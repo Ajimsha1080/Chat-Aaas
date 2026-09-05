@@ -1,135 +1,130 @@
-# 🤖 Chat-AaaS — Enterprise Agent-as-a-Service Platform
-> **Enterprise-Ready, YC-Level AI Employee Management Platform built with a TypeScript + Python Hybrid Architecture.**
+# 🤖 Chat-AaaS — Enterprise Agent-as-a-Service (AaaS) Platform
+
+[![CI/CD Pipeline](https://github.com/Ajimsha1080/Chat-Aaas/actions/workflows/ci.yml/badge.svg)](https://github.com/Ajimsha1080/Chat-Aaas/actions/workflows/ci.yml)
+[![FastAPI](https://img.shields.io/badge/Backend-FastAPI%20(Python%203.11+)-009688.svg?logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com)
+[![React](https://img.shields.io/badge/Frontend-React%2019%20+%20TypeScript-61DAFB.svg?logo=react&logoColor=black)](https://react.dev)
+[![PostgreSQL](https://img.shields.io/badge/Database-PostgreSQL%20+%20pgvector-336791.svg?logo=postgresql&logoColor=white)](https://github.com/pgvector/pgvector)
+[![Redis](https://img.shields.io/badge/Cache%20&%20Workers-Redis%207-DC382D.svg?logo=redis&logoColor=white)](https://redis.io)
+
+**Chat-AaaS** is a production-grade, enterprise Agent-as-a-Service (AaaS) platform designed around a singular product philosophy:
+
+> *"The customer should feel like they are hiring and managing an autonomous AI employee, not configuring an AI infrastructure platform."*
 
 ---
 
-## 🌟 Overview & Product Mental Model
+## 🏛️ System Architecture
 
-Chat-AaaS transforms technical AI agent management into an intuitive business platform:
-\textbf{Company} \longrightarrow \textbf{AI Agent} \longrightarrow \textbf{Teach It} \longrightarrow \textbf{Give It Tools} \longrightarrow \textbf{Deploy Everywhere}
+```text
+┌─────────────────────────────────────────────────────────────┐
+│             React 19 + TypeScript Frontend                  │
+│       (Customer Workspace · Admin Platform · Developer)     │
+└──────────────────────────────┬──────────────────────────────┘
+                               │ HTTPS / SSE
+                               ▼
+┌─────────────────────────────────────────────────────────────┐
+│          Python FastAPI Primary Backend (/api/v1)           │
+│   Auth · RBAC · Multi-Tenancy · Agents · RAG · Actions · GST│
+└───────┬──────────────────────┬───────────────────────┬──────┘
+        │                      │                       │
+        ▼                      ▼                       ▼
+┌──────────────┐       ┌──────────────┐        ┌──────────────┐
+│  PostgreSQL  │       │    Redis     │        │ Asynchronous │
+│  + pgvector  │       │ Queue/Cache  │        │   Workers    │
+└──────────────┘       └──────────────┘        └──────────────┘
+```
 
-- **1 Company = 1 Unified Agent**: Eliminates multi-bot clutter; every organization configures and trains a single autonomous AI employee with draft/published version snapshots.
-- **TypeScript + Python Hybrid Power**: TypeScript handles user experience, API routing, multi-tenancy, RBAC, GST billing, and live support inbox. Python handles vector embeddings, semantic reranking, document intelligence, and hallucination scoring.
-- **Enterprise Security & Reliability**: Complete tenant isolation at the database layer, SSRF defense on URL crawling, 3-tier action confirmation gates for high-risk operations, and a 3-state circuit breaker with local BM25 fallbacks.
-
----
-
-## 🏗️ System Architecture
-
-`
-                                +-------------------------------------------+
-                                |          React 19 + Tailwind UI           |
-                                |  * 3-Pane Inbox  * Test Playground        |
-                                |  * ROI Analytics * Live Preview Embed     |
-                                +---------------------+---------------------+
-                                                      |
-                                                      v
-                                +-------------------------------------------+
-                                |   TypeScript Node.js API & Orchestrator   |
-                                |  * Multi-Tenancy  * RBAC Matrix           |
-                                |  * 18% GST Billing * Action Confirmation  |
-                                |  * Circuit Breaker * Local BM25 Engine    |
-                                +---------------------+---------------------+
-                                                      |
-                         +----------------------------+----------------------------+
-                         | (X-Internal-Token / X-Tenant-ID / X-Request-ID)          |
-                         v                                                         v
-+-------------------------------------------------+     +------------------------------------------+
-|       Python FastAPI AI Microservice Layer      |     |             SQLite Database              |
-|  * Dense Embeddings (1536 dimensions)           |     |  * Strict tenant-isolated entities       |
-|  * Cross-Encoder Semantic Reranker              |     |  * Version snapshots & Audit logs        |
-|  * RAG Faithfulness & Hallucination Evaluator   |     |  * Append-only usage metering ledger     |
-|  * Document Intelligence & Semantic Chunking    |     +------------------------------------------+
-|  * NLP Classification & Sentiment Engine        |
-+-------------------------------------------------+
-`
+### Core Technology Stack
+- **Frontend**: React 19, TypeScript, Vite, TailwindCSS, Lucide Icons, Recharts.
+- **Backend**: Python 3.11+, FastAPI, Pydantic v2, SQLAlchemy 2.0 (async), pgvector.
+- **AI/ML Runtime**: Multi-provider LLM (OpenAI, Anthropic, Gemini, Ollama), Cross-Encoder Reranker, RAG Evaluator, Document AI, NLP Intent Classifier.
+- **Security & Multi-Tenancy**: Strict JWT authentication, Argon2/SHA-256 password hashing, SSRF-guarded knowledge crawler, 3-tier risk action confirmation gates.
+- **Workers**: Redis-backed async workers for heavy document parsing, offline RAG evaluations, and resilient webhook delivery.
 
 ---
 
-## 🚀 Key Features
+## ⚡ Key Features
 
-1. **3-Pane Support Inbox**: Real-time conversation triage with sentiment badges, live message history, AI reasoning drawer, and staff human takeover.
-2. **Draft -> Publish -> Rollback Versioning**: Edit agent settings safely in draft mode, publish version snapshots with changelogs, or rollback in 1-click.
-3. **SSRF-Protected Knowledge Ingestion**: Ingest PDFs, Markdown, URLs, or FAQs with semantic chunking and automated crawler safety protection.
-4. **Action Confirmation Gates**: Distinguish between read-only actions and high-risk operations (e.g., executing refunds or restarting infrastructure).
-5. **Indian GST & Usage-Based Billing**: Automated 18% GST calculation (CGST + SGST or IGST) with itemized PDF-style invoices and usage metering.
-6. **Resilient Circuit Breaker & Fallbacks**: If the Python AI service is ever offline, the TypeScript orchestrator automatically falls back to local BM25 lexical ranking and heuristic evaluation without user downtime.
+### 1. AI Employee Management & Lifecycle
+- **Draft → Test → Publish → Rollback**: Edit draft configurations in isolation, publish immutable version releases with changelogs, and perform 1-click rollbacks to any previous version.
+- **Strict 1:1 Company Mapping**: Each organization has a single, dedicated, high-context AI Employee.
+
+### 2. Multi-Tenant Knowledge Base & RAG Pipeline
+- **Multi-Modal Ingestion**: Ingest PDFs, DOCX, TXT, and Web URLs with automatic chunking and 1536-dimension embeddings.
+- **SSRF Crawler Defense**: Proactively blocks private subnets (`10.0.0.0/8`, `172.16.0.0/12`, `192.168.0.0/16`), loopback (`127.0.0.1`, `localhost`), and cloud metadata (`169.254.169.254`).
+- **Cross-Encoder Semantic Reranking**: Re-orders candidate chunks for high relevance and suppresses hallucinations.
+
+### 3. Business Actions & 3-Tier Risk Safety Gates
+- **Read-Only**: Unrestricted lookup operations (e.g., check cluster health, order status).
+- **Low-Risk**: Safe modifications (e.g., update profile tags).
+- **High-Risk**: Financial or destructive operations (e.g., issue refunds, reboot compute clusters) that require explicit user confirmation prompts before execution.
+
+### 4. Support Inbox & Real-Time Handoff
+- **3-Pane Support Inbox**: Customer queue, live conversation history, and customer metadata panel.
+- **1-Click Human Takeover**: Seamlessly transition conversations from autonomous AI to live human agents.
+
+### 5. Indian GST (18%) Billing & Metering
+- **Transparent Tier Pricing**: Starter (₹4,999/mo), Growth (₹14,999/mo), and Enterprise Business (₹39,999/mo).
+- **Automated GST Tax Invoicing**: Calculates 9% CGST + 9% SGST (intra-state) or 18% IGST (inter-state) with PDF generation.
 
 ---
 
-## 🛠️ Quickstart & Local Setup
+## 🚀 Quick Start (Local Development)
 
-### 1. Installation
-`ash
-git clone https://github.com/Ajimsha1080/Chat-Aaas.git
-cd Chat-Aaas
+### Prerequisites
+- Node.js 20+ and npm
+- Python 3.11+
+- PostgreSQL 16 with pgvector & Redis 7 (or Docker)
+
+### 1. Start Python Backend
+```powershell
+cd backend_python
+python -m venv venv
+venv\Scripts\activate
+pip install -r requirements.txt
+uvicorn app.main:app --reload --port 8000
+```
+
+### 2. Start React Frontend
+```powershell
 npm install
-`
-
-### 2. Environment Setup
-`ash
-cp .env.example .env
-`
-
-### 3. Start Python AI Microservice (FastAPI)
-`ash
-python -m uvicorn backend_python.app.main:app --host 127.0.0.1 --port 8000 --reload
-`
-
-### 4. Start TypeScript Application & Web UI
-`ash
 npm run dev
-`
+```
+
+Visit the dashboard at `http://localhost:5173`.
 
 ---
 
-## 🧪 Automated Testing Suite
+## 🐳 Docker Deployment
 
-Chat-AaaS includes end-to-end automated test suites spanning both TypeScript and Python:
+Run the complete 5-service production stack:
 
-`ash
-# Run all test suites (15 TypeScript + 10 Python suites)
-npm run test:all
+```bash
+docker-compose up --build -d
+```
 
-# Run Node.js / TypeScript test runner
-npm test
+| Service | Port | Description |
+| :--- | :--- | :--- |
+| **frontend** | `80` | React web application served via Nginx |
+| **backend** | `8000` | FastAPI core REST API & AI specialized runtime |
+| **worker** | — | Python async worker processing background tasks |
+| **postgres** | `5432` | PostgreSQL 16 database with pgvector extension |
+| **redis** | `6379` | Redis 7 cache and async task queue |
 
-# Run Python AI FastAPI test suite
-npm run test:python
+---
 
-# Production build verification
+## 🧪 Automated Testing
+
+Run the full automated test suite:
+
+```powershell
+# Run Python Pytest Suite (29 unit & integration tests)
+python -m pytest backend_python/app/tests -v
+
+# Run Frontend Typecheck and Production Build
 npm run build
-`
-
----
-
-## 📁 Repository Structure
-
-`
-Chat-Aaas/
-├── backend_python/            # Python FastAPI AI Microservice
-│   ├── app/
-│   │   ├── main.py            # FastAPI App, Telemetry Middleware & Endpoints
-│   │   ├── schemas.py         # Pydantic v2 Models & API Contracts
-│   │   ├── services/          # AI Microservices (Embeddings, Reranker, RAG Eval, DocAI, NLP)
-│   │   └── tests/             # Automated Python Test Suite (10 suites)
-├── docs/                      # Comprehensive Enterprise Documentation
-│   ├── architecture/          # Overview & TypeScript-Python Hybrid Specs
-│   ├── security/              # Multi-Tenancy, RBAC & SSRF Defense Specs
-│   ├── development/           # Local Development Guide
-│   └── api/                   # API Specifications
-├── server/                    # TypeScript Node.js Backend & API Gateway
-│   ├── db/                    # Multi-Tenant SQLite Database & Schemas
-│   ├── middleware/            # Security, SSRF & RBAC Middlewares
-│   ├── routes/                # Node.js API Router
-│   ├── services/              # Orchestrator, Billing, Inbox, Tools & PythonAiClient
-│   └── tests/                 # Automated TypeScript Test Runner (15 suites)
-├── src/                       # React 19 Frontend (Tailwind CSS, Lucide, Recharts)
-├── .env.example               # Environment Variables Template
-└── package.json               # Scripts and Dependencies
-`
+```
 
 ---
 
 ## 📄 License
-MIT License. Built for production Agent-as-a-Service deployments.\n
+Enterprise Proprietary — Copyright © 2026 Chat-AaaS Inc.

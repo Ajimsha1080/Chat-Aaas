@@ -18,8 +18,7 @@ import {
   Sparkles,
   Clock
 } from 'lucide-react';
-import { APIClient } from '../../api/apiClient';
-import { TestResult } from '../../../server/tests/runTests';
+import { APIClient, TestResult } from '../../api/apiClient';
 
 interface TestRunnerModalProps {
   isOpen: boolean;

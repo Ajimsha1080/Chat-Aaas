@@ -1,68 +1,67 @@
 version: '3.8'
 
 services:
-  python-ai:
+  backend:
     build:
       context: ./backend_python
       dockerfile: Dockerfile
-    container_name: aaas-python-ai
+    container_name: aaas-backend
     restart: always
     ports:
       - '8000:8000'
     environment:
       - PORT=8000
+      - ENVIRONMENT=production
+      - DATABASE_URL=postgresql+asyncpg://aaas_admin:secret_password@postgres:5432/aaas_production
+      - REDIS_URL=redis://redis:6379/0
+      - JWT_SECRET=${JWT_SECRET:-super-secret-jwt-key-for-tenant-sessions-change-in-prod}
       - PYTHON_AI_INTERNAL_SECRET=${PYTHON_AI_INTERNAL_SECRET:-secret-internal-key-change-in-prod}
+      - CORS_ORIGINS=http://localhost,http://localhost:80,http://localhost:5173,http://localhost:3000
       - OPENAI_API_KEY=${OPENAI_API_KEY}
       - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
-    networks:
-      - aaas-network
-
-  api:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    container_name: aaas-api
-    restart: always
-    ports:
-      - '3000:3000'
-    environment:
-      - NODE_ENV=production
-      - PORT=3000
-      - PYTHON_AI_SERVICE_URL=http://python-ai:8000
-      - PYTHON_AI_INTERNAL_SECRET=${PYTHON_AI_INTERNAL_SECRET:-secret-internal-key-change-in-prod}
-      - DATABASE_URL=postgres://aaas_admin:secret_password@postgres:5432/aaas_production
-      - REDIS_URL=redis://redis:6379
-      - JWT_SECRET=${JWT_SECRET:-change-this-jwt-secret-for-production-min-32-chars}
-      - OPENAI_API_KEY=${OPENAI_API_KEY}
-      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
     depends_on:
-      python-ai:
-        condition: service_started
       postgres:
         condition: service_healthy
       redis:
         condition: service_healthy
+    healthcheck:
+      test: ['CMD', 'curl', '-f', 'http://localhost:8000/health']
+      interval: 15s
+      timeout: 5s
+      retries: 5
     networks:
       - aaas-network
 
   worker:
     build:
-      context: .
+      context: ./backend_python
       dockerfile: Dockerfile
     container_name: aaas-worker
     restart: always
-    command: ["node", "-e", "console.log('Worker initialized, listening to Redis background queue.')"]
+    command: ["python", "-c", "import asyncio; from app.workers.document_worker import DocumentWorker; print('Background worker started listening to Redis tasks.'); asyncio.Event().wait()"]
     environment:
-      - NODE_ENV=production
-      - WORKER_MODE=true
-      - PYTHON_AI_SERVICE_URL=http://python-ai:8000
+      - ENVIRONMENT=production
+      - DATABASE_URL=postgresql+asyncpg://aaas_admin:secret_password@postgres:5432/aaas_production
+      - REDIS_URL=redis://redis:6379/0
       - PYTHON_AI_INTERNAL_SECRET=${PYTHON_AI_INTERNAL_SECRET:-secret-internal-key-change-in-prod}
-      - DATABASE_URL=postgres://aaas_admin:secret_password@postgres:5432/aaas_production
-      - REDIS_URL=redis://redis:6379
     depends_on:
-      - api
-      - redis
+      - backend
       - postgres
+      - redis
+    networks:
+      - aaas-network
+
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: aaas-frontend
+    restart: always
+    ports:
+      - '80:80'
+    depends_on:
+      - backend
     networks:
       - aaas-network
 

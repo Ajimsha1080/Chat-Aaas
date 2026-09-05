@@ -1,15 +1,15 @@
 {
   "name": "chat-aaas",
   "private": true,
-  "version": "0.0.0",
+  "version": "2.0.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "oxlint",
-    "test": "tsx -e \"import { TestSuiteRunner } from './server/tests/runTests'; TestSuiteRunner.runAllTests().then(r => console.log(JSON.stringify(r.summary, null, 2)))\"",
-    "test:python": "python backend_python/app/tests/test_agent_runtime.py",
-    "test:all": "npm run test && npm run test:python",
+    "test": "python -m pytest backend_python/app/tests -v",
+    "test:python": "python -m pytest backend_python/app/tests -v",
+    "test:all": "npm run build && python -m pytest backend_python/app/tests -v",
     "preview": "vite preview"
   },
   "dependencies": {
@@ -32,7 +32,6 @@
     "oxlint": "^1.79.0",
     "postcss": "^8.5.28",
     "tailwindcss": "^4.3.3",
-    "tsx": "^4.23.13",
     "typescript": "~6.0.2",
     "vite": "^8.2.2"
   }
