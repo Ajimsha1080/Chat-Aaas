@@ -42,10 +42,13 @@ export interface EscalationSettings {
 
 export interface AgentConfig {
   name: string;
+  role?: string;
+  goals?: string[];
   status: AgentStatus;
   avatarUrl: string;
   description: string;
   tone: AgentTone;
+  modelTier?: 'automatic' | 'fast' | 'balanced' | 'advanced';
   creativityLevel: number; // 0 to 1 (temperature)
   systemInstructions: string;
   businessInstructions: string;
@@ -263,14 +266,11 @@ export interface AnalyticsSummary {
 
 export type NavigationTab = 
   | 'overview' 
-  | 'my-agent' 
   | 'knowledge' 
-  | 'integrations' 
   | 'actions' 
-  | 'deploy' 
   | 'conversations' 
+  | 'channels' 
   | 'analytics' 
-  | 'billing' 
   | 'settings';
 
 export interface ToastNotification {

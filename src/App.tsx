@@ -3,14 +3,11 @@ import { AppProvider, useApp } from './context';
 import { Sidebar } from './components/layout/Sidebar';
 import { Header } from './components/layout/Header';
 import { OverviewView } from './components/dashboard/OverviewView';
-import { MyAgentView } from './components/dashboard/MyAgentView';
 import { KnowledgeView } from './components/dashboard/KnowledgeView';
-import { IntegrationsView } from './components/dashboard/IntegrationsView';
 import { ActionsView } from './components/dashboard/ActionsView';
-import { DeployView } from './components/dashboard/DeployView';
 import { ConversationsView } from './components/dashboard/ConversationsView';
+import { ChannelsView } from './components/dashboard/ChannelsView';
 import { AnalyticsView } from './components/dashboard/AnalyticsView';
-import { BillingView } from './components/dashboard/BillingView';
 import { SettingsView } from './components/dashboard/SettingsView';
 import { AdminDashboard } from './components/admin/AdminDashboard';
 import { TestAgentDrawer } from './components/common/TestAgentDrawer';
@@ -30,7 +27,7 @@ const DashboardContent: React.FC = () => {
   const [isOnboardingOpen, setIsOnboardingOpen] = useState(false);
   const [isTestRunnerOpen, setIsTestRunnerOpen] = useState(false);
 
-  // Render view based on tab
+  // Render view based on 7 core navigation tabs
   const renderActiveView = () => {
     if (isAdminMode) {
       return <AdminDashboard />;
@@ -38,14 +35,11 @@ const DashboardContent: React.FC = () => {
 
     switch (currentTab) {
       case 'overview': return <OverviewView />;
-      case 'my-agent': return <MyAgentView />;
       case 'knowledge': return <KnowledgeView />;
-      case 'integrations': return <IntegrationsView />;
       case 'actions': return <ActionsView />;
       case 'conversations': return <ConversationsView />;
+      case 'channels': return <ChannelsView />;
       case 'analytics': return <AnalyticsView />;
-      case 'deploy': return <DeployView />;
-      case 'billing': return <BillingView />;
       case 'settings': return <SettingsView />;
       default: return <OverviewView />;
     }
