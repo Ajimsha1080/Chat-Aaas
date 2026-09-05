@@ -33,7 +33,7 @@ import {
   ChevronDown
 } from 'lucide-react';
 import { useApp } from '../../context';
-import { NavigationTab, AdminNavigationTab, DeveloperNavigationTab, ProductExperience } from '../../types';
+import { NavigationTab, AdminNavigationTab, DeveloperNavigationTab } from '../../types';
 
 export const Sidebar: React.FC = () => {
   const { 

@@ -13,17 +13,9 @@ import {
   Play, 
   Plus, 
   Trash2, 
-  ExternalLink, 
-  History, 
   ShieldCheck, 
-  ChevronRight,
   AlertTriangle,
-  RotateCcw,
-  Sliders,
-  CheckCircle2,
-  XCircle,
-  FileCode,
-  Server
+  RotateCcw
 } from 'lucide-react';
 import { useApp } from '../../context';
 import { DeveloperNavigationTab } from '../../types';
@@ -43,15 +35,14 @@ export const DeveloperConsole: React.FC = () => {
     rollbackAgentVersion, 
     publishAgentVersion,
     integrations, 
-    updateAgentConfig,
-    showToast 
+    updateAgentConfig
   } = useApp();
 
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
   const [isCreateWebhookOpen, setIsCreateWebhookOpen] = useState(false);
   const [newWebhookUrl, setNewWebhookUrl] = useState('');
   const [newWebhookDesc, setNewWebhookDesc] = useState('');
-  const [newWebhookEvents, setNewWebhookEvents] = useState<string[]>(['conversation.started', 'handoff.triggered']);
+  const [newWebhookEvents] = useState<string[]>(['conversation.started', 'handoff.triggered']);
   const [testingWebhookId, setTestingWebhookId] = useState<string | null>(null);
   const [selectedLog, setSelectedLog] = useState<any | null>(null);
   const [selectedVersion, setSelectedVersion] = useState<any | null>(agentVersions[0] || null);

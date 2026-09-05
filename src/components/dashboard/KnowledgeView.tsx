@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { 
-  BookOpen, 
   Globe, 
   FileText, 
   HelpCircle, 
@@ -9,12 +8,10 @@ import {
   Trash2, 
   CheckCircle2, 
   Search, 
-  Sparkles, 
   UploadCloud,
   Eye,
   Check,
   ShieldCheck,
-  Sliders,
   RefreshCw
 } from 'lucide-react';
 import { useApp } from '../../context';
@@ -34,13 +31,12 @@ export const KnowledgeView: React.FC = () => {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [modalType, setModalType] = useState<KnowledgeType>('url');
   const [previewItem, setPreviewItem] = useState<KnowledgeItem | null>(null);
-  const [showAdvanced, setShowAdvanced] = useState(false);
 
   // New item form state
   const [formTitle, setFormTitle] = useState('');
   const [formContent, setFormContent] = useState('');
   const [formUrl, setFormUrl] = useState('');
-  const [formCategory, setFormCategory] = useState('General');
+  const [formCategory] = useState('General');
   const [formFaqAnswer, setFormFaqAnswer] = useState('');
   const [formFileName, setFormFileName] = useState('');
   const [isIngesting, setIsIngesting] = useState(false);

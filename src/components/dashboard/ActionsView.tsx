@@ -2,16 +2,8 @@ import React, { useState } from 'react';
 import { 
   Zap, 
   ShieldAlert, 
-  CheckCircle2, 
   Play, 
-  Check, 
-  Sparkles,
-  Layers,
-  Database,
-  Calendar,
-  DollarSign,
-  Mail,
-  UserCheck
+  Sparkles
 } from 'lucide-react';
 import { useApp } from '../../context';
 import { ActionDefinition } from '../../types';

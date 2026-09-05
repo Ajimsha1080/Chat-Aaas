@@ -2,21 +2,13 @@ import React, { useState, useRef, useEffect } from 'react';
 import { 
   Search, 
   UserCheck, 
-  CheckCircle2, 
   Send, 
   ShieldAlert, 
-  Bot, 
   Zap, 
-  BookOpen, 
   User, 
   Mail, 
   Globe, 
-  Clock, 
   Check, 
-  Sparkles,
-  ChevronRight,
-  AlertTriangle,
-  FileText,
   CheckCircle
 } from 'lucide-react';
 import { useApp } from '../../context';
@@ -39,10 +31,7 @@ export const ConversationsView: React.FC = () => {
   const [filterStatus, setFilterStatus] = useState<ConversationStatus | 'all' | 'needs_attention'>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [operatorInput, setOperatorInput] = useState('');
-  const [internalNoteInput, setInternalNoteInput] = useState('');
   const [isNoteMode, setIsNoteMode] = useState(false);
-  const [simulateUserInput, setSimulateUserInput] = useState('');
-  const [showReasoningMap, setShowReasoningMap] = useState<Record<string, boolean>>({});
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -76,15 +65,6 @@ export const ConversationsView: React.FC = () => {
       setOperatorInput('');
       showToast('Reply Sent', 'Live staff message delivered to customer.', 'success');
     }
-  };
-
-  const handleSimulateUserMessage = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!simulateUserInput.trim() || !currentActiveConversation) return;
-
-    const text = simulateUserInput.trim();
-    setSimulateUserInput('');
-    await sendMessageToAgent(currentActiveConversation.id, text);
   };
 
   return (

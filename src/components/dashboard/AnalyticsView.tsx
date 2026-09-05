@@ -3,17 +3,13 @@ import {
   CheckCircle2, 
   UserX, 
   Plus, 
-  Clock, 
   MessageSquare, 
   AlertTriangle,
   TrendingUp,
   Star,
-  DollarSign,
   ChevronDown,
   ChevronUp,
-  Cpu,
-  Layers,
-  Sparkles
+  Cpu
 } from 'lucide-react';
 import { useApp } from '../../context';
 import { 

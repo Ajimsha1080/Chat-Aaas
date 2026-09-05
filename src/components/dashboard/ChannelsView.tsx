@@ -9,10 +9,8 @@ import {
   Check, 
   ExternalLink, 
   Paintbrush, 
-  CheckCircle2, 
-  ChevronRight,
-  ShieldCheck,
-  Zap,
+  ShieldCheck, 
+  Zap, 
   Sliders
 } from 'lucide-react';
 import { useApp } from '../../context';
@@ -22,8 +20,7 @@ export const ChannelsView: React.FC = () => {
   const { 
     currentCompany, 
     updateWidgetSettings, 
-    setIsLiveSandboxOpen,
-    setIsQuickTestOpen
+    setIsLiveSandboxOpen
   } = useApp();
 
   const [activeChannel, setActiveChannel] = useState<'website' | 'whatsapp' | 'email' | 'mobile' | 'api'>('website');

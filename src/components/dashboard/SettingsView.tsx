@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { 
-  Building, 
   Users, 
   CreditCard, 
   Cpu, 
@@ -12,13 +11,10 @@ import {
   Copy, 
   UserPlus, 
   Download, 
-  Sparkles,
-  RefreshCw,
-  ExternalLink,
-  ShieldAlert
+  RefreshCw
 } from 'lucide-react';
 import { useApp } from '../../context';
-import { TeamMember, SubscriptionPlanId } from '../../types';
+import { TeamMember } from '../../types';
 import { InvoiceModal } from '../common/InvoiceModal';
 
 export const SettingsView: React.FC = () => {
@@ -28,7 +24,6 @@ export const SettingsView: React.FC = () => {
     addTeamMember, 
     auditLogs,
     allPlans,
-    currentPlan,
     upgradeSubscription,
     invoices,
     regenerateApiKey,

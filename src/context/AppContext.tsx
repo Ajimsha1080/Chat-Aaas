@@ -129,7 +129,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [securityEvents] = useState<SecurityEventItem[]>(INITIAL_SECURITY_EVENTS);
 
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>(INITIAL_TEAM);
-  const [invoices, setInvoices] = useState<Invoice[]>(INITIAL_INVOICES);
+  const [invoices] = useState<Invoice[]>(INITIAL_INVOICES);
   const [analytics] = useState<AnalyticsSummary>(INITIAL_ANALYTICS);
 
   const [activeConversationId, setActiveConversationId] = useState<string | null>(null);

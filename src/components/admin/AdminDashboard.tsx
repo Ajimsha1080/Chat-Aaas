@@ -11,18 +11,10 @@ import {
   FileText, 
   Settings, 
   Search, 
-  CheckCircle2, 
-  XCircle, 
   AlertTriangle, 
-  RefreshCw, 
-  ExternalLink,
-  Lock,
-  DollarSign,
-  Users,
-  Zap,
-  ArrowUpRight,
-  Database,
-  Cpu
+  Lock, 
+  DollarSign, 
+  ArrowUpRight
 } from 'lucide-react';
 import { useApp } from '../../context';
 import { AdminNavigationTab } from '../../types';
@@ -32,25 +24,22 @@ export const AdminDashboard: React.FC = () => {
     companies, 
     allPlans, 
     adminToggleCompanySuspension, 
-    adminUpdatePlanPrice,
-    switchCompany,
-    setCurrentExperience,
-    systemHealth,
-    securityEvents,
-    auditLogs,
-    currentAdminTab,
-    setCurrentAdminTab,
-    showToast
+    switchCompany, 
+    setCurrentExperience, 
+    systemHealth, 
+    securityEvents, 
+    auditLogs, 
+    currentAdminTab, 
+    setCurrentAdminTab, 
+    showToast 
   } = useApp();
 
   const [searchOrg, setSearchOrg] = useState('');
   const [supportOrgId, setSupportOrgId] = useState(companies[0]?.id || '');
-  const [supportQuery, setSupportQuery] = useState('');
   const [supportDiagnosticOutput, setSupportDiagnosticOutput] = useState<any | null>(null);
 
   const totalTenants = companies.length;
   const activeAgents = companies.filter(c => c.agent.status === 'active' && !c.isSuspended).length;
-  const totalPlatformMessages = companies.reduce((acc, c) => acc + c.stats.totalMessages, 0);
   const totalMRR = companies.reduce((acc, c) => {
     const plan = allPlans.find(p => p.id === c.planId);
     return acc + (plan ? plan.priceMonthlyINR : 0);

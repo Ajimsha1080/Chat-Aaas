@@ -1,23 +1,16 @@
 import React from 'react';
 import { 
-  Bot, 
   MessageSquare, 
   CheckCircle2, 
   UserX, 
   Sparkles, 
-  TrendingUp, 
-  ArrowRight, 
   Play, 
-  Pause, 
   Zap, 
   BookOpen, 
   Globe, 
   ChevronRight,
   AlertTriangle,
   Star,
-  DollarSign,
-  ShieldCheck,
-  Send,
   Clock
 } from 'lucide-react';
 import { useApp } from '../../context';
@@ -26,15 +19,13 @@ import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, CartesianG
 export const OverviewView: React.FC = () => {
   const { 
     currentCompany, 
-    toggleAgentStatus, 
     conversations, 
     knowledgeItems, 
     actions,
     setCurrentTab,
     setIsQuickTestOpen,
     setActiveConversationId,
-    publishAgentVersion,
-    showToast
+    publishAgentVersion
   } = useApp();
 
   const stats = currentCompany.stats;

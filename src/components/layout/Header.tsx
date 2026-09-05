@@ -9,10 +9,7 @@ import {
   ExternalLink, 
   Check, 
   UserCircle,
-  Terminal,
-  Code2,
-  ShieldAlert,
-  Sliders
+  Terminal
 } from 'lucide-react';
 import { useApp } from '../../context';
 import { UserRole } from '../../types';
@@ -32,7 +29,6 @@ export const Header: React.FC<HeaderProps> = ({ onOpenOnboarding, onOpenTestRunn
     toggleAgentStatus,
     currentUserRole,
     setCurrentUserRole,
-    currentExperience,
     setCurrentExperience,
     setCurrentTab,
     setIsLiveSandboxOpen,
