@@ -40,6 +40,7 @@ class AgentRuntime:
             return ChatResponse(
                 message="I am connecting you with a human support specialist right now. Our team has received your conversation history and will take over momentarily.",
                 reasoning_steps=reasoning_steps,
+                should_escalate_to_human=True,
                 handoff_required=True,
                 session_id=request.session_id or "sess_live"
             )

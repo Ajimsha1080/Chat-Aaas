@@ -12,6 +12,8 @@ export interface RetrievedChunk {
   similarityScore: number;
 }
 
+import { pythonAiClient } from './pythonAiClient';
+
 export class RAGEngine {
   /**
    * Split long documents into overlapping semantic chunks
@@ -101,5 +103,39 @@ export class RAGEngine {
 
     scoredChunks.sort((a, b) => b.similarityScore - a.similarityScore);
     return scoredChunks.slice(0, topK);
+  }
+
+  /**
+   * Hybrid RAG Pipeline: Vector / BM25 Candidate Retrieval + Cross-Encoder Semantic Reranking
+   */
+  public static async searchTenantKnowledgeHybrid(
+    companyId: string,
+    query: string,
+    topK = 3
+  ): Promise<RetrievedChunk[]> {
+    // 1. First-stage candidate retrieval (Broad top 15 chunks)
+    const initialCandidates = this.searchTenantKnowledge(companyId, query, 15, 0.1);
+    if (initialCandidates.length === 0) return [];
+
+    try {
+      // 2. Cross-Encoder reranking via Python AI service (with local BM25 fallback)
+      const rerankInput = initialCandidates.map(c => ({
+        id: c.chunk.id,
+        content: `${c.chunk.metadata.title}: ${c.chunk.content}`,
+        metadata: c.chunk.metadata,
+        initial_score: c.similarityScore
+      }));
+
+      const reranked = await pythonAiClient.rerank(query, rerankInput, companyId, topK);
+      const chunkMap = new Map<string, DocumentChunkEntity>();
+      initialCandidates.forEach(c => chunkMap.set(c.chunk.id, c.chunk));
+
+      return reranked.map(r => ({
+        chunk: chunkMap.get(r.id) || initialCandidates[0].chunk,
+        similarityScore: r.relevance_score
+      }));
+    } catch {
+      return initialCandidates.slice(0, topK);
+    }
   }
 }

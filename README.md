@@ -1,144 +1,135 @@
-# Agent-as-a-Service (AaaS) Enterprise Multi-Tenant Platform
-
-[![CI/CD Pipeline](https://github.com/agent-as-a-service/aaas/actions/workflows/ci.yml/badge.svg)](https://github.com/agent-as-a-service/aaas/actions/workflows/ci.yml)
-[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
-[![TypeScript: 5.x](https://img.shields.io/badge/TypeScript-5.x-blue.svg)](https://www.typescriptlang.org/)
-[![Vite: 8.x](https://img.shields.io/badge/Vite-8.x-purple.svg)](https://vitejs.dev/)
-
-> **A commercial SaaS platform where each company rents and deploys strictly ONE dedicated AI business agent.**
+# ğŸ¤– Chat-AaaS â€” Enterprise Agent-as-a-Service Platform
+> **Enterprise-Ready, YC-Level AI Employee Management Platform built with a TypeScript + Python Hybrid Architecture.**
 
 ---
 
-## 1. Product Architectural Principle
+## ğŸŒŸ Overview & Product Mental Model
 
-* **Strictly 1 Company = 1 AI Agent**: Companies do not create multiple chatbots or build fragile custom agent graphs. The platform provides a hardened, battle-tested agent engine customized entirely through company knowledge, business rules, approved integrations, and enterprise guardrails.
-* **Draft $\to$ Test $\to$ Publish $\to$ Rollback**: Production widgets and mobile SDKs only serve published, immutable agent version snapshots. Changes are staged in a sandboxed draft state and can be rolled back instantly with zero downtime.
-* **Strict Multi-Tenancy**: All 22 database entities, vector embeddings, tool executions, and conversation logs enforce row-level `company_id` partitioning.
-* **Hierarchical Anti-Hallucination Pipeline**: System Platform Safety $\to$ Company Persona & Instructions $\to$ RAG Knowledge Base $\to$ Least-Privilege Read APIs $\to$ Confirmation-Gated Action Tools $\to$ User Input.
+Chat-AaaS transforms technical AI agent management into an intuitive business platform:
+\textbf{Company} \longrightarrow \textbf{AI Agent} \longrightarrow \textbf{Teach It} \longrightarrow \textbf{Give It Tools} \longrightarrow \textbf{Deploy Everywhere}
 
----
-
-## 2. Directory Structure
-
-```text
-+-- .github/workflows/ci.yml   # Automated CI/CD pipeline (Lint, Test, Build)
-+-- Dockerfile                 # Multi-stage production container build
-+-- docker-compose.yml         # Containerized orchestration (PostgreSQL + pgvector, Redis, Node.js)
-+-- .env.example               # Complete environment variable configuration template
-+-- server/                    # Enterprise Backend Architecture
-¦   +-- db/
-¦   ¦   +-- schema.ts          # 22 Normalized relational database schemas
-¦   ¦   +-- database.ts        # Database engine & query layer
-¦   ¦   +-- seed.ts            # Enterprise seed data (TechFlow Cloud, Apex Health)
-¦   +-- middleware/
-¦   ¦   +-- auth.ts            # JWT authentication & password hashing
-¦   ¦   +-- tenant.ts          # Multi-tenant isolation & request scoping
-¦   ¦   +-- rbac.ts            # Server-side RBAC (owner, admin, staff, super_admin)
-¦   ¦   +-- security.ts        # SSRF defense, IP filtering & sanitization
-¦   +-- services/
-¦   ¦   +-- agentRuntime.ts    # Reasoning engine & prompt composer
-¦   ¦   +-- llmProvider.ts     # Multi-LLM provider abstraction (OpenAI, Claude, Gemini, Ollama)
-¦   ¦   +-- ragEngine.ts       # Chunking, vector similarity & anti-hallucination evaluator
-¦   ¦   +-- crawlerService.ts  # SSRF-protected website crawler
-¦   ¦   +-- toolRegistry.ts    # JSON schema validator, action risk levels & execution handlers
-¦   ¦   +-- integrationService.ts # KMS AES-256-GCM credential encryption & permission matrix
-¦   ¦   +-- usageService.ts    # Append-only usage metering & quota enforcement
-¦   ¦   +-- billingService.ts  # Subscriptions (Starter, Growth, Business, Enterprise), webhooks, GST invoices
-¦   ¦   +-- backgroundQueue.ts # Asynchronous job processor
-¦   ¦   +-- auditLogger.ts     # Immutable security audit trail
-¦   +-- routes/
-¦   ¦   +-- agentRoutes.ts     # Draft, publish, rollback versioning endpoints
-¦   ¦   +-- apiRouter.ts       # Unified /api/v1 REST router
-¦   +-- tests/
-¦       +-- runTests.ts        # 13 Automated test suites
-+-- public/
-¦   +-- widget.js              # Lightweight, embeddable website widget script
-+-- src/                       # Frontend SPA (React 19 + TypeScript + Tailwind CSS)
-¦   +-- api/apiClient.ts       # Unified client interfacing with backend router
-¦   +-- components/            # Production UI modules
-¦   ¦   +-- AgentManagement.tsx    # Draft vs Published studio, real-time testing, version rollback
-¦   ¦   +-- KnowledgeManager.tsx   # Document ingestion, crawler, FAQ management
-¦   ¦   +-- IntegrationsHub.tsx    # CRM/Helpdesk/ERP connectors with permission scopes
-¦   ¦   +-- DeploymentCenter.tsx   # Embed scripts, Webhook keys, Mobile SDK configs
-¦   ¦   +-- ConversationsViewer.tsx# Live inbox, sentiment analysis, human-in-the-loop takeover
-¦   ¦   +-- UsageAnalytics.tsx     # Message meters, token breakdown, response latency graphs
-¦   ¦   +-- BillingManager.tsx     # Subscription tiers, credit packs, GST invoices
-¦   ¦   +-- common/
-¦   ¦       +-- TestRunnerModal.tsx# In-app interactive test runner
-¦   ¦       +-- ErrorBoundary.tsx  # Production UI error boundary
-¦   +-- types.ts               # Shared TypeScript domain contracts
-```
+- **1 Company = 1 Unified Agent**: Eliminates multi-bot clutter; every organization configures and trains a single autonomous AI employee with draft/published version snapshots.
+- **TypeScript + Python Hybrid Power**: TypeScript handles user experience, API routing, multi-tenancy, RBAC, GST billing, and live support inbox. Python handles vector embeddings, semantic reranking, document intelligence, and hallucination scoring.
+- **Enterprise Security & Reliability**: Complete tenant isolation at the database layer, SSRF defense on URL crawling, 3-tier action confirmation gates for high-risk operations, and a 3-state circuit breaker with local BM25 fallbacks.
 
 ---
 
-## 3. Getting Started
+## ğŸ—ï¸ System Architecture
 
-### Prerequisites
-- Node.js 20.x or 22.x LTS
-- npm 10.x+
+`
+                                +-------------------------------------------+
+                                |          React 19 + Tailwind UI           |
+                                |  * 3-Pane Inbox  * Test Playground        |
+                                |  * ROI Analytics * Live Preview Embed     |
+                                +---------------------+---------------------+
+                                                      |
+                                                      v
+                                +-------------------------------------------+
+                                |   TypeScript Node.js API & Orchestrator   |
+                                |  * Multi-Tenancy  * RBAC Matrix           |
+                                |  * 18% GST Billing * Action Confirmation  |
+                                |  * Circuit Breaker * Local BM25 Engine    |
+                                +---------------------+---------------------+
+                                                      |
+                         +----------------------------+----------------------------+
+                         | (X-Internal-Token / X-Tenant-ID / X-Request-ID)          |
+                         v                                                         v
++-------------------------------------------------+     +------------------------------------------+
+|       Python FastAPI AI Microservice Layer      |     |             SQLite Database              |
+|  * Dense Embeddings (1536 dimensions)           |     |  * Strict tenant-isolated entities       |
+|  * Cross-Encoder Semantic Reranker              |     |  * Version snapshots & Audit logs        |
+|  * RAG Faithfulness & Hallucination Evaluator   |     |  * Append-only usage metering ledger     |
+|  * Document Intelligence & Semantic Chunking    |     +------------------------------------------+
+|  * NLP Classification & Sentiment Engine        |
++-------------------------------------------------+
+`
 
-### Quick Start (Local Development)
-```bash
-# 1. Install dependencies
+---
+
+## ğŸš€ Key Features
+
+1. **3-Pane Support Inbox**: Real-time conversation triage with sentiment badges, live message history, AI reasoning drawer, and staff human takeover.
+2. **Draft -> Publish -> Rollback Versioning**: Edit agent settings safely in draft mode, publish version snapshots with changelogs, or rollback in 1-click.
+3. **SSRF-Protected Knowledge Ingestion**: Ingest PDFs, Markdown, URLs, or FAQs with semantic chunking and automated crawler safety protection.
+4. **Action Confirmation Gates**: Distinguish between read-only actions and high-risk operations (e.g., executing refunds or restarting infrastructure).
+5. **Indian GST & Usage-Based Billing**: Automated 18% GST calculation (CGST + SGST or IGST) with itemized PDF-style invoices and usage metering.
+6. **Resilient Circuit Breaker & Fallbacks**: If the Python AI service is ever offline, the TypeScript orchestrator automatically falls back to local BM25 lexical ranking and heuristic evaluation without user downtime.
+
+---
+
+## ğŸ› ï¸ Quickstart & Local Setup
+
+### 1. Installation
+`ash
+git clone https://github.com/Ajimsha1080/Chat-Aaas.git
+cd Chat-Aaas
 npm install
+`
 
-# 2. Copy environment template
+### 2. Environment Setup
+`ash
 cp .env.example .env
+`
 
-# 3. Run automated backend verification test suite (13 suites)
-npm test
+### 3. Start Python AI Microservice (FastAPI)
+`ash
+python -m uvicorn backend_python.app.main:app --host 127.0.0.1 --port 8000 --reload
+`
 
-# 4. Start local development server (Frontend + Mocked Production API Router)
+### 4. Start TypeScript Application & Web UI
+`ash
 npm run dev
-```
-
-### Running with Docker Compose
-```bash
-docker-compose up --build
-```
+`
 
 ---
 
-## 4. Verification & Testing
+## ğŸ§ª Automated Testing Suite
 
-The platform includes 13 automated backend test suites verifying all core enterprise constraints:
+Chat-AaaS includes end-to-end automated test suites spanning both TypeScript and Python:
 
-```bash
-# Run oxlint static code analyzer
-npm run lint
+`ash
+# Run all test suites (15 TypeScript + 10 Python suites)
+npm run test:all
 
-# Execute all automated platform test suites
+# Run Node.js / TypeScript test runner
 npm test
 
-# Compile TypeScript and build production bundle
+# Run Python AI FastAPI test suite
+npm run test:python
+
+# Production build verification
 npm run build
-```
-
-### Verified Test Suites
-1. **Multi-Tenancy Isolation**: Ensures Cross-tenant reads fail and tenant boundary cannot be breached.
-2. **SSRF Defense**: Prevents website crawler from targeting localhost, AWS metadata (`169.254.169.254`), or private subnets (`10.0.0.0/8`, `192.168.0.0/16`).
-3. **1 Company = 1 Agent Enforcement**: Enforces that attempting to create a second agent per company is strictly rejected.
-4. **Agent Versioning**: Tests Draft $\to$ Publish $\to$ Snapshot $\to$ Rollback lifecycle.
-5. **Tool Schema Validation & Confirmation Gates**: Enforces input validation against JSON schemas and flags high-risk actions (`execute_refund`, `cancel_order`) for human confirmation.
-6. **KMS Credential Encryption**: Verifies AES-256-GCM encryption of third-party API keys at rest.
-7. **RAG Vector Search & Chunking**: Validates semantic retrieval with strict tenant filtering.
-8. **Anti-Hallucination Evaluator**: Confirms fallback behavior when context relevance is below threshold.
-9. **Usage Metering & Quotas**: Validates append-only usage ledger and quota rejection when limits are exceeded.
-10. **RBAC Permission Scopes**: Verifies role permissions (`owner`, `admin`, `staff`).
-11. **GST Tax Invoice Calculations**: Validates CGST/SGST invoice computations.
-12. **Background Job Queue**: Validates async job state transitions and retry logic.
-13. **Audit Trail Immutability**: Ensures tamper-evident logging of administrative actions.
+`
 
 ---
 
-## 5. Security Architecture
+## ğŸ“ Repository Structure
 
-* **Zero-Trust Multi-Tenancy**: All database queries parameterize `company_id`. Client headers cannot spoof tenant context.
-* **SSRF Protection**: Crawler validates resolved IP addresses against IPv4/IPv6 private subnets and cloud metadata endpoints before issuing outbound HTTP requests.
-* **KMS Encryption**: Sensitive connector credentials and webhook secrets are encrypted using AES-256-GCM with distinct initialization vectors (IV) and authentication tags.
-* **Human-in-the-Loop Safeguards**: High-impact transactional tools require explicit user or operator confirmation before mutating external business systems.
+`
+Chat-Aaas/
+â”œâ”€â”€ backend_python/            # Python FastAPI AI Microservice
+â”‚   â”œâ”€â”€ app/
+â”‚   â”‚   â”œâ”€â”€ main.py            # FastAPI App, Telemetry Middleware & Endpoints
+â”‚   â”‚   â”œâ”€â”€ schemas.py         # Pydantic v2 Models & API Contracts
+â”‚   â”‚   â”œâ”€â”€ services/          # AI Microservices (Embeddings, Reranker, RAG Eval, DocAI, NLP)
+â”‚   â”‚   â””â”€â”€ tests/             # Automated Python Test Suite (10 suites)
+â”œâ”€â”€ docs/                      # Comprehensive Enterprise Documentation
+â”‚   â”œâ”€â”€ architecture/          # Overview & TypeScript-Python Hybrid Specs
+â”‚   â”œâ”€â”€ security/              # Multi-Tenancy, RBAC & SSRF Defense Specs
+â”‚   â”œâ”€â”€ development/           # Local Development Guide
+â”‚   â””â”€â”€ api/                   # API Specifications
+â”œâ”€â”€ server/                    # TypeScript Node.js Backend & API Gateway
+â”‚   â”œâ”€â”€ db/                    # Multi-Tenant SQLite Database & Schemas
+â”‚   â”œâ”€â”€ middleware/            # Security, SSRF & RBAC Middlewares
+â”‚   â”œâ”€â”€ routes/                # Node.js API Router
+â”‚   â”œâ”€â”€ services/              # Orchestrator, Billing, Inbox, Tools & PythonAiClient
+â”‚   â””â”€â”€ tests/                 # Automated TypeScript Test Runner (15 suites)
+â”œâ”€â”€ src/                       # React 19 Frontend (Tailwind CSS, Lucide, Recharts)
+â”œâ”€â”€ .env.example               # Environment Variables Template
+â””â”€â”€ package.json               # Scripts and Dependencies
+`
 
 ---
 
-## 6. License
-Enterprise Commercial License / MIT
+## ğŸ“„ License
+MIT License. Built for production Agent-as-a-Service deployments.\n

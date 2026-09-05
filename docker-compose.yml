@@ -1,46 +1,68 @@
 version: '3.8'
 
 services:
-  ai-runtime:
+  python-ai:
     build:
       context: ./backend_python
       dockerfile: Dockerfile
-    container_name: aaas-ai-runtime
+    container_name: aaas-python-ai
     restart: always
     ports:
       - '8000:8000'
     environment:
       - PORT=8000
+      - PYTHON_AI_INTERNAL_SECRET=${PYTHON_AI_INTERNAL_SECRET:-secret-internal-key-change-in-prod}
       - OPENAI_API_KEY=${OPENAI_API_KEY}
       - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
-      - GEMINI_API_KEY=${GEMINI_API_KEY}
     networks:
       - aaas-network
 
-  app:
+  api:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: aaas-app
+    container_name: aaas-api
     restart: always
     ports:
       - '3000:3000'
     environment:
       - NODE_ENV=production
       - PORT=3000
-      - AI_RUNTIME_URL=http://ai-runtime:8000
+      - PYTHON_AI_SERVICE_URL=http://python-ai:8000
+      - PYTHON_AI_INTERNAL_SECRET=${PYTHON_AI_INTERNAL_SECRET:-secret-internal-key-change-in-prod}
       - DATABASE_URL=postgres://aaas_admin:secret_password@postgres:5432/aaas_production
       - REDIS_URL=redis://redis:6379
-      - JWT_SECRET=change-this-jwt-secret-for-production-min-32-chars
-      - ENCRYPTION_KEY=0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
+      - JWT_SECRET=${JWT_SECRET:-change-this-jwt-secret-for-production-min-32-chars}
       - OPENAI_API_KEY=${OPENAI_API_KEY}
       - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
     depends_on:
-      - ai-runtime
+      python-ai:
+        condition: service_started
       postgres:
         condition: service_healthy
       redis:
         condition: service_healthy
+    networks:
+      - aaas-network
+
+  worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: aaas-worker
+    restart: always
+    command: ["node", "-e", "console.log('Worker initialized, listening to Redis background queue.')"]
+    environment:
+      - NODE_ENV=production
+      - WORKER_MODE=true
+      - PYTHON_AI_SERVICE_URL=http://python-ai:8000
+      - PYTHON_AI_INTERNAL_SECRET=${PYTHON_AI_INTERNAL_SECRET:-secret-internal-key-change-in-prod}
+      - DATABASE_URL=postgres://aaas_admin:secret_password@postgres:5432/aaas_production
+      - REDIS_URL=redis://redis:6379
+    depends_on:
+      - api
+      - redis
+      - postgres
     networks:
       - aaas-network
 

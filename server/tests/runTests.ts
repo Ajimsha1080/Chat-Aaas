@@ -198,6 +198,38 @@ export class TestSuiteRunner {
       }
     });
 
+    // 8. ================= PYTHON AI CLIENT & HYBRID RAG TESTS ================= //
+    await runTest('Python AI Hybrid Client', 'Circuit breaker resilience & graceful local fallback', async () => {
+      const { pythonAiClient } = await import('../services/pythonAiClient');
+      const state = pythonAiClient.getCircuitState();
+      if (state !== 'CLOSED' && state !== 'HALF_OPEN' && state !== 'OPEN') {
+        throw new Error(`Invalid circuit state: ${state}`);
+      }
+
+      // Test rerank fallback
+      const rerankRes = await pythonAiClient.rerank(
+        'Kubernetes SLA guarantee',
+        [
+          { id: '1', content: 'Random unrelated note about snacks' },
+          { id: '2', content: 'Our enterprise cluster guarantees 99.99% uptime SLA.' }
+        ],
+        'comp-techflow',
+        2
+      );
+
+      if (rerankRes.length !== 2 || rerankRes[0].id !== '2') {
+        throw new Error('Hybrid rerank fallback failed to rank most relevant chunk first.');
+      }
+    });
+
+    await runTest('Python AI Hybrid Client', 'NLP classification detects intent and sentiment', async () => {
+      const { pythonAiClient } = await import('../services/pythonAiClient');
+      const res = await pythonAiClient.classify('URGENT: Requesting full refund for order #123');
+      if (!res.success || !res.intent.includes('refund')) {
+        throw new Error('NLP classifier failed to detect refund intent.');
+      }
+    });
+
     const totalDuration = Date.now() - overallStart;
     const passed = results.filter(r => r.status === 'passed').length;
     const failed = results.filter(r => r.status === 'failed').length;
