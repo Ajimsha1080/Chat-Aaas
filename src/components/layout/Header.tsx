@@ -42,12 +42,8 @@ export const Header: React.FC<HeaderProps> = ({ onOpenOnboarding, onOpenTestRunn
 
   const allRoles: { id: UserRole; label: string; desc: string; defaultExp: 'customer' | 'developer' | 'admin' }[] = [
     { id: 'platform_super_admin', label: 'Super Admin', desc: 'Full SaaS platform operator', defaultExp: 'admin' },
-    { id: 'platform_admin', label: 'Platform Admin', desc: 'Fleet operator & diagnostics', defaultExp: 'admin' },
-    { id: 'owner', label: 'Company Owner', desc: 'Organization executive', defaultExp: 'customer' },
-    { id: 'admin', label: 'Company Admin', desc: 'Team & settings manager', defaultExp: 'customer' },
-    { id: 'manager', label: 'Support Manager', desc: 'Inbox & quality monitor', defaultExp: 'customer' },
-    { id: 'staff', label: 'Support Staff', desc: 'Live chat & human takeover', defaultExp: 'customer' },
-    { id: 'developer', label: 'Developer', desc: 'API, webhooks & SDK tools', defaultExp: 'developer' },
+    { id: 'owner', label: 'Company Owner', desc: 'Organization executive & billing', defaultExp: 'customer' },
+    { id: 'staff', label: 'Support Specialist', desc: 'Live chat & human takeover', defaultExp: 'customer' },
     { id: 'viewer', label: 'Viewer', desc: 'Read-only analytics access', defaultExp: 'customer' }
   ];
 
