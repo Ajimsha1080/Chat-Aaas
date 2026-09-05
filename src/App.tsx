@@ -3,6 +3,7 @@ import { AppProvider, useApp } from './context';
 import { Sidebar } from './components/layout/Sidebar';
 import { Header } from './components/layout/Header';
 import { OverviewView } from './components/dashboard/OverviewView';
+import { MyAgentView } from './components/dashboard/MyAgentView';
 import { KnowledgeView } from './components/dashboard/KnowledgeView';
 import { ActionsView } from './components/dashboard/ActionsView';
 import { ConversationsView } from './components/dashboard/ConversationsView';
@@ -42,6 +43,7 @@ const DashboardContent: React.FC = () => {
     // Customer experience tabs
     switch (currentTab) {
       case 'overview': return <OverviewView />;
+      case 'my_agent': return <MyAgentView />;
       case 'knowledge': return <KnowledgeView />;
       case 'actions': return <ActionsView />;
       case 'conversations': return <ConversationsView />;

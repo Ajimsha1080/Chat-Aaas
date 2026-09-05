@@ -300,6 +300,7 @@ export type DeveloperNavigationTab =
 
 export type NavigationTab = 
   | 'overview' 
+  | 'my_agent'
   | 'knowledge' 
   | 'actions' 
   | 'conversations' 
