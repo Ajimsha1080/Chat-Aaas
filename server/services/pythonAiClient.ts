@@ -85,9 +85,11 @@ export class PythonAiClient {
   private lastFailureTime = 0;
 
   private constructor() {
+    const envServiceUrl = (typeof process !== 'undefined' && process.env?.PYTHON_AI_SERVICE_URL) || 'http://127.0.0.1:8000';
+    const envSecret = (typeof process !== 'undefined' && process.env?.PYTHON_AI_INTERNAL_SECRET) || 'secret-internal-key-change-in-prod';
     this.config = {
-      baseUrl: (process.env.PYTHON_AI_SERVICE_URL || 'http://127.0.0.1:8000').replace(/\/$/, ''),
-      internalSecret: process.env.PYTHON_AI_INTERNAL_SECRET || 'secret-internal-key-change-in-prod',
+      baseUrl: envServiceUrl.replace(/\/$/, ''),
+      internalSecret: envSecret,
       timeoutMs: 4000,
       failureThreshold: 3,
       cooldownMs: 10000
