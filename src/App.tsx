@@ -10,6 +10,7 @@ import { ChannelsView } from './components/dashboard/ChannelsView';
 import { AnalyticsView } from './components/dashboard/AnalyticsView';
 import { SettingsView } from './components/dashboard/SettingsView';
 import { AdminDashboard } from './components/admin/AdminDashboard';
+import { DeveloperConsole } from './components/developer/DeveloperConsole';
 import { TestAgentDrawer } from './components/common/TestAgentDrawer';
 import { ClientWebsiteSandbox } from './components/widget/ClientWebsiteSandbox';
 import { OnboardingModal } from './components/onboarding/OnboardingModal';
@@ -19,6 +20,7 @@ import { ErrorBoundary } from './components/common/ErrorBoundary';
 
 const DashboardContent: React.FC = () => {
   const { 
+    currentExperience,
     currentTab, 
     isAdminMode, 
     isLiveSandboxOpen 
@@ -27,12 +29,17 @@ const DashboardContent: React.FC = () => {
   const [isOnboardingOpen, setIsOnboardingOpen] = useState(false);
   const [isTestRunnerOpen, setIsTestRunnerOpen] = useState(false);
 
-  // Render view based on 7 core navigation tabs
+  // Render view based on 3 dedicated product experiences
   const renderActiveView = () => {
-    if (isAdminMode) {
+    if (currentExperience === 'admin' || isAdminMode) {
       return <AdminDashboard />;
     }
 
+    if (currentExperience === 'developer') {
+      return <DeveloperConsole />;
+    }
+
+    // Customer experience tabs
     switch (currentTab) {
       case 'overview': return <OverviewView />;
       case 'knowledge': return <KnowledgeView />;

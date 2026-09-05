@@ -264,6 +264,40 @@ export interface AnalyticsSummary {
   actionUsageStats: { actionName: string; executions: number; successRate: number }[];
 }
 
+export type ProductExperience = 'customer' | 'admin' | 'developer';
+
+export type UserRole = 
+  | 'platform_super_admin' 
+  | 'platform_admin' 
+  | 'owner' 
+  | 'admin' 
+  | 'manager' 
+  | 'staff' 
+  | 'developer' 
+  | 'viewer';
+
+export type AdminNavigationTab = 
+  | 'overview' 
+  | 'organizations' 
+  | 'agents' 
+  | 'subscriptions' 
+  | 'revenue' 
+  | 'usage' 
+  | 'support' 
+  | 'health' 
+  | 'security' 
+  | 'audit' 
+  | 'settings';
+
+export type DeveloperNavigationTab = 
+  | 'api-keys' 
+  | 'webhooks' 
+  | 'api-logs' 
+  | 'integrations' 
+  | 'agent-versions' 
+  | 'advanced-ai' 
+  | 'dev-tools';
+
 export type NavigationTab = 
   | 'overview' 
   | 'knowledge' 
@@ -273,10 +307,77 @@ export type NavigationTab =
   | 'analytics' 
   | 'settings';
 
+export interface AgentVersionItem {
+  id: string;
+  version: number;
+  versionLabel: string;
+  status: 'live' | 'draft' | 'archived';
+  createdAt: string;
+  publishedAt?: string;
+  author: string;
+  description: string;
+  snapshot: {
+    name: string;
+    role: string;
+    tone: AgentTone;
+    modelTier: 'automatic' | 'fast' | 'balanced' | 'advanced';
+    creativityLevel: number;
+    systemInstructions: string;
+    allowedActionsCount: number;
+    knowledgeItemCount: number;
+  };
+  diffSummary?: string[];
+}
+
+export interface WebhookEndpoint {
+  id: string;
+  url: string;
+  description: string;
+  events: string[];
+  secret: string;
+  status: 'active' | 'failing' | 'disabled';
+  createdAt: string;
+  lastDeliveredAt?: string;
+  successRatePercent: number;
+}
+
+export interface ApiLogEntry {
+  id: string;
+  timestamp: string;
+  method: 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH';
+  path: string;
+  statusCode: number;
+  durationMs: number;
+  ipAddress: string;
+  apiKeyPreview: string;
+  requestBodyMasked?: string;
+  responseBodyPreview?: string;
+}
+
+export interface SystemHealthMetric {
+  service: string;
+  status: 'operational' | 'degraded' | 'outage';
+  uptimePercent: number;
+  latencyMs: number;
+  lastCheck: string;
+  details?: string;
+}
+
+export interface SecurityEventItem {
+  id: string;
+  timestamp: string;
+  type: 'ssrf_blocked' | 'rate_limit_exceeded' | 'invalid_auth' | 'kms_rotation' | 'suspicious_ip';
+  severity: 'low' | 'medium' | 'high' | 'critical';
+  sourceIp: string;
+  description: string;
+  actionTaken: string;
+}
+
 export interface ToastNotification {
   id: string;
   title: string;
   message?: string;
   type: 'success' | 'info' | 'warning' | 'error';
 }
+
 

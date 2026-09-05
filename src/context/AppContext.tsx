@@ -12,6 +12,15 @@ import {
   Invoice, 
   AnalyticsSummary, 
   NavigationTab,
+  AdminNavigationTab,
+  DeveloperNavigationTab,
+  ProductExperience,
+  UserRole,
+  AgentVersionItem,
+  WebhookEndpoint,
+  ApiLogEntry,
+  SystemHealthMetric,
+  SecurityEventItem,
   SubscriptionPlanId,
   AgentConfig,
   WidgetCustomization,
@@ -28,20 +37,38 @@ import {
   INITIAL_AUDIT_LOGS, 
   INITIAL_TEAM, 
   INITIAL_INVOICES, 
-  INITIAL_ANALYTICS 
+  INITIAL_ANALYTICS,
+  INITIAL_AGENT_VERSIONS,
+  INITIAL_WEBHOOKS,
+  INITIAL_API_LOGS,
+  INITIAL_SYSTEM_HEALTH,
+  INITIAL_SECURITY_EVENTS
 } from '../data/mockData';
 import { AIAgentEngine } from '../services/aiEngine';
 import { AppContext } from './AppContextDefinition';
 
-const LOCAL_STORAGE_KEY = 'aaas_platform_state_v1';
+const LOCAL_STORAGE_KEY = 'aaas_platform_state_v2';
 
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  // Navigation
+  // Experiences & Navigation
+  const [currentExperience, setCurrentExperienceState] = useState<ProductExperience>('customer');
   const [currentTab, setCurrentTab] = useState<NavigationTab>('overview');
-  const [isAdminMode, setIsAdminMode] = useState<boolean>(false);
+  const [currentAdminTab, setCurrentAdminTab] = useState<AdminNavigationTab>('overview');
+  const [currentDevTab, setCurrentDevTab] = useState<DeveloperNavigationTab>('api-keys');
+  const [isAdminMode, setIsAdminModeState] = useState<boolean>(false);
   const [isLiveSandboxOpen, setIsLiveSandboxOpen] = useState<boolean>(false);
   const [isQuickTestOpen, setIsQuickTestOpen] = useState<boolean>(false);
-  const [currentUserRole, setCurrentUserRole] = useState<'owner' | 'admin' | 'support_agent' | 'platform_super_admin'>('owner');
+  const [currentUserRole, setCurrentUserRole] = useState<UserRole>('owner');
+
+  const setCurrentExperience = (exp: ProductExperience) => {
+    setCurrentExperienceState(exp);
+    setIsAdminModeState(exp === 'admin');
+  };
+
+  const setIsAdminMode = (admin: boolean) => {
+    setIsAdminModeState(admin);
+    setCurrentExperienceState(admin ? 'admin' : 'customer');
+  };
 
   // Multi-tenant Entities
   const [companies, setCompanies] = useState<Company[]>(() => {
@@ -83,6 +110,24 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return saved ? JSON.parse(saved) : INITIAL_AUDIT_LOGS;
   });
 
+  const [versionsMap, setVersionsMap] = useState<Record<string, AgentVersionItem[]>>(() => {
+    const saved = localStorage.getItem(`${LOCAL_STORAGE_KEY}_versions`);
+    return saved ? JSON.parse(saved) : INITIAL_AGENT_VERSIONS;
+  });
+
+  const [webhooksMap, setWebhooksMap] = useState<Record<string, WebhookEndpoint[]>>(() => {
+    const saved = localStorage.getItem(`${LOCAL_STORAGE_KEY}_webhooks`);
+    return saved ? JSON.parse(saved) : INITIAL_WEBHOOKS;
+  });
+
+  const [apiLogs, setApiLogs] = useState<ApiLogEntry[]>(() => {
+    const saved = localStorage.getItem(`${LOCAL_STORAGE_KEY}_apilogs`);
+    return saved ? JSON.parse(saved) : INITIAL_API_LOGS;
+  });
+
+  const [systemHealth] = useState<SystemHealthMetric[]>(INITIAL_SYSTEM_HEALTH);
+  const [securityEvents] = useState<SecurityEventItem[]>(INITIAL_SECURITY_EVENTS);
+
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>(INITIAL_TEAM);
   const [invoices, setInvoices] = useState<Invoice[]>(INITIAL_INVOICES);
   const [analytics] = useState<AnalyticsSummary>(INITIAL_ANALYTICS);
@@ -113,40 +158,44 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       localStorage.setItem(`${LOCAL_STORAGE_KEY}_actions`, JSON.stringify(actionsMap));
       localStorage.setItem(`${LOCAL_STORAGE_KEY}_conversations`, JSON.stringify(conversationsMap));
       localStorage.setItem(`${LOCAL_STORAGE_KEY}_audit`, JSON.stringify(auditLogs));
+      localStorage.setItem(`${LOCAL_STORAGE_KEY}_versions`, JSON.stringify(versionsMap));
+      localStorage.setItem(`${LOCAL_STORAGE_KEY}_webhooks`, JSON.stringify(webhooksMap));
     } catch (e) {
       console.warn('LocalStorage save failed:', e);
     }
-  }, [companies, allPlans, knowledgeMap, integrationsMap, actionsMap, conversationsMap, auditLogs]);
+  }, [companies, allPlans, knowledgeMap, integrationsMap, actionsMap, conversationsMap, auditLogs, versionsMap, webhooksMap]);
 
-  // Derived current states
+  // Derived current tenant data
   const currentCompany = companies.find(c => c.id === currentCompanyId) || companies[0];
-  const currentPlan = allPlans.find(p => p.id === currentCompany.planId) || allPlans[0];
+  const currentPlan = allPlans.find(p => p.id === currentCompany.planId) || allPlans[1];
   const knowledgeItems = knowledgeMap[currentCompanyId] || [];
   const integrations = integrationsMap[currentCompanyId] || [];
   const actions = actionsMap[currentCompanyId] || [];
   const conversations = conversationsMap[currentCompanyId] || [];
+  const agentVersions = versionsMap[currentCompanyId] || [];
+  const webhooks = webhooksMap[currentCompanyId] || [];
+  const currentActiveConversation = conversations.find(c => c.id === activeConversationId) || null;
 
-  const currentActiveConversation = conversations.find(c => c.id === activeConversationId) || conversations[0] || null;
-
-  // Logging helper
   const addAuditLog = (action: string, details: string, severity: 'info' | 'warning' | 'critical' = 'info') => {
     const newLog: AuditLogItem = {
       id: `log-${Date.now()}`,
-      timestamp: new Date().toISOString(),
-      actor: currentUserRole === 'platform_super_admin' ? 'Platform Super Admin' : `${currentCompany.name} Admin`,
+      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
+      actor: currentUserRole === 'platform_super_admin' ? 'Super Admin' : 'Current User',
       actorRole: currentUserRole,
       action,
       details,
-      ipAddress: '103.21.14.88',
+      ipAddress: '127.0.0.1 (KMS Authenticated)',
       severity
     };
-    setAuditLogs(prev => [newLog, ...prev]);
+    setAuditLogs(prev => [newLog, ...prev.slice(0, 49)]);
   };
 
   const switchCompany = (companyId: string) => {
     if (companies.some(c => c.id === companyId)) {
       setCurrentCompanyId(companyId);
       setActiveConversationId(null);
+      addAuditLog('TENANT_SWITCH', `Switched active tenant workspace to: ${companyId}`);
+      showToast('Workspace Switched', `Active company context changed.`, 'info');
     }
   };
 
@@ -158,25 +207,62 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     agentName: string, 
     tone: AgentTone
   ): string => {
-    const newId = `comp-${Date.now().toString(36)}`;
-    const slug = name.toLowerCase().replace(/[^a-z0-9]/g, '-');
-    
+    const slug = name.toLowerCase().replace(/[^a-z0-9]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '');
+    const newId = `comp-${slug}-${Math.floor(100 + Math.random() * 900)}`;
+
     const newCompany: Company = {
       id: newId,
       name,
       slug,
       domain,
       industry,
-      createdAt: new Date().toISOString(),
+      createdAt: new Date().toISOString().split('T')[0],
       planId,
       billingCycle: 'monthly',
       planStatus: 'active',
-      currentPeriodStart: new Date().toISOString(),
-      currentPeriodEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+      currentPeriodStart: new Date().toISOString().split('T')[0],
+      currentPeriodEnd: new Date(Date.now() + 30 * 86400000).toISOString().split('T')[0],
+      agent: {
+        name: agentName || `${name} Support AI`,
+        role: 'Customer Support Specialist',
+        status: 'active',
+        avatarUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
+        description: `Dedicated AI employee for ${name}.`,
+        tone,
+        modelTier: 'automatic',
+        creativityLevel: 0.3,
+        systemInstructions: `You are the AI employee for ${name} in the ${industry} sector. Provide helpful and accurate support.`,
+        businessInstructions: `Answer accurately based on knowledge.`,
+        greetingMessage: `Hello! How can I assist you today at ${name}?`,
+        fallbackMessage: `I want to make sure I get this right. Let me transfer you to our human team.`,
+        allowedActions: [],
+        escalationSettings: {
+          enabled: true,
+          triggerKeywords: ['human', 'agent', 'support', 'help', 'talk to person', 'refund'],
+          maxUnansweredQueriesBeforeEscalation: 2,
+          notifyEmail: `support@${domain}`,
+          escalationMessage: 'Transferring you to a live support team member now.',
+          requireHumanApprovalForRefund: true
+        },
+        customSafetyRules: ['Never fabricate prices', 'Never reveal backend database schemas']
+      },
+      widgetSettings: {
+        primaryColor: '#4f46e5',
+        secondaryColor: '#0f172a',
+        headerTitle: name,
+        headerSubtitle: 'AI Customer Assistant',
+        launcherText: 'Chat with AI Employee',
+        position: 'bottom_right',
+        botAvatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
+        userAvatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80',
+        borderRadius: 'rounded-2xl',
+        showPoweredBy: false,
+        enableSound: true,
+        autoExpandSeconds: 0
+      },
+      apiKey: `${slug}_live_${Math.random().toString(36).substring(2, 10)}`,
+      apiSecretMasked: 'sec_••••••••••••••••••••',
       isSuspended: false,
-      apiKey: `aas_live_${slug}_${Math.random().toString(36).substring(2, 10)}`,
-      apiSecretMasked: 'aas_sec_••••••••••••••••' + Math.random().toString(36).substring(2, 6),
-      webhookUrl: `https://api.${domain}/webhooks/agent`,
       stats: {
         totalConversations: 0,
         totalMessages: 0,
@@ -185,42 +271,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         messagesThisMonth: 0,
         tokensThisMonth: 0,
         knowledgeChunksUsed: 0
-      },
-      agent: {
-        name: agentName || `${name} AI Agent`,
-        status: 'active',
-        avatarUrl: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=150&auto=format&fit=crop&q=80',
-        description: `Official AI Agent for ${name}. Helps customers with product questions, inquiries, and authorized actions.`,
-        tone,
-        creativityLevel: 0.2,
-        systemInstructions: `You are the official single AI agent for ${name}. Rely strictly on company knowledge and connected tools. If unsure, gracefully offer human support.`,
-        businessInstructions: `Welcome users politely. Handle inquiries about ${industry}. Respect high-risk action confirmation guards.`,
-        greetingMessage: `Hello! Welcome to ${name}. How may I help you today?`,
-        fallbackMessage: `I do not have verified information on that in our knowledge base. Would you like to speak with our support team?`,
-        allowedActions: [],
-        escalationSettings: {
-          enabled: true,
-          triggerKeywords: ['human', 'escalate', 'urgent', 'agent', 'helpdesk'],
-          maxUnansweredQueriesBeforeEscalation: 2,
-          notifyEmail: `support@${domain}`,
-          escalationMessage: 'Transferring you to a live support representative now.',
-          requireHumanApprovalForRefund: true
-        },
-        customSafetyRules: ['Never fabricate policies or financial figures.']
-      },
-      widgetSettings: {
-        primaryColor: '#4f46e5',
-        secondaryColor: '#0f172a',
-        headerTitle: `${name} Support`,
-        headerSubtitle: 'AI Assistant',
-        launcherText: 'Chat with Us',
-        position: 'bottom_right',
-        botAvatar: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=150&auto=format&fit=crop&q=80',
-        userAvatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
-        borderRadius: 'rounded-2xl',
-        showPoweredBy: true,
-        enableSound: true,
-        autoExpandSeconds: 0
       }
     };
 
@@ -229,11 +279,50 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setIntegrationsMap(prev => ({ ...prev, [newId]: [] }));
     setActionsMap(prev => ({ ...prev, [newId]: [] }));
     setConversationsMap(prev => ({ ...prev, [newId]: [] }));
+    setVersionsMap(prev => ({
+      ...prev,
+      [newId]: [{
+        id: `ver-${newId}-v1`,
+        version: 1,
+        versionLabel: 'v1 (Initial)',
+        status: 'live',
+        createdAt: new Date().toISOString(),
+        publishedAt: new Date().toISOString(),
+        author: 'Workspace Creator',
+        description: 'Initial AI Employee creation',
+        snapshot: {
+          name: newCompany.agent.name,
+          role: newCompany.agent.role || 'Customer Support Specialist',
+          tone: newCompany.agent.tone,
+          modelTier: newCompany.agent.modelTier || 'automatic',
+          creativityLevel: newCompany.agent.creativityLevel,
+          systemInstructions: newCompany.agent.systemInstructions,
+          allowedActionsCount: 0,
+          knowledgeItemCount: 0
+        },
+        diffSummary: ['+ Initial AI employee workspace created']
+      }]
+    }));
 
     setCurrentCompanyId(newId);
-    addAuditLog('WORKSPACE_CREATED', `Created new company workspace: "${name}" on ${planId} plan.`);
-    showToast('Workspace Created', `Company workspace "${name}" created on ${planId.toUpperCase()} plan.`, 'success');
+    addAuditLog('WORKSPACE_CREATED', `Created new company workspace: "${name}" with 1 AI employee`);
+    showToast('Company Workspace Ready', `Tenant "${name}" successfully deployed.`, 'success');
     return newId;
+  };
+
+  const upgradeSubscription = (planId: SubscriptionPlanId, cycle: 'monthly' | 'annual') => {
+    setCompanies(prev => prev.map(c => {
+      if (c.id === currentCompanyId) {
+        return {
+          ...c,
+          planId,
+          billingCycle: cycle
+        };
+      }
+      return c;
+    }));
+    addAuditLog('SUBSCRIPTION_UPGRADED', `Plan upgraded to ${planId.toUpperCase()} (${cycle})`);
+    showToast('Plan Updated', `Successfully upgraded subscription to ${planId}.`, 'success');
   };
 
   const updateAgentConfig = (updates: Partial<AgentConfig>) => {
@@ -246,94 +335,180 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       }
       return c;
     }));
-    addAuditLog('AGENT_CONFIG_UPDATED', `Updated single agent profile & tone configurations.`);
-    showToast('Agent Saved', 'AI Agent profile & behavior configuration updated.', 'success');
+    addAuditLog('AGENT_CONFIG_UPDATED', `Updated AI employee configuration fields: ${Object.keys(updates).join(', ')}`);
   };
 
   const toggleAgentStatus = () => {
     const nextStatus = currentCompany.agent.status === 'active' ? 'paused' : 'active';
-    setCompanies(prev => prev.map(c => {
-      if (c.id === currentCompanyId) {
-        return {
-          ...c,
-          agent: { ...c.agent, status: nextStatus }
-        };
-      }
-      return c;
-    }));
-    addAuditLog('AGENT_STATUS_TOGGLED', `Changed agent status to "${nextStatus.toUpperCase()}"`, nextStatus === 'paused' ? 'warning' : 'info');
-    showToast(nextStatus === 'active' ? 'Agent Resumed' : 'Agent Paused', `Single AI Agent is now ${nextStatus}.`, nextStatus === 'active' ? 'success' : 'warning');
+    updateAgentConfig({ status: nextStatus });
+    showToast(
+      nextStatus === 'active' ? 'AI Employee Activated' : 'AI Employee Paused',
+      nextStatus === 'active' ? 'AI employee is now answering customer queries live.' : 'AI employee is paused.',
+      nextStatus === 'active' ? 'success' : 'warning'
+    );
   };
 
-  const addKnowledgeItem = (item: Partial<KnowledgeItem> & { title: string; content: string; type: KnowledgeItem['type'] }) => {
-    const wordCount = item.content.split(/\s+/).length;
-    const chunks = Math.max(1, Math.ceil(wordCount / 60));
-    const tokens = Math.round(wordCount * 1.35);
+  // Agent Versioning Actions
+  const publishAgentVersion = (description = 'Published production update') => {
+    const currentList = versionsMap[currentCompanyId] || [];
+    const nextVerNum = (currentList[0]?.version || 0) + 1;
+    const newVer: AgentVersionItem = {
+      id: `ver-${currentCompanyId}-v${nextVerNum}`,
+      version: nextVerNum,
+      versionLabel: `v${nextVerNum} (Current Live)`,
+      status: 'live',
+      createdAt: new Date().toISOString(),
+      publishedAt: new Date().toISOString(),
+      author: currentUserRole === 'platform_super_admin' ? 'Super Admin' : 'Current User',
+      description,
+      snapshot: {
+        name: currentCompany.agent.name,
+        role: currentCompany.agent.role || 'Customer Support Specialist',
+        tone: currentCompany.agent.tone,
+        modelTier: currentCompany.agent.modelTier || 'automatic',
+        creativityLevel: currentCompany.agent.creativityLevel,
+        systemInstructions: currentCompany.agent.systemInstructions,
+        allowedActionsCount: actions.filter(a => a.enabled).length,
+        knowledgeItemCount: knowledgeItems.length
+      },
+      diffSummary: [
+        `+ Snapshot of ${knowledgeItems.length} knowledge items & ${actions.filter(a => a.enabled).length} actions`,
+        `~ Model tier: ${currentCompany.agent.modelTier || 'automatic'}`
+      ]
+    };
 
+    setVersionsMap(prev => {
+      const list = prev[currentCompanyId] || [];
+      const updated = list.map(v => ({ ...v, status: 'archived' as const, versionLabel: `v${v.version}` }));
+      return {
+        ...prev,
+        [currentCompanyId]: [newVer, ...updated]
+      };
+    });
+
+    addAuditLog('AGENT_VERSION_PUBLISHED', `Published immutable AI Employee version v${nextVerNum}: "${description}"`);
+    showToast('Version Published', `v${nextVerNum} is now live in production.`, 'success');
+  };
+
+  const rollbackAgentVersion = (versionId: string) => {
+    const currentList = versionsMap[currentCompanyId] || [];
+    const target = currentList.find(v => v.id === versionId);
+    if (!target) return;
+
+    updateAgentConfig({
+      name: target.snapshot.name,
+      role: target.snapshot.role,
+      tone: target.snapshot.tone,
+      modelTier: target.snapshot.modelTier,
+      creativityLevel: target.snapshot.creativityLevel,
+      systemInstructions: target.snapshot.systemInstructions
+    });
+
+    publishAgentVersion(`Rollback to v${target.version} (${target.description})`);
+    addAuditLog('AGENT_VERSION_ROLLBACK', `Rolled back AI Employee to version v${target.version}`, 'warning');
+    showToast('Rollback Complete', `Restored AI Employee snapshot from v${target.version}.`, 'info');
+  };
+
+  // Webhook Actions
+  const createWebhook = (url: string, description: string, events: string[]) => {
+    const newWh: WebhookEndpoint = {
+      id: `wh-${Date.now()}`,
+      url,
+      description,
+      events,
+      secret: `whsec_${Math.random().toString(36).substring(2, 12)}`,
+      status: 'active',
+      createdAt: new Date().toISOString().split('T')[0],
+      lastDeliveredAt: 'Never',
+      successRatePercent: 100.0
+    };
+
+    setWebhooksMap(prev => ({
+      ...prev,
+      [currentCompanyId]: [newWh, ...(prev[currentCompanyId] || [])]
+    }));
+
+    addAuditLog('WEBHOOK_CREATED', `Registered webhook endpoint: ${url}`);
+    showToast('Webhook Created', 'New webhook endpoint registered.', 'success');
+  };
+
+  const deleteWebhook = (id: string) => {
+    setWebhooksMap(prev => ({
+      ...prev,
+      [currentCompanyId]: (prev[currentCompanyId] || []).filter(w => w.id !== id)
+    }));
+    addAuditLog('WEBHOOK_DELETED', `Deleted webhook endpoint ID: ${id}`);
+    showToast('Webhook Removed', 'Webhook deleted successfully.', 'info');
+  };
+
+  const triggerTestWebhook = async (id: string): Promise<boolean> => {
+    await new Promise(r => setTimeout(r, 600));
+    setWebhooksMap(prev => ({
+      ...prev,
+      [currentCompanyId]: (prev[currentCompanyId] || []).map(w => 
+        w.id === id ? { ...w, lastDeliveredAt: 'Just now', successRatePercent: 100 } : w
+      )
+    }));
+    const newLog: ApiLogEntry = {
+      id: `log-${Date.now()}`,
+      timestamp: 'Just now',
+      method: 'POST',
+      path: '/api/v1/webhooks/dispatch',
+      statusCode: 200,
+      durationMs: 145,
+      ipAddress: '127.0.0.1',
+      apiKeyPreview: currentCompany.apiKey.substring(0, 10) + '...',
+      requestBodyMasked: '{"event":"test.ping","timestamp":"2026-09-05T21:00:00Z"}',
+      responseBodyPreview: '{"status":"delivered","httpCode":200}'
+    };
+    setApiLogs(prev => [newLog, ...prev.slice(0, 20)]);
+    showToast('Webhook Test Dispatched', 'Received 200 OK delivery signature.', 'success');
+    return true;
+  };
+
+  // Knowledge Management
+  const addKnowledgeItem = (item: Partial<KnowledgeItem> & { title: string; content: string; type: KnowledgeItem['type'] }) => {
     const newItem: KnowledgeItem = {
       id: `kb-${Date.now()}`,
       type: item.type,
       title: item.title,
       sourceUrl: item.sourceUrl,
       fileName: item.fileName,
-      fileSize: item.fileSize || '1.2 MB',
+      fileSize: item.fileSize || '120 KB',
       content: item.content,
       status: 'indexed',
-      chunksCount: chunks,
-      tokenCount: tokens,
-      lastUpdated: new Date().toISOString(),
-      category: item.category || 'General',
+      chunksCount: Math.max(1, Math.ceil(item.content.length / 500)),
+      tokenCount: Math.ceil(item.content.length / 4),
+      lastUpdated: 'Just now',
+      category: item.category || 'General FAQ',
       faqAnswer: item.faqAnswer
     };
 
-    setKnowledgeMap(prev => {
-      const existing = prev[currentCompanyId] || [];
-      return { ...prev, [currentCompanyId]: [newItem, ...existing] };
-    });
-
-    // Increment company stats
-    setCompanies(prev => prev.map(c => {
-      if (c.id === currentCompanyId) {
-        return {
-          ...c,
-          stats: {
-            ...c.stats,
-            knowledgeChunksUsed: c.stats.knowledgeChunksUsed + chunks
-          }
-        };
-      }
-      return c;
+    setKnowledgeMap(prev => ({
+      ...prev,
+      [currentCompanyId]: [newItem, ...(prev[currentCompanyId] || [])]
     }));
 
-    addAuditLog('KNOWLEDGE_INDEXED', `Ingested "${newItem.title}" (${chunks} chunks, ${tokens} tokens)`);
-    showToast('Knowledge Ingested', `"${newItem.title}" was vectorized and indexed.`, 'success');
+    addAuditLog('KNOWLEDGE_INGESTED', `Ingested knowledge item: "${newItem.title}" (${newItem.type})`);
+    showToast('Knowledge Indexed', `"${newItem.title}" has been indexed and is ready for AI grounding.`, 'success');
   };
 
   const deleteKnowledgeItem = (id: string) => {
-    setKnowledgeMap(prev => {
-      const existing = prev[currentCompanyId] || [];
-      const itemToDelete = existing.find(k => k.id === id);
-      if (itemToDelete) {
-        addAuditLog('KNOWLEDGE_DELETED', `Deleted knowledge item: "${itemToDelete.title}"`);
-        showToast('Document Deleted', `"${itemToDelete.title}" removed from knowledge base.`, 'info');
-      }
-      return {
-        ...prev,
-        [currentCompanyId]: existing.filter(k => k.id !== id)
-      };
-    });
+    setKnowledgeMap(prev => ({
+      ...prev,
+      [currentCompanyId]: (prev[currentCompanyId] || []).filter(k => k.id !== id)
+    }));
+    addAuditLog('KNOWLEDGE_DELETED', `Removed knowledge item ID: ${id}`);
+    showToast('Knowledge Removed', 'Item deleted from index.', 'info');
   };
 
+  // Integrations Management
   const updateIntegration = (id: string, updates: Partial<Integration>) => {
-    setIntegrationsMap(prev => {
-      const list = prev[currentCompanyId] || [];
-      return {
-        ...prev,
-        [currentCompanyId]: list.map(item => item.id === id ? { ...item, ...updates } : item)
-      };
-    });
-    addAuditLog('INTEGRATION_CONFIG_UPDATED', `Modified credentials/scopes for integration ID: ${id}`);
-    showToast('Integration Updated', 'Integration settings and scopes saved.', 'success');
+    setIntegrationsMap(prev => ({
+      ...prev,
+      [currentCompanyId]: (prev[currentCompanyId] || []).map(i => i.id === id ? { ...i, ...updates } : i)
+    }));
+    addAuditLog('INTEGRATION_CONFIG_UPDATED', `Updated integration: ${id}`);
   };
 
   const toggleIntegration = (id: string) => {
@@ -341,37 +516,31 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       const list = prev[currentCompanyId] || [];
       return {
         ...prev,
-        [currentCompanyId]: list.map(item => {
-          if (item.id === id) {
-            const nextConnected = !item.connected;
-            addAuditLog(
-              nextConnected ? 'INTEGRATION_CONNECTED' : 'INTEGRATION_DISCONNECTED',
-              `${nextConnected ? 'Connected' : 'Disconnected'} integration: "${item.name}"`
-            );
-            showToast(nextConnected ? 'Integration Connected' : 'Integration Disconnected', `Status for "${item.name}" updated.`, nextConnected ? 'success' : 'warning');
+        [currentCompanyId]: list.map(i => {
+          if (i.id === id) {
+            const nextConnected = !i.connected;
+            addAuditLog(nextConnected ? 'INTEGRATION_CONNECTED' : 'INTEGRATION_DISCONNECTED', `${nextConnected ? 'Connected' : 'Disconnected'} ${i.name}`);
+            showToast(nextConnected ? 'Integration Connected' : 'Integration Disconnected', `${i.name} status updated.`, nextConnected ? 'success' : 'info');
             return {
-              ...item,
+              ...i,
               connected: nextConnected,
               healthStatus: nextConnected ? 'healthy' : 'disconnected',
-              lastSyncAt: nextConnected ? 'Just now' : item.lastSyncAt
+              lastSyncAt: nextConnected ? 'Just now' : i.lastSyncAt
             };
           }
-          return item;
+          return i;
         })
       };
     });
   };
 
+  // Actions Management
   const updateAction = (id: string, updates: Partial<ActionDefinition>) => {
-    setActionsMap(prev => {
-      const list = prev[currentCompanyId] || [];
-      return {
-        ...prev,
-        [currentCompanyId]: list.map(act => act.id === id ? { ...act, ...updates } : act)
-      };
-    });
-    addAuditLog('ACTION_UPDATED', `Updated action parameters/confirmation settings for ID: ${id}`);
-    showToast('Action Updated', 'Tool execution parameters & permissions saved.', 'success');
+    setActionsMap(prev => ({
+      ...prev,
+      [currentCompanyId]: (prev[currentCompanyId] || []).map(a => a.id === id ? { ...a, ...updates } : a)
+    }));
+    addAuditLog('ACTION_DEFINITION_UPDATED', `Updated action definition: ${id}`);
   };
 
   const toggleAction = (id: string) => {
@@ -379,26 +548,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       const list = prev[currentCompanyId] || [];
       return {
         ...prev,
-        [currentCompanyId]: list.map(act => {
-          if (act.id === id) {
-            const nextEnabled = !act.enabled;
-            // Also sync to agent.allowedActions
-            setCompanies(cList => cList.map(c => {
-              if (c.id === currentCompanyId) {
-                const currentAllowed = c.agent.allowedActions;
-                const newAllowed = nextEnabled
-                  ? [...currentAllowed, id]
-                  : currentAllowed.filter(aId => aId !== id);
-                return { ...c, agent: { ...c.agent, allowedActions: newAllowed } };
-              }
-              return c;
-            }));
-
-            addAuditLog('ACTION_STATUS_TOGGLED', `${nextEnabled ? 'Enabled' : 'Disabled'} approved action: "${act.name}"`);
-            showToast(nextEnabled ? 'Action Enabled' : 'Action Disabled', `AI tool "${act.name}" is now ${nextEnabled ? 'active' : 'disabled'}.`, nextEnabled ? 'success' : 'info');
-            return { ...act, enabled: nextEnabled };
+        [currentCompanyId]: list.map(a => {
+          if (a.id === id) {
+            const nextEnabled = !a.enabled;
+            addAuditLog(nextEnabled ? 'ACTION_ENABLED' : 'ACTION_DISABLED', `${nextEnabled ? 'Enabled' : 'Disabled'} action: "${a.name}"`);
+            showToast(nextEnabled ? 'Action Enabled' : 'Action Disabled', `AI employee can ${nextEnabled ? 'now' : 'no longer'} execute ${a.name}.`, nextEnabled ? 'success' : 'info');
+            return { ...a, enabled: nextEnabled };
           }
-          return act;
+          return a;
         })
       };
     });
@@ -414,73 +571,26 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       }
       return c;
     }));
-    addAuditLog('WIDGET_BRANDING_UPDATED', `Updated widget appearance and deployment settings.`);
-    showToast('Widget Branding Saved', 'Live floating widget styles and settings deployed.', 'success');
+    addAuditLog('WIDGET_BRANDING_UPDATED', 'Updated customer chat widget branding');
+    showToast('Branding Saved', 'Widget theme customization saved successfully.', 'success');
   };
 
   const regenerateApiKey = () => {
-    const newKey = `aas_live_${currentCompany.slug}_${Math.random().toString(36).substring(2, 10)}${Math.random().toString(36).substring(2, 10)}`;
-    setCompanies(prev => prev.map(c => {
-      if (c.id === currentCompanyId) {
-        return { ...c, apiKey: newKey };
-      }
-      return c;
-    }));
-    addAuditLog('API_KEY_ROTATED', `Regenerated live API key for tenant "${currentCompany.name}"`, 'warning');
-    showToast('API Key Rotated', 'New live production API key generated.', 'warning');
+    const newKey = `${currentCompany.slug}_live_${Math.random().toString(36).substring(2, 10)}`;
+    setCompanies(prev => prev.map(c => c.id === currentCompanyId ? { ...c, apiKey: newKey } : c));
+    addAuditLog('API_KEY_ROTATED', 'Rotated company public API integration key', 'warning');
+    showToast('API Key Rotated', 'New API key generated. Please update your widget snippet.', 'warning');
   };
 
-  const startNewCustomerChatSession = (initialGreeting = true): string => {
-    const newConvId = `conv-${Date.now().toString(36)}`;
-    const initialMessages: Message[] = [];
-
-    if (initialGreeting) {
-      initialMessages.push({
-        id: `msg-init-${Date.now()}`,
-        sender: 'agent',
-        senderName: currentCompany.agent.name,
-        text: currentCompany.agent.greetingMessage,
-        timestamp: new Date().toISOString()
-      });
-    }
-
-    const newConversation: Conversation = {
-      id: newConvId,
-      companyId: currentCompanyId,
-      customerName: 'Website Visitor',
-      customerEmail: 'visitor@session.io',
-      channel: 'website_widget',
-      startedAt: new Date().toISOString(),
-      lastMessageAt: new Date().toISOString(),
-      status: 'active',
-      sentiment: 'neutral',
-      tags: ['Website Live Session'],
-      totalTokensUsed: 120,
-      messages: initialMessages
-    };
-
-    setConversationsMap(prev => {
-      const existing = prev[currentCompanyId] || [];
-      return { ...prev, [currentCompanyId]: [newConversation, ...existing] };
-    });
-
-    setActiveConversationId(newConvId);
-    showToast('New Chat Session', `Started new session for ${currentCompany.agent.name}.`, 'info');
-    return newConvId;
-  };
-
+  // Conversations & Messaging
   const sendMessageToAgent = async (conversationId: string, text: string) => {
-    const targetConv = (conversationsMap[currentCompanyId] || []).find(c => c.id === conversationId);
-    if (!targetConv) return;
-
-    const userMessage: Message = {
+    const userMsg: Message = {
       id: `msg-u-${Date.now()}`,
       sender: 'user',
       text,
       timestamp: new Date().toISOString()
     };
 
-    // Update conversation with user message first
     setConversationsMap(prev => {
       const list = prev[currentCompanyId] || [];
       return {
@@ -490,7 +600,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             return {
               ...c,
               lastMessageAt: new Date().toISOString(),
-              messages: [...c.messages, userMessage]
+              messages: [...c.messages, userMsg]
             };
           }
           return c;
@@ -498,13 +608,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       };
     });
 
-    // Check if conversation is in human takeover mode
+    const list = conversationsMap[currentCompanyId] || [];
+    const targetConv = list.find(c => c.id === conversationId);
+    if (!targetConv) return;
+
     if (targetConv.status === 'escalated_to_human' && targetConv.assignedOperator) {
-      // In takeover mode, do not auto-reply with agent. Notify operator.
       return;
     }
 
-    // Process through AI Agent Engine
     const currentKnowledge = knowledgeMap[currentCompanyId] || [];
     const currentIntegrations = integrationsMap[currentCompanyId] || [];
     const currentActions = actionsMap[currentCompanyId] || [];
@@ -531,10 +642,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     };
 
     setConversationsMap(prev => {
-      const list = prev[currentCompanyId] || [];
+      const cList = prev[currentCompanyId] || [];
       return {
         ...prev,
-        [currentCompanyId]: list.map(c => {
+        [currentCompanyId]: cList.map(c => {
           if (c.id === conversationId) {
             return {
               ...c,
@@ -551,7 +662,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       };
     });
 
-    // Update company metrics
     setCompanies(prev => prev.map(c => {
       if (c.id === currentCompanyId) {
         return {
@@ -589,7 +699,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       const confNum = Math.floor(100000 + Math.random() * 900000);
       resultMsg = `✅ **Action Confirmed**: ${actionDef.name} has been processed successfully. Confirmation ID: TXN-${confNum}.`;
       
-      // Increment action counter
       setActionsMap(prev => {
         const aList = prev[currentCompanyId] || [];
         return {
@@ -633,17 +742,28 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     });
   };
 
-  const takeoverConversation = (conversationId: string, operatorName = 'Support Agent (You)') => {
+  const takeoverConversation = (conversationId: string, operatorName = 'Support Agent (You)', internalNote?: string) => {
     setConversationsMap(prev => {
       const list = prev[currentCompanyId] || [];
       return {
         ...prev,
         [currentCompanyId]: list.map(c => {
           if (c.id === conversationId) {
+            const extraMessages: Message[] = [];
+            if (internalNote) {
+              extraMessages.push({
+                id: `msg-note-${Date.now()}`,
+                sender: 'system',
+                senderName: 'Internal Operator Note',
+                text: `📝 **Internal Note**: ${internalNote}`,
+                timestamp: new Date().toISOString()
+              });
+            }
             return {
               ...c,
               status: 'escalated_to_human',
-              assignedOperator: operatorName
+              assignedOperator: operatorName,
+              messages: [...c.messages, ...extraMessages]
             };
           }
           return c;
@@ -680,43 +800,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         })
       };
     });
-
-    // Real-time simulated customer response after 2.5 seconds
-    setTimeout(() => {
-      const replies = [
-        "Thank you so much! That resolved my issue completely.",
-        "Got it, appreciate the quick clarification from your team!",
-        "Understood! Thank you for the guidance.",
-        "That's very helpful, thank you!"
-      ];
-      const reply = replies[Math.floor(Math.random() * replies.length)];
-      const custMsg: Message = {
-        id: `msg-u-${Date.now()}`,
-        sender: 'user',
-        text: reply,
-        timestamp: new Date().toISOString()
-      };
-
-      setConversationsMap(prev => {
-        const list = prev[currentCompanyId] || [];
-        return {
-          ...prev,
-          [currentCompanyId]: list.map(c => {
-            if (c.id === conversationId) {
-              return {
-                ...c,
-                lastMessageAt: new Date().toISOString(),
-                sentiment: 'positive',
-                messages: [...c.messages, custMsg]
-              };
-            }
-            return c;
-          })
-        };
-      });
-
-      showToast('Customer Reply', `Visitor replied: "${reply}"`, 'info');
-    }, 2500);
   };
 
   const resolveConversation = (conversationId: string) => {
@@ -750,52 +833,56 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       return c;
     }));
 
-    addAuditLog('CONVERSATION_RESOLVED', `Marked conversation ID ${conversationId} as RESOLVED.`);
-    showToast('Conversation Resolved', 'Session marked as resolved and archived.', 'success');
+    addAuditLog('CONVERSATION_RESOLVED', `Marked conversation ID: ${conversationId} as resolved`);
+    showToast('Conversation Resolved', 'Ticket marked as successfully completed.', 'success');
   };
 
-  const upgradeSubscription = (planId: SubscriptionPlanId, cycle: 'monthly' | 'annual') => {
-    setCompanies(prev => prev.map(c => {
-      if (c.id === currentCompanyId) {
-        return {
-          ...c,
-          planId,
-          billingCycle: cycle,
-          planStatus: 'active'
-        };
-      }
-      return c;
-    }));
-
-    const targetPlan = allPlans.find(p => p.id === planId);
-    const amount = cycle === 'annual' ? (targetPlan?.priceAnnualINR || 0) * 12 : (targetPlan?.priceMonthlyINR || 0);
-
-    const newInvoice: Invoice = {
-      id: `inv-${Date.now()}`,
-      number: `INV-AAS-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`,
-      date: new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
-      amountINR: amount,
-      planName: `${targetPlan?.name || 'Subscription'} (${cycle === 'annual' ? 'Annual' : 'Monthly'})`,
-      status: 'paid'
+  const startNewCustomerChatSession = (initialGreeting = true): string => {
+    const newId = `conv-${Date.now()}-${Math.floor(100 + Math.random() * 900)}`;
+    const newConv: Conversation = {
+      id: newId,
+      companyId: currentCompanyId,
+      customerName: 'Anonymous Website Visitor',
+      customerEmail: undefined,
+      channel: 'website_widget',
+      startedAt: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      lastMessageAt: new Date().toISOString(),
+      status: 'active',
+      sentiment: 'neutral',
+      tags: ['Website Widget', 'Inquiry'],
+      totalTokensUsed: 120,
+      messages: initialGreeting ? [
+        {
+          id: `msg-g-${Date.now()}`,
+          sender: 'agent',
+          senderName: currentCompany.agent.name,
+          text: currentCompany.agent.greetingMessage || 'Hello! How can I help you today?',
+          timestamp: new Date().toISOString()
+        }
+      ] : []
     };
 
-    setInvoices(prev => [newInvoice, ...prev]);
-    addAuditLog('SUBSCRIPTION_PLAN_CHANGED', `Changed subscription tier to ${planId.toUpperCase()} (${cycle})`);
-    showToast('Plan Upgraded', `Subscribed to ${planId.toUpperCase()} plan (${cycle}). Invoice generated.`, 'success');
+    setConversationsMap(prev => ({
+      ...prev,
+      [currentCompanyId]: [newConv, ...(prev[currentCompanyId] || [])]
+    }));
+
+    setActiveConversationId(newId);
+    return newId;
   };
 
   const addTeamMember = (name: string, email: string, role: TeamMember['role']) => {
     const newMember: TeamMember = {
-      id: `tm-${Date.now()}`,
+      id: `usr-${Date.now()}`,
       name,
       email,
       role,
-      status: 'active',
-      lastActive: 'Just invited'
+      status: 'invited',
+      lastActive: 'Never'
     };
     setTeamMembers(prev => [...prev, newMember]);
-    addAuditLog('TEAM_MEMBER_INVITED', `Invited ${email} as ${role}`);
-    showToast('Invitation Sent', `Invite email sent to ${email} as ${role}.`, 'success');
+    addAuditLog('TEAM_MEMBER_INVITED', `Invited team member ${email} with role ${role}`);
+    showToast('Invitation Sent', `Sent invite link to ${email}.`, 'success');
   };
 
   const adminToggleCompanySuspension = (companyId: string) => {
@@ -835,8 +922,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   return (
     <AppContext.Provider
       value={{
+        currentExperience,
+        setCurrentExperience,
         currentTab,
         setCurrentTab,
+        currentAdminTab,
+        setCurrentAdminTab,
+        currentDevTab,
+        setCurrentDevTab,
         isAdminMode,
         setIsAdminMode,
         isLiveSandboxOpen,
@@ -858,6 +951,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
         updateAgentConfig,
         toggleAgentStatus,
+        agentVersions,
+        publishAgentVersion,
+        rollbackAgentVersion,
 
         knowledgeItems,
         addKnowledgeItem,
@@ -870,6 +966,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         actions,
         updateAction,
         toggleAction,
+
+        webhooks,
+        createWebhook,
+        deleteWebhook,
+        triggerTestWebhook,
+        apiLogs,
 
         updateWidgetSettings,
         regenerateApiKey,
@@ -891,6 +993,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         invoices,
         addTeamMember,
 
+        systemHealth,
+        securityEvents,
         adminToggleCompanySuspension,
         adminUpdatePlanPrice,
 
@@ -903,7 +1007,3 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     </AppContext.Provider>
   );
 };
-
-
-
-

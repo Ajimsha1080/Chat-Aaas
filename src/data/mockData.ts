@@ -1008,3 +1008,198 @@ export const INITIAL_ANALYTICS: AnalyticsSummary = {
     { actionName: 'Rotate Sandbox API Token', executions: 29, successRate: 100.0 }
   ]
 };
+
+export const INITIAL_AGENT_VERSIONS: Record<string, any[]> = {
+  'comp-techflow': [
+    {
+      id: 'ver-v3-live',
+      version: 3,
+      versionLabel: 'v3 (Current Live)',
+      status: 'live',
+      createdAt: '2026-09-01T10:00:00Z',
+      publishedAt: '2026-09-01T10:05:00Z',
+      author: 'Vikram Mehta (Owner)',
+      description: 'Added billing quote lookup action and updated enterprise SLA grounding.',
+      snapshot: {
+        name: 'TechFlow Cloud Support Specialist',
+        role: 'Customer Support Specialist',
+        tone: 'technical',
+        modelTier: 'automatic',
+        creativityLevel: 0.2,
+        systemInstructions: 'You are the dedicated Technical Support and Operations Specialist for TechFlow Cloud.',
+        allowedActionsCount: 4,
+        knowledgeItemCount: 24
+      },
+      diffSummary: [
+        '+ Added check_account_quotas business action',
+        '+ Indexed Kubernetes Migration Guide 2026 PDF',
+        '~ Set tone to Technical & Concise'
+      ]
+    },
+    {
+      id: 'ver-v2-archived',
+      version: 2,
+      versionLabel: 'v2',
+      status: 'archived',
+      createdAt: '2026-08-15T14:30:00Z',
+      publishedAt: '2026-08-15T14:40:00Z',
+      author: 'Ananya Sharma (Admin)',
+      description: 'Connected Zendesk & Postgres integrations and set up human handoff thresholds.',
+      snapshot: {
+        name: 'TechFlow Support Bot',
+        role: 'Customer Support Specialist',
+        tone: 'professional',
+        modelTier: 'balanced',
+        creativityLevel: 0.3,
+        systemInstructions: 'Assist TechFlow customers with server and invoice queries.',
+        allowedActionsCount: 2,
+        knowledgeItemCount: 18
+      },
+      diffSummary: [
+        '+ Connected PostgreSQL DB integration',
+        '+ Added create_support_ticket action'
+      ]
+    },
+    {
+      id: 'ver-v1-archived',
+      version: 1,
+      versionLabel: 'v1 (Initial Release)',
+      status: 'archived',
+      createdAt: '2026-08-01T09:00:00Z',
+      publishedAt: '2026-08-01T09:15:00Z',
+      author: 'Vikram Mehta (Owner)',
+      description: 'Initial workspace creation and FAQ indexing.',
+      snapshot: {
+        name: 'TechFlow AI Assistant',
+        role: 'General Inquiries',
+        tone: 'professional',
+        modelTier: 'fast',
+        creativityLevel: 0.4,
+        systemInstructions: 'Default assistant for TechFlow.',
+        allowedActionsCount: 0,
+        knowledgeItemCount: 8
+      },
+      diffSummary: [
+        '+ Initial deployment to Website Widget'
+      ]
+    }
+  ]
+};
+
+export const INITIAL_WEBHOOKS: Record<string, any[]> = {
+  'comp-techflow': [
+    {
+      id: 'wh-prod-01',
+      url: 'https://api.techflow.io/webhooks/ai-agent-events',
+      description: 'Primary customer support & human escalation webhook',
+      events: ['conversation.started', 'handoff.triggered', 'action.executed'],
+      secret: 'whsec_98f12ac79b8841dfb39d',
+      status: 'active',
+      createdAt: '2026-08-10',
+      lastDeliveredAt: '12 minutes ago',
+      successRatePercent: 99.8
+    },
+    {
+      id: 'wh-slack-alerts',
+      url: 'https://hooks.slack.com/services/T00/B00/techflow-alerts',
+      description: 'Internal operations Slack notification on human handoff',
+      events: ['handoff.triggered'],
+      secret: 'whsec_a8721c9b837482f1',
+      status: 'active',
+      createdAt: '2026-08-20',
+      lastDeliveredAt: '1 hour ago',
+      successRatePercent: 100.0
+    }
+  ]
+};
+
+export const INITIAL_API_LOGS: any[] = [
+  {
+    id: 'log-01',
+    timestamp: 'Just now',
+    method: 'POST',
+    path: '/api/v1/chat/completions',
+    statusCode: 200,
+    durationMs: 342,
+    ipAddress: '157.240.241.35',
+    apiKeyPreview: 'tf_live_9a...48',
+    requestBodyMasked: '{"messages":[{"role":"user","content":"How do I configure Redis clustering?"}]}',
+    responseBodyPreview: '{"id":"chatcmpl-98a","choices":[{"message":{"content":"TechFlow Redis clusters..."}}]}'
+  },
+  {
+    id: 'log-02',
+    timestamp: '2 min ago',
+    method: 'POST',
+    path: '/api/v1/actions/execute',
+    statusCode: 200,
+    durationMs: 180,
+    ipAddress: '52.14.99.102',
+    apiKeyPreview: 'tf_live_9a...48',
+    requestBodyMasked: '{"actionCode":"check_account_quotas","params":{"accountId":"ACC-8821"}}',
+    responseBodyPreview: '{"success":true,"result":{"quotaUsed":68,"nodes":12}}'
+  },
+  {
+    id: 'log-03',
+    timestamp: '5 min ago',
+    method: 'GET',
+    path: '/api/v1/knowledge/search?q=SLA',
+    statusCode: 200,
+    durationMs: 45,
+    ipAddress: '103.21.244.0',
+    apiKeyPreview: 'tf_live_9a...48',
+    requestBodyMasked: '',
+    responseBodyPreview: '{"results":[{"chunkId":"chk-812","score":0.94}]}'
+  },
+  {
+    id: 'log-04',
+    timestamp: '14 min ago',
+    method: 'POST',
+    path: '/api/v1/chat/completions',
+    statusCode: 429,
+    durationMs: 12,
+    ipAddress: '198.51.100.4',
+    apiKeyPreview: 'tf_test_01...22',
+    requestBodyMasked: '{"messages":[{"role":"user","content":"Flood test..."}]}',
+    responseBodyPreview: '{"error":"Rate limit exceeded for tier starter. Max 60 req/min."}'
+  }
+];
+
+export const INITIAL_SYSTEM_HEALTH: any[] = [
+  { service: 'Python FastAPI AI Runtime', status: 'operational', uptimePercent: 99.99, latencyMs: 12, lastCheck: '30s ago', details: 'Active workers: 8, SSE streaming enabled' },
+  { service: 'RAG Hybrid Vector Retrieval', status: 'operational', uptimePercent: 99.98, latencyMs: 24, lastCheck: '1m ago', details: 'SQLite vector cache + TF-IDF BM25 fallback' },
+  { service: 'Multi-Tenant Database Engine', status: 'operational', uptimePercent: 100.0, latencyMs: 4, lastCheck: '15s ago', details: 'Zero tenant cross-talk enforced via tenantId indexing' },
+  { service: 'KMS AES-256-GCM Encryption', status: 'operational', uptimePercent: 100.0, latencyMs: 1, lastCheck: '2m ago', details: 'Envelope encryption keys healthy' },
+  { service: 'SSRF & Ingress Safety Firewall', status: 'operational', uptimePercent: 100.0, latencyMs: 2, lastCheck: '45s ago', details: 'RFC 1918 private subnets & AWS metadata safely blocked' },
+  { service: 'External LLM Gateway Routing', status: 'operational', uptimePercent: 99.95, latencyMs: 280, lastCheck: '10s ago', details: 'Anthropic / OpenAI / Gemini provider routing active' }
+];
+
+export const INITIAL_SECURITY_EVENTS: any[] = [
+  {
+    id: 'sec-01',
+    timestamp: '18 minutes ago',
+    type: 'ssrf_blocked',
+    severity: 'high',
+    sourceIp: '185.220.101.5',
+    description: 'Blocked SSRF crawler attempt to internal cloud metadata IP (http://169.254.169.254/latest/meta-data)',
+    actionTaken: 'Connection dropped & IP rate-limited for 24 hours.'
+  },
+  {
+    id: 'sec-02',
+    timestamp: '2 hours ago',
+    type: 'rate_limit_exceeded',
+    severity: 'medium',
+    sourceIp: '198.51.100.4',
+    description: 'Sandbox API token exceeded burst concurrency threshold (> 120 req/sec)',
+    actionTaken: 'HTTP 429 Too Many Requests returned.'
+  },
+  {
+    id: 'sec-03',
+    timestamp: 'Yesterday at 22:00',
+    type: 'kms_rotation',
+    severity: 'low',
+    sourceIp: '127.0.0.1 (System)',
+    description: 'Routine 90-day KMS Envelope Master Key rotation completed successfully.',
+    actionTaken: 'Tenant encrypted credential re-wrap verified.'
+  }
+];
+

@@ -9,9 +9,13 @@ import {
   ExternalLink, 
   Check, 
   UserCircle,
-  Terminal
+  Terminal,
+  Code2,
+  ShieldAlert,
+  Sliders
 } from 'lucide-react';
 import { useApp } from '../../context';
+import { UserRole } from '../../types';
 
 interface HeaderProps {
   onOpenOnboarding: () => void;
@@ -28,7 +32,8 @@ export const Header: React.FC<HeaderProps> = ({ onOpenOnboarding, onOpenTestRunn
     toggleAgentStatus,
     currentUserRole,
     setCurrentUserRole,
-    setIsAdminMode,
+    currentExperience,
+    setCurrentExperience,
     setCurrentTab,
     setIsLiveSandboxOpen,
     setIsQuickTestOpen
@@ -39,6 +44,17 @@ export const Header: React.FC<HeaderProps> = ({ onOpenOnboarding, onOpenTestRunn
 
   const usagePercent = Math.min(100, Math.round((currentCompany.stats.messagesThisMonth / currentPlan.maxConversationsMonth) * 100));
 
+  const allRoles: { id: UserRole; label: string; desc: string; defaultExp: 'customer' | 'developer' | 'admin' }[] = [
+    { id: 'platform_super_admin', label: 'Super Admin', desc: 'Full SaaS platform operator', defaultExp: 'admin' },
+    { id: 'platform_admin', label: 'Platform Admin', desc: 'Fleet operator & diagnostics', defaultExp: 'admin' },
+    { id: 'owner', label: 'Company Owner', desc: 'Organization executive', defaultExp: 'customer' },
+    { id: 'admin', label: 'Company Admin', desc: 'Team & settings manager', defaultExp: 'customer' },
+    { id: 'manager', label: 'Support Manager', desc: 'Inbox & quality monitor', defaultExp: 'customer' },
+    { id: 'staff', label: 'Support Staff', desc: 'Live chat & human takeover', defaultExp: 'customer' },
+    { id: 'developer', label: 'Developer', desc: 'API, webhooks & SDK tools', defaultExp: 'developer' },
+    { id: 'viewer', label: 'Viewer', desc: 'Read-only analytics access', defaultExp: 'customer' }
+  ];
+
   return (
     <header className="h-16 bg-white border-b border-slate-200 px-6 flex items-center justify-between z-10 shrink-0">
       {/* Left: Tenant Workspace Selector & Agent Status */}
@@ -47,9 +63,9 @@ export const Header: React.FC<HeaderProps> = ({ onOpenOnboarding, onOpenTestRunn
         <div className="relative">
           <button
             onClick={() => setIsCompanyDropdownOpen(!isCompanyDropdownOpen)}
-            className="flex items-center gap-2.5 px-3 py-1.5 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-lg text-sm font-semibold text-slate-800 transition-colors shadow-sm"
+            className="flex items-center gap-2.5 px-3 py-1.5 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-xl text-sm font-semibold text-slate-800 transition-colors shadow-xs cursor-pointer"
           >
-            <div className="w-6 h-6 rounded bg-indigo-100 text-indigo-700 flex items-center justify-center font-bold text-xs">
+            <div className="w-6 h-6 rounded-lg bg-indigo-100 text-indigo-700 flex items-center justify-center font-bold text-xs">
               <Building className="w-3.5 h-3.5" />
             </div>
             <span className="max-w-[180px] truncate">{currentCompany.name}</span>
@@ -57,8 +73,8 @@ export const Header: React.FC<HeaderProps> = ({ onOpenOnboarding, onOpenTestRunn
           </button>
 
           {isCompanyDropdownOpen && (
-            <div className="absolute left-0 mt-2 w-64 bg-white border border-slate-200 rounded-xl shadow-xl py-1.5 z-50 animate-in fade-in slide-in-from-top-1 duration-150">
-              <div className="px-3 py-1.5 text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
+            <div className="absolute left-0 mt-2 w-64 bg-white border border-slate-200 rounded-2xl shadow-xl py-1.5 z-50 animate-in fade-in slide-in-from-top-1 duration-150">
+              <div className="px-3.5 py-1.5 text-[10px] font-semibold text-slate-400 uppercase tracking-wider">
                 Select Company Workspace
               </div>
               {companies.map(comp => (
@@ -68,7 +84,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenOnboarding, onOpenTestRunn
                     switchCompany(comp.id);
                     setIsCompanyDropdownOpen(false);
                   }}
-                  className="w-full flex items-center justify-between px-3 py-2 text-left text-xs font-medium hover:bg-slate-50 text-slate-700 transition-colors"
+                  className="w-full flex items-center justify-between px-3.5 py-2 text-left text-xs font-medium hover:bg-slate-50 text-slate-700 transition-colors cursor-pointer"
                 >
                   <div className="overflow-hidden">
                     <p className="font-semibold text-slate-900 truncate">{comp.name}</p>
@@ -85,7 +101,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenOnboarding, onOpenTestRunn
                     setIsCompanyDropdownOpen(false);
                     onOpenOnboarding();
                   }}
-                  className="w-full flex items-center gap-2 px-3 py-2 text-xs font-semibold text-indigo-600 hover:bg-indigo-50 transition-colors"
+                  className="w-full flex items-center gap-2 px-3.5 py-2 text-xs font-semibold text-indigo-600 hover:bg-indigo-50 transition-colors cursor-pointer"
                 >
                   <Plus className="w-4 h-4" />
                   <span>Create Company Workspace</span>
@@ -97,10 +113,10 @@ export const Header: React.FC<HeaderProps> = ({ onOpenOnboarding, onOpenTestRunn
 
         {/* Agent Status Toggle Pill */}
         <div className="flex items-center gap-2 pl-2 border-l border-slate-200">
-          <span className="text-xs text-slate-500 font-medium hidden md:inline">Single Agent:</span>
+          <span className="text-xs text-slate-500 font-medium hidden md:inline">AI Employee:</span>
           <button
             onClick={toggleAgentStatus}
-            className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold border transition-all ${
+            className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold border transition-all cursor-pointer ${
               currentCompany.agent.status === 'active'
                 ? 'bg-emerald-50 text-emerald-700 border-emerald-300 hover:bg-emerald-100'
                 : 'bg-amber-50 text-amber-700 border-amber-300 hover:bg-amber-100'
@@ -134,8 +150,8 @@ export const Header: React.FC<HeaderProps> = ({ onOpenOnboarding, onOpenTestRunn
       {/* Right: Quick actions, Usage meter, Role Switcher */}
       <div className="flex items-center gap-3">
         {/* Usage Meter */}
-        <div className="hidden xl:flex items-center gap-2 bg-slate-50 border border-slate-200 px-3 py-1.5 rounded-lg text-xs">
-          <span className="text-slate-500 font-medium">Monthly Quota:</span>
+        <div className="hidden xl:flex items-center gap-2 bg-slate-50 border border-slate-200 px-3 py-1.5 rounded-xl text-xs">
+          <span className="text-slate-500 font-medium">Quota:</span>
           <div className="w-20 bg-slate-200 h-1.5 rounded-full overflow-hidden">
             <div 
               className={`h-full rounded-full ${usagePercent > 85 ? 'bg-rose-500' : 'bg-indigo-600'}`} 
@@ -148,7 +164,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenOnboarding, onOpenTestRunn
         {/* Backend Test Runner Suite */}
         <button
           onClick={onOpenTestRunner}
-          className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-lg text-xs font-semibold transition-colors border border-slate-200"
+          className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-xl text-xs font-semibold transition-colors border border-slate-200 cursor-pointer"
           title="Run Automated Backend Test Suite (Multi-Tenancy, SSRF, Injection)"
         >
           <Terminal className="w-3.5 h-3.5 text-indigo-600" />
@@ -158,66 +174,60 @@ export const Header: React.FC<HeaderProps> = ({ onOpenOnboarding, onOpenTestRunn
         {/* Quick Test Agent Sandbox */}
         <button
           onClick={() => setIsQuickTestOpen(true)}
-          className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-900 hover:bg-slate-800 text-white rounded-lg text-xs font-semibold shadow-sm transition-colors"
+          className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-semibold shadow-xs transition-colors cursor-pointer"
         >
           <Play className="w-3.5 h-3.5 text-indigo-400" />
-          <span className="hidden sm:inline">Test Agent</span>
+          <span className="hidden sm:inline">Test Employee</span>
         </button>
 
         {/* Client Website Sandbox */}
         <button
           onClick={() => setIsLiveSandboxOpen(true)}
-          className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 rounded-lg text-xs font-semibold transition-colors"
+          className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 rounded-xl text-xs font-semibold transition-colors cursor-pointer"
         >
           <ExternalLink className="w-3.5 h-3.5" />
-          <span className="hidden sm:inline">Client Website</span>
+          <span className="hidden sm:inline">Website Sandbox</span>
         </button>
 
         {/* Role Switcher */}
         <div className="relative border-l border-slate-200 pl-3">
           <button
             onClick={() => setIsRoleDropdownOpen(!isRoleDropdownOpen)}
-            className="flex items-center gap-2 text-xs font-medium text-slate-700 hover:text-slate-900 py-1 px-2 rounded-lg hover:bg-slate-50"
+            className="flex items-center gap-2 text-xs font-medium text-slate-700 hover:text-slate-900 py-1 px-2 rounded-xl hover:bg-slate-50 cursor-pointer"
           >
             <UserCircle className="w-5 h-5 text-slate-600" />
             <div className="text-left hidden md:block">
-              <p className="font-semibold text-slate-800 capitalize leading-tight">{currentUserRole.replace('_', ' ')}</p>
-              <p className="text-[10px] text-slate-400">Switch Role</p>
+              <p className="font-semibold text-slate-800 capitalize leading-tight">{currentUserRole.replace(/_/g, ' ')}</p>
+              <p className="text-[10px] text-slate-400">Switch RBAC</p>
             </div>
             <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
           </button>
 
           {isRoleDropdownOpen && (
-            <div className="absolute right-0 mt-2 w-48 bg-white border border-slate-200 rounded-xl shadow-xl py-1 z-50">
-              <div className="px-3 py-1 text-[10px] font-semibold text-slate-400 uppercase tracking-wider">
-                Simulate Role
+            <div className="absolute right-0 mt-2 w-56 bg-white border border-slate-200 rounded-2xl shadow-xl py-1.5 z-50 animate-in fade-in duration-150">
+              <div className="px-3.5 py-1 text-[10px] font-semibold text-slate-400 uppercase tracking-wider">
+                Simulate RBAC Role
               </div>
-              {(['owner', 'admin', 'support_agent', 'platform_super_admin'] as const).map(role => (
+              {allRoles.map(r => (
                 <button
-                  key={role}
+                  key={r.id}
                   onClick={() => {
-                    setCurrentUserRole(role);
-                    if (role === 'platform_super_admin') {
-                      setIsAdminMode(true);
-                    } else {
-                      setIsAdminMode(false);
-                      if (role === 'support_agent') {
-                        setCurrentTab('conversations');
-                      }
+                    setCurrentUserRole(r.id);
+                    setCurrentExperience(r.defaultExp);
+                    if (r.id === 'staff' || r.id === 'manager') {
+                      setCurrentTab('conversations');
                     }
                     setIsRoleDropdownOpen(false);
                   }}
-                  className={`w-full flex items-center justify-between px-3 py-1.5 text-xs font-medium capitalize text-left hover:bg-slate-50 ${
-                    currentUserRole === role ? 'text-indigo-600 font-semibold bg-indigo-50/50' : 'text-slate-700'
+                  className={`w-full flex items-center justify-between px-3.5 py-1.5 text-xs font-medium text-left hover:bg-slate-50 cursor-pointer ${
+                    currentUserRole === r.id ? 'text-indigo-600 font-semibold bg-indigo-50/50' : 'text-slate-700'
                   }`}
                 >
                   <div>
-                    <span className="block">{role.replace(/_/g, ' ')}</span>
-                    <span className="text-[10px] text-slate-400 font-normal">
-                      {role === 'platform_super_admin' ? 'Super Admin UI' : role === 'support_agent' ? 'Support Inbox UI' : 'Company Dashboard'}
-                    </span>
+                    <span className="block font-semibold">{r.label}</span>
+                    <span className="text-[10px] text-slate-400 font-normal">{r.desc}</span>
                   </div>
-                  {currentUserRole === role && <Check className="w-3.5 h-3.5 text-indigo-600" />}
+                  {currentUserRole === r.id && <Check className="w-3.5 h-3.5 text-indigo-600 shrink-0" />}
                 </button>
               ))}
             </div>

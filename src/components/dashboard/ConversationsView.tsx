@@ -15,7 +15,9 @@ import {
   Check, 
   Sparkles,
   ChevronRight,
-  AlertTriangle
+  AlertTriangle,
+  FileText,
+  CheckCircle
 } from 'lucide-react';
 import { useApp } from '../../context';
 import { ConversationStatus } from '../../types';
@@ -34,9 +36,11 @@ export const ConversationsView: React.FC = () => {
     showToast
   } = useApp();
 
-  const [filterStatus, setFilterStatus] = useState<ConversationStatus | 'all'>('all');
+  const [filterStatus, setFilterStatus] = useState<ConversationStatus | 'all' | 'needs_attention'>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [operatorInput, setOperatorInput] = useState('');
+  const [internalNoteInput, setInternalNoteInput] = useState('');
+  const [isNoteMode, setIsNoteMode] = useState(false);
   const [simulateUserInput, setSimulateUserInput] = useState('');
   const [showReasoningMap, setShowReasoningMap] = useState<Record<string, boolean>>({});
 
@@ -47,7 +51,12 @@ export const ConversationsView: React.FC = () => {
   }, [currentActiveConversation?.messages]);
 
   const filteredConversations = conversations.filter(conv => {
-    const matchesStatus = filterStatus === 'all' || conv.status === filterStatus;
+    let matchesStatus = true;
+    if (filterStatus === 'needs_attention') {
+      matchesStatus = conv.status === 'escalated_to_human';
+    } else if (filterStatus !== 'all') {
+      matchesStatus = conv.status === filterStatus;
+    }
     const matchesSearch = conv.customerName.toLowerCase().includes(searchQuery.toLowerCase()) ||
                           conv.tags.some(t => t.toLowerCase().includes(searchQuery.toLowerCase()));
     return matchesStatus && matchesSearch;
@@ -57,9 +66,16 @@ export const ConversationsView: React.FC = () => {
     e.preventDefault();
     if (!operatorInput.trim() || !currentActiveConversation) return;
 
-    sendOperatorMessage(currentActiveConversation.id, operatorInput.trim());
-    setOperatorInput('');
-    showToast('Reply Sent', 'Live staff message delivered to customer.', 'success');
+    if (isNoteMode) {
+      takeoverConversation(currentActiveConversation.id, 'Support Operator (You)', operatorInput.trim());
+      setOperatorInput('');
+      setIsNoteMode(false);
+      showToast('Internal Note Added', 'Saved private note visible only to team.', 'info');
+    } else {
+      sendOperatorMessage(currentActiveConversation.id, operatorInput.trim());
+      setOperatorInput('');
+      showToast('Reply Sent', 'Live staff message delivered to customer.', 'success');
+    }
   };
 
   const handleSimulateUserMessage = async (e: React.FormEvent) => {
@@ -80,7 +96,7 @@ export const ConversationsView: React.FC = () => {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping" />
-              <h2 className="text-sm font-bold text-slate-900">Conversations</h2>
+              <h2 className="text-sm font-bold text-slate-900">Conversations Inbox</h2>
             </div>
             <button
               onClick={() => {
@@ -119,8 +135,8 @@ export const ConversationsView: React.FC = () => {
           <div className="flex items-center gap-1 overflow-x-auto pb-0.5">
             {[
               { id: 'all', label: 'All' },
-              { id: 'active', label: 'Active' },
-              { id: 'escalated_to_human', label: 'Handoffs' },
+              { id: 'needs_attention', label: 'Needs Attention' },
+              { id: 'active', label: 'AI Serving' },
               { id: 'resolved', label: 'Resolved' }
             ].map(tab => (
               <button
@@ -142,7 +158,7 @@ export const ConversationsView: React.FC = () => {
         <div className="flex-1 overflow-y-auto divide-y divide-slate-100">
           {filteredConversations.length === 0 ? (
             <div className="p-8 text-center text-slate-400 text-xs">
-              No conversations found.
+              No conversations in this filter.
             </div>
           ) : (
             filteredConversations.map(conv => {
@@ -153,41 +169,35 @@ export const ConversationsView: React.FC = () => {
                 <div
                   key={conv.id}
                   onClick={() => setActiveConversationId(conv.id)}
-                  className={`p-3.5 cursor-pointer transition-colors ${
-                    isActive ? 'bg-indigo-50/70 border-l-4 border-indigo-600' : 'hover:bg-slate-50'
+                  className={`p-3.5 cursor-pointer transition-all ${
+                    isActive 
+                      ? 'bg-indigo-50/70 border-l-4 border-l-indigo-600' 
+                      : 'hover:bg-slate-50'
                   }`}
                 >
                   <div className="flex items-center justify-between mb-1">
-                    <span className="font-bold text-xs text-slate-900 truncate max-w-[130px]">
+                    <span className="font-bold text-xs text-slate-900 truncate max-w-[150px]">
                       {conv.customerName}
                     </span>
                     <span className="text-[10px] text-slate-400 font-mono">
-                      {new Date(conv.lastMessageAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                      {conv.startedAt}
                     </span>
                   </div>
 
-                  <p className="text-xs text-slate-600 line-clamp-2 leading-relaxed">
-                    {lastMsg ? lastMsg.text : 'Session started'}
+                  <p className="text-xs text-slate-500 truncate mb-2">
+                    {lastMsg ? lastMsg.text : 'New session started'}
                   </p>
 
-                  <div className="mt-2 flex items-center justify-between">
-                    <div className="flex items-center gap-1.5 flex-wrap">
-                      {conv.status === 'escalated_to_human' && (
-                        <span className="text-[10px] font-semibold px-1.5 py-0.2 bg-rose-100 text-rose-800 rounded">
-                          Handoff
-                        </span>
-                      )}
-                      {conv.status === 'resolved' && (
-                        <span className="text-[10px] font-semibold px-1.5 py-0.2 bg-emerald-100 text-emerald-800 rounded">
-                          Resolved
-                        </span>
-                      )}
-                      {conv.status === 'active' && (
-                        <span className="text-[10px] font-semibold px-1.5 py-0.2 bg-blue-100 text-blue-800 rounded">
-                          Active
-                        </span>
-                      )}
-                    </div>
+                  <div className="flex items-center justify-between">
+                    <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold uppercase ${
+                      conv.status === 'escalated_to_human'
+                        ? 'bg-amber-100 text-amber-800'
+                        : conv.status === 'resolved'
+                        ? 'bg-slate-100 text-slate-600'
+                        : 'bg-emerald-100 text-emerald-800'
+                    }`}>
+                      {conv.status === 'escalated_to_human' ? 'Handoff' : conv.status}
+                    </span>
 
                     <span className="text-[10px] text-slate-400 font-mono">
                       {conv.messages.length} msgs
@@ -200,53 +210,52 @@ export const ConversationsView: React.FC = () => {
         </div>
       </div>
 
-      {/* 2. MIDDLE PANE: Active Chat Transcript & Operator Reply Bar */}
+      {/* 2. MIDDLE PANE: Live Conversation Transcript */}
       {currentActiveConversation ? (
         <div className="flex-1 bg-white rounded-2xl border border-slate-200 shadow-xs flex flex-col overflow-hidden">
-          {/* Thread Header */}
-          <div className="px-5 py-3.5 border-b border-slate-200 bg-slate-50/80 flex items-center justify-between">
+          {/* Active Conversation Header */}
+          <div className="p-4 border-b border-slate-200 flex items-center justify-between bg-slate-50/50">
             <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-full bg-slate-900 text-white font-bold text-xs flex items-center justify-center">
+              <div className="w-8 h-8 rounded-full bg-indigo-100 text-indigo-700 flex items-center justify-center font-bold text-xs">
                 {currentActiveConversation.customerName.charAt(0)}
               </div>
               <div>
-                <h3 className="text-sm font-bold text-slate-900">{currentActiveConversation.customerName}</h3>
-                <p className="text-[11px] text-slate-400 font-mono">{currentActiveConversation.customerEmail}</p>
+                <h3 className="font-bold text-xs text-slate-900">{currentActiveConversation.customerName}</h3>
+                <span className="text-[10px] text-slate-500 font-mono">Channel: {currentActiveConversation.channel}</span>
               </div>
             </div>
 
             <div className="flex items-center gap-2">
-              {currentActiveConversation.status !== 'resolved' && (
-                <button
-                  onClick={() => resolveConversation(currentActiveConversation.id)}
-                  className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer"
-                >
-                  <CheckCircle2 className="w-3.5 h-3.5" />
-                  <span>Mark Resolved</span>
-                </button>
-              )}
+              <button
+                onClick={() => resolveConversation(currentActiveConversation.id)}
+                className="px-3 py-1.5 bg-slate-100 hover:bg-emerald-50 hover:text-emerald-700 hover:border-emerald-200 border border-slate-200 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer"
+              >
+                <CheckCircle className="w-3.5 h-3.5" />
+                <span>Mark Resolved</span>
+              </button>
             </div>
           </div>
 
-          {/* Messages Thread */}
-          <div className="flex-1 overflow-y-auto p-5 space-y-4 bg-slate-50/40">
-            {currentActiveConversation.messages.map((msg) => {
+          {/* Messages Feed */}
+          <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-slate-50/30">
+            {currentActiveConversation.messages.map(msg => {
               const isUser = msg.sender === 'user';
               const isHumanOperator = msg.sender === 'human_agent';
+              const isSystemNote = msg.sender === 'system';
+
+              if (isSystemNote) {
+                return (
+                  <div key={msg.id} className="p-3 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-900 font-mono">
+                    {msg.text}
+                  </div>
+                );
+              }
 
               return (
-                <div key={msg.id} className={`flex flex-col ${isUser ? 'items-end' : 'items-start'}`}>
-                  <div className="flex items-start gap-2.5 max-w-[85%]">
-                    {!isUser && (
-                      <div className={`w-7 h-7 rounded-xl flex items-center justify-center shrink-0 mt-0.5 ${
-                        isHumanOperator ? 'bg-amber-600 text-white font-bold text-xs' : 'bg-indigo-600 text-white'
-                      }`}>
-                        {isHumanOperator ? 'OP' : <Bot className="w-3.5 h-3.5" />}
-                      </div>
-                    )}
-
-                    <div>
-                      <div className="flex items-center gap-1.5 mb-1">
+                <div key={msg.id} className={`flex ${isUser ? 'justify-end' : 'justify-start'}`}>
+                  <div className={`max-w-lg ${isUser ? 'order-1' : 'order-2'}`}>
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2 px-1">
                         <span className="text-[11px] font-bold text-slate-700">
                           {isUser ? currentActiveConversation.customerName : (isHumanOperator ? msg.senderName || 'Staff Support' : currentCompany.agent.name)}
                         </span>
@@ -255,7 +264,7 @@ export const ConversationsView: React.FC = () => {
                         </span>
                         {isHumanOperator && (
                           <span className="text-[10px] px-1.5 py-0.2 bg-amber-100 text-amber-800 rounded font-bold">
-                            Live Human Reply
+                            Live Staff Reply
                           </span>
                         )}
                       </div>
@@ -279,23 +288,50 @@ export const ConversationsView: React.FC = () => {
             <div ref={messagesEndRef} />
           </div>
 
-          {/* Operator Reply Bar */}
-          <div className="p-3 border-t border-slate-200 bg-white">
+          {/* Operator Reply & Internal Note Bar */}
+          <div className="p-3 border-t border-slate-200 bg-white space-y-2">
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setIsNoteMode(false)}
+                className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-colors cursor-pointer ${
+                  !isNoteMode ? 'bg-indigo-50 text-indigo-700 border border-indigo-200' : 'text-slate-500 hover:bg-slate-100'
+                }`}
+              >
+                Reply to Customer
+              </button>
+              <button
+                type="button"
+                onClick={() => setIsNoteMode(true)}
+                className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-colors cursor-pointer ${
+                  isNoteMode ? 'bg-amber-50 text-amber-800 border border-amber-200' : 'text-slate-500 hover:bg-slate-100'
+                }`}
+              >
+                + Internal Staff Note
+              </button>
+            </div>
+
             <form onSubmit={handleSendOperatorReply} className="flex items-center gap-2">
               <input
                 type="text"
                 value={operatorInput}
                 onChange={(e) => setOperatorInput(e.target.value)}
-                placeholder="Reply directly as human operator..."
-                className="flex-1 text-xs px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500"
+                placeholder={isNoteMode ? "Write private internal note (visible only to staff)..." : "Reply directly to customer as human operator..."}
+                className={`flex-1 text-xs px-3.5 py-2.5 border rounded-xl focus:ring-2 focus:ring-indigo-500 ${
+                  isNoteMode ? 'bg-amber-50/50 border-amber-200' : 'bg-slate-50 border-slate-200'
+                }`}
               />
               <button
                 type="submit"
                 disabled={!operatorInput.trim()}
-                className="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer"
+                className={`px-4 py-2.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer ${
+                  isNoteMode 
+                    ? 'bg-amber-600 hover:bg-amber-700 text-white' 
+                    : 'bg-indigo-600 hover:bg-indigo-500 text-white disabled:opacity-50'
+                }`}
               >
                 <Send className="w-3.5 h-3.5" />
-                <span>Send</span>
+                <span>{isNoteMode ? 'Save Note' : 'Send'}</span>
               </button>
             </form>
           </div>
@@ -319,7 +355,7 @@ export const ConversationsView: React.FC = () => {
                 </div>
                 <div className="flex items-center gap-2 text-slate-500 font-mono text-[11px]">
                   <Mail className="w-3.5 h-3.5 text-slate-400" />
-                  <span className="truncate">{currentActiveConversation.customerEmail}</span>
+                  <span className="truncate">{currentActiveConversation.customerEmail || 'visitor@guest.io'}</span>
                 </div>
                 <div className="flex items-center gap-2 text-slate-500 text-[11px]">
                   <Globe className="w-3.5 h-3.5 text-slate-400" />

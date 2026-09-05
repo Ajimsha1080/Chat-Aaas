@@ -11,6 +11,15 @@ import {
   Invoice, 
   AnalyticsSummary, 
   NavigationTab,
+  AdminNavigationTab,
+  DeveloperNavigationTab,
+  ProductExperience,
+  UserRole,
+  AgentVersionItem,
+  WebhookEndpoint,
+  ApiLogEntry,
+  SystemHealthMetric,
+  SecurityEventItem,
   SubscriptionPlanId,
   AgentConfig,
   WidgetCustomization,
@@ -19,17 +28,24 @@ import {
 } from '../types';
 
 export interface AppContextType {
-  // Navigation & Modes
+  // Navigation & Product Experiences
+  currentExperience: ProductExperience;
+  setCurrentExperience: (exp: ProductExperience) => void;
   currentTab: NavigationTab;
   setCurrentTab: (tab: NavigationTab) => void;
-  isAdminMode: boolean;
+  currentAdminTab: AdminNavigationTab;
+  setCurrentAdminTab: (tab: AdminNavigationTab) => void;
+  currentDevTab: DeveloperNavigationTab;
+  setCurrentDevTab: (tab: DeveloperNavigationTab) => void;
+  
+  isAdminMode: boolean; // backward compat
   setIsAdminMode: (admin: boolean) => void;
   isLiveSandboxOpen: boolean;
   setIsLiveSandboxOpen: (open: boolean) => void;
   isQuickTestOpen: boolean;
   setIsQuickTestOpen: (open: boolean) => void;
-  currentUserRole: 'owner' | 'admin' | 'support_agent' | 'platform_super_admin';
-  setCurrentUserRole: (role: 'owner' | 'admin' | 'support_agent' | 'platform_super_admin') => void;
+  currentUserRole: UserRole;
+  setCurrentUserRole: (role: UserRole) => void;
 
   // Company State
   companies: Company[];
@@ -50,9 +66,12 @@ export interface AppContextType {
   currentPlan: SubscriptionPlan;
   upgradeSubscription: (planId: SubscriptionPlanId, cycle: 'monthly' | 'annual') => void;
 
-  // Single Agent Management
+  // Single Agent Management & Versioning
   updateAgentConfig: (updates: Partial<AgentConfig>) => void;
   toggleAgentStatus: () => void;
+  agentVersions: AgentVersionItem[];
+  publishAgentVersion: (description?: string) => void;
+  rollbackAgentVersion: (versionId: string) => void;
 
   // Knowledge Management
   knowledgeItems: KnowledgeItem[];
@@ -69,6 +88,13 @@ export interface AppContextType {
   updateAction: (id: string, updates: Partial<ActionDefinition>) => void;
   toggleAction: (id: string) => void;
 
+  // Developer Features (Webhooks & API Logs)
+  webhooks: WebhookEndpoint[];
+  createWebhook: (url: string, description: string, events: string[]) => void;
+  deleteWebhook: (id: string) => void;
+  triggerTestWebhook: (id: string) => Promise<boolean>;
+  apiLogs: ApiLogEntry[];
+
   // Widget & Deployment
   updateWidgetSettings: (updates: Partial<WidgetCustomization>) => void;
   regenerateApiKey: () => void;
@@ -80,7 +106,7 @@ export interface AppContextType {
   currentActiveConversation: Conversation | null;
   sendMessageToAgent: (conversationId: string, text: string) => Promise<void>;
   confirmPendingAction: (conversationId: string, messageId: string, confirmed: boolean) => Promise<void>;
-  takeoverConversation: (conversationId: string, operatorName?: string) => void;
+  takeoverConversation: (conversationId: string, operatorName?: string, internalNote?: string) => void;
   sendOperatorMessage: (conversationId: string, text: string) => void;
   resolveConversation: (conversationId: string) => void;
   startNewCustomerChatSession: (initialGreeting?: boolean) => string;
@@ -92,7 +118,9 @@ export interface AppContextType {
   invoices: Invoice[];
   addTeamMember: (name: string, email: string, role: TeamMember['role']) => void;
 
-  // Super Admin Platform Controls
+  // Super Admin Platform Controls & Health
+  systemHealth: SystemHealthMetric[];
+  securityEvents: SecurityEventItem[];
   adminToggleCompanySuspension: (companyId: string) => void;
   adminUpdatePlanPrice: (planId: SubscriptionPlanId, monthlyINR: number) => void;
 
@@ -103,3 +131,4 @@ export interface AppContextType {
 }
 
 export const AppContext = createContext<AppContextType | undefined>(undefined);
+

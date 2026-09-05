@@ -17,7 +17,8 @@ import {
   Star,
   DollarSign,
   ShieldCheck,
-  Send
+  Send,
+  Clock
 } from 'lucide-react';
 import { useApp } from '../../context';
 import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, CartesianGrid } from 'recharts';
@@ -32,16 +33,17 @@ export const OverviewView: React.FC = () => {
     setCurrentTab,
     setIsQuickTestOpen,
     setActiveConversationId,
+    publishAgentVersion,
     showToast
   } = useApp();
 
   const stats = currentCompany.stats;
   const resolutionRate = stats.totalConversations > 0 
     ? Math.round((stats.resolvedConversations / stats.totalConversations) * 100) 
-    : 88;
+    : 87;
   const escalationRate = stats.totalConversations > 0 
     ? Math.round((stats.escalatedConversations / stats.totalConversations) * 100) 
-    : 12;
+    : 13;
 
   const chartData = [
     { name: 'Mon', conversations: 120, resolutions: 108 },
@@ -57,7 +59,7 @@ export const OverviewView: React.FC = () => {
 
   return (
     <div className="space-y-6 animate-in fade-in duration-200">
-      {/* 1. Hero Card: AI Employee Status & Direct Actions */}
+      {/* 1. Hero Card: YOUR AI EMPLOYEE Status & Actions */}
       <div className="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 rounded-3xl p-6 sm:p-8 text-white border border-slate-800 shadow-xl relative overflow-hidden">
         <div className="absolute right-0 top-0 bottom-0 w-96 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-indigo-500/20 via-purple-500/10 to-transparent pointer-events-none" />
         
@@ -76,9 +78,12 @@ export const OverviewView: React.FC = () => {
 
             <div>
               <div className="flex items-center gap-3 flex-wrap">
+                <span className="text-[10px] font-bold uppercase tracking-widest text-indigo-400 bg-indigo-500/20 px-2.5 py-0.5 rounded-full border border-indigo-400/30">
+                  YOUR AI EMPLOYEE
+                </span>
                 <h1 className="text-2xl font-black text-white">{currentCompany.agent.name}</h1>
-                <span className="text-xs font-semibold px-3 py-1 rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-400/30">
-                  {currentCompany.agent.role || 'Customer Support Specialist'}
+                <span className="text-xs font-semibold px-3 py-1 rounded-full bg-slate-800 text-slate-300 border border-slate-700">
+                  {currentCompany.agent.role || 'Customer Support AI'}
                 </span>
                 <span className={`text-xs font-semibold px-3 py-1 rounded-full flex items-center gap-1.5 ${
                   currentCompany.agent.status === 'active'
@@ -86,11 +91,11 @@ export const OverviewView: React.FC = () => {
                     : 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
                 }`}>
                   <span className={`w-2 h-2 rounded-full ${currentCompany.agent.status === 'active' ? 'bg-emerald-400' : 'bg-amber-400'}`} />
-                  {currentCompany.agent.status === 'active' ? 'Live & Serving Traffic' : 'Paused'}
+                  {currentCompany.agent.status === 'active' ? '● Live' : '● Paused'}
                 </span>
               </div>
               <p className="text-slate-300 text-xs sm:text-sm mt-2 max-w-2xl leading-relaxed">
-                {currentCompany.agent.description || 'Your dedicated AI Employee handling customer inquiries, order checks, and bookings.'}
+                {currentCompany.agent.description || 'Your dedicated AI Employee handling customer inquiries, order lookups, and meeting bookings.'}
               </p>
               
               <div className="flex items-center gap-5 mt-4 text-xs text-slate-400">
@@ -104,7 +109,7 @@ export const OverviewView: React.FC = () => {
                 </span>
                 <span className="flex items-center gap-1.5">
                   <Globe className="w-3.5 h-3.5 text-emerald-400" />
-                  <strong>Website Widget</strong> Active
+                  <strong>Website Widget</strong> Live
                 </span>
               </div>
             </div>
@@ -113,15 +118,13 @@ export const OverviewView: React.FC = () => {
           <div className="flex items-center gap-3 shrink-0">
             <button
               onClick={() => setIsQuickTestOpen(true)}
-              className="px-4 py-2.5 bg-slate-800 hover:bg-slate-700 text-white rounded-xl text-xs font-semibold flex items-center gap-2 transition-all border border-slate-700 cursor-pointer shadow-sm"
+              className="px-4 py-2.5 bg-slate-800 hover:bg-slate-700 text-white rounded-xl text-xs font-semibold flex items-center gap-2 transition-all border border-slate-700 cursor-pointer shadow-xs"
             >
               <Play className="w-3.5 h-3.5 text-indigo-400" />
-              <span>Test Employee</span>
+              <span>Test Agent</span>
             </button>
             <button
-              onClick={() => {
-                showToast('Agent Published', `Version 2 snapshot deployed live to all channels.`, 'success');
-              }}
+              onClick={() => publishAgentVersion('Published from Overview Dashboard')}
               className="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-semibold flex items-center gap-2 transition-all shadow-lg shadow-indigo-600/30 cursor-pointer"
             >
               <Sparkles className="w-3.5 h-3.5" />
@@ -132,7 +135,7 @@ export const OverviewView: React.FC = () => {
       </div>
 
       {/* 2. Primary 5 Executive Business KPIs */}
-      <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
         {/* Conversations */}
         <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs">
           <div className="flex items-center justify-between text-slate-500">
@@ -140,7 +143,7 @@ export const OverviewView: React.FC = () => {
             <MessageSquare className="w-4 h-4 text-indigo-600" />
           </div>
           <div className="mt-3 flex items-baseline gap-2">
-            <span className="text-2xl font-black text-slate-900">{currentCompany.stats.totalConversations.toLocaleString()}</span>
+            <span className="text-2xl font-black text-slate-900">{currentCompany.stats.totalConversations > 0 ? currentCompany.stats.totalConversations.toLocaleString() : '1,284'}</span>
             <span className="text-xs font-bold text-emerald-600">+12%</span>
           </div>
           <p className="text-[11px] text-slate-500 mt-1">Total inquiries handled</p>
@@ -167,34 +170,35 @@ export const OverviewView: React.FC = () => {
           </div>
           <div className="mt-3 flex items-baseline gap-2">
             <span className="text-2xl font-black text-slate-900">{escalationRate}%</span>
-            <span className="text-xs text-slate-500 font-semibold">Transferred</span>
+            <span className="text-xs text-slate-500 font-semibold">13% Target</span>
           </div>
           <p className="text-[11px] text-slate-500 mt-1">Safely handed to team</p>
         </div>
 
-        {/* Customer Satisfaction */}
+        {/* Avg Response Time */}
         <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs">
+          <div className="flex items-center justify-between text-slate-500">
+            <span className="text-[11px] font-bold uppercase tracking-wider">Avg Response Time</span>
+            <Clock className="w-4 h-4 text-blue-600" />
+          </div>
+          <div className="mt-3 flex items-baseline gap-2">
+            <span className="text-2xl font-black text-slate-900">1.8s</span>
+            <span className="text-xs text-emerald-600 font-bold">Fast</span>
+          </div>
+          <p className="text-[11px] text-slate-500 mt-1">Time to first response</p>
+        </div>
+
+        {/* Customer Satisfaction */}
+        <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs col-span-2 sm:col-span-1">
           <div className="flex items-center justify-between text-slate-500">
             <span className="text-[11px] font-bold uppercase tracking-wider">CSAT Score</span>
             <Star className="w-4 h-4 text-amber-500 fill-amber-500" />
           </div>
           <div className="mt-3 flex items-baseline gap-2">
-            <span className="text-2xl font-black text-slate-900">4.8</span>
+            <span className="text-2xl font-black text-slate-900">4.7</span>
             <span className="text-xs text-slate-500 font-semibold">/ 5.0</span>
           </div>
-          <p className="text-[11px] text-slate-500 mt-1">Positive customer sentiment</p>
-        </div>
-
-        {/* Estimated Value */}
-        <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs col-span-2 sm:col-span-1">
-          <div className="flex items-center justify-between text-slate-500">
-            <span className="text-[11px] font-bold uppercase tracking-wider">Estimated Value</span>
-            <DollarSign className="w-4 h-4 text-emerald-600" />
-          </div>
-          <div className="mt-3 flex items-baseline gap-1">
-            <span className="text-2xl font-black text-emerald-600">?1,18,400</span>
-          </div>
-          <p className="text-[11px] text-slate-500 mt-1">Labor cost saved this month</p>
+          <p className="text-[11px] text-slate-500 mt-1">Positive customer feedback</p>
         </div>
       </div>
 
@@ -236,52 +240,54 @@ export const OverviewView: React.FC = () => {
           </div>
         </div>
 
-        {/* Right Col: Recent Activity & Action Alerts */}
+        {/* Right Col: Recent Activity & Needs Attention */}
         <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-xs flex flex-col justify-between">
           <div>
-            <h3 className="text-sm font-bold text-slate-900 mb-1">Recent Activity & Alerts</h3>
-            <p className="text-xs text-slate-500 mb-4">Live operational events</p>
+            <h3 className="text-sm font-bold text-slate-900 mb-1">Needs Attention & Activity</h3>
+            <p className="text-xs text-slate-500 mb-4">Live operational alerts</p>
 
             <div className="space-y-3 text-xs">
+              {/* Needs Attention Alert */}
+              <div 
+                onClick={() => {
+                  setCurrentTab('conversations');
+                  if (pendingAttentionConversations.length > 0) {
+                    setActiveConversationId(pendingAttentionConversations[0].id);
+                  }
+                }}
+                className="flex items-start gap-2.5 p-3 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 cursor-pointer hover:bg-amber-100 transition-colors"
+              >
+                <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                <div>
+                  <p className="font-bold">Needs Attention</p>
+                  <p className="text-[11px] text-amber-800 font-medium">3 conversations require review</p>
+                </div>
+              </div>
+
+              {/* Recent Activity items */}
               <div className="flex items-start gap-2.5 p-2.5 rounded-xl bg-emerald-50 border border-emerald-100 text-emerald-900">
                 <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
                 <div>
-                  <p className="font-semibold">Knowledge Synced</p>
+                  <p className="font-semibold">Knowledge synced</p>
                   <p className="text-[11px] text-emerald-700">{knowledgeItems.length} documents & FAQs indexed</p>
                 </div>
               </div>
 
               <div className="flex items-start gap-2.5 p-2.5 rounded-xl bg-indigo-50 border border-indigo-100 text-indigo-900">
-                <Globe className="w-4 h-4 text-indigo-600 shrink-0 mt-0.5" />
+                <CheckCircle2 className="w-4 h-4 text-indigo-600 shrink-0 mt-0.5" />
                 <div>
-                  <p className="font-semibold">Website Connected</p>
-                  <p className="text-[11px] text-indigo-700">{currentCompany.domain} live on widget</p>
+                  <p className="font-semibold">Agent published</p>
+                  <p className="text-[11px] text-indigo-700">Latest immutable version active</p>
                 </div>
               </div>
 
-              {pendingAttentionConversations.length > 0 ? (
-                <div 
-                  onClick={() => {
-                    setCurrentTab('conversations');
-                    setActiveConversationId(pendingAttentionConversations[0].id);
-                  }}
-                  className="flex items-start gap-2.5 p-2.5 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 cursor-pointer hover:bg-amber-100 transition-colors"
-                >
-                  <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
-                  <div>
-                    <p className="font-semibold">{pendingAttentionConversations.length} Handoffs Need Attention</p>
-                    <p className="text-[11px] text-amber-700">Click to open Live Inbox</p>
-                  </div>
+              <div className="flex items-start gap-2.5 p-2.5 rounded-xl bg-purple-50 border border-purple-100 text-purple-900">
+                <Globe className="w-4 h-4 text-purple-600 shrink-0 mt-0.5" />
+                <div>
+                  <p className="font-semibold">Website connected</p>
+                  <p className="text-[11px] text-purple-700">{currentCompany.domain} live on widget</p>
                 </div>
-              ) : (
-                <div className="flex items-start gap-2.5 p-2.5 rounded-xl bg-slate-50 border border-slate-100 text-slate-700">
-                  <CheckCircle2 className="w-4 h-4 text-slate-500 shrink-0 mt-0.5" />
-                  <div>
-                    <p className="font-semibold">All Handoffs Resolved</p>
-                    <p className="text-[11px] text-slate-500">No urgent customer escalations</p>
-                  </div>
-                </div>
-              )}
+              </div>
             </div>
           </div>
 
@@ -298,7 +304,7 @@ export const OverviewView: React.FC = () => {
 
       {/* 4. "What To Do Next" Quick Guide */}
       <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-xs">
-        <h3 className="text-sm font-bold text-slate-900 mb-1">Recommended Next Steps</h3>
+        <h3 className="text-sm font-bold text-slate-900 mb-1">What should I do next?</h3>
         <p className="text-xs text-slate-500 mb-4">Improve your AI Employee's capabilities and reach</p>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
