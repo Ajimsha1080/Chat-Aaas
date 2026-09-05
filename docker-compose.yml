@@ -1,0 +1,89 @@
+version: '3.8'
+
+services:
+  ai-runtime:
+    build:
+      context: ./backend_python
+      dockerfile: Dockerfile
+    container_name: aaas-ai-runtime
+    restart: always
+    ports:
+      - '8000:8000'
+    environment:
+      - PORT=8000
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+    networks:
+      - aaas-network
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: aaas-app
+    restart: always
+    ports:
+      - '3000:3000'
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - AI_RUNTIME_URL=http://ai-runtime:8000
+      - DATABASE_URL=postgres://aaas_admin:secret_password@postgres:5432/aaas_production
+      - REDIS_URL=redis://redis:6379
+      - JWT_SECRET=change-this-jwt-secret-for-production-min-32-chars
+      - ENCRYPTION_KEY=0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+    depends_on:
+      - ai-runtime
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - aaas-network
+
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: aaas-postgres
+    restart: always
+    environment:
+      - POSTGRES_USER=aaas_admin
+      - POSTGRES_PASSWORD=secret_password
+      - POSTGRES_DB=aaas_production
+    ports:
+      - '5432:5432'
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U aaas_admin -d aaas_production']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - aaas-network
+
+  redis:
+    image: redis:7-alpine
+    container_name: aaas-redis
+    restart: always
+    ports:
+      - '6379:6379'
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - aaas-network
+
+volumes:
+  postgres_data:
+  redis_data:
+
+networks:
+  aaas-network:
+    driver: bridge
