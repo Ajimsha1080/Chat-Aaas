@@ -280,7 +280,7 @@ export default function App() {
                   onChange={(e) => setLocalSettings({ ...localSettings, showPoweredBy: e.target.checked })}
                   className="rounded text-indigo-600"
                 />
-                <label htmlFor="powered-check" className="font-semibold text-slate-700">Display "Powered by Agent-as-a-Service"</label>
+                <label htmlFor="powered-check" className="font-semibold text-slate-700">Display "Powered by Chat-AaaS" badge</label>
               </div>
             </div>
           </div>
@@ -294,7 +294,7 @@ export default function App() {
               <h3 className="text-sm font-bold text-slate-900">API Credentials</h3>
             </div>
             <p className="text-xs text-slate-500 mb-4">
-              Authenticate mobile apps and backend server endpoints with your single AI agent.
+              Authenticate mobile apps, web widgets, and backend server endpoints with your AI assistant.
             </p>
 
             <div className="space-y-3 text-xs">
