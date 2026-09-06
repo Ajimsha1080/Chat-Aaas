@@ -62,4 +62,101 @@ def test_knowledge_document_upload():
     assert body["data"]["chunksCreated"] >= 1
     assert body["data"]["fileName"] == "security_policy_2026.pdf"
 
+def test_knowledge_faq_creation_and_list():
+    response = client.post(
+        "/api/v1/knowledge/faqs",
+        json={
+            "question": "What is the standard SLA response time for Critical incidents?",
+            "answer": "Critical severity tickets are guaranteed an initial engineer response within 15 minutes, 24/7/365.",
+            "category": "SLA & Support"
+        }
+    )
+    assert response.status_code == 201
+    data = response.json()["data"]
+    assert "source" in data
+    assert data["source"]["sourceType"] == "faq"
+
+    # List sources
+    list_res = client.get("/api/v1/knowledge?source_type=faq")
+    assert list_res.status_code == 200
+    sources = list_res.json()["data"]["sources"]
+    assert any(s["title"] == "What is the standard SLA response time for Critical incidents?" for s in sources)
+
+def test_knowledge_collections_lifecycle():
+    # Create Collection
+    create_res = client.post(
+        "/api/v1/knowledge/collections",
+        json={
+            "name": "Security & Compliance 2026",
+            "description": "SOC2, ISO27001, and HIPAA policies",
+            "icon": "Shield",
+            "color": "emerald"
+        }
+    )
+    assert create_res.status_code == 201
+    col = create_res.json()["data"]
+    col_id = col["id"]
+    assert col["name"] == "Security & Compliance 2026"
+
+    # List Collections
+    list_res = client.get("/api/v1/knowledge/collections")
+    assert list_res.status_code == 200
+    cols = list_res.json()["data"]["collections"]
+    assert any(c["id"] == col_id for c in cols)
+
+    # Delete Collection
+    del_res = client.delete(f"/api/v1/knowledge/collections/{col_id}")
+    assert del_res.status_code == 200
+
+def test_knowledge_gaps_and_faq_conversion():
+    # Get Gaps
+    gaps_res = client.get("/api/v1/knowledge/gaps")
+    assert gaps_res.status_code == 200
+    gaps = gaps_res.json()["data"]["gaps"]
+    assert len(gaps) > 0
+    target_gap = gaps[0]
+
+    # Convert Gap to FAQ
+    convert_res = client.post(
+        f"/api/v1/knowledge/gaps/{target_gap['id']}/convert-faq",
+        json={
+            "answer": "We support on-premise deployments via our enterprise Kubernetes Helm charts."
+        }
+    )
+    assert convert_res.status_code == 201
+    assert convert_res.json()["data"]["faq"]["source"]["title"] == target_gap["query"]
+
+def test_rag_test_endpoint():
+    # Grounded Query
+    grounded_res = client.post(
+        "/api/v1/knowledge/test-rag",
+        json={"query": "What is the return policy timeframe?", "top_k": 3}
+    )
+    assert grounded_res.status_code == 200
+    data = grounded_res.json()["data"]
+    assert data["grounded"] is True
+    assert len(data["citations"]) > 0
+
+    # Ungrounded Query (triggers refusal + gap creation)
+    ungrounded_res = client.post(
+        "/api/v1/knowledge/test-rag",
+        json={"query": "What is the quantum teleportation frequency of the enterprise rocket?", "top_k": 3}
+    )
+    assert ungrounded_res.status_code == 200
+    ug_data = ungrounded_res.json()["data"]
+    assert ug_data["grounded"] is False
+    assert ug_data["needsGapRecorded"] is True
+    assert "couldn't find enough information" in ug_data["answer"].lower()
+
+def test_knowledge_health_metrics():
+    res = client.get("/api/v1/knowledge/health")
+    assert res.status_code == 200
+    data = res.json()["data"]
+    assert "healthScore" in data
+    assert "status" in data
+    assert data["status"] in ["Healthy", "Needs Attention", "Critical"]
+    assert "totalSources" in data
+    assert "totalChunks" in data
+
+
 

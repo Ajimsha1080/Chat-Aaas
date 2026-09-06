@@ -9,8 +9,12 @@ class DatabaseStore:
         self.memberships: Dict[str, Dict[str, Any]] = {}
         self.agents: Dict[str, Dict[str, Any]] = {}
         self.agent_versions: Dict[str, Dict[str, Any]] = {}
+        self.knowledge_collections: Dict[str, Dict[str, Any]] = {}
         self.knowledge_sources: Dict[str, Dict[str, Any]] = {}
         self.document_chunks: Dict[str, Dict[str, Any]] = {}
+        self.knowledge_gaps: Dict[str, Dict[str, Any]] = {}
+        self.knowledge_feedback: List[Dict[str, Any]] = []
+        self.knowledge_jobs: Dict[str, Dict[str, Any]] = {}
         self.integrations: Dict[str, Dict[str, Any]] = {}
         self.agent_tools: Dict[str, Dict[str, Any]] = {}
         self.conversations: Dict[str, Dict[str, Any]] = {}
@@ -93,24 +97,100 @@ class DatabaseStore:
             "createdAt": "2026-08-15T10:00:00.000Z"
         }
 
+        # Collections
+        self.knowledge_collections["col-tf-1"] = {
+            "id": "col-tf-1",
+            "companyId": "comp-techflow",
+            "name": "Customer Support & SLA",
+            "description": "Public SLA guarantees, incident resolution procedures, and contact paths.",
+            "icon": "ShieldCheck",
+            "color": "indigo",
+            "sourceCount": 2,
+            "createdAt": "2026-08-15T10:00:00.000Z"
+        }
+        self.knowledge_collections["col-tf-2"] = {
+            "id": "col-tf-2",
+            "companyId": "comp-techflow",
+            "name": "Pricing & Billing",
+            "description": "Subscription plans, add-ons, refund policies, and GST tax computation.",
+            "icon": "CreditCard",
+            "color": "emerald",
+            "sourceCount": 1,
+            "createdAt": "2026-08-15T10:00:00.000Z"
+        }
+
+        # Knowledge Sources
+        self.knowledge_sources["ks-tf-1"] = {
+            "id": "ks-tf-1",
+            "companyId": "comp-techflow",
+            "collectionId": "col-tf-1",
+            "title": "TechFlow SLA & Uptime Guarantee",
+            "sourceType": "file",
+            "fileName": "techflow_sla_2026.pdf",
+            "fileSizeBytes": 142000,
+            "mimeType": "application/pdf",
+            "version": 1,
+            "category": "SLA",
+            "status": "ready",
+            "chunkCount": 1,
+            "totalTokens": 20,
+            "lastSyncedAt": "2026-09-06T10:00:00.000Z",
+            "createdAt": "2026-08-15T10:00:00.000Z"
+        }
+        self.knowledge_sources["ks-tf-2"] = {
+            "id": "ks-tf-2",
+            "companyId": "comp-techflow",
+            "collectionId": "col-tf-2",
+            "title": "Refund & Cancellation Policy",
+            "sourceType": "faq",
+            "fileName": None,
+            "fileSizeBytes": 2400,
+            "mimeType": "text/plain",
+            "version": 1,
+            "category": "Billing",
+            "status": "ready",
+            "chunkCount": 1,
+            "totalTokens": 15,
+            "lastSyncedAt": "2026-09-06T10:00:00.000Z",
+            "createdAt": "2026-08-15T10:00:00.000Z"
+        }
+
+        # Document Chunks
         self.document_chunks["chk-tf-1"] = {
             "id": "chk-tf-1",
             "knowledgeSourceId": "ks-tf-1",
             "companyId": "comp-techflow",
+            "collectionId": "col-tf-1",
             "chunkIndex": 0,
-            "content": "TechFlow Cloud guarantees a 99.99% monthly uptime SLA across all multi-region Kubernetes clusters.",
-            "tokenCount": 20,
-            "metadata": {"title": "TechFlow SLA and Uptime Guarantee", "category": "SLA"}
+            "content": "TechFlow Cloud guarantees a 99.99% monthly uptime SLA across all multi-region Kubernetes clusters. If uptime falls below 99.99%, enterprise customers are entitled to service credits of 10% to 25% of their monthly bill.",
+            "tokenCount": 35,
+            "sectionHeader": "SLA & Availability",
+            "metadata": {"title": "TechFlow SLA & Uptime Guarantee", "category": "SLA", "fileName": "techflow_sla_2026.pdf", "page": 1}
         }
         self.document_chunks["chk-tf-2"] = {
             "id": "chk-tf-2",
             "knowledgeSourceId": "ks-tf-2",
             "companyId": "comp-techflow",
+            "collectionId": "col-tf-2",
             "chunkIndex": 0,
-            "content": "Standard refund policy allows a full refund within 14 days of purchase.",
-            "tokenCount": 15,
-            "metadata": {"title": "Refund and Cancellation Policy", "category": "Billing"}
+            "content": "Standard refund policy allows a full refund within 14 days of purchase. To initiate a refund, customers must submit an order cancellation request through the portal or speak with support.",
+            "tokenCount": 30,
+            "sectionHeader": "Refund Window",
+            "metadata": {"title": "Refund & Cancellation Policy", "category": "Billing", "faq": True}
         }
+
+        # Knowledge Gaps
+        self.knowledge_gaps["gap-tf-1"] = {
+            "id": "gap-tf-1",
+            "companyId": "comp-techflow",
+            "query": "Do you offer on-premise air-gapped deployments?",
+            "occurrences": 8,
+            "lastAskedAt": "2026-09-06T09:30:00.000Z",
+            "status": "unresolved",
+            "suggestedCategory": "Deployment",
+            "createdAt": "2026-09-05T12:00:00.000Z"
+        }
+
 
         self.agent_tools["act-tf-1"] = {
             "id": "act-tf-1",
@@ -222,6 +302,75 @@ class DatabaseStore:
     def get_document_chunks_for_tenant(self, company_id: str) -> List[Dict[str, Any]]:
         return [c for c in self.document_chunks.values() if c.get("companyId") == company_id]
 
+    def get_collections_for_tenant(self, company_id: str) -> List[Dict[str, Any]]:
+        return [c for c in self.knowledge_collections.values() if c.get("companyId") == company_id]
+
+    def get_knowledge_sources_for_tenant(
+        self, 
+        company_id: str, 
+        collection_id: Optional[str] = None,
+        source_type: Optional[str] = None,
+        status: Optional[str] = None,
+        search: Optional[str] = None
+    ) -> List[Dict[str, Any]]:
+        sources = [s for s in self.knowledge_sources.values() if s.get("companyId") == company_id]
+        if collection_id:
+            sources = [s for s in sources if s.get("collectionId") == collection_id]
+        if source_type and source_type != "all":
+            sources = [s for s in sources if s.get("sourceType") == source_type]
+        if status and status != "all":
+            sources = [s for s in sources if s.get("status") == status]
+        if search:
+            q = search.lower()
+            sources = [s for s in sources if q in s.get("title", "").lower() or q in s.get("category", "").lower()]
+        return sources
+
+    def get_knowledge_gaps_for_tenant(self, company_id: str) -> List[Dict[str, Any]]:
+        return [g for g in self.knowledge_gaps.values() if g.get("companyId") == company_id]
+
+    def get_knowledge_health_for_tenant(self, company_id: str) -> Dict[str, Any]:
+        sources = self.get_knowledge_sources_for_tenant(company_id)
+        gaps = self.get_knowledge_gaps_for_tenant(company_id)
+        chunks = self.get_document_chunks_for_tenant(company_id)
+        failed_sources = [s for s in sources if s.get("status") == "failed"]
+        needs_attention = [s for s in sources if s.get("status") == "needs_attention"]
+        processing = [s for s in sources if s.get("status") == "processing"]
+        ready = [s for s in sources if s.get("status") in ["ready", "indexed"]]
+
+        # Calculate numeric health score (0-100)
+        total_s = max(1, len(sources))
+        penalty = (len(failed_sources) * 25) + (len(needs_attention) * 10) + (min(len(gaps), 5) * 4)
+        health_score = max(50, min(100, 100 - penalty))
+
+        if health_score >= 85:
+            health_status = "Healthy"
+        elif health_score >= 65:
+            health_status = "Needs Attention"
+        else:
+            health_status = "Critical"
+
+        issues = []
+        if failed_sources:
+            issues.append(f"{len(failed_sources)} sources failed processing")
+        if needs_attention:
+            issues.append(f"{len(needs_attention)} sources require attention")
+        if gaps:
+            issues.append(f"{len(gaps)} unanswered customer questions detected")
+
+        return {
+            "status": health_status,
+            "healthScore": health_score,
+            "totalSources": len(sources),
+            "totalChunks": len(chunks),
+            "readyCount": len(ready),
+            "processingCount": len(processing),
+            "needsAttentionCount": len(needs_attention),
+            "failedCount": len(failed_sources),
+            "gapsCount": len(gaps),
+            "issues": issues,
+            "lastUpdated": "Just now"
+        }
+
     def get_agent_for_company(self, company_id: str) -> Optional[Dict[str, Any]]:
         for a in self.agents.values():
             if a.get("companyId") == company_id:
@@ -229,3 +378,4 @@ class DatabaseStore:
         return None
 
 db = DatabaseStore()
+

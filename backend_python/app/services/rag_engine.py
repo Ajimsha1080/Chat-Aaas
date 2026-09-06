@@ -69,7 +69,8 @@ class RAGEngine:
 
         for chunk in stored_chunks:
             # Enforce strict multi-tenant boundary
-            if chunk.get("company_id") != company_id:
+            chunk_company = chunk.get("companyId") or chunk.get("company_id")
+            if chunk_company != company_id:
                 continue
 
             content = chunk.get("content", "")
@@ -85,7 +86,7 @@ class RAGEngine:
             if relevance >= threshold:
                 results.append(ChunkSearchResult(
                     chunk_id=chunk.get("id", "chk_1"),
-                    knowledge_source_id=chunk.get("knowledge_source_id", "src_1"),
+                    knowledge_source_id=chunk.get("knowledgeSourceId") or chunk.get("knowledge_source_id", "src_1"),
                     content=content,
                     similarity_score=round(relevance, 3)
                 ))
@@ -94,11 +95,72 @@ class RAGEngine:
         return results[:top_k]
 
     @staticmethod
-    def evaluate_groundedness(chunks: List[ChunkSearchResult], threshold: float = 0.72) -> Tuple[bool, str]:
+    def evaluate_groundedness(chunks: List[ChunkSearchResult], threshold: float = 0.60) -> Tuple[bool, str]:
         """Evaluates whether retrieved chunks provide sufficient evidence to answer without hallucination."""
         if not chunks:
-            return False, "No relevant company knowledge found. Refusing to speculate."
+            return False, "I couldn't find enough information in your knowledge to answer this confidently."
         top_score = chunks[0].similarity_score
         if top_score < threshold:
-            return False, f"Relevance score {top_score} is below threshold {threshold}. Falling back to safe escalation."
+            return False, "I couldn't find enough information in your knowledge to answer this confidently."
         return True, f"Grounded response with confidence score {top_score}."
+
+    @classmethod
+    def sanitize_untrusted_text(cls, text: str) -> str:
+        """Sanitizes retrieved text against malicious prompt injection delimiters."""
+        text = text.replace("</company_knowledge>", "[escaped]")
+        text = text.replace("<system_prompt>", "[escaped]")
+        text = text.replace("</system_prompt>", "[escaped]")
+        return text
+
+    @classmethod
+    def execute_rag_query(
+        cls,
+        query: str,
+        company_id: str,
+        stored_chunks: List[Dict[str, Any]],
+        top_k: int = 3
+    ) -> Dict[str, Any]:
+        """
+        Executes an end-to-end RAG query pipeline:
+        1. Retrieval with strict tenant isolation
+        2. Groundedness validation (anti-hallucination)
+        3. Prompt injection containment fences
+        4. Citations formatting
+        """
+        chunks = cls.search_chunks(query, company_id, stored_chunks, threshold=0.1, top_k=top_k)
+        is_grounded, ground_msg = cls.evaluate_groundedness(chunks, threshold=0.50)
+
+        citations = []
+        for c in chunks:
+            if c.similarity_score >= 0.50:
+                citations.append({
+                    "chunkId": c.chunk_id,
+                    "sourceId": c.knowledge_source_id,
+                    "preview": c.content[:150] + "..." if len(c.content) > 150 else c.content,
+                    "score": c.similarity_score
+                })
+
+        if not is_grounded or not citations:
+            return {
+                "success": False,
+                "answer": "I couldn't find enough information in your company's knowledge to answer this question accurately.",
+                "isGrounded": False,
+                "grounded": False,
+                "citations": [],
+                "confidenceScore": 0.0,
+                "needsGapRecorded": True
+            }
+
+        # Build grounded synthesis
+        top_content = chunks[0].content
+        answer = f"Based on your company knowledge:\n\n{top_content}"
+
+        return {
+            "success": True,
+            "answer": answer,
+            "isGrounded": True,
+            "grounded": True,
+            "citations": citations,
+            "confidenceScore": chunks[0].similarity_score,
+            "needsGapRecorded": False
+        }

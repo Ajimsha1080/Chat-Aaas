@@ -168,22 +168,50 @@ class Message(Base):
     conversation = relationship("Conversation", back_populates="messages")
 
 
+class KnowledgeCollection(Base):
+    __tablename__ = "knowledge_collections"
+
+    id = Column(String(64), primary_key=True, index=True)
+    company_id = Column(String(64), ForeignKey("companies.id", ondelete="CASCADE"), nullable=False, index=True)
+    name = Column(String(255), nullable=False)
+    description = Column(Text, nullable=True)
+    icon = Column(String(50), default="folder", nullable=False)
+    color = Column(String(50), default="indigo", nullable=False)
+    source_count = Column(Integer, default=0, nullable=False)
+    created_at = Column(String(64), nullable=False)
+    updated_at = Column(String(64), nullable=True)
+
+    sources = relationship("KnowledgeSource", back_populates="collection")
+
+    __table_args__ = (
+        Index("idx_tenant_collection_name", "company_id", "name", unique=True),
+    )
+
+
 class KnowledgeSource(Base):
     __tablename__ = "knowledge_sources"
 
     id = Column(String(64), primary_key=True, index=True)
     company_id = Column(String(64), ForeignKey("companies.id", ondelete="CASCADE"), nullable=False, index=True)
+    collection_id = Column(String(64), ForeignKey("knowledge_collections.id", ondelete="SET NULL"), nullable=True, index=True)
     title = Column(String(255), nullable=False)
-    source_type = Column(String(50), nullable=False)  # url, pdf, docx, txt, manual
+    source_type = Column(String(50), nullable=False)  # file, website, url, faq, text, connected
+    file_name = Column(String(255), nullable=True)
+    file_size_bytes = Column(Integer, default=0, nullable=False)
+    mime_type = Column(String(100), nullable=True)
+    version = Column(Integer, default=1, nullable=False)
     source_url = Column(String(1000), nullable=True)
     category = Column(String(100), default="General", nullable=False)
-    status = Column(String(50), default="indexed", nullable=False)  # processing, indexed, error
+    status = Column(String(50), default="ready", nullable=False)  # ready, processing, needs_attention, failed
+    error_message = Column(Text, nullable=True)
     chunk_count = Column(Integer, default=0, nullable=False)
     total_tokens = Column(Integer, default=0, nullable=False)
+    last_synced_at = Column(String(64), nullable=True)
     created_at = Column(String(64), nullable=False)
     updated_at = Column(String(64), nullable=True)
 
     company = relationship("Company", back_populates="knowledge_sources")
+    collection = relationship("KnowledgeCollection", back_populates="sources")
     chunks = relationship("DocumentChunk", back_populates="source", cascade="all, delete-orphan")
 
 
@@ -193,10 +221,12 @@ class DocumentChunk(Base):
     id = Column(String(64), primary_key=True, index=True)
     knowledge_source_id = Column(String(64), ForeignKey("knowledge_sources.id", ondelete="CASCADE"), nullable=False, index=True)
     company_id = Column(String(64), nullable=False, index=True)
+    collection_id = Column(String(64), nullable=True, index=True)
     chunk_index = Column(Integer, default=0, nullable=False)
     content = Column(Text, nullable=False)
     token_count = Column(Integer, default=0, nullable=False)
-    embedding = Column(JSON, nullable=True)  # Stored as array/vector for pgvector similarity
+    section_header = Column(String(255), nullable=True)
+    embedding = Column(JSON, nullable=True)  # Stored as 1536-dim vector for pgvector similarity
     metadata_json = Column(JSON, default=dict, nullable=False)
     created_at = Column(String(64), nullable=False)
 
@@ -205,6 +235,48 @@ class DocumentChunk(Base):
     __table_args__ = (
         Index("idx_tenant_chunk", "company_id", "knowledge_source_id"),
     )
+
+
+class KnowledgeGap(Base):
+    __tablename__ = "knowledge_gaps"
+
+    id = Column(String(64), primary_key=True, index=True)
+    company_id = Column(String(64), ForeignKey("companies.id", ondelete="CASCADE"), nullable=False, index=True)
+    query = Column(String(500), nullable=False)
+    occurrences = Column(Integer, default=1, nullable=False)
+    last_asked_at = Column(String(64), nullable=False)
+    status = Column(String(50), default="unresolved", nullable=False)  # unresolved, converted_to_faq, ignored
+    suggested_category = Column(String(100), default="General", nullable=False)
+    created_at = Column(String(64), nullable=False)
+
+
+class KnowledgeFeedback(Base):
+    __tablename__ = "knowledge_feedback"
+
+    id = Column(String(64), primary_key=True, index=True)
+    company_id = Column(String(64), ForeignKey("companies.id", ondelete="CASCADE"), nullable=False, index=True)
+    conversation_id = Column(String(64), nullable=True, index=True)
+    message_id = Column(String(64), nullable=True, index=True)
+    rating = Column(String(20), nullable=False)  # helpful, not_helpful
+    feedback_text = Column(Text, nullable=True)
+    retrieved_chunk_ids = Column(JSON, default=list, nullable=False)
+    created_at = Column(String(64), nullable=False)
+
+
+class KnowledgeJob(Base):
+    __tablename__ = "knowledge_jobs"
+
+    id = Column(String(64), primary_key=True, index=True)
+    company_id = Column(String(64), nullable=False, index=True)
+    source_id = Column(String(64), nullable=False, index=True)
+    job_type = Column(String(50), nullable=False)  # file_ingest, web_crawl, reprocess
+    status = Column(String(50), default="queued", nullable=False)  # queued, processing, completed, failed
+    progress_percent = Column(Integer, default=0, nullable=False)
+    error_details = Column(Text, nullable=True)
+    retry_count = Column(Integer, default=0, nullable=False)
+    created_at = Column(String(64), nullable=False)
+    completed_at = Column(String(64), nullable=True)
+
 
 
 class AgentTool(Base):

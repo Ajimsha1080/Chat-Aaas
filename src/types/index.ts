@@ -77,7 +77,50 @@ export interface KnowledgeItem {
   lastUpdated: string;
   category?: string;
   faqAnswer?: string;
+  collectionId?: string;
+  collectionName?: string;
 }
+
+export interface KnowledgeCollection {
+  id: string;
+  companyId?: string;
+  name: string;
+  description?: string;
+  icon?: string;
+  color?: string;
+  sourceCount?: number;
+  createdAt?: string;
+}
+
+export interface KnowledgeGap {
+  id: string;
+  companyId?: string;
+  query: string;
+  occurrences: number;
+  lastAskedAt: string;
+  status: 'unresolved' | 'converted_to_faq' | 'dismissed';
+  suggestedCategory?: string;
+  createdAt?: string;
+}
+
+export interface RagCitation {
+  chunkId: string;
+  sourceId: string;
+  preview: string;
+  score: number;
+  sourceTitle?: string;
+}
+
+export interface RagTestResponse {
+  success: boolean;
+  answer: string;
+  isGrounded: boolean;
+  grounded?: boolean;
+  citations: RagCitation[];
+  confidenceScore: number;
+  needsGapRecorded?: boolean;
+}
+
 
 export type IntegrationCategory = 'crm' | 'erp' | 'booking' | 'support' | 'payment' | 'database';
 
