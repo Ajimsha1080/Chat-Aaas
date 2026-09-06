@@ -39,10 +39,15 @@ export const DeployView: React.FC = () => {
     setTimeout(() => setIsSaved(false), 2500);
   };
 
+  const origin = typeof window !== 'undefined' ? window.location.origin : 'https://cdn.chat-aaas.com';
+  const isLocal = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
+  const widgetScriptSrc = isLocal ? `${origin}/widget.js` : 'https://cdn.chat-aaas.com/v1/widget.js';
+  const apiEndpointUrl = isLocal ? 'http://127.0.0.1:8001/api/v1/chat' : 'https://api.chat-aaas.com/api/v1/chat';
+
   // Embed script snippet
   const scriptSnippet = `<!-- Chat-AaaS AI Assistant Widget for ${currentCompany.name} -->
 <script
-  src="https://cdn.chat-aaas.com/v1/widget.js"
+  src="${widgetScriptSrc}"
   data-agent-key="${currentCompany.apiKey}"
   data-position="${localSettings.position}"
   data-primary-color="${localSettings.primaryColor}"

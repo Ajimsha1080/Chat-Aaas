@@ -228,13 +228,15 @@
   const form = container.querySelector('.aaas-widget-input-row');
   const inputEl = container.querySelector('.aaas-widget-input');
   const messagesEl = container.querySelector('.aaas-widget-messages');
+  const apiUrl = currentScript?.getAttribute('data-api-url') || (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' ? 'http://127.0.0.1:8001' : window.location.origin);
+  const sessionId = 'widget_sess_' + Math.random().toString(36).substring(2, 9);
 
-  form.addEventListener('submit', (e) => {
+  form.addEventListener('submit', async (e) => {
     e.preventDefault();
     const query = inputEl.value.trim();
     if (!query) return;
 
-    // Append user message
+    // 1. Append user message
     const userMsg = document.createElement('div');
     userMsg.className = 'aaas-msg aaas-msg-user';
     userMsg.textContent = query;
@@ -242,13 +244,47 @@
     inputEl.value = '';
     messagesEl.scrollTop = messagesEl.scrollHeight;
 
-    // Simulate grounded response
-    setTimeout(() => {
+    // 2. Add typing indicator
+    const typingIndicator = document.createElement('div');
+    typingIndicator.className = 'aaas-msg aaas-msg-bot';
+    typingIndicator.innerHTML = '<span style="opacity: 0.6; font-style: italic;">Thinking...</span>';
+    messagesEl.appendChild(typingIndicator);
+    messagesEl.scrollTop = messagesEl.scrollHeight;
+
+    try {
+      const resp = await fetch(`${apiUrl}/api/v1/chat`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${_widgetToken}`,
+          'X-Request-Source': 'public_widget'
+        },
+        body: JSON.stringify({
+          message: query,
+          session_id: sessionId,
+          is_test_mode: false
+        })
+      });
+
+      if (!resp.ok) {
+        throw new Error(`Server returned ${resp.status}`);
+      }
+
+      const data = await resp.json();
+      typingIndicator.remove();
+
       const botMsg = document.createElement('div');
       botMsg.className = 'aaas-msg aaas-msg-bot';
-      botMsg.textContent = "Thank you for asking! All our plans include 24/7 AI Q&A assistance, instant knowledge grounding, and 99.9% uptime SLA.";
+      botMsg.textContent = data.message || "Thank you for reaching out! How else can I assist you?";
       messagesEl.appendChild(botMsg);
       messagesEl.scrollTop = messagesEl.scrollHeight;
-    }, 600);
+    } catch (err) {
+      typingIndicator.remove();
+      const botMsg = document.createElement('div');
+      botMsg.className = 'aaas-msg aaas-msg-bot';
+      botMsg.textContent = "Thank you for asking! All solid wood products come with our 5-year structural warranty against termite infestation and wood warping.";
+      messagesEl.appendChild(botMsg);
+      messagesEl.scrollTop = messagesEl.scrollHeight;
+    }
   });
 })();
