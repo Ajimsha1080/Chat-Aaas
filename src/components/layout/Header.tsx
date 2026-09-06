@@ -8,13 +8,11 @@ import {
   Sparkles, 
   ExternalLink, 
   Check, 
-  UserCircle, 
   Terminal, 
   HelpCircle, 
   Search 
 } from 'lucide-react';
 import { useApp } from '../../context';
-import { UserRole } from '../../types';
 
 interface HeaderProps {
   onOpenOnboarding: () => void;
@@ -23,7 +21,12 @@ interface HeaderProps {
   onOpenCommandPalette?: () => void;
 }
 
-export const Header: React.FC<HeaderProps> = ({ onOpenOnboarding, onOpenTestRunner, onOpenHelp, onOpenCommandPalette }) => {
+export const Header: React.FC<HeaderProps> = ({ 
+  onOpenOnboarding, 
+  onOpenTestRunner, 
+  onOpenHelp, 
+  onOpenCommandPalette 
+}) => {
   const { 
     companies, 
     currentCompanyId, 
@@ -31,29 +34,16 @@ export const Header: React.FC<HeaderProps> = ({ onOpenOnboarding, onOpenTestRunn
     switchCompany, 
     currentPlan, 
     toggleAgentStatus,
-    currentUserRole,
-    setCurrentUserRole,
-    setCurrentExperience,
-    setCurrentTab,
     setIsLiveSandboxOpen,
     setIsQuickTestOpen
   } = useApp();
 
   const [isCompanyDropdownOpen, setIsCompanyDropdownOpen] = useState(false);
-  const [isRoleDropdownOpen, setIsRoleDropdownOpen] = useState(false);
-
   const usagePercent = Math.min(100, Math.round((currentCompany.stats.messagesThisMonth / currentPlan.maxConversationsMonth) * 100));
-
-  const allRoles: { id: UserRole; label: string; desc: string; defaultExp: 'customer' | 'developer' | 'admin' }[] = [
-    { id: 'platform_super_admin', label: 'Super Admin', desc: 'Full SaaS platform operator', defaultExp: 'admin' },
-    { id: 'owner', label: 'Company Owner', desc: 'Organization executive & billing', defaultExp: 'customer' },
-    { id: 'staff', label: 'Support Specialist', desc: 'Live chat & human takeover', defaultExp: 'customer' },
-    { id: 'viewer', label: 'Viewer', desc: 'Read-only analytics access', defaultExp: 'customer' }
-  ];
 
   return (
     <header className="h-16 bg-white border-b border-slate-200 px-6 flex items-center justify-between z-10 shrink-0">
-      {/* Left: Tenant Workspace Selector & Agent Status */}
+      {/* Left: Tenant Workspace Selector & Assistant Status */}
       <div className="flex items-center gap-4">
         {/* Company Dropdown */}
         <div className="relative">
@@ -107,7 +97,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenOnboarding, onOpenTestRunn
           )}
         </div>
 
-        {/* Agent Status Toggle Pill */}
+        {/* Assistant Status Toggle Pill */}
         <div className="flex items-center gap-2 pl-2 border-l border-slate-200">
           <span className="text-xs text-slate-500 font-medium hidden md:inline">Assistant:</span>
           <button
@@ -117,7 +107,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenOnboarding, onOpenTestRunn
                 ? 'bg-emerald-50 text-emerald-700 border-emerald-300 hover:bg-emerald-100'
                 : 'bg-amber-50 text-amber-700 border-amber-300 hover:bg-amber-100'
             }`}
-            title="Click to toggle agent status"
+            title="Click to toggle assistant status"
           >
             {currentCompany.agent.status === 'active' ? (
               <>
@@ -147,7 +137,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenOnboarding, onOpenTestRunn
       {onOpenCommandPalette && (
         <button
           onClick={onOpenCommandPalette}
-          className="hidden md:flex items-center gap-2.5 px-3 py-1.5 bg-slate-100/80 hover:bg-slate-200/80 text-slate-500 rounded-xl text-xs font-medium transition-all border border-slate-200 cursor-pointer shadow-2xs"
+          className="hidden md:flex items-center gap-2.5 px-3.5 py-1.5 bg-slate-100/80 hover:bg-slate-200/80 text-slate-500 rounded-xl text-xs font-medium transition-all border border-slate-200 cursor-pointer shadow-2xs"
           title="Open Command Palette (Cmd+K / Ctrl+K)"
         >
           <Search className="w-3.5 h-3.5 text-slate-400" />
@@ -158,7 +148,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenOnboarding, onOpenTestRunn
         </button>
       )}
 
-      {/* Right: Quick actions, Usage meter, Role Switcher */}
+      {/* Right: Quick actions, Quota meter, Test & Preview */}
       <div className="flex items-center gap-3">
         {/* Usage Meter */}
         <div className="hidden xl:flex items-center gap-2 bg-slate-50 border border-slate-200 px-3 py-1.5 rounded-xl text-xs">
@@ -176,7 +166,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenOnboarding, onOpenTestRunn
         <button
           onClick={onOpenTestRunner}
           className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-xl text-xs font-semibold transition-colors border border-slate-200 cursor-pointer"
-          title="Run Automated Backend Test Suite (Multi-Tenancy, SSRF, Injection)"
+          title="Run Automated Backend Test Suite"
         >
           <Terminal className="w-3.5 h-3.5 text-indigo-600" />
           <span>Run Tests</span>
@@ -185,7 +175,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenOnboarding, onOpenTestRunn
         {/* Quick Test Agent Sandbox */}
         <button
           onClick={() => setIsQuickTestOpen(true)}
-          className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-semibold shadow-xs transition-colors cursor-pointer"
+          className="flex items-center gap-1.5 px-3.5 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-semibold shadow-xs transition-colors cursor-pointer"
         >
           <Play className="w-3.5 h-3.5 fill-white text-white" />
           <span className="hidden sm:inline">Test Assistant</span>
@@ -194,7 +184,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenOnboarding, onOpenTestRunn
         {/* Client Website Sandbox */}
         <button
           onClick={() => setIsLiveSandboxOpen(true)}
-          className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 rounded-xl text-xs font-semibold transition-colors cursor-pointer"
+          className="flex items-center gap-1.5 px-3.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 rounded-xl text-xs font-semibold transition-colors cursor-pointer"
         >
           <ExternalLink className="w-3.5 h-3.5 text-indigo-600" />
           <span className="hidden sm:inline">Website Preview</span>
@@ -210,51 +200,6 @@ export const Header: React.FC<HeaderProps> = ({ onOpenOnboarding, onOpenTestRunn
             <HelpCircle className="w-5 h-5" />
           </button>
         )}
-
-        {/* Role Switcher */}
-        <div className="relative border-l border-slate-200 pl-3">
-          <button
-            onClick={() => setIsRoleDropdownOpen(!isRoleDropdownOpen)}
-            className="flex items-center gap-2 text-xs font-medium text-slate-700 hover:text-slate-900 py-1 px-2 rounded-xl hover:bg-slate-50 cursor-pointer"
-          >
-            <UserCircle className="w-5 h-5 text-slate-600" />
-            <div className="text-left hidden md:block">
-              <p className="font-semibold text-slate-800 capitalize leading-tight">{currentUserRole.replace(/_/g, ' ')}</p>
-              <p className="text-[10px] text-slate-400">Switch RBAC</p>
-            </div>
-            <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
-          </button>
-
-          {isRoleDropdownOpen && (
-            <div className="absolute right-0 mt-2 w-56 bg-white border border-slate-200 rounded-2xl shadow-xl py-1.5 z-50 animate-in fade-in duration-150">
-              <div className="px-3.5 py-1 text-[10px] font-semibold text-slate-400 uppercase tracking-wider">
-                Simulate RBAC Role
-              </div>
-              {allRoles.map(r => (
-                <button
-                  key={r.id}
-                  onClick={() => {
-                    setCurrentUserRole(r.id);
-                    setCurrentExperience(r.defaultExp);
-                    if (r.id === 'staff' || r.id === 'manager') {
-                      setCurrentTab('conversations');
-                    }
-                    setIsRoleDropdownOpen(false);
-                  }}
-                  className={`w-full flex items-center justify-between px-3.5 py-1.5 text-xs font-medium text-left hover:bg-slate-50 cursor-pointer ${
-                    currentUserRole === r.id ? 'text-indigo-600 font-semibold bg-indigo-50/50' : 'text-slate-700'
-                  }`}
-                >
-                  <div>
-                    <span className="block font-semibold">{r.label}</span>
-                    <span className="text-[10px] text-slate-400 font-normal">{r.desc}</span>
-                  </div>
-                  {currentUserRole === r.id && <Check className="w-3.5 h-3.5 text-indigo-600 shrink-0" />}
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
       </div>
     </header>
   );
