@@ -24,6 +24,7 @@ import {
   ThumbsUp,
   ThumbsDown,
   ArrowRight,
+  ChevronRight,
   Bot
 } from 'lucide-react';
 import { useApp } from '../../context';
@@ -39,7 +40,7 @@ export const KnowledgeView: React.FC = () => {
   } = useApp();
 
   // Navigation & Filtering
-  const [activeTab, setActiveTab] = useState<KnowledgeType | 'all'>('all');
+  const [activeTab, setActiveTab] = useState<KnowledgeType | 'all' | 'gaps'>('all');
   const [selectedCollection, setSelectedCollection] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
   
@@ -374,6 +375,15 @@ export const KnowledgeView: React.FC = () => {
               </span>
             </div>
             <p className="text-[11px] text-slate-500 mt-1">{totalChunks} semantic vector chunks indexed</p>
+            {knowledgeGaps.length > 0 && (
+              <button 
+                onClick={() => setActiveTab('gaps')}
+                className="mt-2 text-[10px] text-amber-700 bg-amber-50 hover:bg-amber-100 border border-amber-200 px-2 py-0.5 rounded-md font-bold flex items-center gap-1 cursor-pointer transition-colors"
+              >
+                <AlertTriangle className="w-2.5 h-2.5 text-amber-600" />
+                <span>{knowledgeGaps.length} questions need answers</span>
+              </button>
+            )}
           </div>
         </div>
 
@@ -429,53 +439,6 @@ export const KnowledgeView: React.FC = () => {
         </div>
       </div>
 
-      {/* Knowledge Gaps Resolver Banner (If any gaps exist) */}
-      {knowledgeGaps.length > 0 && (
-        <div className="bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200/80 rounded-2xl p-4 shadow-xs">
-          <div className="flex items-start justify-between gap-3 flex-wrap sm:flex-nowrap">
-            <div className="flex items-start gap-3">
-              <div className="p-2 bg-amber-500/10 rounded-xl text-amber-700 mt-0.5">
-                <AlertTriangle className="w-4 h-4" />
-              </div>
-              <div>
-                <h3 className="text-xs font-bold text-amber-900">
-                  {knowledgeGaps.length} Unresolved Customer Questions Detected
-                </h3>
-                <p className="text-[11px] text-amber-700 mt-0.5">
-                  Customers asked questions where the AI lacked verified answers. Convert them to FAQs in 1 click to improve accuracy.
-                </p>
-              </div>
-            </div>
-          </div>
-
-          {/* Gaps List */}
-          <div className="mt-3 grid grid-cols-1 md:grid-cols-2 gap-2.5">
-            {knowledgeGaps.map(gap => (
-              <div key={gap.id} className="bg-white/90 backdrop-blur-xs p-3 rounded-xl border border-amber-200 flex items-center justify-between gap-2 shadow-2xs">
-                <div className="overflow-hidden">
-                  <p className="text-xs font-semibold text-slate-900 truncate">"{gap.query}"</p>
-                  <div className="flex items-center gap-2 text-[10px] text-slate-500 mt-0.5">
-                    <span className="text-amber-700 font-bold">{gap.occurrences} asks</span>
-                    <span>•</span>
-                    <span>{gap.suggestedCategory}</span>
-                  </div>
-                </div>
-                <button
-                  onClick={() => {
-                    setConvertingGap(gap);
-                    setGapFaqAnswer('');
-                  }}
-                  className="px-2.5 py-1 bg-amber-600 hover:bg-amber-500 text-white rounded-lg text-[11px] font-semibold whitespace-nowrap transition-colors flex items-center gap-1 cursor-pointer shrink-0"
-                >
-                  <Plus className="w-3 h-3" />
-                  <span>Convert to FAQ</span>
-                </button>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
       {/* Collections Row */}
       <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs flex items-center justify-between gap-3 overflow-x-auto">
         <div className="flex items-center gap-2">
@@ -527,15 +490,20 @@ export const KnowledgeView: React.FC = () => {
             { id: 'url', label: 'Websites' },
             { id: 'document', label: 'Documents' },
             { id: 'faq', label: 'FAQs' },
-            { id: 'text', label: 'Custom Text' }
+            { id: 'text', label: 'Custom Text' },
+            ...(knowledgeGaps.length > 0 ? [{ id: 'gaps', label: `⚠️ Needs Answers (${knowledgeGaps.length})` }] : [])
           ].map(tab => (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id as any)}
               className={`px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all cursor-pointer ${
                 activeTab === tab.id
-                  ? 'bg-slate-900 text-white shadow-xs'
-                  : 'text-slate-600 hover:bg-slate-100'
+                  ? tab.id === 'gaps' 
+                    ? 'bg-amber-600 text-white shadow-xs' 
+                    : 'bg-slate-900 text-white shadow-xs'
+                  : tab.id === 'gaps' 
+                    ? 'bg-amber-50 text-amber-800 border border-amber-200 hover:bg-amber-100' 
+                    : 'text-slate-600 hover:bg-slate-100'
               }`}
             >
               {tab.label}
@@ -555,68 +523,138 @@ export const KnowledgeView: React.FC = () => {
         </div>
       </div>
 
-      {/* Knowledge Item Cards Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {filteredItems.map(item => {
-          const isUrl = item.type === 'url';
-          const isDoc = item.type === 'document';
-          const isFaq = item.type === 'faq';
-
-          return (
-            <div 
-              key={item.id}
-              className="bg-white rounded-2xl p-5 border border-slate-200 shadow-xs hover:border-slate-300 transition-all flex flex-col justify-between"
-            >
-              <div>
-                <div className="flex items-center justify-between mb-2">
-                  <div className="flex items-center gap-2">
-                    <div className={`p-1.5 rounded-lg ${
-                      isUrl ? 'bg-indigo-50 text-indigo-600' : isDoc ? 'bg-blue-50 text-blue-600' : isFaq ? 'bg-purple-50 text-purple-600' : 'bg-emerald-50 text-emerald-600'
-                    }`}>
-                      {isUrl ? <Globe className="w-3.5 h-3.5" /> : isDoc ? <FileText className="w-3.5 h-3.5" /> : isFaq ? <HelpCircle className="w-3.5 h-3.5" /> : <AlignLeft className="w-3.5 h-3.5" />}
-                    </div>
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">{item.type}</span>
-                  </div>
-                  <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
-                    <CheckCircle2 className="w-3 h-3 text-emerald-600" />
-                    <span>Ready</span>
-                  </span>
-                </div>
-
-                <h3 className="text-sm font-bold text-slate-900 line-clamp-1">{item.title}</h3>
-                <p className="text-xs text-slate-500 mt-1 line-clamp-2 leading-relaxed">
-                  {item.faqAnswer || item.content}
-                </p>
+      {/* Gaps Tab Active View */}
+      {activeTab === 'gaps' ? (
+        <div className="space-y-4">
+          <div className="bg-amber-50/80 border border-amber-200 rounded-2xl p-4 flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2.5">
+              <div className="p-2 bg-amber-500/10 rounded-xl text-amber-700">
+                <AlertTriangle className="w-4 h-4" />
               </div>
-
-              <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-xs">
-                <span className="text-[11px] text-slate-400 font-medium">
-                  {item.category || 'General'} {item.chunksCount ? `• ${item.chunksCount} chunks` : ''}
-                </span>
-                <div className="flex items-center gap-1.5">
-                  <button
-                    onClick={() => setPreviewItem(item)}
-                    className="p-1.5 text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
-                    title="Preview Chunks"
-                  >
-                    <Eye className="w-3.5 h-3.5" />
-                  </button>
-                  <button
-                    onClick={() => {
-                      deleteKnowledgeItem(item.id);
-                      showToast('Knowledge Removed', `Removed "${item.title}".`, 'info');
-                    }}
-                    className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer"
-                    title="Delete"
-                  >
-                    <Trash2 className="w-3.5 h-3.5" />
-                  </button>
-                </div>
+              <div>
+                <h3 className="text-xs font-bold text-amber-900">Unresolved Customer Questions ({knowledgeGaps.length})</h3>
+                <p className="text-[11px] text-amber-700">Questions real customers asked where your assistant lacked verified answers. Convert them into FAQs in 1 click.</p>
               </div>
             </div>
-          );
-        })}
-      </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {knowledgeGaps.map(gap => (
+              <div key={gap.id} className="bg-white rounded-2xl p-5 border border-amber-200 shadow-xs flex flex-col justify-between">
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-amber-600 bg-amber-50 px-2 py-0.5 rounded-md border border-amber-200">
+                      {gap.suggestedCategory}
+                    </span>
+                    <span className="text-xs font-bold text-amber-800">{gap.occurrences} customer asks</span>
+                  </div>
+                  <h4 className="text-sm font-bold text-slate-900 mt-2">"{gap.query}"</h4>
+                  <p className="text-xs text-slate-400 mt-1">Last asked {gap.lastAskedAt}</p>
+                </div>
+
+                <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between">
+                  <span className="text-[11px] text-slate-500">Add verified answer</span>
+                  <button
+                    onClick={() => {
+                      setConvertingGap(gap);
+                      setGapFaqAnswer('');
+                    }}
+                    className="px-3 py-1.5 bg-amber-600 hover:bg-amber-500 text-white rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    <span>+ Convert to FAQ</span>
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      ) : (
+        /* Standard Knowledge Item Cards Grid */
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {filteredItems.map(item => {
+            const isUrl = item.type === 'url';
+            const isDoc = item.type === 'document';
+            const isFaq = item.type === 'faq';
+
+            return (
+              <div 
+                key={item.id}
+                className="bg-white rounded-2xl p-5 border border-slate-200 shadow-xs hover:border-slate-300 transition-all flex flex-col justify-between"
+              >
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-2">
+                      <div className={`p-1.5 rounded-lg ${
+                        isUrl ? 'bg-indigo-50 text-indigo-600' : isDoc ? 'bg-blue-50 text-blue-600' : isFaq ? 'bg-purple-50 text-purple-600' : 'bg-emerald-50 text-emerald-600'
+                      }`}>
+                        {isUrl ? <Globe className="w-3.5 h-3.5" /> : isDoc ? <FileText className="w-3.5 h-3.5" /> : isFaq ? <HelpCircle className="w-3.5 h-3.5" /> : <AlignLeft className="w-3.5 h-3.5" />}
+                      </div>
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">{item.type}</span>
+                    </div>
+                    <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+                      <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                      <span>Ready</span>
+                    </span>
+                  </div>
+
+                  <h3 className="text-sm font-bold text-slate-900 line-clamp-1">{item.title}</h3>
+                  <p className="text-xs text-slate-500 mt-1 line-clamp-2 leading-relaxed">
+                    {item.faqAnswer || item.content}
+                  </p>
+                </div>
+
+                <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-xs">
+                  <span className="text-[11px] text-slate-400 font-medium">
+                    {item.category || 'General'} {item.chunksCount ? `• ${item.chunksCount} chunks` : ''}
+                  </span>
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      onClick={() => setPreviewItem(item)}
+                      className="p-1.5 text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
+                      title="Preview Chunks"
+                    >
+                      <Eye className="w-3.5 h-3.5" />
+                    </button>
+                    <button
+                      onClick={() => {
+                        deleteKnowledgeItem(item.id);
+                        showToast('Knowledge Removed', `Removed "${item.title}".`, 'info');
+                      }}
+                      className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer"
+                      title="Delete"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Clean Bottom Learning Section if Gaps Exist and Not on Gaps Tab */}
+      {knowledgeGaps.length > 0 && activeTab !== 'gaps' && (
+        <div className="bg-amber-50/70 border border-amber-200/70 rounded-2xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-2xs">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-amber-500/10 rounded-xl text-amber-700 shrink-0">
+              <AlertTriangle className="w-4 h-4" />
+            </div>
+            <div>
+              <p className="text-xs font-bold text-amber-900">{knowledgeGaps.length} Unresolved Customer Questions Detected</p>
+              <p className="text-[11px] text-amber-700">Customers asked questions where the AI lacked verified answers.</p>
+            </div>
+          </div>
+          <button
+            onClick={() => setActiveTab('gaps')}
+            className="px-3.5 py-1.5 bg-amber-600 hover:bg-amber-500 text-white rounded-xl text-xs font-semibold whitespace-nowrap transition-colors flex items-center gap-1 cursor-pointer shrink-0"
+          >
+            <span>Review Gaps ({knowledgeGaps.length})</span>
+            <ChevronRight className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      )}
 
       {/* RAG Sandbox Modal / Drawer */}
       {isTestSandboxOpen && (
