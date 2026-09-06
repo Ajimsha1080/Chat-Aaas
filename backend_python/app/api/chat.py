@@ -27,7 +27,7 @@ async def process_chat_message(
     company_id = ctx.company_id
     
     # 1. Anti-spam & Cost Protection: Max 20 requests/minute per tenant session
-    client_key = f"{company_id}_{req.conversation_id or 'anon'}"
+    client_key = f"{company_id}_{req.conversation_id or req.session_id or 'anon'}"
     RateLimiter.check_rate_limit(client_key, max_requests=20)
 
     stored_chunks = [c for c in db.document_chunks.values() if c.get("companyId") == company_id]
@@ -42,8 +42,8 @@ async def process_chat_message(
     )
 
     # Record usage
-    UsageService.record_event(company_id, "message", 1, {"conversationId": req.conversation_id})
-    UsageService.record_event(company_id, "llm_tokens", response.tokens_used, {"model": agent.get("model", "gpt-4o")})
+    UsageService.record_event(company_id, "message", 1, "messages", req.conversation_id or req.session_id)
+    UsageService.record_event(company_id, "llm_tokens", response.tokens_used, "tokens", req.conversation_id or req.session_id)
 
     return response
 
@@ -58,7 +58,7 @@ async def stream_chat_tokens(
     company_id = ctx.company_id
     
     # 1. Anti-spam & Cost Protection: Max 20 requests/minute per tenant session
-    client_key = f"{company_id}_{req.conversation_id or 'anon'}"
+    client_key = f"{company_id}_{req.conversation_id or req.session_id or 'anon'}"
     RateLimiter.check_rate_limit(client_key, max_requests=20)
 
     stored_chunks = [c for c in db.document_chunks.values() if c.get("companyId") == company_id]
@@ -73,8 +73,8 @@ async def stream_chat_tokens(
     )
 
     # Record usage
-    UsageService.record_event(company_id, "message", 1, {"conversationId": req.conversation_id})
-    UsageService.record_event(company_id, "llm_tokens", response.tokens_used, {"model": agent.get("model", "gpt-4o")})
+    UsageService.record_event(company_id, "message", 1, "messages", req.conversation_id)
+    UsageService.record_event(company_id, "llm_tokens", response.tokens_used, "tokens", req.conversation_id)
 
     async def sse_event_generator():
         # 1. Send metadata event

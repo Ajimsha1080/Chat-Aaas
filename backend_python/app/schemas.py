@@ -201,7 +201,10 @@ class ChatMessage(BaseModel):
 class ChatRequest(BaseModel):
     message: str
     session_id: Optional[str] = None
+    conversation_id: Optional[str] = None
     customer_id: Optional[str] = None
+    customer_email: Optional[str] = None
+    customer_name: Optional[str] = None
     history: List[ChatMessage] = []
     is_test_mode: bool = False
 
@@ -226,6 +229,7 @@ class ChatResponse(BaseModel):
     is_refusal: bool = False
     session_id: Optional[str] = None
     citations: List[str] = []
+    tokens_used: int = 120
 
 class ROIAnalyticsResponse(BaseModel):
     automation_rate_percent: float
