@@ -84,8 +84,8 @@ class AgentRuntime:
             detail=f"Querying vector embeddings isolated strictly for tenant '{company_id}'.",
             timestamp=now_str
         ))
-        chunks = RAGEngine.search_chunks(user_msg, company_id, stored_chunks, threshold=0.72)
-        is_grounded, ground_msg = RAGEngine.evaluate_groundedness(chunks, threshold=0.72)
+        chunks = RAGEngine.search_chunks(user_msg, company_id, stored_chunks, threshold=0.30)
+        is_grounded, ground_msg = RAGEngine.evaluate_groundedness(chunks, threshold=0.35)
 
         reasoning_steps.append(ReasoningStep(
             stage="Anti-Hallucination Evaluator",
