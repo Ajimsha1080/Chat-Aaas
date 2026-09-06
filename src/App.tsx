@@ -14,7 +14,6 @@ import { SettingsView } from './components/dashboard/SettingsView';
 import { AdminDashboard } from './components/admin/AdminDashboard';
 import { DeveloperConsole } from './components/developer/DeveloperConsole';
 import { TestAgentDrawer } from './components/common/TestAgentDrawer';
-import { ClientWebsiteSandbox } from './components/widget/ClientWebsiteSandbox';
 import { OnboardingModal } from './components/onboarding/OnboardingModal';
 import { ToastContainer } from './components/common/ToastContainer';
 import { TestRunnerModal } from './components/common/TestRunnerModal';
@@ -27,7 +26,6 @@ const DashboardContent: React.FC = () => {
     currentExperience,
     currentTab, 
     isAdminMode, 
-    isLiveSandboxOpen,
     setIsQuickTestOpen
   } = useApp();
 
@@ -98,9 +96,6 @@ const DashboardContent: React.FC = () => {
 
       {/* Quick Test Agent Drawer (Live AI reasoning & tool execution inspector) */}
       <TestAgentDrawer />
-
-      {/* Standalone Client Website Embed Sandbox */}
-      {isLiveSandboxOpen && <ClientWebsiteSandbox />}
 
       {/* Onboarding Wizard for creating new company workspace */}
       <OnboardingModal 
