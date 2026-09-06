@@ -34,17 +34,36 @@ const DashboardContent: React.FC = () => {
   const [isHelpOpen, setIsHelpOpen] = useState(false);
   const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
 
-  // Render view based on dedicated product experiences & customer tabs
-  const renderActiveView = () => {
-    if (currentExperience === 'admin' || isAdminMode) {
-      return <AdminDashboard />;
-    }
+  // 1. Dedicated Full-Screen Super-Admin Portal (Completely separated from customer workspace)
+  if (currentExperience === 'admin' || isAdminMode) {
+    return (
+      <div className="flex h-screen w-screen bg-slate-100 overflow-hidden font-sans">
+        <main className="flex-1 overflow-y-auto p-6 md:p-10 bg-slate-50">
+          <div className="max-w-7xl mx-auto">
+            <AdminDashboard />
+          </div>
+        </main>
+        <ToastContainer />
+      </div>
+    );
+  }
 
-    if (currentExperience === 'developer') {
-      return <DeveloperConsole />;
-    }
+  // 2. Developer Console (if activated)
+  if (currentExperience === 'developer') {
+    return (
+      <div className="flex h-screen w-screen bg-slate-900 overflow-hidden font-sans">
+        <main className="flex-1 overflow-y-auto p-6 md:p-10">
+          <div className="max-w-7xl mx-auto">
+            <DeveloperConsole />
+          </div>
+        </main>
+        <ToastContainer />
+      </div>
+    );
+  }
 
-    // Customer experience tabs
+  // 3. Customer Experience Workspace (Standard Sidebar + Header Layout)
+  const renderCustomerView = () => {
     switch (currentTab) {
       case 'home':
       case 'overview':
@@ -75,10 +94,10 @@ const DashboardContent: React.FC = () => {
 
   return (
     <div className="flex h-screen w-screen bg-slate-100 overflow-hidden font-sans">
-      {/* Sidebar Navigation */}
+      {/* Customer Workspace Sidebar Navigation */}
       <Sidebar />
 
-      {/* Main Workspace View Container */}
+      {/* Main Workspace Container */}
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
         <Header 
           onOpenOnboarding={() => setIsOnboardingOpen(true)} 
@@ -89,15 +108,15 @@ const DashboardContent: React.FC = () => {
 
         <main className="flex-1 overflow-y-auto p-6 md:p-8 bg-slate-50/70">
           <div className="max-w-7xl mx-auto">
-            {renderActiveView()}
+            {renderCustomerView()}
           </div>
         </main>
       </div>
 
-      {/* Quick Test Agent Drawer (Live AI reasoning & tool execution inspector) */}
+      {/* Quick Test Agent Drawer */}
       <TestAgentDrawer />
 
-      {/* Onboarding Wizard for creating new company workspace */}
+      {/* Onboarding Wizard */}
       <OnboardingModal 
         isOpen={isOnboardingOpen} 
         onClose={() => setIsOnboardingOpen(false)} 
@@ -109,7 +128,7 @@ const DashboardContent: React.FC = () => {
         onClose={() => setIsTestRunnerOpen(false)} 
       />
 
-      {/* Help & Documentation Center Modal */}
+      {/* Help Center */}
       <HelpModal 
         isOpen={isHelpOpen} 
         onClose={() => setIsHelpOpen(false)}
