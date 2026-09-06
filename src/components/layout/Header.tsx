@@ -8,9 +8,10 @@ import {
   Sparkles, 
   ExternalLink, 
   Check, 
-  UserCircle,
-  Terminal,
-  HelpCircle
+  UserCircle, 
+  Terminal, 
+  HelpCircle, 
+  Search 
 } from 'lucide-react';
 import { useApp } from '../../context';
 import { UserRole } from '../../types';
@@ -19,9 +20,10 @@ interface HeaderProps {
   onOpenOnboarding: () => void;
   onOpenTestRunner: () => void;
   onOpenHelp?: () => void;
+  onOpenCommandPalette?: () => void;
 }
 
-export const Header: React.FC<HeaderProps> = ({ onOpenOnboarding, onOpenTestRunner, onOpenHelp }) => {
+export const Header: React.FC<HeaderProps> = ({ onOpenOnboarding, onOpenTestRunner, onOpenHelp, onOpenCommandPalette }) => {
   const { 
     companies, 
     currentCompanyId, 
@@ -140,6 +142,21 @@ export const Header: React.FC<HeaderProps> = ({ onOpenOnboarding, onOpenTestRunn
           <span className="capitalize">{currentPlan.name} Plan</span>
         </span>
       </div>
+
+      {/* Middle: Command Palette Trigger */}
+      {onOpenCommandPalette && (
+        <button
+          onClick={onOpenCommandPalette}
+          className="hidden md:flex items-center gap-2.5 px-3 py-1.5 bg-slate-100/80 hover:bg-slate-200/80 text-slate-500 rounded-xl text-xs font-medium transition-all border border-slate-200 cursor-pointer shadow-2xs"
+          title="Open Command Palette (Cmd+K / Ctrl+K)"
+        >
+          <Search className="w-3.5 h-3.5 text-slate-400" />
+          <span>Quick search or jump to...</span>
+          <kbd className="px-1.5 py-0.5 bg-white border border-slate-200 rounded text-[10px] font-mono text-slate-600 font-bold">
+            ⌘K
+          </kbd>
+        </button>
+      )}
 
       {/* Right: Quick actions, Usage meter, Role Switcher */}
       <div className="flex items-center gap-3">

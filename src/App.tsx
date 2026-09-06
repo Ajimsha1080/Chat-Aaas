@@ -19,6 +19,7 @@ import { OnboardingModal } from './components/onboarding/OnboardingModal';
 import { ToastContainer } from './components/common/ToastContainer';
 import { TestRunnerModal } from './components/common/TestRunnerModal';
 import { HelpModal } from './components/common/HelpModal';
+import { CommandPalette } from './components/common/CommandPalette';
 import { ErrorBoundary } from './components/common/ErrorBoundary';
 
 const DashboardContent: React.FC = () => {
@@ -33,6 +34,7 @@ const DashboardContent: React.FC = () => {
   const [isOnboardingOpen, setIsOnboardingOpen] = useState(false);
   const [isTestRunnerOpen, setIsTestRunnerOpen] = useState(false);
   const [isHelpOpen, setIsHelpOpen] = useState(false);
+  const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
 
   // Render view based on dedicated product experiences & customer tabs
   const renderActiveView = () => {
@@ -84,6 +86,7 @@ const DashboardContent: React.FC = () => {
           onOpenOnboarding={() => setIsOnboardingOpen(true)} 
           onOpenTestRunner={() => setIsTestRunnerOpen(true)}
           onOpenHelp={() => setIsHelpOpen(true)}
+          onOpenCommandPalette={() => setIsCommandPaletteOpen(true)}
         />
 
         <main className="flex-1 overflow-y-auto p-6 md:p-8 bg-slate-50/70">
@@ -116,6 +119,13 @@ const DashboardContent: React.FC = () => {
         isOpen={isHelpOpen} 
         onClose={() => setIsHelpOpen(false)}
         onOpenTestAssistant={() => setIsQuickTestOpen(true)}
+      />
+
+      {/* Global Quick Command Palette (Cmd+K) */}
+      <CommandPalette 
+        isOpen={isCommandPaletteOpen}
+        onClose={() => setIsCommandPaletteOpen(false)}
+        onOpenHelp={() => setIsHelpOpen(true)}
       />
 
       {/* Global Interactive Toast Notification System */}
