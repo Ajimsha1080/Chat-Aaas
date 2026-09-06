@@ -173,7 +173,7 @@ export const Sidebar: React.FC = () => {
                 <Building2 className="w-3.5 h-3.5 text-indigo-400" />
                 <div>
                   <p className="leading-tight">Company Workspace</p>
-                  <p className="text-[10px] text-slate-500 font-normal">Business & AI employee</p>
+                  <p className="text-[10px] text-slate-500 font-normal">Business & AI Assistant</p>
                 </div>
               </button>
 
@@ -186,10 +186,10 @@ export const Sidebar: React.FC = () => {
                   currentExperience === 'developer' ? 'text-emerald-400 font-bold bg-slate-800/50' : 'text-slate-300'
                 }`}
               >
-                <Code2 className="w-3.5 h-3.5 text-emerald-400" />
+                <Terminal className="w-3.5 h-3.5 text-emerald-400" />
                 <div>
                   <p className="leading-tight">Developer Console</p>
-                  <p className="text-[10px] text-slate-500 font-normal">APIs, webhooks & SDK</p>
+                  <p className="text-[10px] text-slate-500 font-normal">API keys & webhooks</p>
                 </div>
               </button>
 
@@ -205,8 +205,8 @@ export const Sidebar: React.FC = () => {
                 >
                   <ShieldAlert className="w-3.5 h-3.5 text-rose-400" />
                   <div>
-                    <p className="leading-tight">Platform Admin</p>
-                    <p className="text-[10px] text-slate-500 font-normal">Fleet & tenant operator</p>
+                    <p className="leading-tight">Super Admin Platform</p>
+                    <p className="text-[10px] text-slate-500 font-normal">Fleet telemetry & health</p>
                   </div>
                 </button>
               )}
@@ -215,12 +215,12 @@ export const Sidebar: React.FC = () => {
         </div>
       </div>
 
-      {/* AI Employee Profile Card (Shown in Customer & Developer mode) */}
+      {/* AI Assistant Profile Card (Shown in Customer & Developer mode) */}
       {currentExperience !== 'admin' && (
         <div className="px-3 pt-3 pb-2">
           <div className="bg-slate-900/90 border border-slate-800 rounded-xl p-3">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-[10px] font-bold text-indigo-400 uppercase tracking-wider">Your AI Employee</span>
+              <span className="text-[10px] font-bold text-indigo-400 uppercase tracking-wider">Your AI Assistant</span>
               <span className={`inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full ${
                 currentCompany.agent.status === 'active' 
                   ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30' 
@@ -243,7 +243,7 @@ export const Sidebar: React.FC = () => {
               />
               <div className="overflow-hidden">
                 <h4 className="text-xs font-bold text-white truncate">{currentCompany.agent.name}</h4>
-                <p className="text-[11px] text-slate-400 truncate">{currentCompany.agent.role || 'Customer Specialist'}</p>
+                <p className="text-[11px] text-slate-400 truncate">{currentCompany.agent.role || 'Q&A Assistant'}</p>
               </div>
             </div>
 
@@ -252,7 +252,7 @@ export const Sidebar: React.FC = () => {
               className="w-full mt-2.5 py-1.5 px-2.5 bg-indigo-600/20 hover:bg-indigo-600/30 border border-indigo-500/30 text-indigo-300 hover:text-indigo-200 text-xs font-medium rounded-lg flex items-center justify-center gap-1.5 transition-all cursor-pointer"
             >
               <PlaySquare className="w-3.5 h-3.5" />
-              <span>Test Employee</span>
+              <span>Test Assistant</span>
             </button>
           </div>
         </div>

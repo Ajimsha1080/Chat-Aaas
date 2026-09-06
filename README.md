@@ -1,4 +1,4 @@
-# 🤖 Chat-AaaS — Enterprise Agent-as-a-Service (AaaS) Platform
+# 🤖 Chat-AaaS — AI Q&A Assistant SaaS Platform
 
 [![CI/CD Pipeline](https://github.com/Ajimsha1080/Chat-Aaas/actions/workflows/ci.yml/badge.svg)](https://github.com/Ajimsha1080/Chat-Aaas/actions/workflows/ci.yml)
 [![FastAPI](https://img.shields.io/badge/Backend-FastAPI%20(Python%203.11+)-009688.svg?logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com)
@@ -6,9 +6,33 @@
 [![PostgreSQL](https://img.shields.io/badge/Database-PostgreSQL%20+%20pgvector-336791.svg?logo=postgresql&logoColor=white)](https://github.com/pgvector/pgvector)
 [![Redis](https://img.shields.io/badge/Cache%20&%20Workers-Redis%207-DC382D.svg?logo=redis&logoColor=white)](https://redis.io)
 
-**Chat-AaaS** is a production-grade, enterprise Agent-as-a-Service (AaaS) platform designed around a singular product philosophy:
+**Chat-AaaS** is a production-grade, enterprise AI Q&A Assistant SaaS platform built around a single core promise:
 
-> *"The customer should feel like they are hiring and managing an autonomous AI employee, not configuring an AI infrastructure platform."*
+> **"Create one AI assistant for your business. Add your knowledge. Deploy it anywhere."**
+
+---
+
+## 🔁 Core Product Loop
+
+```text
+GET ASSISTANT
+      ↓
+ADD KNOWLEDGE (Website / Docs / FAQs)
+      ↓
+CONFIGURE IDENTITY & TONE
+      ↓
+TEST IN PLAYGROUND
+      ↓
+PUBLISH
+      ↓
+DEPLOY (Website Widget / API / App)
+      ↓
+ANSWER QUESTIONS 24/7
+      ↓
+REVIEW INBOX & KNOWLEDGE GAPS
+      ↓
+IMPROVE KNOWLEDGE
+```
 
 ---
 
@@ -17,13 +41,13 @@
 ```text
 ┌─────────────────────────────────────────────────────────────┐
 │             React 19 + TypeScript Frontend                  │
-│       (Customer Workspace · Admin Platform · Developer)     │
+│       (Customer Workspace · Super Admin · Developer)        │
 └──────────────────────────────┬──────────────────────────────┘
-                               │ HTTPS / SSE
+                               │ HTTPS / SSE Streaming
                                ▼
 ┌─────────────────────────────────────────────────────────────┐
 │          Python FastAPI Primary Backend (/api/v1)           │
-│   Auth · RBAC · Multi-Tenancy · Agents · RAG · Actions · GST│
+│   Auth · Multi-Tenancy · Assistant · RAG · Knowledge · GST  │
 └───────┬──────────────────────┬───────────────────────┬──────┘
         │                      │                       │
         ▼                      ▼                       ▼
@@ -36,35 +60,38 @@
 ### Core Technology Stack
 - **Frontend**: React 19, TypeScript, Vite, TailwindCSS, Lucide Icons, Recharts.
 - **Backend**: Python 3.11+, FastAPI, Pydantic v2, SQLAlchemy 2.0 (async), pgvector.
-- **AI/ML Runtime**: Multi-provider LLM (OpenAI, Anthropic, Gemini, Ollama), Cross-Encoder Reranker, RAG Evaluator, Document AI, NLP Intent Classifier.
-- **Security & Multi-Tenancy**: Strict JWT authentication, Argon2/SHA-256 password hashing, SSRF-guarded knowledge crawler, 3-tier risk action confirmation gates.
+- **AI/ML Runtime**: Multi-provider LLM (OpenAI, Anthropic, Gemini, Ollama), Cross-Encoder Reranker, RAG Evaluator, Document AI semantic chunker.
+- **Security & Multi-Tenancy**: Strict JWT authentication, Argon2/SHA-256 password hashing, SSRF-guarded knowledge crawler, tenant isolation per business.
 - **Workers**: Redis-backed async workers for heavy document parsing, offline RAG evaluations, and resilient webhook delivery.
 
 ---
 
-## ⚡ Key Features
+## ⚡ Key Platform Capabilities
 
-### 1. AI Employee Management & Lifecycle
-- **Draft → Test → Publish → Rollback**: Edit draft configurations in isolation, publish immutable version releases with changelogs, and perform 1-click rollbacks to any previous version.
-- **Strict 1:1 Company Mapping**: Each organization has a single, dedicated, high-context AI Employee.
+### 1. ONE Prebuilt AI Q&A Assistant
+- **Strict 1:1 Company Mapping**: Every business receives one dedicated, pre-configured Q&A Assistant.
+- **Draft → Test → Publish → Rollback**: Edit draft configurations in isolation, publish immutable version releases, and perform 1-click rollbacks.
+- **Identity & Tone Customization**: Tone presets (Professional, Friendly, Empathetic, Direct, Technical), custom greeting, and plain-English business rules.
 
-### 2. Multi-Tenant Knowledge Base & RAG Pipeline
-- **Multi-Modal Ingestion**: Ingest PDFs, DOCX, TXT, and Web URLs with automatic chunking and 1536-dimension embeddings.
+### 2. Multi-Tenant Knowledge Base & Grounded RAG
+- **Multi-Modal Ingestion**: Ingest PDFs, DOCX, TXT, FAQs, and Website URLs with automatic chunking and vector embeddings.
 - **SSRF Crawler Defense**: Proactively blocks private subnets (`10.0.0.0/8`, `172.16.0.0/12`, `192.168.0.0/16`), loopback (`127.0.0.1`, `localhost`), and cloud metadata (`169.254.169.254`).
-- **Cross-Encoder Semantic Reranking**: Re-orders candidate chunks for high relevance and suppresses hallucinations.
+- **Anti-Hallucination Threshold**: Strict confidence evaluation — if verified knowledge is insufficient, the assistant gracefully provides a fallback message or human handoff.
+- **Knowledge Gaps Triage**: Automatically captures unanswered user questions so teams can convert them into FAQs with 1 click.
 
-### 3. Business Actions & 3-Tier Risk Safety Gates
-- **Read-Only**: Unrestricted lookup operations (e.g., check cluster health, order status).
-- **Low-Risk**: Safe modifications (e.g., update profile tags).
-- **High-Risk**: Financial or destructive operations (e.g., issue refunds, reboot compute clusters) that require explicit user confirmation prompts before execution.
+### 3. Multi-Channel Distribution Hub
+- **Website Embed Widget**: Fast, responsive HTML `<script>` embed with custom branding and placement controls.
+- **React SDK & Iframe**: Drop-in React components and embedded chat frames.
+- **REST API & Webhooks**: Developer-friendly endpoints for querying the assistant from mobile apps and external backend services.
 
-### 4. Support Inbox & Real-Time Handoff
-- **3-Pane Support Inbox**: Customer queue, live conversation history, and customer metadata panel.
-- **1-Click Human Takeover**: Seamlessly transition conversations from autonomous AI to live human agents.
+### 4. Conversations & Live Human Takeover
+- **Conversation Inbox**: Filter by Answered, Unanswered, and Human Handoffs.
+- **Citation Inspection**: Inspect source documents used for every generated answer.
+- **1-Click Human Handoff**: Seamlessly transition from AI to live operator.
 
 ### 5. Indian GST (18%) Billing & Metering
 - **Transparent Tier Pricing**: Starter (₹4,999/mo), Growth (₹14,999/mo), and Enterprise Business (₹39,999/mo).
-- **Automated GST Tax Invoicing**: Calculates 9% CGST + 9% SGST (intra-state) or 18% IGST (inter-state) with PDF generation.
+- **Automated GST Tax Invoicing**: Calculates 9% CGST + 9% SGST (intra-state) or 18% IGST (inter-state) with PDF downloads.
 
 ---
 
@@ -81,7 +108,7 @@ cd backend_python
 python -m venv venv
 venv\Scripts\activate
 pip install -r requirements.txt
-uvicorn app.main:app --reload --port 8000
+uvicorn app.main:app --reload --port 8001
 ```
 
 ### 2. Start React Frontend
@@ -98,33 +125,20 @@ Visit the dashboard at `http://localhost:5173`.
 
 Run the complete 5-service production stack:
 
-```bash
-docker-compose up --build -d
+```powershell
+docker-compose up -d --build
 ```
-
-| Service | Port | Description |
-| :--- | :--- | :--- |
-| **frontend** | `80` | React web application served via Nginx |
-| **backend** | `8000` | FastAPI core REST API & AI specialized runtime |
-| **worker** | — | Python async worker processing background tasks |
-| **postgres** | `5432` | PostgreSQL 16 database with pgvector extension |
-| **redis** | `6379` | Redis 7 cache and async task queue |
 
 ---
 
-## 🧪 Automated Testing
+## 🧪 Testing
 
-Run the full automated test suite:
-
+### Run Backend Unit & Integration Tests:
 ```powershell
-# Run Python Pytest Suite (29 unit & integration tests)
-python -m pytest backend_python/app/tests -v
+python -m pytest backend_python/app/tests/ -v
+```
 
-# Run Frontend Typecheck and Production Build
+### Run Frontend Production Build:
+```powershell
 npm run build
 ```
-
----
-
-## 📄 License
-Enterprise Proprietary — Copyright © 2026 Chat-AaaS Inc.

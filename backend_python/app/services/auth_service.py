@@ -86,8 +86,8 @@ class AuthService:
         new_agent = {
             "id": agent_id,
             "companyId": company_id,
-            "name": f"{company_name} AI Employee",
-            "description": f"Autonomous AI employee for {company_name}.",
+            "name": f"{company_name} AI Assistant",
+            "description": f"Autonomous AI Q&A assistant for {company_name}.",
             "avatarUrl": "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe",
             "status": "active",
             "tone": "professional",

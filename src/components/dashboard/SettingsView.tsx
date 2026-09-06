@@ -31,7 +31,7 @@ export const SettingsView: React.FC = () => {
     showToast
   } = useApp();
 
-  const [activeTab, setActiveTab] = useState<'employee' | 'team' | 'billing' | 'models' | 'security' | 'api' | 'audit'>('employee');
+  const [activeTab, setActiveTab] = useState<'assistant' | 'team' | 'billing' | 'models' | 'security' | 'api' | 'audit'>('assistant');
   const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
   const [inviteName, setInviteName] = useState('');
   const [inviteEmail, setInviteEmail] = useState('');
@@ -39,7 +39,7 @@ export const SettingsView: React.FC = () => {
   const [selectedInvoice, setSelectedInvoice] = useState<any | null>(null);
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
 
-  // Employee Form State
+  // Assistant Form State
   const [agentName, setAgentName] = useState(currentCompany.agent.name);
   const [agentRole, setAgentRole] = useState(currentCompany.agent.role || 'Customer Support Specialist');
   const [agentTone, setAgentTone] = useState(currentCompany.agent.tone);
@@ -52,7 +52,7 @@ export const SettingsView: React.FC = () => {
     setTimeout(() => setCopiedKey(null), 2500);
   };
 
-  const handleSaveEmployee = (e: React.FormEvent) => {
+  const handleSaveAssistant = (e: React.FormEvent) => {
     e.preventDefault();
     updateAgentConfig({
       name: agentName,
@@ -61,7 +61,7 @@ export const SettingsView: React.FC = () => {
       greetingMessage: agentGreeting,
       modelTier: modelTier as any
     });
-    showToast('Employee Updated', 'AI Employee persona, role, and tone saved.', 'success');
+    showToast('Assistant Updated', 'AI Assistant persona, role, and tone saved.', 'success');
   };
 
   const handleInvite = (e: React.FormEvent) => {
@@ -87,7 +87,7 @@ export const SettingsView: React.FC = () => {
       {/* Tabs */}
       <div className="flex items-center gap-1.5 border-b border-slate-200 pb-2 overflow-x-auto">
         {[
-          { id: 'employee', label: 'AI Employee', icon: Bot },
+          { id: 'assistant', label: 'AI Assistant', icon: Bot },
           { id: 'team', label: 'Team & RBAC', icon: Users, count: teamMembers.length },
           { id: 'billing', label: 'Billing & Plans', icon: CreditCard },
           { id: 'models', label: 'AI Model', icon: Cpu },
@@ -121,18 +121,18 @@ export const SettingsView: React.FC = () => {
         })}
       </div>
 
-      {/* 1. AI Employee Tab */}
-      {activeTab === 'employee' && (
+      {/* 1. AI Assistant Tab */}
+      {activeTab === 'assistant' && (
         <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs max-w-3xl space-y-6">
           <div>
-            <h3 className="text-sm font-bold text-slate-900">AI Employee Identity & Goals</h3>
-            <p className="text-xs text-slate-500">Configure how your AI Employee introduces itself and represents your brand.</p>
+            <h3 className="text-sm font-bold text-slate-900">AI Assistant Identity & Goals</h3>
+            <p className="text-xs text-slate-500">Configure how your AI Assistant introduces itself and represents your brand.</p>
           </div>
 
-          <form onSubmit={handleSaveEmployee} className="space-y-4 text-xs">
+          <form onSubmit={handleSaveAssistant} className="space-y-4 text-xs">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label className="font-semibold text-slate-700 block mb-1">Employee Name</label>
+                <label className="font-semibold text-slate-700 block mb-1">Assistant Name</label>
                 <input
                   type="text"
                   required
@@ -197,7 +197,7 @@ export const SettingsView: React.FC = () => {
               type="submit"
               className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold rounded-xl text-xs transition-colors cursor-pointer shadow-sm"
             >
-              Save Employee Changes
+              Save Assistant Changes
             </button>
           </form>
         </div>
@@ -275,7 +275,7 @@ export const SettingsView: React.FC = () => {
                       </li>
                       <li className="flex items-center gap-1.5">
                         <Check className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-                        <span><strong>1 Dedicated</strong> AI Employee</span>
+                        <span><strong>1 Dedicated</strong> AI Assistant</span>
                       </li>
                     </ul>
                   </div>
@@ -415,7 +415,7 @@ export const SettingsView: React.FC = () => {
         <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs max-w-3xl space-y-4 text-xs">
           <div>
             <h3 className="text-sm font-bold text-slate-900">Live API Key & Webhook Endpoint</h3>
-            <p className="text-xs text-slate-500">Authenticate API and webhook requests from your servers to your AI Employee.</p>
+            <p className="text-xs text-slate-500">Authenticate API and webhook requests from your servers to your AI Assistant.</p>
           </div>
 
           <div className="space-y-3 pt-2">

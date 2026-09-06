@@ -886,7 +886,7 @@ export const KnowledgeView: React.FC = () => {
           <div className="bg-white rounded-3xl max-w-lg w-full p-6 shadow-2xl border border-slate-200 space-y-4 animate-in zoom-in-95 duration-150">
             <div className="flex items-center justify-between pb-3 border-b border-slate-100">
               <div>
-                <h3 className="text-base font-bold text-slate-900">Teach Your AI Employee</h3>
+                <h3 className="text-base font-bold text-slate-900">Add Business Knowledge</h3>
                 <p className="text-xs text-slate-500">Upload documents, crawl website URLs, or add direct FAQs.</p>
               </div>
               <button
@@ -937,7 +937,7 @@ export const KnowledgeView: React.FC = () => {
                     modalType === 'faq' 
                       ? 'e.g. What is your return policy?' 
                       : modalType === 'document'
-                      ? 'e.g. Employee Operations Manual'
+                      ? 'e.g. Product Guide & Service Policies'
                       : 'e.g. Enterprise SLA Terms'
                   }
                   className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:outline-hidden"

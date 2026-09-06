@@ -55,4 +55,4 @@ def test_signup_creates_company_and_agent():
     data = res.json()["data"]
     assert "token" in data
     assert data["company"]["name"] == "Quantum AI Systems"
-    assert data["agent"]["name"] == "Quantum AI Systems AI Employee"
+    assert data["agent"]["name"] == "Quantum AI Systems AI Assistant"

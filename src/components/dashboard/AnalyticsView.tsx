@@ -37,7 +37,7 @@ export const AnalyticsView: React.FC = () => {
   const [showAdvancedAnalytics, setShowAdvancedAnalytics] = useState(false);
 
   const pieData = [
-    { name: 'Resolved by AI Employee', value: analytics.resolutionRatePercent, color: '#10b981' },
+    { name: 'Resolved by AI Assistant', value: analytics.resolutionRatePercent, color: '#10b981' },
     { name: 'Handed to Support Team', value: analytics.escalationRatePercent, color: '#f59e0b' }
   ];
 
@@ -242,7 +242,7 @@ export const AnalyticsView: React.FC = () => {
             <div className="flex items-center justify-between">
               <span className="flex items-center gap-2 text-slate-600">
                 <span className="w-2.5 h-2.5 rounded-full bg-emerald-500" />
-                <span>Resolved by AI Employee</span>
+                <span>Resolved by AI Assistant</span>
               </span>
               <span className="font-bold text-slate-900">{analytics.resolutionRatePercent}%</span>
             </div>
@@ -268,7 +268,7 @@ export const AnalyticsView: React.FC = () => {
           <span className="text-[11px] text-indigo-600 font-semibold">Continuous Improvement</span>
         </div>
         <p className="text-xs text-slate-500 mb-4">
-          Queries where your employee lacked verified documentation. Click <strong>"Add to Knowledge Base"</strong> to teach your employee the right answer.
+          Queries where your assistant lacked verified documentation. Click <strong>"Add to Knowledge Base"</strong> to teach your assistant the right answer.
         </p>
 
         <div className="divide-y divide-slate-100">

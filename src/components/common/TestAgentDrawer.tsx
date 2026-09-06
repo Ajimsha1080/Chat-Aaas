@@ -187,13 +187,13 @@ export const TestAgentDrawer: React.FC = () => {
           </div>
         </div>
 
-        {/* Hierarchy Context Badge */}
-        <div className="bg-indigo-900 text-indigo-100 px-4 py-2 text-[11px] flex items-center justify-between">
+        {/* Grounded Q&A Context Badge */}
+        <div className="bg-slate-900 text-indigo-100 px-4 py-2 text-[11px] flex items-center justify-between border-b border-slate-800">
           <div className="flex items-center gap-2">
-            <Layers className="w-3.5 h-3.5 text-indigo-300" />
-            <span>Enforcing: <strong>System</strong> → <strong>Knowledge ({knowledgeItems.length})</strong> → <strong>Tools ({actions.filter(a => a.enabled).length})</strong></span>
+            <Layers className="w-3.5 h-3.5 text-indigo-400" />
+            <span>Grounded Q&A: <strong>Knowledge ({knowledgeItems.length} sources)</strong> → <strong>Confidence Threshold</strong></span>
           </div>
-          <span className="text-indigo-300 font-mono text-[10px]">Zero Hallucination</span>
+          <span className="text-emerald-400 font-mono text-[10px] font-semibold">● Anti-Hallucination</span>
         </div>
 
         {/* Chat History */}

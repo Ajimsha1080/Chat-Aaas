@@ -227,11 +227,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         role: 'Customer Support Specialist',
         status: 'active',
         avatarUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
-        description: `Dedicated AI employee for ${name}.`,
+        description: `Dedicated AI assistant for ${name}.`,
         tone,
         modelTier: 'automatic',
         creativityLevel: 0.3,
-        systemInstructions: `You are the AI employee for ${name} in the ${industry} sector. Provide helpful and accurate support.`,
+        systemInstructions: `You are the AI assistant for ${name} in the ${industry} sector. Provide helpful and accurate support.`,
         businessInstructions: `Answer accurately based on knowledge.`,
         greetingMessage: `Hello! How can I assist you today at ${name}?`,
         fallbackMessage: `I want to make sure I get this right. Let me transfer you to our human team.`,
@@ -251,7 +251,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         secondaryColor: '#0f172a',
         headerTitle: name,
         headerSubtitle: 'AI Customer Assistant',
-        launcherText: 'Chat with AI Employee',
+        launcherText: 'Chat with AI Assistant',
         position: 'bottom_right',
         botAvatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
         userAvatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80',
@@ -289,7 +289,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         createdAt: new Date().toISOString(),
         publishedAt: new Date().toISOString(),
         author: 'Workspace Creator',
-        description: 'Initial AI Employee creation',
+        description: 'Initial AI Assistant creation',
         snapshot: {
           name: newCompany.agent.name,
           role: newCompany.agent.role || 'Customer Support Specialist',
@@ -300,12 +300,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           allowedActionsCount: 0,
           knowledgeItemCount: 0
         },
-        diffSummary: ['+ Initial AI employee workspace created']
+        diffSummary: ['+ Initial AI assistant workspace created']
       }]
     }));
 
     setCurrentCompanyId(newId);
-    addAuditLog('WORKSPACE_CREATED', `Created new company workspace: "${name}" with 1 AI employee`);
+    addAuditLog('WORKSPACE_CREATED', `Created new company workspace: "${name}" with 1 AI assistant`);
     showToast('Company Workspace Ready', `Tenant "${name}" successfully deployed.`, 'success');
     return newId;
   };
@@ -335,15 +335,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       }
       return c;
     }));
-    addAuditLog('AGENT_CONFIG_UPDATED', `Updated AI employee configuration fields: ${Object.keys(updates).join(', ')}`);
+    addAuditLog('AGENT_CONFIG_UPDATED', `Updated AI assistant configuration fields: ${Object.keys(updates).join(', ')}`);
   };
 
   const toggleAgentStatus = () => {
     const nextStatus = currentCompany.agent.status === 'active' ? 'paused' : 'active';
     updateAgentConfig({ status: nextStatus });
     showToast(
-      nextStatus === 'active' ? 'AI Employee Activated' : 'AI Employee Paused',
-      nextStatus === 'active' ? 'AI employee is now answering customer queries live.' : 'AI employee is paused.',
+      nextStatus === 'active' ? 'AI Assistant Activated' : 'AI Assistant Paused',
+      nextStatus === 'active' ? 'AI assistant is now answering customer queries live.' : 'AI assistant is paused.',
       nextStatus === 'active' ? 'success' : 'warning'
     );
   };
@@ -405,8 +405,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     });
 
     publishAgentVersion(`Rollback to v${target.version} (${target.description})`);
-    addAuditLog('AGENT_VERSION_ROLLBACK', `Rolled back AI Employee to version v${target.version}`, 'warning');
-    showToast('Rollback Complete', `Restored AI Employee snapshot from v${target.version}.`, 'info');
+    addAuditLog('AGENT_VERSION_ROLLBACK', `Rolled back AI Assistant to version v${target.version}`, 'warning');
+    showToast('Rollback Complete', `Restored AI Assistant snapshot from v${target.version}.`, 'info');
   };
 
   // Webhook Actions
@@ -552,7 +552,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           if (a.id === id) {
             const nextEnabled = !a.enabled;
             addAuditLog(nextEnabled ? 'ACTION_ENABLED' : 'ACTION_DISABLED', `${nextEnabled ? 'Enabled' : 'Disabled'} action: "${a.name}"`);
-            showToast(nextEnabled ? 'Action Enabled' : 'Action Disabled', `AI employee can ${nextEnabled ? 'now' : 'no longer'} execute ${a.name}.`, nextEnabled ? 'success' : 'info');
+            showToast(nextEnabled ? 'Action Enabled' : 'Action Disabled', `AI assistant can ${nextEnabled ? 'now' : 'no longer'} execute ${a.name}.`, nextEnabled ? 'success' : 'info');
             return { ...a, enabled: nextEnabled };
           }
           return a;

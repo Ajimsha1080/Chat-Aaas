@@ -142,7 +142,7 @@ export const AdminDashboard: React.FC = () => {
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
             {[
               { label: 'Total Organizations', value: '1,284', sub: '+18% this month', icon: Building2, color: 'text-indigo-600', bg: 'bg-indigo-50' },
-              { label: 'Active AI Employees', value: '936', sub: '72.8% active fleet', icon: Bot, color: 'text-emerald-600', bg: 'bg-emerald-50' },
+              { label: 'Active AI Assistants', value: '936', sub: '72.8% active fleet', icon: Bot, color: 'text-emerald-600', bg: 'bg-emerald-50' },
               { label: 'Monthly Conversations', value: '2.4M', sub: '99.4% resolution', icon: Activity, color: 'text-blue-600', bg: 'bg-blue-50' },
               { label: 'Platform MRR', value: `₹${(totalMRR * 12).toLocaleString('en-IN')}`, sub: '18% GST compliant', icon: DollarSign, color: 'text-purple-600', bg: 'bg-purple-50' },
               { label: 'System Health', value: '99.99%', sub: 'Zero active outages', icon: HeartPulse, color: 'text-rose-600', bg: 'bg-rose-50' },
@@ -187,7 +187,7 @@ export const AdminDashboard: React.FC = () => {
                     <tr className="border-b border-slate-100 text-slate-400 uppercase text-[10px]">
                       <th className="pb-2">Company</th>
                       <th className="pb-2">Plan</th>
-                      <th className="pb-2">AI Employee</th>
+                      <th className="pb-2">AI Assistant</th>
                       <th className="pb-2">Status</th>
                       <th className="pb-2 text-right">Actions</th>
                     </tr>
@@ -339,7 +339,7 @@ export const AdminDashboard: React.FC = () => {
       {currentAdminTab === 'agents' && (
         <div className="space-y-4 animate-in fade-in duration-150">
           <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs">
-            <h3 className="text-sm font-bold text-slate-900 mb-1">Global AI Employee Fleet</h3>
+            <h3 className="text-sm font-bold text-slate-900 mb-1">Global AI Assistant Fleet</h3>
             <p className="text-xs text-slate-500 mb-4">Real-time health, model routing, and error rates of deployed agents.</p>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
               {companies.map(c => (

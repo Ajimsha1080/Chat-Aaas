@@ -5,11 +5,11 @@ from app.db.database import db
 PLANS_CATALOG = [
     {
         "id": "starter",
-        "name": "Starter AI Employee",
+        "name": "Starter AI Assistant",
         "priceMonthlyINR": 4999,
         "priceAnnualINR": 49990,
         "maxConversationsMonth": 1000,
-        "features": ["1 AI Employee", "Standard Knowledge", "Email Support", "Web Widget"]
+        "features": ["1 AI Assistant", "Standard Knowledge", "Email Support", "Web Widget"]
     },
     {
         "id": "growth",

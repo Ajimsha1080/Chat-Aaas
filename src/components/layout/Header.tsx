@@ -109,7 +109,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenOnboarding, onOpenTestRunn
 
         {/* Agent Status Toggle Pill */}
         <div className="flex items-center gap-2 pl-2 border-l border-slate-200">
-          <span className="text-xs text-slate-500 font-medium hidden md:inline">AI Employee:</span>
+          <span className="text-xs text-slate-500 font-medium hidden md:inline">Assistant:</span>
           <button
             onClick={toggleAgentStatus}
             className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold border transition-all cursor-pointer ${
