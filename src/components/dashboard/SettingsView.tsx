@@ -77,10 +77,10 @@ export const SettingsView: React.FC = () => {
   return (
     <div className="space-y-6 animate-in fade-in duration-200">
       {/* Header */}
-      <div>
-        <h1 className="text-xl font-bold text-slate-900">Settings & Administration</h1>
+      <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-xs">
+        <h1 className="text-xl sm:text-2xl font-black text-slate-900">Settings & Administration</h1>
         <p className="text-xs text-slate-500 mt-1">
-          Configure your AI Employee, team roles, billing plans, AI model routing, and enterprise security.
+          Configure your assistant workspace, team roles, developer API keys, and audit logs.
         </p>
       </div>
 

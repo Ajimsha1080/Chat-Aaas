@@ -55,13 +55,14 @@ export const Sidebar: React.FC = () => {
 
   // Customer experience navigation
   const customerNavItems: { id: NavigationTab; label: string; icon: any; badge?: string }[] = [
-    { id: 'overview', label: 'Overview', icon: LayoutDashboard },
-    { id: 'knowledge', label: 'Knowledge', icon: BookOpen },
-    { id: 'actions', label: 'Actions', icon: Zap },
+    { id: 'home', label: 'Home', icon: LayoutDashboard },
+    { id: 'assistant', label: 'My Assistant', icon: Sparkles },
     { id: 'conversations', label: 'Conversations', icon: MessageSquare, badge: 'Live' },
-    { id: 'channels', label: 'Channels', icon: Globe },
-    { id: 'analytics', label: 'Analytics', icon: BarChart3 },
-    { id: 'settings', label: 'Settings', icon: Settings }
+    { id: 'knowledge', label: 'Knowledge', icon: BookOpen },
+    { id: 'connections', label: 'Connections', icon: Layers },
+    { id: 'deploy', label: 'Deploy', icon: Globe },
+    { id: 'insights', label: 'Insights', icon: BarChart3 },
+    { id: 'billing', label: 'Billing', icon: CreditCard }
   ];
 
   // Developer console navigation
@@ -257,6 +258,25 @@ export const Sidebar: React.FC = () => {
             </button>
           );
         })}
+
+        {/* Customer Settings & Help Divider */}
+        {currentExperience === 'customer' && (
+          <div className="pt-2 mt-2 border-t border-slate-800/80 space-y-1">
+            <button
+              onClick={() => setCurrentTab('settings')}
+              className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-medium transition-all cursor-pointer ${
+                currentTab === 'settings'
+                  ? 'bg-indigo-600 text-white font-semibold shadow-md shadow-indigo-600/30'
+                  : 'text-slate-300 hover:bg-slate-900 hover:text-white'
+              }`}
+            >
+              <div className="flex items-center gap-3">
+                <Settings className={`w-4 h-4 ${currentTab === 'settings' ? 'text-white' : 'text-slate-400'}`} />
+                <span>Settings</span>
+              </div>
+            </button>
+          </div>
+        )}
 
         {/* Developer Console Navigation */}
         {currentExperience === 'developer' && developerNavItems.map(item => {

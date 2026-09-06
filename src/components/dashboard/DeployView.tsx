@@ -89,11 +89,11 @@ export default function App() {
   return (
     <div className="space-y-6 animate-in fade-in duration-200">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-xl font-bold text-slate-900">Deploy AI Agent to Website & Mobile</h1>
+          <h1 className="text-xl sm:text-2xl font-black text-slate-900">Deploy your Assistant</h1>
           <p className="text-xs text-slate-500 mt-1">
-            Embed <strong>{currentCompany.agent.name}</strong> on your website in 2 minutes with a single line of script, React SDK, or REST API.
+            Choose where customers will interact with <strong>{currentCompany.agent.name}</strong>: Website widget, WhatsApp, or custom API.
           </p>
         </div>
 

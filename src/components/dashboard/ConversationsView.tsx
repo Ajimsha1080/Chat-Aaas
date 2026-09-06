@@ -116,7 +116,7 @@ export const ConversationsView: React.FC = () => {
             {[
               { id: 'all', label: 'All' },
               { id: 'needs_attention', label: 'Needs Attention' },
-              { id: 'active', label: 'AI Serving' },
+              { id: 'active', label: 'Open' },
               { id: 'resolved', label: 'Resolved' }
             ].map(tab => (
               <button

@@ -38,11 +38,11 @@ export const BillingView: React.FC = () => {
   return (
     <div className="space-y-6 animate-in fade-in duration-200">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-xl font-bold text-slate-900">Subscription & Usage Billing</h1>
+          <h1 className="text-xl sm:text-2xl font-black text-slate-900">Billing & Subscription</h1>
           <p className="text-xs text-slate-500 mt-1">
-            Manage your company's rented single AI agent subscription tier, live limits, and billing invoices.
+            Manage your company's active plan, usage quotas, and download GST tax invoices.
           </p>
         </div>
 

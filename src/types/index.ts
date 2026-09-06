@@ -299,13 +299,19 @@ export type DeveloperNavigationTab =
   | 'dev-tools';
 
 export type NavigationTab = 
-  | 'overview' 
-  | 'knowledge' 
-  | 'actions' 
+  | 'home'
+  | 'assistant'
   | 'conversations' 
+  | 'knowledge' 
+  | 'connections' 
+  | 'deploy' 
+  | 'insights' 
+  | 'billing' 
+  | 'settings'
+  | 'overview' 
+  | 'actions' 
   | 'channels' 
-  | 'analytics' 
-  | 'settings';
+  | 'analytics';
 
 export interface AgentVersionItem {
   id: string;
