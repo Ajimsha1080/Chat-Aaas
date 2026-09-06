@@ -43,3 +43,23 @@ def test_multi_tenant_chunk_retrieval_isolation():
     assert len(res1) == 1
     assert res1[0].chunk_id == "c1"
     assert len(res2) == 0
+
+def test_knowledge_document_upload():
+    response = client.post(
+        "/api/v1/knowledge/upload",
+        json={
+            "title": "Quarterly Security Policy",
+            "content": "All production database accesses require multi-factor authentication and hardware security keys. Encryption at rest is mandatory for all customer data.",
+            "fileName": "security_policy_2026.pdf",
+            "docType": "pdf",
+            "category": "security"
+        }
+    )
+    assert response.status_code == 201
+    body = response.json()
+    assert body["status"] == 201
+    assert body["data"]["status"] == "indexed"
+    assert body["data"]["chunksCreated"] >= 1
+    assert body["data"]["fileName"] == "security_policy_2026.pdf"
+
+
