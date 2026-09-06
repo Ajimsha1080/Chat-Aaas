@@ -10,6 +10,7 @@ from app.schemas import ChatRequest, ChatResponse
 from app.core.tenant import TenantContext, get_tenant_context
 from app.services.agent_runtime import AgentRuntime
 from app.services.usage_service import UsageService
+from app.services.rate_limiter import RateLimiter
 from app.db.database import db
 
 router = APIRouter(prefix="/chat", tags=["Agent Chat & Streaming"])
@@ -21,12 +22,17 @@ async def process_chat_message(
     ctx: TenantContext = Depends(get_tenant_context)
 ):
     """
-    Direct synchronous AI agent execution with RAG retrieval and tool gates.
+    Direct synchronous AI agent execution with RAG retrieval, anti-spam rate limiting, and tool gates.
     """
     company_id = ctx.company_id
-    stored_chunks = [c for c in db.document_chunks.values() if c.get("companyId") == company_id]
+    
+    # 1. Anti-spam & Cost Protection: Max 20 requests/minute per tenant session
+    client_key = f"{company_id}_{req.conversation_id or 'anon'}"
+    RateLimiter.check_rate_limit(client_key, max_requests=20)
 
-    agent = db.get_agent_for_company(company_id) or {"name": "Aura", "model": "gpt-4o"}
+    stored_chunks = [c for c in db.document_chunks.values() if c.get("companyId") == company_id]
+    agent = db.get_agent_for_company(company_id) or {"name": "Aura", "model": "gpt-4o-mini"}
+
 
     response = await AgentRuntime.process_message(
         request=req,
@@ -50,8 +56,14 @@ async def stream_chat_tokens(
     Real SSE Token Streaming endpoint for React chat widgets and web dashboards.
     """
     company_id = ctx.company_id
+    
+    # 1. Anti-spam & Cost Protection: Max 20 requests/minute per tenant session
+    client_key = f"{company_id}_{req.conversation_id or 'anon'}"
+    RateLimiter.check_rate_limit(client_key, max_requests=20)
+
     stored_chunks = [c for c in db.document_chunks.values() if c.get("companyId") == company_id]
-    agent = db.get_agent_for_company(company_id) or {"name": "Aura", "model": "gpt-4o"}
+    agent = db.get_agent_for_company(company_id) or {"name": "Aura", "model": "gpt-4o-mini"}
+
 
     response = await AgentRuntime.process_message(
         request=req,

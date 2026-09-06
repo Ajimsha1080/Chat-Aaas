@@ -7,6 +7,7 @@ from app.db.database import db
 from app.services.conversation_service import ConversationService
 from app.services.agent_runtime import AgentRuntime
 from app.services.usage_service import UsageService
+from app.services.rate_limiter import RateLimiter
 from app.schemas import ChatRequest
 from app.core.tenant import TenantContext, get_tenant_context
 
@@ -36,6 +37,11 @@ def get_conversation(conversation_id: str, ctx: TenantContext = Depends(get_tena
 @router.post("/message")
 async def send_message(req: SendMessageRequest, ctx: TenantContext = Depends(get_tenant_context)):
     company_id = ctx.company_id
+
+    # Anti-Spam Rate Limiter
+    client_key = f"{company_id}_{req.conversationId or req.customerEmail or 'anon'}"
+    RateLimiter.check_rate_limit(client_key, max_requests=20)
+
 
     # Find or create conversation
     conv_id = req.conversationId or f"conv-{int(time.time() * 1000)}"
