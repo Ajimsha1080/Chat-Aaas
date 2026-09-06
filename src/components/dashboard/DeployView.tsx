@@ -40,9 +40,9 @@ export const DeployView: React.FC = () => {
   };
 
   // Embed script snippet
-  const scriptSnippet = `<!-- Agent-as-a-Service (AaaS) Widget for ${currentCompany.name} -->
+  const scriptSnippet = `<!-- Chat-AaaS AI Assistant Widget for ${currentCompany.name} -->
 <script
-  src="https://cdn.agent-as-a-service.io/v1/widget.js"
+  src="https://cdn.chat-aaas.com/v1/widget.js"
   data-agent-key="${currentCompany.apiKey}"
   data-position="${localSettings.position}"
   data-primary-color="${localSettings.primaryColor}"
@@ -50,13 +50,13 @@ export const DeployView: React.FC = () => {
 </script>`;
 
   // React component snippet
-  const reactSnippet = `import { AgentChatWidget } from '@aaas/react-sdk';
+  const reactSnippet = `import { AssistantChatWidget } from '@chat-aaas/react-sdk';
 
 export default function App() {
   return (
     <div className="min-h-screen">
       {/* Your App Content */}
-      <AgentChatWidget
+      <AssistantChatWidget
         apiKey="${currentCompany.apiKey}"
         primaryColor="${localSettings.primaryColor}"
         position="${localSettings.position}"
@@ -68,7 +68,7 @@ export default function App() {
 
   // Iframe snippet
   const iframeSnippet = `<iframe
-  src="https://embed.agent-as-a-service.io/chat/${currentCompany.slug}?key=${currentCompany.apiKey}"
+  src="https://embed.chat-aaas.com/chat/${currentCompany.slug}?key=${currentCompany.apiKey}"
   width="400"
   height="620"
   frameborder="0"
@@ -77,11 +77,11 @@ export default function App() {
 ></iframe>`;
 
   // cURL REST API snippet
-  const curlSnippet = `curl -X POST https://api.agent-as-a-service.io/v1/agent/chat \\
+  const curlSnippet = `curl -X POST https://api.chat-aaas.com/api/v1/chat \\
   -H "Authorization: Bearer ${currentCompany.apiKey}" \\
   -H "Content-Type: application/json" \\
   -d '{
-    "message": "Hello! What is your SLA policy?",
+    "message": "Hello! What is your return policy?",
     "customerId": "usr_9941",
     "customerEmail": "alex@enterprise.com"
   }'`;
