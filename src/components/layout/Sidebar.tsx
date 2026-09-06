@@ -55,16 +55,10 @@ export const Sidebar: React.FC = () => {
       ]
     },
     {
-      groupName: 'Distribution',
+      groupName: 'Distribution & Analytics',
       items: [
-        { id: 'deploy', label: 'Deploy', icon: Globe }
-      ]
-    },
-    {
-      groupName: 'Analytics & Account',
-      items: [
-        { id: 'insights', label: 'Insights', icon: BarChart3 },
-        { id: 'billing', label: 'Billing', icon: CreditCard }
+        { id: 'deploy', label: 'Deploy', icon: Globe },
+        { id: 'insights', label: 'Analytics', icon: BarChart3 }
       ]
     }
   ];

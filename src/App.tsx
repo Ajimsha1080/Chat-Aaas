@@ -6,17 +6,14 @@ import { HomeView } from './components/dashboard/HomeView';
 import { MyAssistantView } from './components/dashboard/MyAssistantView';
 import { ConversationsView } from './components/dashboard/ConversationsView';
 import { KnowledgeView } from './components/dashboard/KnowledgeView';
-import { ConnectionsView } from './components/dashboard/ConnectionsView';
 import { DeployView } from './components/dashboard/DeployView';
 import { InsightsView } from './components/dashboard/InsightsView';
-import { BillingView } from './components/dashboard/BillingView';
 import { SettingsView } from './components/dashboard/SettingsView';
 import { AdminDashboard } from './components/admin/AdminDashboard';
 import { DeveloperConsole } from './components/developer/DeveloperConsole';
 import { TestAgentDrawer } from './components/common/TestAgentDrawer';
 import { OnboardingModal } from './components/onboarding/OnboardingModal';
 import { ToastContainer } from './components/common/ToastContainer';
-import { TestRunnerModal } from './components/common/TestRunnerModal';
 import { HelpModal } from './components/common/HelpModal';
 import { CommandPalette } from './components/common/CommandPalette';
 import { ErrorBoundary } from './components/common/ErrorBoundary';
@@ -30,7 +27,6 @@ const DashboardContent: React.FC = () => {
   } = useApp();
 
   const [isOnboardingOpen, setIsOnboardingOpen] = useState(false);
-  const [isTestRunnerOpen, setIsTestRunnerOpen] = useState(false);
   const [isHelpOpen, setIsHelpOpen] = useState(false);
   const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
 
@@ -74,18 +70,16 @@ const DashboardContent: React.FC = () => {
         return <ConversationsView />;
       case 'knowledge':
         return <KnowledgeView />;
-      case 'connections':
-      case 'actions':
-        return <ConnectionsView />;
       case 'deploy':
       case 'channels':
+      case 'connections':
+      case 'actions':
         return <DeployView />;
       case 'insights':
       case 'analytics':
         return <InsightsView />;
-      case 'billing':
-        return <BillingView />;
       case 'settings':
+      case 'billing':
         return <SettingsView />;
       default:
         return <HomeView />;
@@ -101,7 +95,7 @@ const DashboardContent: React.FC = () => {
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
         <Header 
           onOpenOnboarding={() => setIsOnboardingOpen(true)} 
-          onOpenTestRunner={() => setIsTestRunnerOpen(true)}
+          onOpenTestRunner={() => {}}
           onOpenHelp={() => setIsHelpOpen(true)}
           onOpenCommandPalette={() => setIsCommandPaletteOpen(true)}
         />
@@ -120,12 +114,6 @@ const DashboardContent: React.FC = () => {
       <OnboardingModal 
         isOpen={isOnboardingOpen} 
         onClose={() => setIsOnboardingOpen(false)} 
-      />
-
-      {/* Automated Backend Test Suite Modal */}
-      <TestRunnerModal 
-        isOpen={isTestRunnerOpen} 
-        onClose={() => setIsTestRunnerOpen(false)} 
       />
 
       {/* Help Center */}
