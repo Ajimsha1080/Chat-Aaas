@@ -31,6 +31,10 @@ class Settings(BaseSettings):
     OPENAI_API_KEY: Optional[str] = os.getenv("OPENAI_API_KEY", None)
     ANTHROPIC_API_KEY: Optional[str] = os.getenv("ANTHROPIC_API_KEY", None)
     GEMINI_API_KEY: Optional[str] = os.getenv("GEMINI_API_KEY", None)
-    DEFAULT_LLM_MODEL: str = "gpt-4o"
+    
+    # Custom In-House / Private Model API Endpoint
+    CUSTOM_LLM_API_URL: Optional[str] = os.getenv("CUSTOM_LLM_API_URL", None)
+    CUSTOM_LLM_API_KEY: Optional[str] = os.getenv("CUSTOM_LLM_API_KEY", None)
+    DEFAULT_LLM_MODEL: str = os.getenv("DEFAULT_LLM_MODEL", "custom-model")
 
 settings = Settings()
