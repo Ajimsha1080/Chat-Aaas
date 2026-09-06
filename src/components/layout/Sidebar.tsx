@@ -79,20 +79,19 @@ export const Sidebar: React.FC = () => {
       ]
     },
     {
-      groupName: 'Intelligence',
+      groupName: 'Knowledge Base',
       items: [
         { id: 'knowledge', label: 'Knowledge', icon: BookOpen }
       ]
     },
     {
-      groupName: 'Integrations & Reach',
+      groupName: 'Distribution',
       items: [
-        { id: 'connections', label: 'Connections', icon: Layers },
         { id: 'deploy', label: 'Deploy', icon: Globe }
       ]
     },
     {
-      groupName: 'Business',
+      groupName: 'Analytics & Account',
       items: [
         { id: 'insights', label: 'Insights', icon: BarChart3 },
         { id: 'billing', label: 'Billing', icon: CreditCard }

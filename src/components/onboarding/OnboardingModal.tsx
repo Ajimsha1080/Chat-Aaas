@@ -4,20 +4,19 @@ import {
   Sparkles, 
   Check, 
   ArrowRight, 
-  ArrowLeft,
-  Bot,
-  Building2,
-  BookOpen,
-  Plug,
-  Play,
-  Rocket,
-  CheckCircle2,
-  Globe,
-  Upload,
-  MessageSquare
+  ArrowLeft, 
+  Globe, 
+  Upload, 
+  MessageSquare, 
+  CheckCircle2, 
+  Play, 
+  Rocket, 
+  Sliders, 
+  BookOpen, 
+  Building2 
 } from 'lucide-react';
 import { useApp } from '../../context';
-import { AgentTone, SubscriptionPlanId } from '../../types';
+import { AgentTone } from '../../types';
 import confetti from 'canvas-confetti';
 
 interface OnboardingModalProps {
@@ -31,27 +30,30 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({ isOpen, onClos
   const [step, setStep] = useState<1 | 2 | 3 | 4 | 5>(1);
   const [businessName, setBusinessName] = useState('');
   const [websiteUrl, setWebsiteUrl] = useState('');
-  const [helpGoals, setHelpGoals] = useState<string[]>([
-    'Customer support',
-    'Product questions'
-  ]);
+  const [industry, setIndustry] = useState('SaaS & Software');
   const [preferredLanguage, setPreferredLanguage] = useState('English');
   const [tone, setTone] = useState<AgentTone>('professional');
   const [assistantName, setAssistantName] = useState('');
-  const [selectedTools, setSelectedTools] = useState<string[]>(['whatsapp', 'website']);
+  const [greetingMessage, setGreetingMessage] = useState('Hi there! 👋 How can I help you with our products and services today?');
+  const [testQuestion, setTestQuestion] = useState('What are your pricing options and SLA?');
+  const [testAnswer, setTestAnswer] = useState<string | null>(null);
+  const [isTesting, setIsTesting] = useState(false);
 
   if (!isOpen) return null;
 
-  const toggleGoal = (goal: string) => {
-    setHelpGoals(prev => 
-      prev.includes(goal) ? prev.filter(g => g !== goal) : [...prev, goal]
-    );
-  };
+  const tones: { id: AgentTone; label: string; desc: string }[] = [
+    { id: 'professional', label: 'Professional', desc: 'Courteous, concise, and business-focused.' },
+    { id: 'friendly', label: 'Friendly & Warm', desc: 'Approachable, warm, and conversational.' },
+    { id: 'empathetic', label: 'Empathetic', desc: 'Supportive, patient, and understanding.' },
+    { id: 'direct', label: 'Direct', desc: 'Short, precise answers with zero fluff.' }
+  ];
 
-  const toggleTool = (tool: string) => {
-    setSelectedTools(prev => 
-      prev.includes(tool) ? prev.filter(t => t !== tool) : [...prev, tool]
-    );
+  const handleSimulateTest = () => {
+    setIsTesting(true);
+    setTimeout(() => {
+      setIsTesting(false);
+      setTestAnswer(`Hello! We offer Starter, Growth, Business, and Enterprise plans tailored to your team size. All plans include 24/7 AI Q&A assistance, custom branding, and 99.9% uptime SLA.`);
+    }, 600);
   };
 
   const handleComplete = () => {
@@ -61,7 +63,7 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({ isOpen, onClos
     createCompanyWorkspace(
       businessName || 'My Business',
       finalDomain,
-      'SaaS & Cloud Software',
+      industry,
       'growth',
       finalName,
       tone
@@ -73,7 +75,7 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({ isOpen, onClos
       origin: { y: 0.6 }
     });
 
-    showToast('Assistant Created', `Your AI Assistant ${finalName} is ready!`, 'success');
+    showToast('AI Assistant Ready', `Your Q&A Assistant ${finalName} is now active!`, 'success');
     onClose();
     setCurrentTab('home');
   };
@@ -90,8 +92,15 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({ isOpen, onClos
               <Sparkles className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="text-base font-bold text-slate-900">Let's set up your AI Assistant 🚀</h3>
-              <p className="text-xs text-slate-500">Step {step} of 5 — {step === 1 ? 'Your business' : step === 2 ? 'Add knowledge' : step === 3 ? 'Connect tools' : step === 4 ? 'Test assistant' : 'Deploy'}</p>
+              <h3 className="text-base font-bold text-slate-900">Set up your AI Q&A Assistant 🚀</h3>
+              <p className="text-xs text-slate-500">
+                Step {step} of 5 — {
+                  step === 1 ? 'Business Information' :
+                  step === 2 ? 'Add Knowledge' :
+                  step === 3 ? 'Personality & Greeting' :
+                  step === 4 ? 'Test Assistant' : 'Ready to Deploy'
+                }
+              </p>
             </div>
           </div>
 
@@ -113,7 +122,7 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({ isOpen, onClos
           </div>
           <div className="flex justify-between text-[10px] text-slate-400 mt-1 font-semibold">
             <span>Progress: {progressPercent}%</span>
-            <span>{step === 5 ? 'Ready to Deploy' : `${5 - step} steps remaining`}</span>
+            <span>{step === 5 ? 'Launch Ready' : `${5 - step} steps remaining`}</span>
           </div>
         </div>
 
@@ -124,51 +133,39 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({ isOpen, onClos
             <div className="space-y-4 animate-in fade-in duration-150">
               <div>
                 <h4 className="text-sm font-bold text-slate-900 mb-0.5">Tell us about your business</h4>
-                <p className="text-slate-500">Your assistant will adapt its tone and answers for your customers.</p>
+                <p className="text-slate-500">Your AI Q&A assistant will represent your brand when answering customer questions.</p>
               </div>
 
               <div>
                 <label className="block font-bold text-slate-900 mb-1">Business Name *</label>
                 <input
                   type="text"
-                  placeholder="e.g. Acme Innovations"
+                  placeholder="e.g. Acme Cloud Systems"
                   value={businessName}
                   onChange={e => setBusinessName(e.target.value)}
                   className="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 shadow-xs"
                 />
               </div>
 
-              <div>
-                <label className="block font-bold text-slate-900 mb-1">What should your assistant help with?</label>
-                <div className="grid grid-cols-2 gap-2 mt-1">
-                  {[
-                    'Customer support',
-                    'Product questions',
-                    'Sales inquiries',
-                    'Lead qualification',
-                    'Order tracking',
-                    'Internal team help'
-                  ].map(goal => (
-                    <button
-                      type="button"
-                      key={goal}
-                      onClick={() => toggleGoal(goal)}
-                      className={`p-2.5 rounded-xl border text-left flex items-center justify-between transition-all cursor-pointer ${
-                        helpGoals.includes(goal)
-                          ? 'bg-indigo-50/70 border-indigo-600 text-indigo-950 font-bold'
-                          : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
-                      }`}
-                    >
-                      <span>{goal}</span>
-                      {helpGoals.includes(goal) && <Check className="w-3.5 h-3.5 text-indigo-600" />}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3 pt-1">
+              <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block font-bold text-slate-900 mb-1">Preferred Language</label>
+                  <label className="block font-bold text-slate-900 mb-1">Industry</label>
+                  <select
+                    value={industry}
+                    onChange={e => setIndustry(e.target.value)}
+                    className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500 shadow-xs"
+                  >
+                    <option value="SaaS & Software">SaaS & Software</option>
+                    <option value="E-Commerce & Retail">E-Commerce & Retail</option>
+                    <option value="Healthcare & Clinics">Healthcare & Clinics</option>
+                    <option value="Financial Services">Financial Services</option>
+                    <option value="Professional Services">Professional Services</option>
+                    <option value="Education & EdTech">Education & EdTech</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block font-bold text-slate-900 mb-1">Primary Language</label>
                   <select
                     value={preferredLanguage}
                     onChange={e => setPreferredLanguage(e.target.value)}
@@ -177,22 +174,8 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({ isOpen, onClos
                     <option value="English">English</option>
                     <option value="Spanish">Spanish</option>
                     <option value="Hindi">Hindi</option>
-                    <option value="Malayalam">Malayalam</option>
+                    <option value="French">French</option>
                     <option value="German">German</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block font-bold text-slate-900 mb-1">Tone of Voice</label>
-                  <select
-                    value={tone}
-                    onChange={e => setTone(e.target.value as any)}
-                    className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500 shadow-xs"
-                  >
-                    <option value="professional">Professional</option>
-                    <option value="friendly">Friendly & Warm</option>
-                    <option value="empathetic">Empathetic</option>
-                    <option value="direct">Direct & Concise</option>
                   </select>
                 </div>
               </div>
@@ -204,11 +187,11 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({ isOpen, onClos
             <div className="space-y-4 animate-in fade-in duration-150">
               <div>
                 <h4 className="text-sm font-bold text-slate-900 mb-0.5">Add your business knowledge</h4>
-                <p className="text-slate-500">Your assistant uses this information to answer customer questions accurately.</p>
+                <p className="text-slate-500">Your assistant retrieves answers directly from your public website and uploaded files.</p>
               </div>
 
               <div>
-                <label className="block font-bold text-slate-900 mb-1">Website URL for Auto-Sync</label>
+                <label className="block font-bold text-slate-900 mb-1">Company Website URL</label>
                 <div className="relative">
                   <Globe className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
                   <input
@@ -219,65 +202,29 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({ isOpen, onClos
                     className="w-full pl-9 pr-3 py-2.5 bg-white border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500 shadow-xs"
                   />
                 </div>
-                <p className="text-[11px] text-slate-400 mt-1">We will securely scan your public pages and FAQ.</p>
+                <p className="text-[11px] text-slate-400 mt-1">We will automatically index your homepage, FAQs, and help center.</p>
               </div>
 
-              <div className="p-4 border-2 border-dashed border-slate-200 rounded-2xl bg-slate-50/50 text-center space-y-2">
-                <Upload className="w-8 h-8 mx-auto text-indigo-600" />
-                <p className="font-bold text-slate-800">Upload Product Catalogs or Policies</p>
+              <div className="p-4 border-2 border-dashed border-indigo-200 rounded-2xl bg-indigo-50/30 text-center space-y-2">
+                <Upload className="w-7 h-7 mx-auto text-indigo-600" />
+                <p className="font-bold text-slate-800">Upload Product Docs, Price Lists, or PDFs</p>
                 <p className="text-[11px] text-slate-400">PDF, DOCX, TXT, CSV up to 25MB</p>
-                <span className="inline-block px-3 py-1 bg-white border border-slate-200 rounded-lg text-[11px] font-semibold text-slate-700">
-                  Select Files
-                </span>
+                <button
+                  type="button"
+                  className="px-3.5 py-1.5 bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 hover:bg-slate-50 shadow-2xs"
+                >
+                  Browse Files
+                </button>
               </div>
             </div>
           )}
 
-          {/* STEP 3: Connect Tools */}
+          {/* STEP 3: Customize Q&A Assistant */}
           {step === 3 && (
             <div className="space-y-4 animate-in fade-in duration-150">
               <div>
-                <h4 className="text-sm font-bold text-slate-900 mb-0.5">Connect your business channels</h4>
-                <p className="text-slate-500">Choose where customers will chat with your AI assistant.</p>
-              </div>
-
-              <div className="space-y-2.5">
-                {[
-                  { id: 'website', name: 'Website Chat Widget', desc: 'Embed on your website in 2 minutes', icon: '🌐' },
-                  { id: 'whatsapp', name: 'WhatsApp Business', desc: 'Message customers on WhatsApp', icon: '💬' },
-                  { id: 'slack', name: 'Slack Integration', desc: 'Escalations to internal team channels', icon: '⚡' },
-                  { id: 'shopify', name: 'Shopify Store', desc: 'Check order status and tracking live', icon: '🛍️' }
-                ].map(tool => (
-                  <button
-                    type="button"
-                    key={tool.id}
-                    onClick={() => toggleTool(tool.id)}
-                    className={`w-full p-3.5 rounded-2xl border text-left flex items-center justify-between transition-all cursor-pointer ${
-                      selectedTools.includes(tool.id)
-                        ? 'bg-indigo-50/70 border-indigo-600 ring-1 ring-indigo-500/20'
-                        : 'bg-white border-slate-200 hover:bg-slate-50'
-                    }`}
-                  >
-                    <div className="flex items-center gap-3">
-                      <span className="text-xl">{tool.icon}</span>
-                      <div>
-                        <p className="font-bold text-slate-900">{tool.name}</p>
-                        <p className="text-[11px] text-slate-500">{tool.desc}</p>
-                      </div>
-                    </div>
-                    {selectedTools.includes(tool.id) && <CheckCircle2 className="w-4 h-4 text-indigo-600" />}
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* STEP 4: Test Assistant */}
-          {step === 4 && (
-            <div className="space-y-4 animate-in fade-in duration-150">
-              <div>
-                <h4 className="text-sm font-bold text-slate-900 mb-0.5">Test your AI Assistant</h4>
-                <p className="text-slate-500">Give your assistant a name and preview its welcoming response.</p>
+                <h4 className="text-sm font-bold text-slate-900 mb-0.5">Customize Assistant Personality & Tone</h4>
+                <p className="text-slate-500">Choose how your assistant speaks with visitors and what greeting it uses.</p>
               </div>
 
               <div>
@@ -291,22 +238,93 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({ isOpen, onClos
                 />
               </div>
 
-              <div className="p-4 bg-slate-900 text-white rounded-2xl space-y-2">
-                <div className="flex items-center gap-2">
-                  <div className="w-6 h-6 rounded-lg bg-indigo-600 flex items-center justify-center font-bold text-[10px]">
-                    AI
-                  </div>
-                  <span className="font-bold text-xs">{assistantName || 'Nova AI'}</span>
-                  <span className="text-[10px] text-emerald-400 font-semibold">● Ready</span>
+              <div>
+                <label className="block font-bold text-slate-900 mb-1.5">Tone of Voice</label>
+                <div className="grid grid-cols-2 gap-2">
+                  {tones.map(t => (
+                    <button
+                      type="button"
+                      key={t.id}
+                      onClick={() => setTone(t.id)}
+                      className={`p-3 rounded-xl border text-left transition-all cursor-pointer ${
+                        tone === t.id
+                          ? 'bg-indigo-50/80 border-indigo-600 ring-2 ring-indigo-500/20 text-indigo-950 font-bold'
+                          : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between mb-0.5">
+                        <span className="text-xs font-bold">{t.label}</span>
+                        {tone === t.id && <Check className="w-3.5 h-3.5 text-indigo-600" />}
+                      </div>
+                      <p className="text-[10px] text-slate-500">{t.desc}</p>
+                    </button>
+                  ))}
                 </div>
-                <p className="text-xs text-slate-200 bg-slate-800/80 p-3 rounded-xl leading-relaxed">
-                  "Hello! I am {assistantName || 'Nova AI'}, your assistant for {businessName || 'your business'}. How can I assist you with products, order details, or pricing today?"
-                </p>
+              </div>
+
+              <div>
+                <label className="block font-bold text-slate-900 mb-1">Welcome Message</label>
+                <input
+                  type="text"
+                  value={greetingMessage}
+                  onChange={e => setGreetingMessage(e.target.value)}
+                  className="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 shadow-xs"
+                />
               </div>
             </div>
           )}
 
-          {/* STEP 5: Deploy */}
+          {/* STEP 4: Test Assistant */}
+          {step === 4 && (
+            <div className="space-y-4 animate-in fade-in duration-150">
+              <div>
+                <h4 className="text-sm font-bold text-slate-900 mb-0.5">Test your Q&A Assistant</h4>
+                <p className="text-slate-500">Ask a question to see how your assistant formulates grounded responses.</p>
+              </div>
+
+              <div className="space-y-2">
+                <label className="block font-bold text-slate-900">Sample Customer Question</label>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={testQuestion}
+                    onChange={e => setTestQuestion(e.target.value)}
+                    className="flex-1 px-3.5 py-2 bg-white border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleSimulateTest}
+                    disabled={isTesting}
+                    className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-bold flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                  >
+                    <Play className="w-3.5 h-3.5 fill-white" />
+                    <span>{isTesting ? 'Thinking...' : 'Ask'}</span>
+                  </button>
+                </div>
+              </div>
+
+              {testAnswer && (
+                <div className="p-4 bg-slate-900 text-white rounded-2xl space-y-2 animate-in fade-in duration-150">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <div className="w-5 h-5 rounded-lg bg-indigo-600 flex items-center justify-center font-bold text-[10px]">
+                        AI
+                      </div>
+                      <span className="font-bold text-xs">{assistantName || 'Nova AI'}</span>
+                    </div>
+                    <span className="text-[10px] text-emerald-400 font-semibold bg-emerald-950/60 px-2 py-0.5 rounded-full border border-emerald-800/60">
+                      ● Grounded Answer
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-200 leading-relaxed bg-slate-800/80 p-3 rounded-xl border border-slate-700/60">
+                    {testAnswer}
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* STEP 5: Launch Ready */}
           {step === 5 && (
             <div className="space-y-4 animate-in fade-in duration-150 text-center py-2">
               <div className="w-16 h-16 rounded-3xl bg-emerald-50 border border-emerald-200 text-emerald-600 flex items-center justify-center mx-auto">
@@ -314,24 +332,24 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({ isOpen, onClos
               </div>
 
               <div>
-                <h4 className="text-base font-bold text-slate-900">Your AI Assistant is ready!</h4>
-                <p className="text-slate-500 mt-1">
-                  Click below to activate your assistant workspace and open the live command center.
+                <h4 className="text-base font-bold text-slate-900">Your AI Q&A Assistant is Ready!</h4>
+                <p className="text-slate-500 mt-1 max-w-md mx-auto">
+                  Your business workspace is initialized with prebuilt RAG retrieval, anti-hallucination refusal, and multi-channel embed code.
                 </p>
               </div>
 
-              <div className="p-4 bg-indigo-50/70 border border-indigo-100 rounded-2xl text-left space-y-1.5 text-xs text-indigo-950">
+              <div className="p-4 bg-indigo-50/70 border border-indigo-100 rounded-2xl text-left space-y-2 text-xs text-indigo-950">
                 <div className="flex items-center gap-2">
                   <Check className="w-4 h-4 text-indigo-600" />
-                  <span><strong>{businessName || 'Acme Workspace'}</strong> initialized</span>
+                  <span><strong>{businessName || 'Business'}</strong> workspace configured</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <Check className="w-4 h-4 text-indigo-600" />
-                  <span>AI assistant configured with <strong>{tone}</strong> tone</span>
+                  <span>Assistant: <strong>{assistantName || 'Nova AI'}</strong> ({tone} tone)</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <Check className="w-4 h-4 text-indigo-600" />
-                  <span>Multi-channel website and WhatsApp integrations enabled</span>
+                  <span>Website embed snippet & API keys generated</span>
                 </div>
               </div>
             </div>
