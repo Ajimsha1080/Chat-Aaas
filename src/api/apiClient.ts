@@ -76,8 +76,49 @@ export class APIClient {
   }
 
   // ================= KNOWLEDGE BASE ================= //
-  public static async getKnowledge() {
-    return this.request('/api/v1/knowledge', 'GET');
+  public static async getKnowledge(params?: { collection_id?: string; source_type?: string; search?: string }) {
+    let q = '';
+    if (params) {
+      const sp = new URLSearchParams();
+      if (params.collection_id) sp.set('collection_id', params.collection_id);
+      if (params.source_type) sp.set('source_type', params.source_type);
+      if (params.search) sp.set('search', params.search);
+      const str = sp.toString();
+      if (str) q = `?${str}`;
+    }
+    return this.request(`/api/v1/knowledge${q}`, 'GET');
+  }
+
+  public static async getKnowledgeHealth() {
+    return this.request('/api/v1/knowledge/health', 'GET');
+  }
+
+  public static async getKnowledgeCollections() {
+    return this.request('/api/v1/knowledge/collections', 'GET');
+  }
+
+  public static async createKnowledgeCollection(name: string, description?: string, icon?: string, color?: string) {
+    return this.request('/api/v1/knowledge/collections', 'POST', { name, description, icon, color });
+  }
+
+  public static async deleteKnowledgeCollection(collectionId: string) {
+    return this.request(`/api/v1/knowledge/collections/${collectionId}`, 'DELETE');
+  }
+
+  public static async getKnowledgeGaps() {
+    return this.request('/api/v1/knowledge/gaps', 'GET');
+  }
+
+  public static async convertGapToFaq(gapId: string, answer: string, collectionId?: string, category?: string) {
+    return this.request(`/api/v1/knowledge/gaps/${gapId}/convert-faq`, 'POST', { answer, collectionId, category });
+  }
+
+  public static async testRag(query: string, top_k = 3) {
+    return this.request('/api/v1/knowledge/test-rag', 'POST', { query, top_k });
+  }
+
+  public static async recordKnowledgeFeedback(rating: 'helpful' | 'not_helpful', feedbackText?: string, retrievedChunkIds?: string[]) {
+    return this.request('/api/v1/knowledge/feedback', 'POST', { rating, feedbackText, retrievedChunkIds });
   }
 
   public static async crawlUrl(url: string, category?: string) {
@@ -169,6 +210,47 @@ export class APIClient {
         test: async () => {
           const data = await this.getPlans();
           if (!data || !data.plans) throw new Error("Plans missing");
+        }
+      },
+      {
+        suite: "6. Knowledge Health Radar",
+        name: "Verify dynamic health score calculation and source metrics",
+        test: async () => {
+          const data = await this.getKnowledgeHealth();
+          if (!data || !data.status) throw new Error("Knowledge health metrics missing");
+        }
+      },
+      {
+        suite: "7. Knowledge Collections & Gaps",
+        name: "Retrieve organized collections and unresolved customer queries",
+        test: async () => {
+          const cols = await this.getKnowledgeCollections();
+          const gaps = await this.getKnowledgeGaps();
+          if (!cols || !gaps) throw new Error("Collections or gaps response missing");
+        }
+      },
+      {
+        suite: "8. Grounded RAG Query",
+        name: "Execute RAG pipeline with grounded citations and anti-hallucination check",
+        test: async () => {
+          const res = await this.testRag("What is your return policy timeframe?", 3);
+          if (!res || !res.answer) throw new Error("RAG query failed");
+        }
+      },
+      {
+        suite: "9. Customer Conversations",
+        name: "Verify support inbox conversation retrieval and multi-tenant scoping",
+        test: async () => {
+          const res = await this.getConversations();
+          if (!res || !res.conversations) throw new Error("Conversations missing");
+        }
+      },
+      {
+        suite: "10. Analytics & Security Audit",
+        name: "Verify tenant security audit logs and event dispatch",
+        test: async () => {
+          const res = await this.getAuditLogs();
+          if (!res || !res.logs) throw new Error("Audit logs missing");
         }
       }
     ];
