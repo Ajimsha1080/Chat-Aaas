@@ -10,7 +10,9 @@ import {
   Check, 
   Terminal, 
   HelpCircle, 
-  Search 
+  Search,
+  ShieldAlert,
+  ArrowLeft
 } from 'lucide-react';
 import { useApp } from '../../context';
 
@@ -35,7 +37,10 @@ export const Header: React.FC<HeaderProps> = ({
     currentPlan, 
     toggleAgentStatus,
     setIsLiveSandboxOpen,
-    setIsQuickTestOpen
+    setIsQuickTestOpen,
+    currentExperience,
+    setCurrentExperience,
+    showToast
   } = useApp();
 
   const [isCompanyDropdownOpen, setIsCompanyDropdownOpen] = useState(false);
@@ -189,6 +194,33 @@ export const Header: React.FC<HeaderProps> = ({
           <ExternalLink className="w-3.5 h-3.5 text-indigo-600" />
           <span className="hidden sm:inline">Website Preview</span>
         </button>
+
+        {/* Direct 1-Click Super Admin / Customer Experience Switcher */}
+        {currentExperience === 'admin' ? (
+          <button
+            onClick={() => {
+              setCurrentExperience('customer');
+              showToast('Customer Workspace', 'Returned to customer workspace.', 'info');
+            }}
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-rose-600 hover:bg-rose-500 text-white rounded-xl text-xs font-bold transition-all shadow-xs cursor-pointer"
+            title="Exit Super Admin and Return to Workspace"
+          >
+            <ArrowLeft className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline">Exit Admin</span>
+          </button>
+        ) : (
+          <button
+            onClick={() => {
+              setCurrentExperience('admin');
+              showToast('Super Admin Mode', 'Switched to SaaS Operator Master Admin.', 'info');
+            }}
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-bold transition-all shadow-xs cursor-pointer border border-slate-700"
+            title="Switch to SaaS Platform Super Admin"
+          >
+            <ShieldAlert className="w-3.5 h-3.5 text-rose-400" />
+            <span className="hidden sm:inline">Super Admin</span>
+          </button>
+        )}
 
         {/* Help Center */}
         {onOpenHelp && (

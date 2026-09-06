@@ -36,6 +36,7 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({ isOpen, onClose,
     knowledgeItems, 
     conversations,
     currentCompany,
+    setCurrentExperience,
     showToast
   } = useApp();
 
@@ -63,6 +64,30 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({ isOpen, onClose,
   if (!isOpen) return null;
 
   const quickActions = [
+    {
+      id: 'switch-super-admin',
+      title: 'Switch to Platform Super Admin Portal',
+      subtitle: 'Multi-tenant fleet management, MRR & system diagnostics',
+      icon: ShieldCheck,
+      category: 'Experiences',
+      action: () => {
+        onClose();
+        setCurrentExperience('admin');
+        showToast('Super Admin Mode', 'Switched to SaaS Platform Master Admin.', 'info');
+      }
+    },
+    {
+      id: 'switch-customer-workspace',
+      title: 'Switch to Customer Workspace',
+      subtitle: 'Knowledge base, chat inbox, widget & settings',
+      icon: Building2,
+      category: 'Experiences',
+      action: () => {
+        onClose();
+        setCurrentExperience('customer');
+        showToast('Customer Workspace', 'Returned to customer workspace view.', 'info');
+      }
+    },
     {
       id: 'test-assistant',
       title: 'Test AI Assistant',
