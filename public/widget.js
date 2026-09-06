@@ -151,6 +151,31 @@
       cursor: pointer;
       font-size: 13px;
     }
+    @media (max-width: 480px) {
+      .aaas-widget-launcher {
+        bottom: 16px;
+        right: 16px;
+        padding: 10px 16px;
+        font-size: 13px;
+      }
+      .aaas-widget-container {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        top: 0;
+        width: 100vw;
+        height: 100vh;
+        max-width: 100vw;
+        max-height: 100vh;
+        border-radius: 0;
+        border: none;
+        z-index: 1000000;
+      }
+      .aaas-widget-input-row {
+        padding-bottom: max(12px, env(safe-area-inset-bottom));
+      }
+    }
   `;
   document.head.appendChild(style);
 
