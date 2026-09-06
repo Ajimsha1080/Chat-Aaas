@@ -8,8 +8,6 @@ import {
   Settings, 
   PlaySquare, 
   Sparkles,
-  ExternalLink,
-  ChevronRight,
   PauseCircle,
   CheckCircle2,
   CreditCard
@@ -23,7 +21,6 @@ export const Sidebar: React.FC = () => {
     setCurrentTab, 
     currentCompany,
     conversations,
-    setIsLiveSandboxOpen,
     setIsQuickTestOpen
   } = useApp();
 
@@ -185,20 +182,6 @@ export const Sidebar: React.FC = () => {
             </div>
           </button>
         </div>
-      </div>
-
-      {/* Bottom Website Preview Link */}
-      <div className="p-3 border-t border-slate-800/80 space-y-2 bg-slate-950/80">
-        <button
-          onClick={() => setIsLiveSandboxOpen(true)}
-          className="w-full flex items-center justify-between px-3 py-2 bg-gradient-to-r from-emerald-600/20 to-teal-600/10 hover:from-emerald-600/30 hover:to-teal-600/20 border border-emerald-500/30 text-emerald-300 rounded-xl text-xs font-medium transition-all cursor-pointer"
-        >
-          <div className="flex items-center gap-2">
-            <ExternalLink className="w-3.5 h-3.5 text-emerald-400" />
-            <span>Client Website Preview</span>
-          </div>
-          <ChevronRight className="w-3 h-3 text-emerald-400/70" />
-        </button>
       </div>
     </aside>
   );
