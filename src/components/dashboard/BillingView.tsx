@@ -135,23 +135,23 @@ export const BillingView: React.FC = () => {
             <span className="text-[10px] text-slate-400 mt-1 block">Vector chunk indexing capacity</span>
           </div>
 
-          {/* Meter 3: Production Agents */}
+          {/* Meter 3: Production Assistant */}
           <div>
             <div className="flex items-center justify-between text-xs mb-1.5">
-              <span className="text-slate-400 font-medium">Rented AI Agents:</span>
+              <span className="text-slate-400 font-medium">AI Q&A Assistant:</span>
               <span className="font-bold text-emerald-400 font-mono">1 / 1 Dedicated</span>
             </div>
             <div className="w-full bg-slate-800 h-2 rounded-full overflow-hidden">
               <div className="h-full rounded-full bg-emerald-500" style={{ width: '100%' }} />
             </div>
-            <span className="text-[10px] text-slate-400 mt-1 block">Strict single-agent deployment</span>
+            <span className="text-[10px] text-slate-400 mt-1 block">Strict single-assistant deployment</span>
           </div>
         </div>
       </div>
 
       {/* Subscription Plans Pricing Matrix */}
       <div>
-        <h2 className="text-base font-bold text-slate-900 mb-4">Choose Your Rented Agent Plan</h2>
+        <h2 className="text-base font-bold text-slate-900 mb-4">Choose Your Assistant Plan</h2>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           {allPlans.map(plan => {

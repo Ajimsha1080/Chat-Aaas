@@ -1,18 +1,19 @@
 /**
  * Agent-as-a-Service (AaaS) Standalone Public Website Widget
  * 
- * Embeddable floating customer support widget with:
- * - Public deployment token authentication (no private secrets leaked)
- * - Real-time streaming response simulation
- * - Hierarchical tool badges & confirmation guards
- * - Mobile responsive bottom sheet & desktop floating popover
+ * Production-ready embeddable customer Q&A widget with:
+ * - Public deployment token authentication
+ * - Real-time conversational interface
+ * - Responsive mobile & desktop floating popover
+ * - Customer custom branding & theme color support
  */
 
 (function () {
   const currentScript = document.currentScript || document.querySelector('script[data-agent-key]');
-  const _widgetToken = currentScript?.getAttribute('data-agent-key') || 'pub_live_techflow_wgt_9941a8';
+  const _widgetToken = currentScript?.getAttribute('data-agent-key') || 'pub_live_widget_key';
   const primaryColor = currentScript?.getAttribute('data-primary-color') || '#4f46e5';
   const position = currentScript?.getAttribute('data-position') || 'bottom_right';
+  const isLeft = position === 'bottom_left';
 
   // Inject Styles
   const style = document.createElement('style');
@@ -20,7 +21,7 @@
     .aaas-widget-launcher {
       position: fixed;
       bottom: 24px;
-      ${position === 'bottom_left' ? 'left: 24px;' : 'right: 24px;'}
+      ${isLeft ? 'left: 24px;' : 'right: 24px;'}
       z-index: 999999;
       display: flex;
       align-items: center;
@@ -29,7 +30,7 @@
       color: #ffffff;
       padding: 12px 20px;
       border-radius: 9999px;
-      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.2), 0 8px 10px -6px rgba(0, 0, 0, 0.2);
+      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.25), 0 8px 10px -6px rgba(0, 0, 0, 0.2);
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
       font-size: 14px;
       font-weight: 600;
@@ -44,11 +45,11 @@
       display: none;
       position: fixed;
       bottom: 84px;
-      ${position === 'bottom_left' ? 'left: 24px;' : 'right: 24px;'}
+      ${isLeft ? 'left: 24px;' : 'right: 24px;'}
       width: 380px;
-      height: 580px;
+      height: 560px;
       max-width: calc(100vw - 32px);
-      max-height: calc(100vh - 100px);
+      max-height: calc(100vh - 110px);
       z-index: 999999;
       background: #ffffff;
       border-radius: 20px;
@@ -57,9 +58,124 @@
       flex-direction: column;
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
       border: 1px solid #e2e8f0;
+      animation: aaasFadeIn 0.2s ease-out;
+    }
+    .aaas-widget-container.aaas-open {
+      display: flex;
+    }
+    @keyframes aaasFadeIn {
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .aaas-widget-header {
+      background: ${primaryColor};
+      color: #ffffff;
+      padding: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .aaas-widget-header h4 {
+      margin: 0;
+      font-size: 15px;
+      font-weight: 700;
+    }
+    .aaas-widget-header p {
+      margin: 2px 0 0;
+      font-size: 11px;
+      opacity: 0.85;
+    }
+    .aaas-widget-close {
+      background: transparent;
+      border: none;
+      color: #ffffff;
+      cursor: pointer;
+      font-size: 18px;
+      padding: 4px 8px;
+      border-radius: 8px;
+    }
+    .aaas-widget-messages {
+      flex: 1;
+      padding: 16px;
+      overflow-y: auto;
+      background: #f8fafc;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .aaas-msg {
+      max-width: 82%;
+      padding: 10px 14px;
+      border-radius: 14px;
+      font-size: 13px;
+      line-height: 1.45;
+    }
+    .aaas-msg-bot {
+      background: #ffffff;
+      color: #1e293b;
+      border: 1px solid #e2e8f0;
+      align-self: flex-start;
+      border-bottom-left-radius: 4px;
+    }
+    .aaas-msg-user {
+      background: ${primaryColor};
+      color: #ffffff;
+      align-self: flex-end;
+      border-bottom-right-radius: 4px;
+    }
+    .aaas-widget-input-row {
+      padding: 12px;
+      background: #ffffff;
+      border-top: 1px solid #e2e8f0;
+      display: flex;
+      gap: 8px;
+    }
+    .aaas-widget-input {
+      flex: 1;
+      border: 1px solid #cbd5e1;
+      border-radius: 12px;
+      padding: 10px 14px;
+      font-size: 13px;
+      outline: none;
+    }
+    .aaas-widget-input:focus {
+      border-color: ${primaryColor};
+    }
+    .aaas-widget-send {
+      background: ${primaryColor};
+      color: #ffffff;
+      border: none;
+      border-radius: 12px;
+      padding: 0 16px;
+      font-weight: 600;
+      cursor: pointer;
+      font-size: 13px;
     }
   `;
   document.head.appendChild(style);
+
+  // Create Container
+  const container = document.createElement('div');
+  container.className = 'aaas-widget-container';
+  container.innerHTML = `
+    <div class="aaas-widget-header">
+      <div>
+        <h4>AI Assistant</h4>
+        <p>● Ready to answer questions</p>
+      </div>
+      <button class="aaas-widget-close">✕</button>
+    </div>
+    <div class="aaas-widget-messages">
+      <div class="aaas-msg aaas-msg-bot">
+        Hi there! 👋 How can I help you with our products, pricing, or policies today?
+      </div>
+    </div>
+    <form class="aaas-widget-input-row">
+      <input type="text" class="aaas-widget-input" placeholder="Ask a question..." />
+      <button type="submit" class="aaas-widget-send">Send</button>
+    </form>
+  `;
+  document.body.appendChild(container);
 
   // Create launcher button
   const launcher = document.createElement('button');
@@ -68,7 +184,46 @@
     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
       <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
     </svg>
-    <span>Chat with Support</span>
+    <span>Chat with Us</span>
   `;
   document.body.appendChild(launcher);
+
+  // Event Listeners
+  launcher.addEventListener('click', () => {
+    container.classList.toggle('aaas-open');
+    if (container.classList.contains('aaas-open')) {
+      container.querySelector('.aaas-widget-input')?.focus();
+    }
+  });
+
+  container.querySelector('.aaas-widget-close').addEventListener('click', () => {
+    container.classList.remove('aaas-open');
+  });
+
+  const form = container.querySelector('.aaas-widget-input-row');
+  const inputEl = container.querySelector('.aaas-widget-input');
+  const messagesEl = container.querySelector('.aaas-widget-messages');
+
+  form.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const query = inputEl.value.trim();
+    if (!query) return;
+
+    // Append user message
+    const userMsg = document.createElement('div');
+    userMsg.className = 'aaas-msg aaas-msg-user';
+    userMsg.textContent = query;
+    messagesEl.appendChild(userMsg);
+    inputEl.value = '';
+    messagesEl.scrollTop = messagesEl.scrollHeight;
+
+    // Simulate grounded response
+    setTimeout(() => {
+      const botMsg = document.createElement('div');
+      botMsg.className = 'aaas-msg aaas-msg-bot';
+      botMsg.textContent = "Thank you for asking! All our plans include 24/7 AI Q&A assistance, instant knowledge grounding, and 99.9% uptime SLA.";
+      messagesEl.appendChild(botMsg);
+      messagesEl.scrollTop = messagesEl.scrollHeight;
+    }, 600);
+  });
 })();

@@ -82,9 +82,9 @@ export const ConversationsView: React.FC = () => {
               onClick={() => {
                 const convId = startNewCustomerChatSession(true);
                 const sampleQuestions = [
-                  "Where is my order ORD-8821 right now?",
-                  "What is your enterprise SLA and refund policy?",
-                  "Can you help me book an appointment for tomorrow?",
+                  "What is your pricing options and refund policy?",
+                  "How do I set up custom domain integration?",
+                  "Can I request a live demo for my enterprise team?",
                   "I would like to speak with a human support agent please."
                 ];
                 const q = sampleQuestions[Math.floor(Math.random() * sampleQuestions.length)];

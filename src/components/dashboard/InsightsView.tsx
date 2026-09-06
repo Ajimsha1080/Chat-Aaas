@@ -51,11 +51,11 @@ export const InsightsView: React.FC = () => {
   ];
 
   const topQuestions = [
-    { topic: 'Order Tracking & Status', percentage: 32, count: 410 },
-    { topic: 'Refund & Return Policy', percentage: 21, count: 270 },
-    { topic: 'Pricing & Subscription Plans', percentage: 17, count: 218 },
-    { topic: 'Product Specs & Compatibility', percentage: 14, count: 180 },
-    { topic: 'Account & Password Help', percentage: 16, count: 206 }
+    { topic: 'Pricing & Subscription Plans', percentage: 32, count: 410 },
+    { topic: 'Refund & Return Policy', percentage: 25, count: 320 },
+    { topic: 'Product Specs & Compatibility', percentage: 18, count: 230 },
+    { topic: 'API & Developer Integration', percentage: 15, count: 192 },
+    { topic: 'Account & Team Management', percentage: 10, count: 128 }
   ];
 
   return (
