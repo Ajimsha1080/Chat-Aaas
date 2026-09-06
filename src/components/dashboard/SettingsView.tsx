@@ -11,7 +11,9 @@ import {
   RefreshCw,
   Sparkles,
   Terminal,
-  Lock
+  Lock,
+  Eye,
+  EyeOff
 } from 'lucide-react';
 import { useApp } from '../../context';
 import { TeamMember } from '../../types';
@@ -38,6 +40,7 @@ export const SettingsView: React.FC = () => {
   const [inviteRole, setInviteRole] = useState<TeamMember['role']>('support_agent');
   const [selectedInvoice, setSelectedInvoice] = useState<any | null>(null);
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
+  const [showApiKey, setShowApiKey] = useState(false);
 
   // Assistant Form State
   const [agentName, setAgentName] = useState(currentCompany.agent.name);
@@ -387,22 +390,32 @@ export const SettingsView: React.FC = () => {
               <div>
                 <label className="font-semibold text-slate-700 block mb-1.5">Live Secret API Key</label>
                 <div className="flex items-center gap-2">
-                  <input
-                    type="password"
-                    readOnly
-                    value={currentCompany.apiKey}
-                    className="flex-1 px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl font-mono text-xs text-slate-700"
-                  />
+                  <div className="relative flex-1">
+                    <input
+                      type={showApiKey ? "text" : "password"}
+                      readOnly
+                      value={currentCompany.apiKey}
+                      className="w-full pl-3.5 pr-10 py-2.5 bg-slate-50 border border-slate-200 rounded-xl font-mono text-xs text-slate-700"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowApiKey(!showApiKey)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-0.5 cursor-pointer"
+                      title={showApiKey ? "Hide Secret Key" : "Reveal Secret Key"}
+                    >
+                      {showApiKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
                   <button
                     onClick={() => handleCopy(currentCompany.apiKey, 'apiKey')}
-                    className="px-3.5 py-2.5 bg-slate-800 hover:bg-slate-700 text-white rounded-xl text-xs font-semibold flex items-center gap-1.5 cursor-pointer"
+                    className="px-3.5 py-2.5 bg-slate-800 hover:bg-slate-700 text-white rounded-xl text-xs font-semibold flex items-center gap-1.5 cursor-pointer transition-colors"
                   >
                     {copiedKey === 'apiKey' ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
                     <span>{copiedKey === 'apiKey' ? 'Copied' : 'Copy'}</span>
                   </button>
                   <button
                     onClick={regenerateApiKey}
-                    className="px-3.5 py-2.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-xl text-xs font-semibold flex items-center gap-1.5 cursor-pointer"
+                    className="px-3.5 py-2.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-xl text-xs font-semibold flex items-center gap-1.5 cursor-pointer transition-colors"
                   >
                     <RefreshCw className="w-3.5 h-3.5" />
                     <span>Rotate Key</span>
