@@ -236,44 +236,73 @@ async def crawl_and_ingest_website(req: IngestWebsiteRequest, ctx: TenantContext
     src_id = f"ks-{ctx.company_id}-web-{uuid.uuid4().hex[:6]}"
     title = res.get("title") or req.url
 
+    # Process via DocumentAIService for multi-chunk semantic parsing
+    doc_req = DocumentProcessRequest(
+        title=title,
+        raw_text=cleaned_content,
+        doc_type="txt",
+        chunk_size=500
+    )
+    doc_res = DocumentAIService.process_document(doc_req)
+    chunks_to_save = doc_res.chunks if doc_res.chunks else []
+
     # Create source
     new_source = {
         "id": src_id,
         "companyId": ctx.company_id,
-        "collectionId": req.collectionId,
+        "collectionId": req.collectionId or "col-tf-1",
         "title": title,
         "sourceType": "website",
         "sourceUrl": req.url,
         "category": req.category or "Website",
         "status": "ready",
-        "chunkCount": 1,
-        "totalTokens": len(cleaned_content[:1200]) // 4,
+        "chunkCount": max(1, len(chunks_to_save)),
+        "totalTokens": doc_res.total_tokens or (len(cleaned_content) // 4),
         "lastSyncedAt": time.strftime("%Y-%m-%dT%H:%M:%S.000Z", time.gmtime()),
         "createdAt": time.strftime("%Y-%m-%dT%H:%M:%S.000Z", time.gmtime())
     }
     db.knowledge_sources[src_id] = new_source
 
-    chunk_id = f"chk-{ctx.company_id}-{uuid.uuid4().hex[:8]}"
-    new_chunk = {
-        "id": chunk_id,
-        "knowledgeSourceId": src_id,
-        "companyId": ctx.company_id,
-        "collectionId": req.collectionId,
-        "chunkIndex": 0,
-        "content": cleaned_content[:1200],
-        "tokenCount": max(1, len(cleaned_content[:1200]) // 4),
-        "sectionHeader": title,
-        "metadata": {"title": title, "category": req.category, "url": req.url}
-    }
-    db.document_chunks[chunk_id] = new_chunk
+    created_chunk_ids = []
+    if chunks_to_save:
+        for c in chunks_to_save:
+            chk_id = f"chk-{ctx.company_id}-{uuid.uuid4().hex[:8]}"
+            chk = {
+                "id": chk_id,
+                "knowledgeSourceId": src_id,
+                "companyId": ctx.company_id,
+                "collectionId": req.collectionId,
+                "chunkIndex": c.chunk_index,
+                "content": c.content,
+                "tokenCount": c.token_count,
+                "sectionHeader": c.section_header or title,
+                "metadata": {"title": title, "category": req.category, "url": req.url}
+            }
+            db.document_chunks[chk_id] = chk
+            created_chunk_ids.append(chk_id)
+    else:
+        chk_id = f"chk-{ctx.company_id}-{uuid.uuid4().hex[:8]}"
+        chk = {
+            "id": chk_id,
+            "knowledgeSourceId": src_id,
+            "companyId": ctx.company_id,
+            "collectionId": req.collectionId,
+            "chunkIndex": 0,
+            "content": cleaned_content[:1200],
+            "tokenCount": max(1, len(cleaned_content[:1200]) // 4),
+            "sectionHeader": title,
+            "metadata": {"title": title, "category": req.category, "url": req.url}
+        }
+        db.document_chunks[chk_id] = chk
+        created_chunk_ids.append(chk_id)
 
     return {
         "status": 201,
         "data": {
             "success": True,
             "source": new_source,
-            "chunk": new_chunk,
-            "message": f"Successfully crawled and indexed webpage from '{req.url}'."
+            "chunksCreated": len(created_chunk_ids),
+            "message": f"Successfully crawled and indexed {len(created_chunk_ids)} semantic chunks from '{req.url}'."
         }
     }
 
