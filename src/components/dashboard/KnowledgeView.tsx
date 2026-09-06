@@ -350,18 +350,10 @@ export const KnowledgeView: React.FC = () => {
 
           <button
             onClick={() => handleOpenAddModal('document')}
-            className="px-3.5 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-colors shadow-xs cursor-pointer"
-          >
-            <FileUp className="w-4 h-4 text-indigo-400" />
-            <span>Upload Document</span>
-          </button>
-
-          <button
-            onClick={() => handleOpenAddModal('url')}
-            className="px-3.5 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-colors shadow-xs cursor-pointer"
+            className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-colors shadow-xs cursor-pointer"
           >
             <Plus className="w-4 h-4" />
-            <span>Teach New Knowledge</span>
+            <span>+ Add Knowledge</span>
           </button>
         </div>
       </div>
