@@ -20,7 +20,10 @@ export interface TestResult {
 export class APIClient {
   private static token: string | null = null;
   private static currentCompanyId = 'comp-techflow';
-  private static baseUrl = (typeof import.meta !== 'undefined' && import.meta.env?.VITE_API_BASE_URL) || 'http://localhost:8001';
+  private static baseUrl = (typeof import.meta !== 'undefined' && import.meta.env?.VITE_API_BASE_URL) 
+    || (typeof window !== 'undefined' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1' 
+        ? window.location.origin 
+        : 'http://localhost:8001');
 
   public static setAuth(token: string | null, companyId: string): void {
     this.token = token;
