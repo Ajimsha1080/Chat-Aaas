@@ -69,7 +69,7 @@ export const HomeView: React.FC = () => {
   const isLive = currentCompany.agent.status === 'active';
 
   const handleCopyScript = () => {
-    const snippet = `<script src="https://cdn.agent-as-a-service.io/v1/widget.js" data-agent-key="${currentCompany.apiKey}" defer></script>`;
+    const snippet = `<script src="https://cdn.chat-aaas.com/v1/widget.js" data-agent-key="${currentCompany.apiKey}" defer></script>`;
     navigator.clipboard.writeText(snippet);
     setCopiedSnippet(true);
     showToast('Script Copied', 'Website widget embed snippet copied to clipboard.', 'success');
