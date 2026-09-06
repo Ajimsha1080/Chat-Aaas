@@ -178,47 +178,53 @@ export default function App() {
         </div>
       </div>
 
-      {/* Grid: Visual Customizer & API Keys */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Left 2 Cols: Widget Appearance & Positioning Customizer */}
-        <div className="lg:col-span-2 bg-white rounded-2xl p-6 border border-slate-200 shadow-xs">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-2">
-              <Paintbrush className="w-4 h-4 text-indigo-600" />
-              <h3 className="text-sm font-bold text-slate-900">Branding & Chatbot Customizer</h3>
+      {/* Visual Customizer & Live Mini-Preview */}
+      <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-xs">
+        <div className="flex items-center justify-between mb-6 pb-4 border-b border-slate-100">
+          <div className="flex items-center gap-2.5">
+            <div className="p-2 bg-indigo-50 text-indigo-600 rounded-xl">
+              <Paintbrush className="w-4 h-4" />
             </div>
-            <button
-              onClick={handleSaveBranding}
-              className="px-4 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-semibold flex items-center gap-1.5 shadow-sm transition-colors"
-            >
-              {isSaved ? <Check className="w-3.5 h-3.5 text-emerald-300" /> : <CheckCircle2 className="w-3.5 h-3.5" />}
-              <span>{isSaved ? 'Branding Saved' : 'Save Appearance'}</span>
-            </button>
+            <div>
+              <h3 className="text-base font-bold text-slate-900">Branding & Widget Customizer</h3>
+              <p className="text-xs text-slate-500">Personalize how the floating chat widget looks and behaves on your website.</p>
+            </div>
           </div>
 
-          <div className="space-y-4 text-xs">
-            {/* Colors */}
+          <button
+            onClick={handleSaveBranding}
+            className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-semibold flex items-center gap-1.5 shadow-sm transition-colors cursor-pointer"
+          >
+            {isSaved ? <Check className="w-3.5 h-3.5 text-emerald-300" /> : <CheckCircle2 className="w-3.5 h-3.5" />}
+            <span>{isSaved ? 'Branding Saved!' : 'Save Appearance'}</span>
+          </button>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+          {/* Left Form (7 cols) */}
+          <div className="lg:col-span-7 space-y-5 text-xs">
+            {/* Colors & Position */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label className="block font-bold text-slate-700 mb-1">Primary Theme Color</label>
+                <label className="block font-bold text-slate-700 mb-1.5">Primary Theme Color</label>
                 <div className="flex items-center gap-2">
                   <input
                     type="color"
                     value={localSettings.primaryColor}
                     onChange={(e) => setLocalSettings({ ...localSettings, primaryColor: e.target.value })}
-                    className="w-9 h-9 rounded-lg border border-slate-200 cursor-pointer"
+                    className="w-10 h-10 rounded-xl border border-slate-200 cursor-pointer p-0.5"
                   />
                   <input
                     type="text"
                     value={localSettings.primaryColor}
                     onChange={(e) => setLocalSettings({ ...localSettings, primaryColor: e.target.value })}
-                    className="flex-1 px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg font-mono text-xs"
+                    className="flex-1 px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl font-mono text-xs text-slate-800"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block font-bold text-slate-700 mb-1">Widget Position</label>
+                <label className="block font-bold text-slate-700 mb-1.5">Widget Screen Position</label>
                 <div className="grid grid-cols-2 gap-2">
                   {[
                     { id: 'bottom_right', label: 'Bottom Right' },
@@ -228,7 +234,7 @@ export default function App() {
                       key={pos.id}
                       type="button"
                       onClick={() => setLocalSettings({ ...localSettings, position: pos.id as any })}
-                      className={`p-2 rounded-lg border font-semibold text-center transition-all ${
+                      className={`py-2 px-3 rounded-xl border font-semibold text-center transition-all cursor-pointer ${
                         localSettings.position === pos.id
                           ? 'border-indigo-600 bg-indigo-50 text-indigo-900 ring-1 ring-indigo-600'
                           : 'border-slate-200 text-slate-600 hover:bg-slate-50'
@@ -244,115 +250,134 @@ export default function App() {
             {/* Titles & Launcher Text */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label className="block font-bold text-slate-700 mb-1">Header Title</label>
+                <label className="block font-bold text-slate-700 mb-1.5">Header Title</label>
                 <input
                   type="text"
                   value={localSettings.headerTitle}
                   onChange={(e) => setLocalSettings({ ...localSettings, headerTitle: e.target.value })}
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs"
+                  placeholder="e.g. UrbanCraft Concierge"
+                  className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900"
                 />
               </div>
 
               <div>
-                <label className="block font-bold text-slate-700 mb-1">Launcher Button Label</label>
+                <label className="block font-bold text-slate-700 mb-1.5">Floating Button Label</label>
                 <input
                   type="text"
                   value={localSettings.launcherText}
                   onChange={(e) => setLocalSettings({ ...localSettings, launcherText: e.target.value })}
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs"
+                  placeholder="e.g. Chat with Us"
+                  className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900"
                 />
               </div>
             </div>
 
-            {/* Mobile Behavior & Toggles */}
-            <div className="pt-3 border-t border-slate-100 grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="flex items-center gap-2">
+            {/* Toggles */}
+            <div className="pt-4 border-t border-slate-100 space-y-3">
+              <label className="flex items-center gap-2.5 cursor-pointer">
                 <input
                   type="checkbox"
-                  id="sound-check"
                   checked={localSettings.enableSound}
                   onChange={(e) => setLocalSettings({ ...localSettings, enableSound: e.target.checked })}
-                  className="rounded text-indigo-600"
+                  className="rounded text-indigo-600 w-4 h-4 cursor-pointer"
                 />
-                <label htmlFor="sound-check" className="font-semibold text-slate-700">Enable chime audio on message</label>
-              </div>
+                <span className="font-semibold text-slate-700">Play subtle chime audio on new message</span>
+              </label>
 
-              <div className="flex items-center gap-2">
+              <label className="flex items-center gap-2.5 cursor-pointer">
                 <input
                   type="checkbox"
-                  id="powered-check"
                   checked={localSettings.showPoweredBy}
                   onChange={(e) => setLocalSettings({ ...localSettings, showPoweredBy: e.target.checked })}
-                  className="rounded text-indigo-600"
+                  className="rounded text-indigo-600 w-4 h-4 cursor-pointer"
                 />
-                <label htmlFor="powered-check" className="font-semibold text-slate-700">Display "Powered by Chat-AaaS" badge</label>
+                <span className="font-semibold text-slate-700">Display "Powered by Chat-AaaS" badge</span>
+              </label>
+            </div>
+          </div>
+
+          {/* Right Live Visual Mockup (5 cols) */}
+          <div className="lg:col-span-5 bg-slate-50 border border-slate-200/80 rounded-2xl p-5 flex flex-col justify-between relative overflow-hidden">
+            <div>
+              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block mb-3">Live Appearance Preview</span>
+              
+              {/* Mini Widget Card */}
+              <div className="bg-white rounded-2xl border border-slate-200 shadow-md overflow-hidden max-w-xs mx-auto">
+                <div 
+                  className="p-3 text-white flex items-center justify-between"
+                  style={{ backgroundColor: localSettings.primaryColor }}
+                >
+                  <div>
+                    <h5 className="font-bold text-xs">{localSettings.headerTitle || currentCompany.name}</h5>
+                    <p className="text-[10px] opacity-80">● Ready to answer questions</p>
+                  </div>
+                  <span className="text-xs opacity-75">✕</span>
+                </div>
+
+                <div className="p-3 space-y-2 bg-slate-50 min-h-[120px] text-[11px]">
+                  <div className="bg-white p-2.5 rounded-xl border border-slate-200 text-slate-700 max-w-[85%] shadow-2xs">
+                    Hi there! 👋 How can I help you today?
+                  </div>
+                  <div 
+                    className="p-2.5 rounded-xl text-white max-w-[85%] ml-auto"
+                    style={{ backgroundColor: localSettings.primaryColor }}
+                  >
+                    What is your warranty policy?
+                  </div>
+                </div>
+
+                <div className="p-2 bg-white border-t border-slate-100 flex items-center gap-1.5">
+                  <div className="flex-1 bg-slate-100 rounded-lg px-2.5 py-1 text-[10px] text-slate-400">
+                    Ask a question...
+                  </div>
+                  <div 
+                    className="px-2.5 py-1 rounded-lg text-white font-bold text-[10px]"
+                    style={{ backgroundColor: localSettings.primaryColor }}
+                  >
+                    Send
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Mini Floating Button Preview */}
+            <div className="mt-4 pt-4 border-t border-slate-200/60 flex items-center justify-between">
+              <span className="text-[11px] text-slate-500 font-medium">Floating Button Preview:</span>
+              <div 
+                className="px-3 py-1.5 rounded-full text-white text-xs font-semibold flex items-center gap-1.5 shadow-sm"
+                style={{ backgroundColor: localSettings.primaryColor }}
+              >
+                <span>💬</span>
+                <span>{localSettings.launcherText || 'Chat with Us'}</span>
               </div>
             </div>
           </div>
         </div>
+      </div>
 
-        {/* Right Col: API Keys & Credentials */}
-        <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-xs flex flex-col justify-between">
+      {/* Clean Developer & API Settings Link at Bottom */}
+      <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+        <div className="flex items-center gap-2.5">
+          <div className="p-1.5 bg-slate-200 text-slate-700 rounded-lg">
+            <Key className="w-4 h-4" />
+          </div>
           <div>
-            <div className="flex items-center gap-2 mb-2">
-              <Key className="w-4 h-4 text-indigo-600" />
-              <h3 className="text-sm font-bold text-slate-900">API Credentials</h3>
-            </div>
-            <p className="text-xs text-slate-500 mb-4">
-              Authenticate mobile apps, web widgets, and backend server endpoints with your AI assistant.
-            </p>
-
-            <div className="space-y-3 text-xs">
-              <div>
-                <label className="block font-bold text-slate-700 mb-1">Publishable Client API Key</label>
-                <div className="flex items-center gap-1.5">
-                  <input
-                    type="text"
-                    readOnly
-                    value={currentCompany.apiKey}
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg font-mono text-[11px] text-slate-800"
-                  />
-                  <button
-                    onClick={() => handleCopy(currentCompany.apiKey, 'apiKey')}
-                    className="p-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg transition-colors shrink-0"
-                    title="Copy API Key"
-                  >
-                    {copiedKey === 'apiKey' ? <Check className="w-4 h-4 text-emerald-600" /> : <Copy className="w-4 h-4" />}
-                  </button>
-                </div>
-              </div>
-
-              <div>
-                <label className="block font-bold text-slate-700 mb-1">Secret Key (Encrypted)</label>
-                <input
-                  type="text"
-                  readOnly
-                  value={currentCompany.apiSecretMasked}
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg font-mono text-[11px] text-slate-400"
-                />
-              </div>
-
-              <div>
-                <label className="block font-bold text-slate-700 mb-1">Webhook Dispatch URL</label>
-                <input
-                  type="text"
-                  readOnly
-                  value={currentCompany.webhookUrl || 'Not configured'}
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg font-mono text-[11px] text-slate-700"
-                />
-              </div>
-            </div>
+            <p className="font-bold text-slate-800">Need Backend REST API Keys, Webhooks, or Secret Tokens?</p>
+            <p className="text-slate-500 text-[11px]">Manage private keys, rotated tokens, and webhook dispatch in developer settings.</p>
           </div>
-
-          <div className="pt-4 border-t border-slate-100">
-            <button
-              onClick={regenerateApiKey}
-              className="w-full py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-xs rounded-xl flex items-center justify-center gap-1.5 transition-colors"
-            >
-              <RefreshCw className="w-3.5 h-3.5" />
-              <span>Rotate / Regenerate API Key</span>
-            </button>
-          </div>
+        </div>
+        
+        <div className="flex items-center gap-2 shrink-0">
+          <span className="text-[11px] font-mono bg-white px-2 py-1 rounded-md border border-slate-200 text-slate-600">
+            {currentCompany.apiKey.slice(0, 14)}...
+          </span>
+          <button
+            onClick={() => handleCopy(currentCompany.apiKey, 'apiKey')}
+            className="px-3 py-1.5 bg-white hover:bg-slate-100 border border-slate-200 text-slate-700 rounded-xl font-semibold transition-colors flex items-center gap-1 cursor-pointer"
+          >
+            {copiedKey === 'apiKey' ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
+            <span>{copiedKey === 'apiKey' ? 'Copied' : 'Copy Key'}</span>
+          </button>
         </div>
       </div>
     </div>
