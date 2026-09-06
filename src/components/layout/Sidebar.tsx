@@ -47,22 +47,57 @@ export const Sidebar: React.FC = () => {
     setCurrentDevTab,
     currentCompany,
     currentUserRole,
+    conversations,
     setIsLiveSandboxOpen,
     setIsQuickTestOpen
   } = useApp();
 
   const [isExpDropdownOpen, setIsExpDropdownOpen] = useState(false);
 
-  // Customer experience navigation
-  const customerNavItems: { id: NavigationTab; label: string; icon: any; badge?: string }[] = [
-    { id: 'home', label: 'Home', icon: LayoutDashboard },
-    { id: 'assistant', label: 'My Assistant', icon: Sparkles },
-    { id: 'conversations', label: 'Conversations', icon: MessageSquare, badge: 'Live' },
-    { id: 'knowledge', label: 'Knowledge', icon: BookOpen },
-    { id: 'connections', label: 'Connections', icon: Layers },
-    { id: 'deploy', label: 'Deploy', icon: Globe },
-    { id: 'insights', label: 'Insights', icon: BarChart3 },
-    { id: 'billing', label: 'Billing', icon: CreditCard }
+  // Customer experience navigation with logical groups
+  const unreadConversationsCount = conversations.filter(c => c.status === 'escalated_to_human' || c.status === 'flagged').length;
+
+  const customerNavGroups: {
+    groupName?: string;
+    items: { id: NavigationTab; label: string; icon: any; badge?: string }[];
+  }[] = [
+    {
+      items: [
+        { id: 'home', label: 'Home', icon: LayoutDashboard }
+      ]
+    },
+    {
+      groupName: 'Assistant',
+      items: [
+        { id: 'assistant', label: 'My Assistant', icon: Sparkles },
+        { 
+          id: 'conversations', 
+          label: 'Conversations', 
+          icon: MessageSquare, 
+          badge: unreadConversationsCount > 0 ? `${unreadConversationsCount}` : undefined 
+        }
+      ]
+    },
+    {
+      groupName: 'Intelligence',
+      items: [
+        { id: 'knowledge', label: 'Knowledge', icon: BookOpen }
+      ]
+    },
+    {
+      groupName: 'Integrations & Reach',
+      items: [
+        { id: 'connections', label: 'Connections', icon: Layers },
+        { id: 'deploy', label: 'Deploy', icon: Globe }
+      ]
+    },
+    {
+      groupName: 'Business',
+      items: [
+        { id: 'insights', label: 'Insights', icon: BarChart3 },
+        { id: 'billing', label: 'Billing', icon: CreditCard }
+      ]
+    }
   ];
 
   // Developer console navigation
@@ -225,102 +260,125 @@ export const Sidebar: React.FC = () => {
       )}
 
       {/* Primary Navigation Items for current experience */}
-      <div className="flex-1 overflow-y-auto px-3 py-2 space-y-1">
-        <div className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider px-3 py-1">
-          {currentExperience === 'customer' ? 'Company Menu' : currentExperience === 'developer' ? 'Developer Tools' : 'Operator Menu'}
-        </div>
-
+      <div className="flex-1 overflow-y-auto px-3 py-2 space-y-3">
         {/* Customer App Navigation */}
-        {currentExperience === 'customer' && customerNavItems.map(item => {
-          const Icon = item.icon;
-          const isActive = currentTab === item.id;
-          return (
-            <button
-              key={item.id}
-              onClick={() => setCurrentTab(item.id)}
-              className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-medium transition-all cursor-pointer ${
-                isActive
-                  ? 'bg-indigo-600 text-white font-semibold shadow-md shadow-indigo-600/30'
-                  : 'text-slate-300 hover:bg-slate-900 hover:text-white'
-              }`}
-            >
-              <div className="flex items-center gap-3">
-                <Icon className={`w-4 h-4 ${isActive ? 'text-white' : 'text-slate-400'}`} />
-                <span>{item.label}</span>
-              </div>
-              {item.badge && (
-                <span className={`text-[10px] px-1.5 py-0.5 rounded font-mono ${
-                  isActive ? 'bg-indigo-700/80 text-white' : 'bg-slate-800 text-slate-400'
-                }`}>
-                  {item.badge}
-                </span>
-              )}
-            </button>
-          );
-        })}
-
-        {/* Customer Settings & Help Divider */}
         {currentExperience === 'customer' && (
-          <div className="pt-2 mt-2 border-t border-slate-800/80 space-y-1">
-            <button
-              onClick={() => setCurrentTab('settings')}
-              className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-medium transition-all cursor-pointer ${
-                currentTab === 'settings'
-                  ? 'bg-indigo-600 text-white font-semibold shadow-md shadow-indigo-600/30'
-                  : 'text-slate-300 hover:bg-slate-900 hover:text-white'
-              }`}
-            >
-              <div className="flex items-center gap-3">
-                <Settings className={`w-4 h-4 ${currentTab === 'settings' ? 'text-white' : 'text-slate-400'}`} />
-                <span>Settings</span>
+          <div className="space-y-3">
+            {customerNavGroups.map((group, gIdx) => (
+              <div key={gIdx} className="space-y-1">
+                {group.groupName && (
+                  <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider px-3 pt-2 pb-0.5">
+                    {group.groupName}
+                  </div>
+                )}
+                {group.items.map(item => {
+                  const Icon = item.icon;
+                  const isActive = currentTab === item.id;
+                  return (
+                    <button
+                      key={item.id}
+                      onClick={() => setCurrentTab(item.id)}
+                      className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs transition-all cursor-pointer ${
+                        isActive
+                          ? 'bg-indigo-500/15 text-indigo-200 font-bold border-l-2 border-indigo-400 pl-2.5 shadow-2xs'
+                          : 'text-slate-300 hover:bg-slate-900/80 hover:text-white font-medium'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2.5">
+                        <Icon className={`w-4 h-4 transition-colors ${isActive ? 'text-indigo-400' : 'text-slate-400'}`} />
+                        <span>{item.label}</span>
+                      </div>
+                      {item.badge && (
+                        <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-bold font-mono ${
+                          isActive 
+                            ? 'bg-indigo-500/30 text-indigo-200 border border-indigo-500/40' 
+                            : 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
+                        }`}>
+                          {item.badge}
+                        </span>
+                      )}
+                    </button>
+                  );
+                })}
               </div>
-            </button>
+            ))}
+
+            {/* Customer Settings Divider */}
+            <div className="pt-2 border-t border-slate-800/80 space-y-1">
+              <button
+                onClick={() => setCurrentTab('settings')}
+                className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs transition-all cursor-pointer ${
+                  currentTab === 'settings'
+                    ? 'bg-indigo-500/15 text-indigo-200 font-bold border-l-2 border-indigo-400 pl-2.5 shadow-2xs'
+                    : 'text-slate-300 hover:bg-slate-900/80 hover:text-white font-medium'
+                }`}
+              >
+                <div className="flex items-center gap-2.5">
+                  <Settings className={`w-4 h-4 ${currentTab === 'settings' ? 'text-indigo-400' : 'text-slate-400'}`} />
+                  <span>Settings</span>
+                </div>
+              </button>
+            </div>
           </div>
         )}
 
         {/* Developer Console Navigation */}
-        {currentExperience === 'developer' && developerNavItems.map(item => {
-          const Icon = item.icon;
-          const isActive = currentDevTab === item.id;
-          return (
-            <button
-              key={item.id}
-              onClick={() => setCurrentDevTab(item.id)}
-              className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-medium transition-all cursor-pointer ${
-                isActive
-                  ? 'bg-emerald-600 text-white font-semibold shadow-md shadow-emerald-600/30'
-                  : 'text-slate-300 hover:bg-slate-900 hover:text-white'
-              }`}
-            >
-              <div className="flex items-center gap-3">
-                <Icon className={`w-4 h-4 ${isActive ? 'text-white' : 'text-slate-400'}`} />
-                <span>{item.label}</span>
-              </div>
-            </button>
-          );
-        })}
+        {currentExperience === 'developer' && (
+          <div className="space-y-1">
+            <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider px-3 py-1">
+              Developer Tools
+            </div>
+            {developerNavItems.map(item => {
+              const Icon = item.icon;
+              const isActive = currentDevTab === item.id;
+              return (
+                <button
+                  key={item.id}
+                  onClick={() => setCurrentDevTab(item.id)}
+                  className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-medium transition-all cursor-pointer ${
+                    isActive
+                      ? 'bg-emerald-500/15 text-emerald-200 font-bold border-l-2 border-emerald-400 pl-2.5'
+                      : 'text-slate-300 hover:bg-slate-900 hover:text-white'
+                  }`}
+                >
+                  <div className="flex items-center gap-2.5">
+                    <Icon className={`w-4 h-4 ${isActive ? 'text-emerald-400' : 'text-slate-400'}`} />
+                    <span>{item.label}</span>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        )}
 
         {/* Admin Console Navigation */}
-        {currentExperience === 'admin' && adminNavItems.map(item => {
-          const Icon = item.icon;
-          const isActive = currentAdminTab === item.id;
-          return (
-            <button
-              key={item.id}
-              onClick={() => setCurrentAdminTab(item.id)}
-              className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-medium transition-all cursor-pointer ${
-                isActive
-                  ? 'bg-rose-600 text-white font-semibold shadow-md shadow-rose-600/30'
-                  : 'text-slate-300 hover:bg-slate-900 hover:text-white'
-              }`}
-            >
-              <div className="flex items-center gap-3">
-                <Icon className={`w-4 h-4 ${isActive ? 'text-white' : 'text-slate-400'}`} />
-                <span>{item.label}</span>
-              </div>
-            </button>
-          );
-        })}
+        {currentExperience === 'admin' && (
+          <div className="space-y-1">
+            <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider px-3 py-1">
+              Operator Menu
+            </div>
+            {adminNavItems.map(item => {
+              const Icon = item.icon;
+              const isActive = currentAdminTab === item.id;
+              return (
+                <button
+                  key={item.id}
+                  onClick={() => setCurrentAdminTab(item.id)}
+                  className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-medium transition-all cursor-pointer ${
+                    isActive
+                      ? 'bg-rose-500/15 text-rose-200 font-bold border-l-2 border-rose-400 pl-2.5'
+                      : 'text-slate-300 hover:bg-slate-900 hover:text-white'
+                  }`}
+                >
+                  <div className="flex items-center gap-2.5">
+                    <Icon className={`w-4 h-4 ${isActive ? 'text-rose-400' : 'text-slate-400'}`} />
+                    <span>{item.label}</span>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        )}
       </div>
 
       {/* Bottom Sandbox Link */}
