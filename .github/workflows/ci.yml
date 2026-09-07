@@ -26,8 +26,11 @@ jobs:
           pip install -r backend_python/requirements.txt
 
       - name: Run Pytest Test Suite
+        env:
+          PYTHONPATH: backend_python
         run: |
           python -m pytest backend_python/app/tests -v
+
 
   frontend-react-build:
     name: React Frontend Lint & Production Build
