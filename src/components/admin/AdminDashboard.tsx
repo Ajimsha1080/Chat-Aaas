@@ -20,7 +20,11 @@ import {
   Layers,
   Database,
   Radio,
-  ExternalLink
+  ExternalLink,
+  ShieldCheck,
+  Cpu,
+  Menu,
+  X
 } from 'lucide-react';
 import { useApp } from '../../context';
 
@@ -42,6 +46,7 @@ export const AdminDashboard: React.FC = () => {
   const [supportOrgId, setSupportOrgId] = useState(companies[0]?.id || '');
   const [supportDiagnosticOutput, setSupportDiagnosticOutput] = useState<any | null>(null);
   const [isEmergencyKillswitchActive, setIsEmergencyKillswitchActive] = useState(false);
+  const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
 
   const totalTenants = companies.length;
   const activeAgents = companies.filter(c => c.agent.status === 'active' && !c.isSuspended).length;
@@ -80,78 +85,175 @@ export const AdminDashboard: React.FC = () => {
     { id: 'security' as const, label: 'Security & Audit Logs', icon: ShieldAlert, count: securityEvents.length }
   ];
 
+  const currentNavTitle = adminNavs.find(n => n.id === activeTab)?.label || 'Platform Overview';
+
   return (
-    <div className="space-y-5 animate-in fade-in duration-150">
-      {/* 1. Sleek Super-Admin Header */}
-      <div className="bg-white rounded-xl p-5 sm:p-6 border border-slate-200/80 shadow-[0_1px_2px_rgba(0,0,0,0.02)] flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-2 mb-1">
-            <span className="px-2 py-0.5 rounded text-[10px] font-mono uppercase font-semibold bg-rose-50 text-rose-700 border border-rose-200/80 flex items-center gap-1">
-              <Lock className="w-3 h-3" />
-              <span>SaaS Operator Master Plane</span>
-            </span>
-            <span className="text-[11px] text-slate-400 font-mono">Tenant Isolation: Enforced</span>
+    <div className="flex h-full w-full bg-slate-100 overflow-hidden font-sans">
+      {/* Mobile Sidebar Backdrop */}
+      {isMobileNavOpen && (
+        <div 
+          onClick={() => setIsMobileNavOpen(false)}
+          className="fixed inset-0 z-40 bg-slate-900/50 backdrop-blur-xs md:hidden"
+        />
+      )}
+
+      {/* 1. LEFT SIDEBAR NAVIGATION: Features on the SIDE */}
+      <aside className={`fixed md:static inset-y-0 left-0 z-50 w-64 lg:w-72 bg-[#090d16] text-slate-300 flex flex-col h-full shrink-0 border-r border-slate-800/80 select-none transition-transform duration-200 ${
+        isMobileNavOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'
+      }`}>
+        {/* Top Operator Brand Header */}
+        <div className="p-4.5 border-b border-slate-800/80 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-rose-600 via-rose-500 to-amber-500 flex items-center justify-center shadow-lg shadow-rose-500/20 text-white font-bold shrink-0">
+              <Lock className="w-4.5 h-4.5 text-white" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-1.5">
+                <span className="font-bold text-white text-sm tracking-tight block truncate">Master Plane</span>
+                <span className="px-1.5 py-0.2 rounded text-[9px] font-mono font-bold bg-rose-500/20 text-rose-300 border border-rose-500/30 uppercase">
+                  ROOT
+                </span>
+              </div>
+              <span className="text-[10px] font-mono text-slate-400 block truncate">SaaS Operator Admin</span>
+            </div>
           </div>
-          <h1 className="text-lg sm:text-xl font-semibold text-slate-900 tracking-tight">
-            Platform Operations & Fleet Administration
-          </h1>
-          <p className="text-xs text-slate-500 mt-0.5 max-w-2xl">
-            Real-time multi-tenant telemetry, MRR revenue metrics, KMS envelope encryption checks, and emergency controls.
-          </p>
+
+          <button
+            onClick={() => setIsMobileNavOpen(false)}
+            className="md:hidden p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 cursor-pointer"
+          >
+            <X className="w-5 h-5" />
+          </button>
         </div>
 
-        <div className="flex items-center gap-2.5 shrink-0">
+        {/* Isolation & Status Pill */}
+        <div className="px-3.5 pt-3 pb-2">
+          <div className="p-2.5 rounded-lg bg-slate-900/90 border border-slate-800/80 text-[11px] flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+              <span className="text-slate-300 font-medium font-mono">Tenant Isolation</span>
+            </div>
+            <span className="text-emerald-400 font-mono font-semibold text-[10px] uppercase">Enforced</span>
+          </div>
+        </div>
+
+        {/* Feature Navigation List (On the SIDE) */}
+        <div className="flex-1 overflow-y-auto px-3 py-2 space-y-1">
+          <div className="px-2 py-1 text-[10px] font-mono font-semibold text-slate-500 uppercase tracking-wider">
+            Platform Features
+          </div>
+          {adminNavs.map(tab => {
+            const Icon = tab.icon;
+            const isActive = activeTab === tab.id;
+            return (
+              <button
+                key={tab.id}
+                onClick={() => {
+                  setActiveTab(tab.id);
+                  setIsMobileNavOpen(false);
+                }}
+                className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-xs font-medium transition-colors cursor-pointer group text-left ${
+                  isActive 
+                    ? 'bg-slate-800 text-white font-semibold shadow-xs border border-slate-700/80' 
+                    : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
+                }`}
+              >
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <Icon className={`w-4 h-4 shrink-0 transition-colors ${
+                    isActive ? 'text-rose-400' : 'text-slate-400 group-hover:text-slate-300'
+                  }`} />
+                  <span className="truncate">{tab.label}</span>
+                </div>
+
+                {tab.badge && (
+                  <span className={`text-[10px] font-mono px-1.5 py-0.2 rounded shrink-0 ml-1.5 ${
+                    isActive ? 'bg-slate-900 text-rose-300 font-semibold' : 'bg-slate-800 text-slate-400'
+                  }`}>
+                    {tab.badge}
+                  </span>
+                )}
+                {tab.count !== undefined && (
+                  <span className={`text-[10px] font-mono px-1.5 py-0.2 rounded shrink-0 ml-1.5 ${
+                    isActive ? 'bg-slate-900 text-rose-300 font-semibold' : 'bg-slate-800 text-slate-400'
+                  }`}>
+                    {tab.count}
+                  </span>
+                )}
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Bottom System & Return to Workspace Controls */}
+        <div className="p-3 border-t border-slate-800/80 space-y-2 bg-[#060910]">
+          <div className="px-2 py-1 text-[10px] font-mono text-slate-400 flex items-center justify-between">
+            <span>Cluster: ap-south-1</span>
+            <span className="text-emerald-400 font-semibold">99.99% SLA</span>
+          </div>
+
           <button
             onClick={() => setCurrentExperience('customer')}
-            className="px-3.5 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-lg text-xs font-medium transition-colors shadow-xs cursor-pointer flex items-center gap-2"
+            className="w-full px-3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white rounded-lg text-xs font-medium transition-colors cursor-pointer flex items-center justify-center gap-2 border border-slate-700/70"
           >
             <ArrowLeft className="w-3.5 h-3.5" />
             <span>Return to Workspace</span>
           </button>
         </div>
-      </div>
+      </aside>
 
-      {/* 2. Crisp Tab Navigation */}
-      <div className="flex items-center gap-1 border-b border-slate-200 overflow-x-auto pb-px">
-        {adminNavs.map(tab => {
-          const Icon = tab.icon;
-          const isActive = activeTab === tab.id;
-          return (
+      {/* 2. MAIN RIGHT CONTENT AREA */}
+      <div className="flex-1 flex flex-col min-w-0 overflow-hidden bg-slate-50">
+        {/* Top Sub-Header */}
+        <header className="h-14 sm:h-16 bg-white border-b border-slate-200/80 px-4 sm:px-8 flex items-center justify-between shrink-0 sticky top-0 z-10">
+          <div className="flex items-center gap-3">
             <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              className={`flex items-center gap-2 px-3.5 py-2.5 text-xs font-medium whitespace-nowrap transition-colors border-b-2 cursor-pointer ${
-                isActive 
-                  ? 'border-slate-900 text-slate-900' 
-                  : 'border-transparent text-slate-500 hover:text-slate-800 hover:border-slate-300'
-              }`}
+              onClick={() => setIsMobileNavOpen(true)}
+              className="md:hidden p-1.5 text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-lg cursor-pointer"
             >
-              <Icon className="w-3.5 h-3.5" />
-              <span>{tab.label}</span>
-              {tab.badge && (
-                <span className={`text-[10px] font-mono px-1.5 py-0.2 rounded ${
-                  isActive ? 'bg-slate-100 text-slate-800 font-semibold' : 'bg-slate-100 text-slate-500'
-                }`}>
-                  {tab.badge}
-                </span>
-              )}
-              {tab.count !== undefined && (
-                <span className={`text-[10px] font-mono px-1.5 py-0.2 rounded ${
-                  isActive ? 'bg-slate-100 text-slate-800 font-semibold' : 'bg-slate-100 text-slate-500'
-                }`}>
-                  {tab.count}
-                </span>
-              )}
+              <Menu className="w-5 h-5" />
             </button>
-          );
-        })}
-      </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h1 className="text-base sm:text-lg font-semibold text-slate-900 tracking-tight">
+                  {currentNavTitle}
+                </h1>
+                <span className="hidden sm:inline-flex px-2 py-0.5 rounded text-[10px] font-mono bg-slate-100 text-slate-600 border border-slate-200">
+                  Global Operator Plane
+                </span>
+              </div>
+              <p className="text-[11px] text-slate-400 hidden sm:block">
+                Master operator telemetry, automated isolation gates, and infrastructure diagnostics.
+              </p>
+            </div>
+          </div>
 
-      {/* 1. OVERVIEW TAB */}
-      {activeTab === 'overview' && (
-        <div className="space-y-5 animate-in fade-in duration-150">
-          {/* Top Metrics KPI Grid */}
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3.5">
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setCurrentExperience('customer')}
+              className="hidden sm:flex px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-medium items-center gap-1.5 transition-colors cursor-pointer"
+            >
+              <ArrowLeft className="w-3.5 h-3.5" />
+              <span>Workspace</span>
+            </button>
+            <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-mono font-medium ${
+              isEmergencyKillswitchActive 
+                ? 'bg-rose-50 text-rose-700 border border-rose-200' 
+                : 'bg-emerald-50 text-emerald-700 border border-emerald-200/60'
+            }`}>
+              <span className={`w-1.5 h-1.5 rounded-full ${isEmergencyKillswitchActive ? 'bg-rose-500' : 'bg-emerald-500'}`} />
+              <span className="hidden xs:inline">{isEmergencyKillswitchActive ? 'Killswitch Active' : '99.99% Operational'}</span>
+            </span>
+          </div>
+        </header>
+
+        {/* Scrollable View Content */}
+        <main className="flex-1 overflow-y-auto p-4 sm:p-6 md:p-8">
+          <div className="max-w-7xl mx-auto space-y-5">
+            {/* 1. OVERVIEW TAB */}
+            {activeTab === 'overview' && (
+              <div className="space-y-5 animate-in fade-in duration-150">
+                {/* Top Metrics KPI Grid */}
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3.5">
             {[
               { label: 'Total Tenants', value: `${totalTenants}`, sub: '+18% growth', icon: Building2 },
               { label: 'Active Fleet', value: `${activeAgents}`, sub: '100% operational', icon: Bot, isGood: true },
@@ -540,6 +642,9 @@ export const AdminDashboard: React.FC = () => {
           </div>
         </div>
       )}
+          </div>
+        </main>
+      </div>
     </div>
   );
 };

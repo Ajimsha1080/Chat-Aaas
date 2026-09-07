@@ -15,7 +15,10 @@ import {
   Trash2, 
   ShieldCheck, 
   AlertTriangle,
-  RotateCcw
+  RotateCcw,
+  X,
+  ArrowLeft,
+  Menu
 } from 'lucide-react';
 import { useApp } from '../../context';
 import { DeveloperNavigationTab } from '../../types';
@@ -106,64 +109,140 @@ export const DeveloperConsole: React.FC = () => {
     { id: 'dev-tools', label: 'Developer SDK & Tools', icon: Code2 }
   ];
 
-  return (
-    <div className="space-y-6">
-      {/* Top Banner */}
-      <div className="bg-slate-900 text-white rounded-xl p-5 sm:p-6 shadow-sm border border-slate-800 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-2 mb-1">
-            <span className="px-2 py-0.5 rounded text-[10px] font-semibold uppercase tracking-wider bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
-              Developer Console
-            </span>
-            <span className="text-xs text-slate-400 font-mono">Workspace: {currentCompany.slug}</span>
-          </div>
-          <h1 className="text-lg sm:text-xl font-bold text-white tracking-tight">Technical Infrastructure Control</h1>
-          <p className="text-xs text-slate-400 mt-0.5">
-            Manage raw REST APIs, webhook payloads, immutable agent version rollback, and low-level AI inference parameters.
-          </p>
-        </div>
+  const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
 
-        <div className="flex items-center gap-2 shrink-0">
+  const currentNavTitle = navItems.find(n => n.id === currentDevTab)?.label || 'API Keys & Secrets';
+
+  return (
+    <div className="flex h-full w-full bg-slate-900 text-slate-100 overflow-hidden font-sans">
+      {/* Mobile Sidebar Backdrop */}
+      {isMobileNavOpen && (
+        <div 
+          onClick={() => setIsMobileNavOpen(false)}
+          className="fixed inset-0 z-40 bg-slate-950/70 backdrop-blur-xs md:hidden"
+        />
+      )}
+
+      {/* 1. LEFT DEVELOPER SIDEBAR: Features on the SIDE */}
+      <aside className={`fixed md:static inset-y-0 left-0 z-50 w-64 lg:w-72 bg-[#060911] text-slate-300 flex flex-col h-full shrink-0 border-r border-slate-800 select-none transition-transform duration-200 ${
+        isMobileNavOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'
+      }`}>
+        {/* Brand Header */}
+        <div className="p-4.5 border-b border-slate-800 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-indigo-600 text-white flex items-center justify-center font-bold shadow-md shadow-indigo-600/30 shrink-0">
+              <Code2 className="w-4.5 h-4.5" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <span className="font-bold text-white text-sm tracking-tight block truncate">Dev Console</span>
+              <span className="text-[10px] font-mono text-indigo-400 block truncate">{currentCompany.slug}</span>
+            </div>
+          </div>
+
           <button
-            onClick={() => handleCopy(currentCompany.apiKey, 'header-key')}
-            className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 rounded-lg text-xs font-mono flex items-center gap-1.5 transition-colors cursor-pointer"
+            onClick={() => setIsMobileNavOpen(false)}
+            className="md:hidden p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 cursor-pointer"
           >
-            {copiedKey === 'header-key' ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
-            <span>Copy API Key</span>
+            <X className="w-5 h-5" />
           </button>
         </div>
-      </div>
 
-      {/* Secondary Horizontal Nav Tabs */}
-      <div className="flex items-center gap-1.5 border-b border-slate-200 pb-2 overflow-x-auto">
-        {navItems.map(tab => {
-          const Icon = tab.icon;
-          const isActive = currentDevTab === tab.id;
-          return (
+        {/* Feature Navigation List (On the SIDE) */}
+        <div className="flex-1 overflow-y-auto px-3 py-3 space-y-1">
+          <div className="px-2 py-1 text-[10px] font-mono font-semibold text-slate-500 uppercase tracking-wider">
+            Developer APIs & Tools
+          </div>
+          {navItems.map(tab => {
+            const Icon = tab.icon;
+            const isActive = currentDevTab === tab.id;
+            return (
+              <button
+                key={tab.id}
+                onClick={() => {
+                  setCurrentDevTab(tab.id);
+                  setIsMobileNavOpen(false);
+                }}
+                className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-xs font-medium transition-colors cursor-pointer group text-left ${
+                  isActive 
+                    ? 'bg-indigo-600 text-white font-semibold shadow-xs' 
+                    : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60'
+                }`}
+              >
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <Icon className={`w-4 h-4 shrink-0 transition-colors ${
+                    isActive ? 'text-white' : 'text-slate-400 group-hover:text-slate-300'
+                  }`} />
+                  <span className="truncate">{tab.label}</span>
+                </div>
+
+                {tab.count !== undefined && (
+                  <span className={`text-[10px] font-mono px-1.5 py-0.2 rounded font-bold shrink-0 ml-1.5 ${
+                    isActive ? 'bg-indigo-700 text-white' : 'bg-slate-800 text-slate-400'
+                  }`}>
+                    {tab.count}
+                  </span>
+                )}
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Bottom Actions */}
+        <div className="p-3 border-t border-slate-800 space-y-2 bg-[#04060c]">
+          <button
+            onClick={() => handleCopy(currentCompany.apiKey, 'sidebar-key')}
+            className="w-full px-3 py-2 bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-white border border-slate-700/80 rounded-lg text-xs font-mono flex items-center justify-center gap-2 transition-colors cursor-pointer"
+          >
+            {copiedKey === 'sidebar-key' ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+            <span>Copy Live API Key</span>
+          </button>
+
+          <button
+            onClick={() => window.location.reload()}
+            className="w-full px-3 py-2 bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-300 hover:text-white rounded-lg text-xs font-medium transition-colors cursor-pointer flex items-center justify-center gap-2 border border-indigo-500/30"
+          >
+            <ArrowLeft className="w-3.5 h-3.5" />
+            <span>Return to Workspace</span>
+          </button>
+        </div>
+      </aside>
+
+      {/* 2. MAIN RIGHT CONTENT AREA */}
+      <div className="flex-1 flex flex-col min-w-0 overflow-hidden bg-slate-900">
+        {/* Top Header */}
+        <header className="h-14 sm:h-16 bg-slate-900/90 backdrop-blur-md border-b border-slate-800 px-4 sm:px-8 flex items-center justify-between shrink-0 sticky top-0 z-10">
+          <div className="flex items-center gap-3">
             <button
-              key={tab.id}
-              onClick={() => setCurrentDevTab(tab.id)}
-              className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-all cursor-pointer ${
-                isActive 
-                  ? 'bg-indigo-600 text-white shadow-sm shadow-indigo-600/20' 
-                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
-              }`}
+              onClick={() => setIsMobileNavOpen(true)}
+              className="md:hidden p-1.5 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg cursor-pointer"
             >
-              <Icon className="w-4 h-4" />
-              <span>{tab.label}</span>
-              {tab.count !== undefined && (
-                <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-bold ${
-                  isActive ? 'bg-indigo-700 text-white' : 'bg-slate-200 text-slate-700'
-                }`}>
-                  {tab.count}
-                </span>
-              )}
+              <Menu className="w-5 h-5" />
             </button>
-          );
-        })}
-      </div>
+            <div>
+              <h1 className="text-base sm:text-lg font-bold text-white tracking-tight">
+                {currentNavTitle}
+              </h1>
+              <p className="text-[11px] text-slate-400 hidden sm:block">
+                Low-level REST endpoints, webhook callbacks, and runtime telemetry.
+              </p>
+            </div>
+          </div>
 
-      {/* 1. API Keys Tab */}
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => handleCopy(currentCompany.apiKey, 'header-key')}
+              className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 rounded-lg text-xs font-mono flex items-center gap-1.5 transition-colors cursor-pointer"
+            >
+              {copiedKey === 'header-key' ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+              <span>Copy API Key</span>
+            </button>
+          </div>
+        </header>
+
+        {/* Scrollable Main Area */}
+        <main className="flex-1 overflow-y-auto p-4 sm:p-6 md:p-8">
+          <div className="max-w-6xl mx-auto space-y-6">
+            {/* 1. API Keys Tab */}
       {currentDevTab === 'api-keys' && (
         <div className="space-y-6 animate-in fade-in duration-150">
           <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs space-y-5">
@@ -663,6 +742,9 @@ print(res.json())`}</pre>
           </div>
         </div>
       )}
+          </div>
+        </main>
+      </div>
     </div>
   );
 };

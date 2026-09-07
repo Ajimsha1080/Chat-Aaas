@@ -35,11 +35,7 @@ const DashboardContent: React.FC = () => {
   if (currentExperience === 'admin' || isAdminMode) {
     return (
       <div className="flex h-screen w-screen bg-slate-100 overflow-hidden font-sans">
-        <main className="flex-1 overflow-y-auto p-4 sm:p-6 md:p-10 bg-slate-50">
-          <div className="max-w-7xl mx-auto">
-            <AdminDashboard />
-          </div>
-        </main>
+        <AdminDashboard />
         <ToastContainer />
       </div>
     );
@@ -49,11 +45,7 @@ const DashboardContent: React.FC = () => {
   if (currentExperience === 'developer') {
     return (
       <div className="flex h-screen w-screen bg-slate-900 overflow-hidden font-sans">
-        <main className="flex-1 overflow-y-auto p-4 sm:p-6 md:p-10">
-          <div className="max-w-7xl mx-auto">
-            <DeveloperConsole />
-          </div>
-        </main>
+        <DeveloperConsole />
         <ToastContainer />
       </div>
     );
