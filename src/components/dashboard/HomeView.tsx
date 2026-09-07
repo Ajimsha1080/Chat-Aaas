@@ -409,29 +409,6 @@ export const HomeView: React.FC = () => {
               </div>
             </div>
           </div>
-
-          {/* Quick Channels / Deploy Preview Card */}
-          <div className="bg-slate-900 rounded-2xl p-5 text-white border border-slate-800 shadow-sm space-y-3.5">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-bold uppercase tracking-wider text-slate-400">Website Widget</span>
-              <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse" />
-            </div>
-
-            <div>
-              <h4 className="text-base font-bold text-white">Live Customer Preview</h4>
-              <p className="text-xs sm:text-sm text-slate-300 mt-1 leading-relaxed">
-                Test your assistant on a simulated live website before embedding.
-              </p>
-            </div>
-
-            <button
-              onClick={() => setIsLiveSandboxOpen(true)}
-              className="w-full py-2.5 px-4 bg-white hover:bg-slate-100 text-slate-900 font-semibold rounded-xl text-sm flex items-center justify-center gap-2 transition-all cursor-pointer shadow-sm"
-            >
-              <ExternalLink className="w-4 h-4 text-slate-800" />
-              <span>Launch Live Preview</span>
-            </button>
-          </div>
         </div>
       </div>
 
