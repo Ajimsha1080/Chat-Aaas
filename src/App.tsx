@@ -26,6 +26,7 @@ const DashboardContent: React.FC = () => {
     setIsQuickTestOpen
   } = useApp();
 
+  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
   const [isOnboardingOpen, setIsOnboardingOpen] = useState(false);
   const [isHelpOpen, setIsHelpOpen] = useState(false);
   const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
@@ -34,7 +35,7 @@ const DashboardContent: React.FC = () => {
   if (currentExperience === 'admin' || isAdminMode) {
     return (
       <div className="flex h-screen w-screen bg-slate-100 overflow-hidden font-sans">
-        <main className="flex-1 overflow-y-auto p-6 md:p-10 bg-slate-50">
+        <main className="flex-1 overflow-y-auto p-4 sm:p-6 md:p-10 bg-slate-50">
           <div className="max-w-7xl mx-auto">
             <AdminDashboard />
           </div>
@@ -48,7 +49,7 @@ const DashboardContent: React.FC = () => {
   if (currentExperience === 'developer') {
     return (
       <div className="flex h-screen w-screen bg-slate-900 overflow-hidden font-sans">
-        <main className="flex-1 overflow-y-auto p-6 md:p-10">
+        <main className="flex-1 overflow-y-auto p-4 sm:p-6 md:p-10">
           <div className="max-w-7xl mx-auto">
             <DeveloperConsole />
           </div>
@@ -89,7 +90,10 @@ const DashboardContent: React.FC = () => {
   return (
     <div className="flex h-screen w-screen bg-slate-100 overflow-hidden font-sans">
       {/* Customer Workspace Sidebar Navigation */}
-      <Sidebar />
+      <Sidebar 
+        isMobileOpen={isMobileSidebarOpen}
+        onCloseMobile={() => setIsMobileSidebarOpen(false)}
+      />
 
       {/* Main Workspace Container */}
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
@@ -98,9 +102,10 @@ const DashboardContent: React.FC = () => {
           onOpenTestRunner={() => {}}
           onOpenHelp={() => setIsHelpOpen(true)}
           onOpenCommandPalette={() => setIsCommandPaletteOpen(true)}
+          onToggleMobileNav={() => setIsMobileSidebarOpen(prev => !prev)}
         />
 
-        <main className="flex-1 overflow-y-auto p-6 md:p-8 bg-slate-50/70">
+        <main className="flex-1 overflow-y-auto p-3.5 sm:p-6 md:p-8 bg-slate-50/70">
           <div className="max-w-7xl mx-auto">
             {renderCustomerView()}
           </div>

@@ -146,41 +146,46 @@ export const TestAgentDrawer: React.FC = () => {
   };
 
   return (
-    <div className="fixed inset-0 z-50 overflow-hidden flex justify-end bg-slate-900/40 backdrop-blur-xs animate-in fade-in duration-200">
-      <div className="w-full max-w-lg bg-white h-full shadow-2xl flex flex-col border-l border-slate-200 animate-in slide-in-from-right duration-300">
+    <div className="fixed inset-0 z-50 overflow-hidden flex justify-end animate-in fade-in duration-200">
+      {/* Backdrop */}
+      <div 
+        className="fixed inset-0 bg-slate-900/50 backdrop-blur-xs transition-opacity" 
+        onClick={() => setIsQuickTestOpen(false)} 
+      />
+      <div className="relative w-full max-w-lg bg-white h-full shadow-2xl flex flex-col border-l border-slate-200 animate-in slide-in-from-right duration-300 z-10">
         {/* Drawer Header */}
-        <div className="px-5 py-4 border-b border-slate-200 bg-slate-50 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="relative">
+        <div className="px-4 sm:px-5 py-3.5 sm:py-4 border-b border-slate-200 bg-slate-50 flex items-center justify-between">
+          <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
+            <div className="relative shrink-0">
               <img 
                 src={currentCompany.agent.avatarUrl} 
                 alt={currentCompany.agent.name} 
-                className="w-10 h-10 rounded-full object-cover ring-2 ring-indigo-500/30"
+                className="w-9 h-9 sm:w-10 sm:h-10 rounded-full object-cover ring-2 ring-indigo-500/30"
               />
-              <span className="absolute bottom-0 right-0 w-3 h-3 rounded-full bg-emerald-500 ring-2 ring-white" />
+              <span className="absolute bottom-0 right-0 w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full bg-emerald-500 ring-2 ring-white" />
             </div>
-            <div>
+            <div className="min-w-0">
               <div className="flex items-center gap-2">
-                <h3 className="text-sm font-bold text-slate-900">{currentCompany.agent.name}</h3>
-                <span className="text-[10px] px-1.5 py-0.5 bg-indigo-50 text-indigo-700 font-mono rounded font-medium border border-indigo-200">
+                <h3 className="text-xs sm:text-sm font-bold text-slate-900 truncate">{currentCompany.agent.name}</h3>
+                <span className="text-[10px] px-1.5 py-0.5 bg-indigo-50 text-indigo-700 font-mono rounded font-medium border border-indigo-200 shrink-0">
                   Single Agent
                 </span>
               </div>
-              <p className="text-xs text-slate-500">Live Workspace Test & Hierarchy Inspector</p>
+              <p className="text-[11px] sm:text-xs text-slate-500 truncate">Live Workspace Test & Hierarchy Inspector</p>
             </div>
           </div>
 
-          <div className="flex items-center gap-1.5">
+          <div className="flex items-center gap-1 sm:gap-1.5 shrink-0">
             <button
               onClick={resetChat}
               title="Reset Test Conversation"
-              className="p-1.5 text-slate-500 hover:text-slate-800 hover:bg-slate-200/60 rounded-lg transition-colors"
+              className="p-1.5 text-slate-500 hover:text-slate-800 hover:bg-slate-200/60 rounded-lg transition-colors cursor-pointer"
             >
               <RotateCcw className="w-4 h-4" />
             </button>
             <button
               onClick={() => setIsQuickTestOpen(false)}
-              className="p-1.5 text-slate-500 hover:text-slate-800 hover:bg-slate-200/60 rounded-lg transition-colors"
+              className="p-1.5 text-slate-500 hover:text-slate-800 hover:bg-slate-200/60 rounded-lg transition-colors cursor-pointer"
             >
               <X className="w-5 h-5" />
             </button>
@@ -188,12 +193,12 @@ export const TestAgentDrawer: React.FC = () => {
         </div>
 
         {/* Grounded Q&A Context Badge */}
-        <div className="bg-slate-900 text-indigo-100 px-4 py-2 text-[11px] flex items-center justify-between border-b border-slate-800">
-          <div className="flex items-center gap-2">
-            <Layers className="w-3.5 h-3.5 text-indigo-400" />
-            <span>Grounded Q&A: <strong>Knowledge ({knowledgeItems.length} sources)</strong> → <strong>Confidence Threshold</strong></span>
+        <div className="bg-slate-900 text-indigo-100 px-3.5 sm:px-4 py-2 text-[10px] sm:text-[11px] flex items-center justify-between border-b border-slate-800">
+          <div className="flex items-center gap-1.5 sm:gap-2 truncate mr-2">
+            <Layers className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
+            <span className="truncate">Grounded Q&A: <strong>Knowledge ({knowledgeItems.length} sources)</strong></span>
           </div>
-          <span className="text-emerald-400 font-mono text-[10px] font-semibold">● Anti-Hallucination</span>
+          <span className="text-emerald-400 font-mono text-[10px] font-semibold shrink-0">● Anti-Hallucination</span>
         </div>
 
         {/* Chat History */}

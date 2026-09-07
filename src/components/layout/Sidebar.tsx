@@ -8,14 +8,17 @@ import {
   Settings, 
   PlaySquare, 
   Sparkles,
-  PauseCircle,
-  CheckCircle2,
-  CreditCard
+  X
 } from 'lucide-react';
 import { useApp } from '../../context';
 import { NavigationTab } from '../../types';
 
-export const Sidebar: React.FC = () => {
+interface SidebarProps {
+  isMobileOpen?: boolean;
+  onCloseMobile?: () => void;
+}
+
+export const Sidebar: React.FC<SidebarProps> = ({ isMobileOpen = false, onCloseMobile }) => {
   const { 
     currentTab, 
     setCurrentTab, 
@@ -26,6 +29,11 @@ export const Sidebar: React.FC = () => {
 
   const unreadConversationsCount = conversations.filter(c => c.status === 'escalated_to_human' || c.status === 'flagged').length;
   const isLive = currentCompany.agent.status === 'active';
+
+  const handleSelectTab = (tab: NavigationTab) => {
+    setCurrentTab(tab);
+    if (onCloseMobile) onCloseMobile();
+  };
 
   const customerNavGroups: {
     groupName?: string;
@@ -63,10 +71,10 @@ export const Sidebar: React.FC = () => {
     }
   ];
 
-  return (
-    <aside className="w-64 bg-[#090d16] text-slate-300 flex flex-col shrink-0 border-r border-slate-800/70 select-none">
+  const sidebarContent = (
+    <div className="w-64 bg-[#090d16] text-slate-300 flex flex-col h-full shrink-0 border-r border-slate-800/70 select-none">
       {/* Brand Header */}
-      <div className="p-4 border-b border-slate-800/60">
+      <div className="p-4 border-b border-slate-800/60 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-indigo-600 via-indigo-500 to-violet-500 flex items-center justify-center shadow-lg shadow-indigo-500/25 text-white font-bold text-lg tracking-tight">
             <Sparkles className="w-4.5 h-4.5 text-white" />
@@ -76,6 +84,16 @@ export const Sidebar: React.FC = () => {
             <span className="text-[10px] font-semibold text-indigo-400 uppercase tracking-widest block">AI Q&A Platform</span>
           </div>
         </div>
+        {/* Mobile Close Button */}
+        {onCloseMobile && (
+          <button
+            onClick={onCloseMobile}
+            className="md:hidden p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 transition-colors cursor-pointer"
+            aria-label="Close sidebar"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        )}
       </div>
 
       {/* AI Assistant Profile Card */}
@@ -106,7 +124,10 @@ export const Sidebar: React.FC = () => {
           </div>
 
           <button
-            onClick={() => setIsQuickTestOpen(true)}
+            onClick={() => {
+              setIsQuickTestOpen(true);
+              if (onCloseMobile) onCloseMobile();
+            }}
             className="w-full mt-2.5 py-1.5 px-2.5 bg-indigo-600/20 hover:bg-indigo-600/30 border border-indigo-500/30 text-indigo-200 hover:text-white text-xs font-semibold rounded-xl flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-xs active:scale-[0.99]"
           >
             <PlaySquare className="w-3.5 h-3.5 text-indigo-400" />
@@ -130,7 +151,7 @@ export const Sidebar: React.FC = () => {
               return (
                 <button
                   key={item.id}
-                  onClick={() => setCurrentTab(item.id)}
+                  onClick={() => handleSelectTab(item.id)}
                   className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs transition-all cursor-pointer ${
                     isActive
                       ? 'bg-indigo-600/20 text-white font-bold border-l-2 border-indigo-400 pl-2.5 shadow-sm shadow-indigo-600/10'
@@ -159,7 +180,7 @@ export const Sidebar: React.FC = () => {
         {/* Customer Settings Divider */}
         <div className="pt-2 border-t border-slate-800/60 space-y-1">
           <button
-            onClick={() => setCurrentTab('settings')}
+            onClick={() => handleSelectTab('settings')}
             className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs transition-all cursor-pointer ${
               currentTab === 'settings'
                 ? 'bg-indigo-600/20 text-white font-bold border-l-2 border-indigo-400 pl-2.5 shadow-sm shadow-indigo-600/10'
@@ -173,6 +194,28 @@ export const Sidebar: React.FC = () => {
           </button>
         </div>
       </div>
-    </aside>
+    </div>
+  );
+
+  return (
+    <>
+      {/* 1. Desktop Static Sidebar */}
+      <aside className="hidden md:flex h-full shrink-0">
+        {sidebarContent}
+      </aside>
+
+      {/* 2. Mobile Drawer Overlay */}
+      {isMobileOpen && (
+        <div className="fixed inset-0 z-50 md:hidden flex animate-in fade-in duration-200">
+          <div 
+            className="fixed inset-0 bg-slate-950/70 backdrop-blur-xs" 
+            onClick={onCloseMobile} 
+          />
+          <div className="relative flex-1 max-w-[280px] w-full bg-[#090d16] shadow-2xl h-full animate-in slide-in-from-left duration-200 z-10">
+            {sidebarContent}
+          </div>
+        </div>
+      )}
+    </>
   );
 };

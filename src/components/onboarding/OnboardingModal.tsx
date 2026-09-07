@@ -83,17 +83,17 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({ isOpen, onClos
   const progressPercent = Math.round((step / 5) * 100);
 
   return (
-    <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in duration-150">
-      <div className="bg-white rounded-3xl max-w-xl w-full shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[90vh]">
+    <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-2.5 sm:p-4 animate-in fade-in duration-150">
+      <div className="bg-white rounded-2xl sm:rounded-3xl max-w-xl w-full shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[92vh]">
         {/* Header */}
-        <div className="px-6 py-5 border-b border-slate-100 bg-slate-50/80 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-indigo-600 text-white flex items-center justify-center font-bold shadow-md shadow-indigo-600/20">
+        <div className="px-4 sm:px-6 py-4 sm:py-5 border-b border-slate-100 bg-slate-50/80 flex items-center justify-between">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl sm:rounded-2xl bg-indigo-600 text-white flex items-center justify-center font-bold shadow-md shadow-indigo-600/20 shrink-0">
               <Sparkles className="w-5 h-5" />
             </div>
-            <div>
-              <h3 className="text-base font-bold text-slate-900">Set up your AI Q&A Assistant 🚀</h3>
-              <p className="text-xs text-slate-500">
+            <div className="min-w-0">
+              <h3 className="text-sm sm:text-base font-bold text-slate-900 truncate">Set up your AI Assistant</h3>
+              <p className="text-[11px] sm:text-xs text-slate-500 truncate">
                 Step {step} of 5 — {
                   step === 1 ? 'Business Information' :
                   step === 2 ? 'Add Knowledge' :
@@ -106,7 +106,7 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({ isOpen, onClos
 
           <button
             onClick={onClose}
-            className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-200/60 rounded-xl transition-colors cursor-pointer"
+            className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-200/60 rounded-xl transition-colors cursor-pointer shrink-0"
           >
             <X className="w-5 h-5" />
           </button>

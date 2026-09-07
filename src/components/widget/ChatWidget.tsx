@@ -130,39 +130,39 @@ export const ChatWidget: React.FC<ChatWidgetProps> = ({ isInlinePreview = false 
   const isBottomLeft = settings.position === 'bottom_left';
 
   return (
-    <div className={isInlinePreview ? 'w-full h-full' : `fixed ${isBottomLeft ? 'left-6' : 'right-6'} bottom-6 z-50 flex flex-col ${isBottomLeft ? 'items-start' : 'items-end'}`}>
+    <div className={isInlinePreview ? 'w-full h-full' : `fixed ${isBottomLeft ? 'left-3 sm:left-6' : 'right-3 sm:right-6'} bottom-3 sm:bottom-6 z-50 flex flex-col ${isBottomLeft ? 'items-start' : 'items-end'}`}>
       {/* Floating Chat Container */}
       {(isOpen || isInlinePreview) && (
         <div 
-          className={`w-96 max-w-[calc(100vw-2rem)] h-[580px] bg-white rounded-3xl shadow-2xl border border-slate-200/90 flex flex-col overflow-hidden mb-3.5 animate-in slide-in-from-bottom-5 duration-200`}
+          className={`w-96 max-w-[calc(100vw-1.5rem)] h-[520px] sm:h-[580px] max-h-[calc(100vh-5rem)] bg-white rounded-2xl sm:rounded-3xl shadow-2xl border border-slate-200/90 flex flex-col overflow-hidden mb-2.5 sm:mb-3.5 animate-in slide-in-from-bottom-5 duration-200`}
         >
           {/* Widget Header */}
           <div 
             style={{ backgroundColor: settings.primaryColor }}
-            className="p-4 text-white flex items-center justify-between shrink-0 shadow-md"
+            className="p-3.5 sm:p-4 text-white flex items-center justify-between shrink-0 shadow-md"
           >
-            <div className="flex items-center gap-3">
-              <div className="relative">
+            <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
+              <div className="relative shrink-0">
                 <img 
                   src={settings.botAvatar || currentCompany.agent.avatarUrl} 
                   alt="" 
-                  className="w-10 h-10 rounded-full object-cover ring-2 ring-white/30"
+                  className="w-9 h-9 sm:w-10 sm:h-10 rounded-full object-cover ring-2 ring-white/30"
                 />
-                <span className={`absolute bottom-0 right-0 w-3 h-3 rounded-full ring-2 ring-white ${
+                <span className={`absolute bottom-0 right-0 w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full ring-2 ring-white ${
                   currentCompany.agent.status === 'active' ? 'bg-emerald-400' : 'bg-amber-400'
                 }`} />
               </div>
-              <div>
-                <h3 className="font-bold text-sm tracking-tight">{settings.headerTitle}</h3>
-                <p className="text-[11px] text-white/80">{settings.headerSubtitle}</p>
+              <div className="min-w-0">
+                <h3 className="font-bold text-xs sm:text-sm tracking-tight truncate">{settings.headerTitle}</h3>
+                <p className="text-[10px] sm:text-[11px] text-white/80 truncate">{settings.headerSubtitle}</p>
               </div>
             </div>
 
-            <div className="flex items-center gap-1">
+            <div className="flex items-center gap-1 shrink-0">
               {!isInlinePreview && (
                 <button
                   onClick={() => setIsOpen(false)}
-                  className="p-1.5 hover:bg-white/20 rounded-full text-white/90 transition-colors"
+                  className="p-1.5 hover:bg-white/20 rounded-full text-white/90 transition-colors cursor-pointer"
                 >
                   <X className="w-4 h-4" />
                 </button>

@@ -11,7 +11,8 @@ import {
   HelpCircle, 
   Search,
   ShieldAlert,
-  ArrowLeft
+  ArrowLeft,
+  Menu
 } from 'lucide-react';
 import { useApp } from '../../context';
 
@@ -20,13 +21,15 @@ interface HeaderProps {
   onOpenTestRunner: () => void;
   onOpenHelp?: () => void;
   onOpenCommandPalette?: () => void;
+  onToggleMobileNav?: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({ 
   onOpenOnboarding, 
   onOpenTestRunner, 
   onOpenHelp, 
-  onOpenCommandPalette 
+  onOpenCommandPalette,
+  onToggleMobileNav
 }) => {
   const { 
     companies, 
@@ -45,20 +48,31 @@ export const Header: React.FC<HeaderProps> = ({
   const usagePercent = Math.min(100, Math.round((currentCompany.stats.messagesThisMonth / currentPlan.maxConversationsMonth) * 100));
 
   return (
-    <header className="h-16 bg-white/90 backdrop-blur-md border-b border-slate-200/80 px-6 flex items-center justify-between z-10 shrink-0 sticky top-0">
-      {/* Left: Tenant Workspace Selector & Assistant Status */}
-      <div className="flex items-center gap-3.5">
+    <header className="h-14 sm:h-16 bg-white/90 backdrop-blur-md border-b border-slate-200/80 px-3 sm:px-6 flex items-center justify-between z-10 shrink-0 sticky top-0">
+      {/* Left: Mobile Nav Toggle + Tenant Workspace Selector & Assistant Status */}
+      <div className="flex items-center gap-2 sm:gap-3.5">
+        {/* Mobile Hamburger Menu Toggle */}
+        {onToggleMobileNav && (
+          <button
+            onClick={onToggleMobileNav}
+            className="md:hidden p-1.5 text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
+            aria-label="Toggle navigation menu"
+          >
+            <Menu className="w-5 h-5" />
+          </button>
+        )}
+
         {/* Company Dropdown */}
         <div className="relative">
           <button
             onClick={() => setIsCompanyDropdownOpen(!isCompanyDropdownOpen)}
-            className="flex items-center gap-2.5 px-3 py-1.5 bg-slate-50/80 hover:bg-slate-100 border border-slate-200/80 rounded-xl text-xs font-bold text-slate-800 transition-all shadow-2xs hover:shadow-xs cursor-pointer tracking-tight"
+            className="flex items-center gap-2 sm:gap-2.5 px-2.5 sm:px-3 py-1.5 bg-slate-50/80 hover:bg-slate-100 border border-slate-200/80 rounded-xl text-xs font-bold text-slate-800 transition-all shadow-2xs hover:shadow-xs cursor-pointer tracking-tight"
           >
-            <div className="w-5.5 h-5.5 rounded-lg bg-indigo-600 text-white flex items-center justify-center font-bold text-xs shadow-xs">
+            <div className="w-5 h-5 sm:w-5.5 sm:h-5.5 rounded-lg bg-indigo-600 text-white flex items-center justify-center font-bold text-xs shadow-xs shrink-0">
               <Building className="w-3 h-3" />
             </div>
-            <span className="max-w-[160px] truncate">{currentCompany.name}</span>
-            <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
+            <span className="max-w-[100px] sm:max-w-[160px] truncate">{currentCompany.name}</span>
+            <ChevronDown className="w-3.5 h-3.5 text-slate-400 shrink-0" />
           </button>
 
           {isCompanyDropdownOpen && (
@@ -101,11 +115,10 @@ export const Header: React.FC<HeaderProps> = ({
         </div>
 
         {/* Assistant Status Toggle Pill */}
-        <div className="flex items-center gap-2 pl-2 border-l border-slate-200">
-          <span className="text-xs text-slate-500 font-medium hidden md:inline">Assistant:</span>
+        <div className="flex items-center gap-1.5 sm:gap-2 pl-1.5 sm:pl-2 border-l border-slate-200">
           <button
             onClick={toggleAgentStatus}
-            className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold border transition-all cursor-pointer ${
+            className={`inline-flex items-center gap-1 sm:gap-1.5 px-2 sm:px-2.5 py-1 rounded-full text-xs font-semibold border transition-all cursor-pointer ${
               currentCompany.agent.status === 'active'
                 ? 'bg-emerald-50 text-emerald-700 border-emerald-300 hover:bg-emerald-100'
                 : 'bg-amber-50 text-amber-700 border-amber-300 hover:bg-amber-100'
@@ -115,14 +128,14 @@ export const Header: React.FC<HeaderProps> = ({
             {currentCompany.agent.status === 'active' ? (
               <>
                 <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping" />
-                <span className="w-2 h-2 rounded-full bg-emerald-500 -ml-3.5" />
-                <span>Active</span>
+                <span className="w-2 h-2 rounded-full bg-emerald-500 -ml-3 sm:-ml-3.5" />
+                <span className="hidden xs:inline text-[11px] sm:text-xs">Active</span>
                 <Pause className="w-3 h-3 ml-0.5 text-emerald-600" />
               </>
             ) : (
               <>
                 <span className="w-2 h-2 rounded-full bg-amber-500" />
-                <span>Paused</span>
+                <span className="hidden xs:inline text-[11px] sm:text-xs">Paused</span>
                 <Play className="w-3 h-3 ml-0.5 text-amber-600" />
               </>
             )}
@@ -152,7 +165,7 @@ export const Header: React.FC<HeaderProps> = ({
       )}
 
       {/* Right: Quick actions, Quota meter, Test & Preview */}
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-2 sm:gap-3">
         {/* Usage Meter */}
         <div className="hidden xl:flex items-center gap-2 bg-slate-50 border border-slate-200 px-3 py-1.5 rounded-xl text-xs">
           <span className="text-slate-500 font-medium">Quota:</span>
@@ -165,12 +178,10 @@ export const Header: React.FC<HeaderProps> = ({
           <span className="font-semibold text-slate-700">{usagePercent}%</span>
         </div>
 
-
-
         {/* Quick Test Agent Sandbox */}
         <button
           onClick={() => setIsQuickTestOpen(true)}
-          className="flex items-center gap-1.5 px-3.5 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-semibold shadow-xs transition-colors cursor-pointer"
+          className="flex items-center gap-1.5 px-2.5 sm:px-3.5 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-semibold shadow-xs transition-colors cursor-pointer"
         >
           <Play className="w-3.5 h-3.5 fill-white text-white" />
           <span className="hidden sm:inline">Test Assistant</span>
@@ -183,7 +194,7 @@ export const Header: React.FC<HeaderProps> = ({
               setCurrentExperience('customer');
               showToast('Customer Workspace', 'Returned to customer workspace.', 'info');
             }}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-rose-600 hover:bg-rose-500 text-white rounded-xl text-xs font-bold transition-all shadow-xs cursor-pointer"
+            className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 bg-rose-600 hover:bg-rose-500 text-white rounded-xl text-xs font-bold transition-all shadow-xs cursor-pointer"
             title="Exit Super Admin and Return to Workspace"
           >
             <ArrowLeft className="w-3.5 h-3.5" />
@@ -195,7 +206,7 @@ export const Header: React.FC<HeaderProps> = ({
               setCurrentExperience('admin');
               showToast('Super Admin Mode', 'Switched to SaaS Operator Master Admin.', 'info');
             }}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-bold transition-all shadow-xs cursor-pointer border border-slate-700"
+            className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-bold transition-all shadow-xs cursor-pointer border border-slate-700"
             title="Switch to SaaS Platform Super Admin"
           >
             <ShieldAlert className="w-3.5 h-3.5 text-rose-400" />

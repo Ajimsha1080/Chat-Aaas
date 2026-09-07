@@ -9,7 +9,10 @@ import {
   Mail, 
   Globe, 
   Check, 
-  CheckCircle
+  CheckCircle,
+  ArrowLeft,
+  Info,
+  X
 } from 'lucide-react';
 import { useApp } from '../../context';
 import { ConversationStatus } from '../../types';
@@ -32,6 +35,7 @@ export const ConversationsView: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [operatorInput, setOperatorInput] = useState('');
   const [isNoteMode, setIsNoteMode] = useState(false);
+  const [isMobileProfileOpen, setIsMobileProfileOpen] = useState(false);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -67,12 +71,86 @@ export const ConversationsView: React.FC = () => {
     }
   };
 
+  // Customer Profile Component (used in desktop right pane and mobile drawer)
+  const renderCustomerProfile = () => {
+    if (!currentActiveConversation) return null;
+    return (
+      <div className="flex flex-col justify-between h-full space-y-4">
+        <div className="space-y-4">
+          <div className="pb-3 border-b border-slate-100">
+            <h3 className="text-xs font-semibold text-slate-900 uppercase tracking-wider">Customer Profile</h3>
+            <div className="mt-2 text-xs space-y-1.5">
+              <div className="flex items-center gap-2 text-slate-700">
+                <User className="w-3.5 h-3.5 text-slate-400" />
+                <span className="font-medium truncate">{currentActiveConversation.customerName}</span>
+              </div>
+              <div className="flex items-center gap-2 text-slate-500 font-mono text-[11px]">
+                <Mail className="w-3.5 h-3.5 text-slate-400" />
+                <span className="truncate">{currentActiveConversation.customerEmail || 'visitor@guest.io'}</span>
+              </div>
+              <div className="flex items-center gap-2 text-slate-500 text-[11px]">
+                <Globe className="w-3.5 h-3.5 text-slate-400" />
+                <span className="capitalize">{currentActiveConversation.channel.replace('_', ' ')}</span>
+              </div>
+            </div>
+          </div>
+
+          {/* AI Status & Takeover */}
+          <div className="pb-3 border-b border-slate-100">
+            <h3 className="text-xs font-semibold text-slate-900 uppercase tracking-wider">Handoff Status</h3>
+            <div className="mt-2">
+              {currentActiveConversation.status === 'escalated_to_human' ? (
+                <div className="p-2.5 rounded-lg bg-rose-50/60 border border-rose-200/80 text-rose-900 text-xs space-y-1">
+                  <div className="flex items-center gap-1.5 font-semibold">
+                    <ShieldAlert className="w-3.5 h-3.5 text-rose-600" />
+                    <span>Staff Takeover Active</span>
+                  </div>
+                  <p className="text-[11px] text-rose-700">AI Agent is silenced so you can assist directly.</p>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  <div className="p-2 rounded-lg bg-emerald-50 border border-emerald-200/60 text-emerald-900 text-xs">
+                    <div className="flex items-center gap-1.5 font-medium">
+                      <Check className="w-3.5 h-3.5 text-emerald-600" />
+                      <span>AI Autonomously Serving</span>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => takeoverConversation(currentActiveConversation.id)}
+                    className="w-full py-1.5 bg-slate-100 hover:bg-slate-200/70 text-slate-700 border border-slate-200/80 rounded-lg text-xs font-medium flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+                  >
+                    <UserCheck className="w-3.5 h-3.5 text-slate-600" />
+                    <span>Take Over Chat</span>
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* AI Knowledge Grounding Note */}
+          <div>
+            <h3 className="text-xs font-semibold text-slate-900 uppercase tracking-wider">Grounding Context</h3>
+            <p className="text-[11px] text-slate-400 mt-1 leading-relaxed">
+              All replies in this thread are strictly referenced against <strong>{currentCompany.name}</strong> verified knowledge base chunks.
+            </p>
+          </div>
+        </div>
+
+        <div className="pt-3 border-t border-slate-100 text-[10px] text-slate-400 font-mono text-center">
+          Session ID: {currentActiveConversation.id}
+        </div>
+      </div>
+    );
+  };
+
   return (
-    <div className="h-[calc(100vh-8.5rem)] flex gap-3.5 animate-in fade-in duration-150">
-      {/* 1. LEFT PANE: Conversation List */}
-      <div className="w-72 sm:w-80 bg-white rounded-xl border border-slate-200/80 shadow-[0_1px_2px_rgba(0,0,0,0.02)] flex flex-col shrink-0 overflow-hidden">
+    <div className="h-[calc(100vh-7.5rem)] sm:h-[calc(100vh-8.5rem)] flex gap-3.5 animate-in fade-in duration-150 relative">
+      {/* 1. LEFT PANE: Conversation List (Hidden on mobile when conversation is selected) */}
+      <div className={`w-full md:w-72 lg:w-80 bg-white rounded-xl border border-slate-200/80 shadow-[0_1px_2px_rgba(0,0,0,0.02)] flex flex-col shrink-0 overflow-hidden ${
+        currentActiveConversation ? 'hidden md:flex' : 'flex'
+      }`}>
         {/* Inbox Header */}
-        <div className="p-3.5 border-b border-slate-200/80 space-y-2.5">
+        <div className="p-3 sm:p-3.5 border-b border-slate-200/80 space-y-2.5">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <span className="w-2 h-2 rounded-full bg-emerald-500" />
@@ -190,34 +268,53 @@ export const ConversationsView: React.FC = () => {
         </div>
       </div>
 
-      {/* 2. MIDDLE PANE: Live Conversation Transcript */}
+      {/* 2. MIDDLE PANE: Live Conversation Transcript (Full width on mobile when active) */}
       {currentActiveConversation ? (
-        <div className="flex-1 bg-white rounded-xl border border-slate-200/80 shadow-[0_1px_2px_rgba(0,0,0,0.02)] flex flex-col overflow-hidden">
+        <div className="flex-1 bg-white rounded-xl border border-slate-200/80 shadow-[0_1px_2px_rgba(0,0,0,0.02)] flex flex-col overflow-hidden min-w-0">
           {/* Active Conversation Header */}
-          <div className="p-3.5 border-b border-slate-200/80 flex items-center justify-between bg-slate-50/50">
-            <div className="flex items-center gap-2.5">
-              <div className="w-7 h-7 rounded-md bg-slate-100 text-slate-700 flex items-center justify-center font-semibold text-xs border border-slate-200/60">
+          <div className="p-3 sm:p-3.5 border-b border-slate-200/80 flex items-center justify-between bg-slate-50/50">
+            <div className="flex items-center gap-2 sm:gap-2.5 min-w-0">
+              {/* Back button on mobile to return to conversation list */}
+              <button
+                onClick={() => setActiveConversationId(null as any)}
+                className="md:hidden p-1.5 text-slate-600 hover:text-slate-900 hover:bg-slate-200/60 rounded-lg transition-colors mr-1 cursor-pointer"
+                title="Back to inbox list"
+              >
+                <ArrowLeft className="w-4 h-4" />
+              </button>
+
+              <div className="w-7 h-7 rounded-md bg-slate-100 text-slate-700 flex items-center justify-center font-semibold text-xs border border-slate-200/60 shrink-0">
                 {currentActiveConversation.customerName.charAt(0)}
               </div>
-              <div>
-                <h3 className="font-semibold text-xs text-slate-900">{currentActiveConversation.customerName}</h3>
-                <span className="text-[10px] text-slate-400 font-mono">Channel: {currentActiveConversation.channel}</span>
+              <div className="min-w-0">
+                <h3 className="font-semibold text-xs text-slate-900 truncate">{currentActiveConversation.customerName}</h3>
+                <span className="text-[10px] text-slate-400 font-mono block truncate">Channel: {currentActiveConversation.channel}</span>
               </div>
             </div>
 
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+              {/* Mobile Profile Drawer Toggle */}
+              <button
+                onClick={() => setIsMobileProfileOpen(!isMobileProfileOpen)}
+                className="lg:hidden p-1.5 text-slate-600 hover:text-slate-900 hover:bg-slate-200/60 rounded-lg transition-colors cursor-pointer"
+                title="Customer details"
+              >
+                <Info className="w-4 h-4" />
+              </button>
+
               <button
                 onClick={() => resolveConversation(currentActiveConversation.id)}
-                className="px-3 py-1.5 bg-white hover:bg-slate-50 border border-slate-200 rounded-lg text-xs font-medium flex items-center gap-1.5 transition-colors cursor-pointer shadow-2xs"
+                className="px-2.5 sm:px-3 py-1.5 bg-white hover:bg-slate-50 border border-slate-200 rounded-lg text-xs font-medium flex items-center gap-1.5 transition-colors cursor-pointer shadow-2xs"
               >
                 <CheckCircle className="w-3.5 h-3.5 text-emerald-600" />
-                <span>Mark Resolved</span>
+                <span className="hidden sm:inline">Mark Resolved</span>
+                <span className="sm:hidden">Resolve</span>
               </button>
             </div>
           </div>
 
           {/* Messages Feed */}
-          <div className="flex-1 overflow-y-auto p-4 space-y-3.5 bg-slate-50/20">
+          <div className="flex-1 overflow-y-auto p-3 sm:p-4 space-y-3.5 bg-slate-50/20">
             {currentActiveConversation.messages.map(msg => {
               const isUser = msg.sender === 'user';
               const isHumanOperator = msg.sender === 'human_agent';
@@ -233,7 +330,7 @@ export const ConversationsView: React.FC = () => {
 
               return (
                 <div key={msg.id} className={`flex ${isUser ? 'justify-end' : 'justify-start'}`}>
-                  <div className={`max-w-md ${isUser ? 'order-1' : 'order-2'}`}>
+                  <div className={`max-w-[88%] sm:max-w-md ${isUser ? 'order-1' : 'order-2'}`}>
                     <div className="space-y-1">
                       <div className="flex items-center gap-2 px-1">
                         <span className="text-[11px] font-medium text-slate-700">
@@ -269,7 +366,7 @@ export const ConversationsView: React.FC = () => {
           </div>
 
           {/* Operator Reply & Internal Note Bar */}
-          <div className="p-3 border-t border-slate-200/80 bg-white space-y-2">
+          <div className="p-2.5 sm:p-3 border-t border-slate-200/80 bg-white space-y-2">
             <div className="flex items-center gap-1.5">
               <button
                 type="button"
@@ -296,7 +393,7 @@ export const ConversationsView: React.FC = () => {
                 type="text"
                 value={operatorInput}
                 onChange={(e) => setOperatorInput(e.target.value)}
-                placeholder={isNoteMode ? "Write private internal note (visible only to staff)..." : "Reply directly to customer as human operator..."}
+                placeholder={isNoteMode ? "Write private note..." : "Reply as human operator..."}
                 className={`flex-1 text-xs px-3 py-2 border rounded-lg focus:ring-1 focus:ring-slate-900 focus:border-slate-900 focus:outline-hidden ${
                   isNoteMode ? 'bg-amber-50/40 border-amber-200' : 'bg-slate-50 border-slate-200'
                 }`}
@@ -304,89 +401,51 @@ export const ConversationsView: React.FC = () => {
               <button
                 type="submit"
                 disabled={!operatorInput.trim()}
-                className={`px-3.5 py-2 rounded-lg text-xs font-medium flex items-center gap-1.5 transition-colors cursor-pointer ${
+                className={`px-3 sm:px-3.5 py-2 rounded-lg text-xs font-medium flex items-center gap-1.5 transition-colors cursor-pointer ${
                   isNoteMode 
                     ? 'bg-amber-600 hover:bg-amber-700 text-white' 
                     : 'bg-slate-900 hover:bg-slate-800 text-white disabled:opacity-50'
                 }`}
               >
                 <Send className="w-3.5 h-3.5" />
-                <span>{isNoteMode ? 'Save Note' : 'Send'}</span>
+                <span className="hidden xs:inline">{isNoteMode ? 'Save Note' : 'Send'}</span>
               </button>
             </form>
           </div>
         </div>
       ) : (
-        <div className="flex-1 bg-white rounded-xl border border-slate-200/80 shadow-[0_1px_2px_rgba(0,0,0,0.02)] flex items-center justify-center p-8 text-center text-slate-400 text-xs">
+        <div className="hidden md:flex flex-1 bg-white rounded-xl border border-slate-200/80 shadow-[0_1px_2px_rgba(0,0,0,0.02)] items-center justify-center p-8 text-center text-slate-400 text-xs">
           Select a conversation from the left to view messages and customer context.
         </div>
       )}
 
-      {/* 3. RIGHT PANE: Customer / AI Context */}
+      {/* 3. RIGHT PANE: Customer / AI Context (Desktop Sidebar) */}
       {currentActiveConversation && (
-        <div className="w-64 lg:w-72 bg-white rounded-xl border border-slate-200/80 shadow-[0_1px_2px_rgba(0,0,0,0.02)] p-4 flex flex-col justify-between shrink-0 overflow-y-auto space-y-4">
-          <div className="space-y-4">
-            <div className="pb-3 border-b border-slate-100">
-              <h3 className="text-xs font-semibold text-slate-900 uppercase tracking-wider">Customer Profile</h3>
-              <div className="mt-2 text-xs space-y-1.5">
-                <div className="flex items-center gap-2 text-slate-700">
-                  <User className="w-3.5 h-3.5 text-slate-400" />
-                  <span className="font-medium truncate">{currentActiveConversation.customerName}</span>
-                </div>
-                <div className="flex items-center gap-2 text-slate-500 font-mono text-[11px]">
-                  <Mail className="w-3.5 h-3.5 text-slate-400" />
-                  <span className="truncate">{currentActiveConversation.customerEmail || 'visitor@guest.io'}</span>
-                </div>
-                <div className="flex items-center gap-2 text-slate-500 text-[11px]">
-                  <Globe className="w-3.5 h-3.5 text-slate-400" />
-                  <span className="capitalize">{currentActiveConversation.channel.replace('_', ' ')}</span>
-                </div>
-              </div>
-            </div>
+        <div className="hidden lg:flex w-64 lg:w-72 bg-white rounded-xl border border-slate-200/80 shadow-[0_1px_2px_rgba(0,0,0,0.02)] p-4 flex-col justify-between shrink-0 overflow-y-auto space-y-4">
+          {renderCustomerProfile()}
+        </div>
+      )}
 
-            {/* AI Status & Takeover */}
-            <div className="pb-3 border-b border-slate-100">
-              <h3 className="text-xs font-semibold text-slate-900 uppercase tracking-wider">Handoff Status</h3>
-              <div className="mt-2">
-                {currentActiveConversation.status === 'escalated_to_human' ? (
-                  <div className="p-2.5 rounded-lg bg-rose-50/60 border border-rose-200/80 text-rose-900 text-xs space-y-1">
-                    <div className="flex items-center gap-1.5 font-semibold">
-                      <ShieldAlert className="w-3.5 h-3.5 text-rose-600" />
-                      <span>Staff Takeover Active</span>
-                    </div>
-                    <p className="text-[11px] text-rose-700">AI Agent is silenced so you can assist directly.</p>
-                  </div>
-                ) : (
-                  <div className="space-y-2">
-                    <div className="p-2 rounded-lg bg-emerald-50 border border-emerald-200/60 text-emerald-900 text-xs">
-                      <div className="flex items-center gap-1.5 font-medium">
-                        <Check className="w-3.5 h-3.5 text-emerald-600" />
-                        <span>AI Autonomously Serving</span>
-                      </div>
-                    </div>
-                    <button
-                      onClick={() => takeoverConversation(currentActiveConversation.id)}
-                      className="w-full py-1.5 bg-slate-100 hover:bg-slate-200/70 text-slate-700 border border-slate-200/80 rounded-lg text-xs font-medium flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
-                    >
-                      <UserCheck className="w-3.5 h-3.5 text-slate-600" />
-                      <span>Take Over Chat</span>
-                    </button>
-                  </div>
-                )}
-              </div>
+      {/* 4. MOBILE CUSTOMER PROFILE DRAWER / MODAL */}
+      {isMobileProfileOpen && currentActiveConversation && (
+        <div className="fixed inset-0 z-50 lg:hidden flex justify-end animate-in fade-in duration-150">
+          <div 
+            className="fixed inset-0 bg-slate-950/60 backdrop-blur-xs" 
+            onClick={() => setIsMobileProfileOpen(false)} 
+          />
+          <div className="relative w-full max-w-xs bg-white shadow-2xl h-full p-5 flex flex-col justify-between z-10 animate-in slide-in-from-right duration-200 overflow-y-auto">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+              <h3 className="text-sm font-semibold text-slate-900">Customer Details</h3>
+              <button 
+                onClick={() => setIsMobileProfileOpen(false)}
+                className="p-1 text-slate-400 hover:text-slate-700 rounded-lg hover:bg-slate-100 cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
             </div>
-
-            {/* AI Knowledge Grounding Note */}
-            <div>
-              <h3 className="text-xs font-semibold text-slate-900 uppercase tracking-wider">Grounding Context</h3>
-              <p className="text-[11px] text-slate-400 mt-1 leading-relaxed">
-                All replies in this thread are strictly referenced against <strong>{currentCompany.name}</strong> verified knowledge base chunks.
-              </p>
+            <div className="flex-1 py-3">
+              {renderCustomerProfile()}
             </div>
-          </div>
-
-          <div className="pt-3 border-t border-slate-100 text-[10px] text-slate-400 font-mono text-center">
-            Session ID: {currentActiveConversation.id}
           </div>
         </div>
       )}
