@@ -10,8 +10,6 @@ import {
   AlertTriangle, 
   SlidersHorizontal,
   ChevronRight,
-  ExternalLink,
-  Upload,
   ArrowUpRight,
   ListTodo
 } from 'lucide-react';
@@ -26,8 +24,7 @@ export const HomeView: React.FC = () => {
     integrations,
     setCurrentTab, 
     setIsQuickTestOpen, 
-    setActiveConversationId, 
-    setIsLiveSandboxOpen
+    setActiveConversationId
   } = useApp();
 
   const stats = currentCompany.stats;
@@ -124,32 +121,6 @@ export const HomeView: React.FC = () => {
         </div>
       </div>
 
-      {/* 2. Quick Actions Strip */}
-      <div className="bg-white rounded-xl p-3.5 border border-slate-200/90 shadow-xs flex items-center justify-between gap-4 overflow-x-auto">
-        <div className="flex items-center gap-2 shrink-0 pl-1">
-          <span className="text-xs font-bold text-slate-500 uppercase tracking-wider hidden sm:inline">
-            Quick Actions
-          </span>
-        </div>
-
-        <div className="flex items-center gap-2.5 shrink-0 flex-wrap">
-          <button
-            onClick={() => setCurrentTab('knowledge')}
-            className="px-3 py-2 bg-slate-100 hover:bg-slate-200/80 text-slate-800 rounded-lg text-sm font-medium flex items-center gap-2 transition-colors cursor-pointer border border-slate-200"
-          >
-            <Upload className="w-4 h-4 text-slate-700" />
-            <span>Upload Document</span>
-          </button>
-
-          <button
-            onClick={() => setIsLiveSandboxOpen(true)}
-            className="px-3 py-2 bg-slate-100 hover:bg-slate-200/80 text-slate-800 rounded-lg text-sm font-medium flex items-center gap-2 transition-colors cursor-pointer border border-slate-200"
-          >
-            <ExternalLink className="w-4 h-4 text-slate-700" />
-            <span>Live Web Preview</span>
-          </button>
-        </div>
-      </div>
 
       {/* 3. Getting Started Checklist */}
       {completedCount < 4 && (
