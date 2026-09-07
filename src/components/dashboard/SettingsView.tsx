@@ -78,24 +78,24 @@ export const SettingsView: React.FC = () => {
   };
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-200">
+    <div className="space-y-5 animate-in fade-in duration-150">
       {/* Header */}
-      <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="bg-white rounded-xl p-5 sm:p-6 border border-slate-200/80 shadow-[0_1px_2px_rgba(0,0,0,0.02)] flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-xl sm:text-2xl font-black text-slate-900">Settings & Administration</h1>
-          <p className="text-xs text-slate-500 mt-1">
-            Configure your AI assistant persona, team access control, billing subscription, and developer credentials.
+          <h1 className="text-lg sm:text-xl font-semibold text-slate-900 tracking-tight">Settings & Administration</h1>
+          <p className="text-xs text-slate-500 mt-0.5">
+            Configure assistant persona, team access control, billing subscription, and developer credentials.
           </p>
         </div>
       </div>
 
-      {/* Streamlined Tabs (4 Essential Categories) */}
-      <div className="flex items-center gap-2 border-b border-slate-200 pb-2 overflow-x-auto">
+      {/* Streamlined Tabs */}
+      <div className="flex items-center gap-1 border-b border-slate-200 overflow-x-auto pb-px">
         {[
           { id: 'assistant', label: 'AI Assistant', icon: Bot },
           { id: 'team', label: 'Team & Access', icon: Users, count: teamMembers.length },
           { id: 'billing', label: 'Billing & Plans', icon: CreditCard },
-          { id: 'developer', label: 'Developer & Logs', icon: Terminal, count: auditLogs.length }
+          { id: 'developer', label: 'Developer & Security', icon: Terminal, count: auditLogs.length }
         ].map(tab => {
           const Icon = tab.icon;
           const isActive = activeTab === tab.id;
@@ -103,17 +103,17 @@ export const SettingsView: React.FC = () => {
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id as any)}
-              className={`px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-2 whitespace-nowrap transition-all cursor-pointer ${
+              className={`px-3.5 py-2.5 text-xs font-medium flex items-center gap-2 whitespace-nowrap transition-colors border-b-2 cursor-pointer ${
                 isActive
-                  ? 'bg-slate-900 text-white shadow-xs'
-                  : 'text-slate-600 hover:bg-slate-100'
+                  ? 'border-slate-900 text-slate-900'
+                  : 'border-transparent text-slate-500 hover:text-slate-800 hover:border-slate-300'
               }`}
             >
-              <Icon className="w-4 h-4" />
+              <Icon className="w-3.5 h-3.5" />
               <span>{tab.label}</span>
               {tab.count !== undefined && (
-                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                  isActive ? 'bg-slate-800 text-slate-200' : 'bg-slate-200 text-slate-700'
+                <span className={`text-[10px] font-mono px-1.5 py-0.2 rounded ${
+                  isActive ? 'bg-slate-100 text-slate-800' : 'bg-slate-100 text-slate-500'
                 }`}>
                   {tab.count}
                 </span>
@@ -123,47 +123,47 @@ export const SettingsView: React.FC = () => {
         })}
       </div>
 
-      {/* 1. AI Assistant Tab (Includes Persona + Model Routing) */}
+      {/* 1. AI Assistant Tab */}
       {activeTab === 'assistant' && (
-        <div className="bg-white rounded-3xl border border-slate-200 p-6 sm:p-8 shadow-xs max-w-4xl space-y-6">
+        <div className="bg-white rounded-xl border border-slate-200/80 p-5 sm:p-6 shadow-[0_1px_2px_rgba(0,0,0,0.02)] max-w-4xl space-y-5">
           <div>
-            <h3 className="text-base font-bold text-slate-900">AI Assistant Persona & Intelligence</h3>
-            <p className="text-xs text-slate-500">Configure how your AI Assistant introduces itself, represents your brand, and reasons through answers.</p>
+            <h3 className="text-xs font-semibold text-slate-900">Persona & Model Intelligence</h3>
+            <p className="text-[11px] text-slate-400 mt-0.5">Configure how your AI Assistant introduces itself and reasons through answers.</p>
           </div>
 
-          <form onSubmit={handleSaveAssistant} className="space-y-6 text-xs">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <form onSubmit={handleSaveAssistant} className="space-y-4 text-xs">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
               <div>
-                <label className="font-semibold text-slate-700 block mb-1.5">Assistant Name</label>
+                <label className="font-medium text-slate-700 block mb-1">Assistant Name</label>
                 <input
                   type="text"
                   required
                   value={agentName}
                   onChange={(e) => setAgentName(e.target.value)}
-                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 text-slate-900 font-medium"
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:ring-1 focus:ring-slate-900 focus:border-slate-900 text-slate-900 font-medium focus:outline-hidden"
                 />
               </div>
 
               <div>
-                <label className="font-semibold text-slate-700 block mb-1.5">Assigned Role</label>
+                <label className="font-medium text-slate-700 block mb-1">Assigned Role</label>
                 <input
                   type="text"
                   required
                   value={agentRole}
                   onChange={(e) => setAgentRole(e.target.value)}
                   placeholder="e.g. Customer Support Specialist"
-                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 text-slate-900 font-medium"
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:ring-1 focus:ring-slate-900 focus:border-slate-900 text-slate-900 font-medium focus:outline-hidden"
                 />
               </div>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
               <div>
-                <label className="font-semibold text-slate-700 block mb-1.5">Conversation Tone</label>
+                <label className="font-medium text-slate-700 block mb-1">Conversation Tone</label>
                 <select
                   value={agentTone}
                   onChange={(e) => setAgentTone(e.target.value as any)}
-                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl font-medium text-slate-900"
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg font-medium text-slate-900 focus:ring-1 focus:ring-slate-900 focus:outline-hidden"
                 >
                   <option value="professional">Professional & Helpful</option>
                   <option value="friendly">Friendly & Warm</option>
@@ -174,38 +174,38 @@ export const SettingsView: React.FC = () => {
               </div>
 
               <div>
-                <label className="font-semibold text-slate-700 block mb-1.5">Company Website Domain</label>
+                <label className="font-medium text-slate-700 block mb-1">Company Website Domain</label>
                 <input
                   type="text"
                   disabled
                   value={currentCompany.domain}
-                  className="w-full px-3.5 py-2.5 bg-slate-100 border border-slate-200 rounded-xl text-slate-500 font-medium"
+                  className="w-full px-3 py-2 bg-slate-100 border border-slate-200 rounded-lg text-slate-500 font-mono"
                 />
               </div>
             </div>
 
             <div>
-              <label className="font-semibold text-slate-700 block mb-1.5">Default Welcome / Greeting Message</label>
+              <label className="font-medium text-slate-700 block mb-1">Default Greeting Message</label>
               <textarea
                 rows={3}
                 required
                 value={agentGreeting}
                 onChange={(e) => setAgentGreeting(e.target.value)}
-                className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 text-slate-900 font-medium"
+                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:ring-1 focus:ring-slate-900 focus:border-slate-900 text-slate-900 focus:outline-hidden"
               />
             </div>
 
             {/* AI Intelligence & Speed Tier */}
             <div className="pt-2 border-t border-slate-100">
-              <label className="font-bold text-slate-800 block mb-1">AI Model Intelligence Tier</label>
-              <p className="text-[11px] text-slate-500 mb-3">Choose the balance between response speed and deep multi-step reasoning.</p>
+              <label className="font-medium text-slate-900 block mb-0.5">Model Intelligence Tier</label>
+              <p className="text-[11px] text-slate-400 mb-3">Choose the balance between response speed and deep multi-step reasoning.</p>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                 {[
-                  { id: 'automatic', name: 'Automatic (Recommended)', desc: 'Smart routing between fast embeddings and deep reasoning.', badge: 'Best Performance' },
-                  { id: 'fast', name: 'Fast & Lightweight', desc: 'Ultra-low latency (<300ms) for quick FAQs and greetings.', badge: '< 300ms TTFT' },
+                  { id: 'automatic', name: 'Automatic (Recommended)', desc: 'Smart routing between fast embeddings and deep reasoning.', badge: 'Optimal' },
+                  { id: 'fast', name: 'Fast & Lightweight', desc: 'Ultra-low latency (<300ms) for quick FAQs and greetings.', badge: '< 300ms' },
                   { id: 'balanced', name: 'Balanced', desc: 'High accuracy with low token consumption.', badge: 'Standard' },
-                  { id: 'advanced', name: 'Advanced Deep Reasoning', desc: 'Maximum comprehension for complex technical troubleshooting.', badge: 'Highest Accuracy' }
+                  { id: 'advanced', name: 'Advanced Deep Reasoning', desc: 'Maximum comprehension for complex technical troubleshooting.', badge: 'Deep Reasoning' }
                 ].map(tier => {
                   const isSel = modelTier === tier.id;
                   return (
@@ -213,14 +213,14 @@ export const SettingsView: React.FC = () => {
                       key={tier.id}
                       type="button"
                       onClick={() => setModelTier(tier.id as any)}
-                      className={`p-4 rounded-2xl border text-left transition-all cursor-pointer ${
-                        isSel ? 'bg-indigo-50/70 border-indigo-600 ring-2 ring-indigo-500/20 shadow-xs' : 'border-slate-200 hover:bg-slate-50'
+                      className={`p-3 rounded-lg border text-left transition-colors cursor-pointer ${
+                        isSel ? 'bg-slate-50 border-slate-900 ring-1 ring-slate-900/10' : 'border-slate-200 hover:bg-slate-50'
                       }`}
                     >
                       <div className="flex items-center justify-between mb-1">
-                        <span className="font-bold text-slate-900 text-xs">{tier.name}</span>
-                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                          isSel ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-700'
+                        <span className="font-semibold text-slate-900 text-xs">{tier.name}</span>
+                        <span className={`text-[10px] font-mono px-1.5 py-0.2 rounded ${
+                          isSel ? 'bg-slate-900 text-white' : 'bg-slate-100 text-slate-600'
                         }`}>
                           {tier.badge}
                         </span>
@@ -235,10 +235,9 @@ export const SettingsView: React.FC = () => {
             <div className="pt-2 flex justify-start">
               <button
                 type="submit"
-                className="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl text-xs transition-colors cursor-pointer shadow-sm flex items-center gap-2"
+                className="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white font-medium rounded-lg text-xs transition-colors cursor-pointer shadow-xs flex items-center gap-2"
               >
-                <Sparkles className="w-4 h-4" />
-                <span>Save Assistant Changes</span>
+                <span>Save Changes</span>
               </button>
             </div>
           </form>
@@ -247,38 +246,38 @@ export const SettingsView: React.FC = () => {
 
       {/* 2. Team & Access Tab */}
       {activeTab === 'team' && (
-        <div className="bg-white rounded-3xl border border-slate-200 p-6 sm:p-8 shadow-xs space-y-5">
+        <div className="bg-white rounded-xl border border-slate-200/80 p-5 sm:p-6 shadow-[0_1px_2px_rgba(0,0,0,0.02)] space-y-4">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100">
             <div>
-              <h3 className="text-base font-bold text-slate-900">Team Members & Access Control (RBAC)</h3>
-              <p className="text-xs text-slate-500">Manage support agents who can monitor conversations and take over chats live.</p>
+              <h3 className="text-xs font-semibold text-slate-900">Team Members & Access Control (RBAC)</h3>
+              <p className="text-[11px] text-slate-400">Manage staff members who can monitor conversations and take over chats live.</p>
             </div>
             <button
               onClick={() => setIsInviteModalOpen(true)}
-              className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 cursor-pointer shadow-xs self-start sm:self-auto"
+              className="px-3.5 py-1.5 bg-slate-900 hover:bg-slate-800 text-white rounded-lg text-xs font-medium flex items-center gap-1.5 cursor-pointer shadow-xs self-start sm:self-auto"
             >
-              <UserPlus className="w-4 h-4" />
-              <span>Invite Team Member</span>
+              <UserPlus className="w-3.5 h-3.5" />
+              <span>Invite Member</span>
             </button>
           </div>
 
           <div className="divide-y divide-slate-100 text-xs">
             {teamMembers.map(member => (
-              <div key={member.id} className="py-3.5 flex items-center justify-between">
+              <div key={member.id} className="py-3 flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center font-bold text-slate-700 text-xs">
+                  <div className="w-8 h-8 rounded-lg bg-slate-100 border border-slate-200/60 flex items-center justify-center font-semibold text-slate-700 text-xs">
                     {member.name.charAt(0)}
                   </div>
                   <div>
-                    <h4 className="font-bold text-slate-900">{member.name}</h4>
+                    <h4 className="font-semibold text-slate-900">{member.name}</h4>
                     <p className="text-[11px] text-slate-400 font-mono">{member.email}</p>
                   </div>
                 </div>
-                <div className="flex items-center gap-3">
-                  <span className="capitalize font-semibold px-2.5 py-1 rounded-lg bg-slate-100 text-slate-700 text-xs">
+                <div className="flex items-center gap-2.5">
+                  <span className="capitalize font-mono px-2 py-0.5 rounded bg-slate-100 text-slate-700 text-[11px] border border-slate-200/60">
                     {member.role.replace('_', ' ')}
                   </span>
-                  <span className="text-[10px] text-emerald-600 font-bold bg-emerald-50 px-2.5 py-1 rounded-lg">
+                  <span className="text-[10px] text-emerald-700 font-medium bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200/60">
                     {member.status}
                   </span>
                 </div>
@@ -290,35 +289,35 @@ export const SettingsView: React.FC = () => {
 
       {/* 3. Billing & Plans Tab */}
       {activeTab === 'billing' && (
-        <div className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div className="space-y-5">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-3.5">
             {allPlans.map(plan => {
               const isCurrent = plan.id === currentCompany.planId;
               return (
                 <div
                   key={plan.id}
-                  className={`bg-white rounded-3xl p-6 border flex flex-col justify-between transition-all ${
-                    isCurrent ? 'border-indigo-600 ring-2 ring-indigo-500/20 shadow-sm' : 'border-slate-200'
+                  className={`bg-white rounded-xl p-5 border flex flex-col justify-between transition-all ${
+                    isCurrent ? 'border-slate-900 ring-1 ring-slate-900/10 shadow-xs' : 'border-slate-200/80 shadow-[0_1px_2px_rgba(0,0,0,0.02)]'
                   }`}
                 >
                   <div>
                     <div className="flex items-center justify-between mb-2">
-                      <h4 className="font-bold text-sm text-slate-900 capitalize">{plan.name}</h4>
+                      <h4 className="font-semibold text-xs text-slate-900 capitalize">{plan.name}</h4>
                       {isCurrent && (
-                        <span className="text-[10px] font-bold px-2 py-0.5 bg-indigo-100 text-indigo-700 rounded-full">
+                        <span className="text-[10px] font-mono px-2 py-0.5 bg-slate-100 text-slate-700 rounded border border-slate-200">
                           Current
                         </span>
                       )}
                     </div>
                     <div className="mt-2 flex items-baseline gap-1">
-                      <span className="text-2xl font-black text-slate-900">₹{plan.priceMonthlyINR.toLocaleString()}</span>
-                      <span className="text-xs text-slate-500">/mo</span>
+                      <span className="text-xl font-bold text-slate-900">₹{plan.priceMonthlyINR.toLocaleString()}</span>
+                      <span className="text-xs text-slate-400">/mo</span>
                     </div>
-                    <p className="text-xs text-slate-500 mt-1">{plan.description}</p>
-                    <ul className="mt-4 space-y-2.5 text-xs text-slate-600">
+                    <p className="text-[11px] text-slate-500 mt-1">{plan.description}</p>
+                    <ul className="mt-3.5 space-y-2 text-xs text-slate-600">
                       <li className="flex items-center gap-1.5">
                         <Check className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-                        <span><strong>{plan.maxConversationsMonth.toLocaleString()}</strong> conversations/mo</span>
+                        <span><strong>{plan.maxConversationsMonth.toLocaleString()}</strong> chats/mo</span>
                       </li>
                       <li className="flex items-center gap-1.5">
                         <Check className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
@@ -326,7 +325,7 @@ export const SettingsView: React.FC = () => {
                       </li>
                       <li className="flex items-center gap-1.5">
                         <Check className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-                        <span>Real-time Human Handoff</span>
+                        <span>Real-time Live Handoff</span>
                       </li>
                     </ul>
                   </div>
@@ -336,10 +335,10 @@ export const SettingsView: React.FC = () => {
                       if (!isCurrent) upgradeSubscription(plan.id, currentCompany.billingCycle || 'monthly');
                     }}
                     disabled={isCurrent}
-                    className={`w-full mt-6 py-2.5 rounded-xl text-xs font-bold transition-colors cursor-pointer ${
+                    className={`w-full mt-5 py-2 rounded-lg text-xs font-medium transition-colors cursor-pointer ${
                       isCurrent 
-                        ? 'bg-slate-100 text-slate-400 cursor-not-allowed' 
-                        : 'bg-indigo-600 hover:bg-indigo-500 text-white'
+                        ? 'bg-slate-100 text-slate-400 cursor-not-allowed border border-slate-200' 
+                        : 'bg-slate-900 hover:bg-slate-800 text-white shadow-xs'
                     }`}
                   >
                     {isCurrent ? 'Active Plan' : `Upgrade to ${plan.name}`}
@@ -350,23 +349,23 @@ export const SettingsView: React.FC = () => {
           </div>
 
           {/* GST Invoices */}
-          <div className="bg-white rounded-3xl border border-slate-200 p-6 sm:p-8 shadow-xs space-y-4">
-            <h3 className="text-base font-bold text-slate-900">GST Tax Invoices (18% GST Included)</h3>
+          <div className="bg-white rounded-xl border border-slate-200/80 p-5 sm:p-6 shadow-[0_1px_2px_rgba(0,0,0,0.02)] space-y-3.5">
+            <h3 className="text-xs font-semibold text-slate-900">GST Invoices (18% Tax Inclusive)</h3>
             <div className="divide-y divide-slate-100 text-xs">
               {invoices.map(inv => (
-                <div key={inv.id} className="py-3 flex items-center justify-between">
+                <div key={inv.id} className="py-2.5 flex items-center justify-between">
                   <div>
-                    <h4 className="font-bold text-slate-900">{inv.number}</h4>
+                    <h4 className="font-medium text-slate-900">{inv.number}</h4>
                     <span className="text-[11px] text-slate-400 font-mono">{inv.date} · {inv.planName}</span>
                   </div>
                   <div className="flex items-center gap-3">
-                    <span className="font-bold text-slate-900">₹{inv.amountINR.toLocaleString()}</span>
+                    <span className="font-semibold text-slate-900">₹{inv.amountINR.toLocaleString()}</span>
                     <button
                       onClick={() => setSelectedInvoice(inv)}
-                      className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-semibold flex items-center gap-1.5 cursor-pointer"
+                      className="px-2.5 py-1 bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 rounded-md text-xs font-medium flex items-center gap-1.5 cursor-pointer"
                     >
-                      <Download className="w-3.5 h-3.5" />
-                      <span>Invoice</span>
+                      <Download className="w-3 h-3 text-slate-500" />
+                      <span>Download</span>
                     </button>
                   </div>
                 </div>
@@ -376,113 +375,111 @@ export const SettingsView: React.FC = () => {
         </div>
       )}
 
-      {/* 4. Developer & Logs Tab (API Keys, Webhooks, Security Guarantees, Audit Logs) */}
+      {/* 4. Developer & Logs Tab */}
       {activeTab === 'developer' && (
-        <div className="space-y-6">
+        <div className="space-y-5">
           {/* API Keys & Webhook Section */}
-          <div className="bg-white rounded-3xl border border-slate-200 p-6 sm:p-8 shadow-xs space-y-5">
+          <div className="bg-white rounded-xl border border-slate-200/80 p-5 sm:p-6 shadow-[0_1px_2px_rgba(0,0,0,0.02)] space-y-4">
             <div>
-              <h3 className="text-base font-bold text-slate-900">API Credentials & Webhooks</h3>
-              <p className="text-xs text-slate-500">Authenticate API and webhook requests from your backend servers.</p>
+              <h3 className="text-xs font-semibold text-slate-900">API Credentials & Webhooks</h3>
+              <p className="text-[11px] text-slate-400">Authenticate API and webhook requests from your backend servers.</p>
             </div>
 
-            <div className="space-y-4 text-xs">
+            <div className="space-y-3.5 text-xs">
               <div>
-                <label className="font-semibold text-slate-700 block mb-1.5">Live Secret API Key</label>
+                <label className="font-medium text-slate-700 block mb-1">Live Secret API Key</label>
                 <div className="flex items-center gap-2">
                   <div className="relative flex-1">
                     <input
                       type={showApiKey ? "text" : "password"}
                       readOnly
                       value={currentCompany.apiKey}
-                      className="w-full pl-3.5 pr-10 py-2.5 bg-slate-50 border border-slate-200 rounded-xl font-mono text-xs text-slate-700"
+                      className="w-full pl-3 pr-9 py-2 bg-slate-50 border border-slate-200 rounded-lg font-mono text-xs text-slate-700"
                     />
                     <button
                       type="button"
                       onClick={() => setShowApiKey(!showApiKey)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-0.5 cursor-pointer"
+                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-0.5 cursor-pointer"
                       title={showApiKey ? "Hide Secret Key" : "Reveal Secret Key"}
                     >
-                      {showApiKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                      {showApiKey ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
                     </button>
                   </div>
                   <button
                     onClick={() => handleCopy(currentCompany.apiKey, 'apiKey')}
-                    className="px-3.5 py-2.5 bg-slate-800 hover:bg-slate-700 text-white rounded-xl text-xs font-semibold flex items-center gap-1.5 cursor-pointer transition-colors"
+                    className="px-3 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-lg text-xs font-medium flex items-center gap-1.5 cursor-pointer transition-colors shadow-xs"
                   >
-                    {copiedKey === 'apiKey' ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+                    {copiedKey === 'apiKey' ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
                     <span>{copiedKey === 'apiKey' ? 'Copied' : 'Copy'}</span>
                   </button>
                   <button
                     onClick={regenerateApiKey}
-                    className="px-3.5 py-2.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-xl text-xs font-semibold flex items-center gap-1.5 cursor-pointer transition-colors"
+                    className="px-3 py-2 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 rounded-lg text-xs font-medium flex items-center gap-1.5 cursor-pointer transition-colors"
                   >
-                    <RefreshCw className="w-3.5 h-3.5" />
+                    <RefreshCw className="w-3 h-3 text-slate-500" />
                     <span>Rotate Key</span>
                   </button>
                 </div>
               </div>
 
               <div>
-                <label className="font-semibold text-slate-700 block mb-1.5">Inbound Webhook URL</label>
+                <label className="font-medium text-slate-700 block mb-1">Inbound Webhook URL</label>
                 <input
                   type="text"
                   readOnly
                   value={`https://api.chat-aaas.com/api/v1/webhook/${currentCompany.id}`}
-                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl font-mono text-xs text-slate-700"
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg font-mono text-xs text-slate-700"
                 />
               </div>
             </div>
 
             {/* Subtle Security Guarantees Banner */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2">
-              <div className="p-3.5 bg-emerald-50/60 rounded-2xl border border-emerald-100 flex items-start gap-2.5">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 pt-1">
+              <div className="p-3 bg-slate-50 rounded-lg border border-slate-200/80 flex items-start gap-2.5">
                 <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
                 <div>
-                  <h5 className="font-bold text-xs text-emerald-950">Tenant Row-Level Isolation</h5>
-                  <p className="text-[10px] text-emerald-800 mt-0.5">Partitioned pgvector embeddings & tables</p>
+                  <h5 className="font-semibold text-xs text-slate-900">Row-Level Tenant Isolation</h5>
+                  <p className="text-[10px] text-slate-400 mt-0.5">Partitioned vector embeddings & tables</p>
                 </div>
               </div>
 
-              <div className="p-3.5 bg-slate-50 rounded-2xl border border-slate-200 flex items-start gap-2.5">
+              <div className="p-3 bg-slate-50 rounded-lg border border-slate-200/80 flex items-start gap-2.5">
                 <Lock className="w-4 h-4 text-slate-600 shrink-0 mt-0.5" />
                 <div>
-                  <h5 className="font-bold text-xs text-slate-900">AES-256 KMS Encryption</h5>
-                  <p className="text-[10px] text-slate-500 mt-0.5">Encrypted API tokens and connector keys</p>
+                  <h5 className="font-semibold text-xs text-slate-900">AES-256 Encryption</h5>
+                  <p className="text-[10px] text-slate-400 mt-0.5">Encrypted API tokens and connector keys</p>
                 </div>
               </div>
 
-              <div className="p-3.5 bg-slate-50 rounded-2xl border border-slate-200 flex items-start gap-2.5">
+              <div className="p-3 bg-slate-50 rounded-lg border border-slate-200/80 flex items-start gap-2.5">
                 <ShieldCheck className="w-4 h-4 text-slate-600 shrink-0 mt-0.5" />
                 <div>
-                  <h5 className="font-bold text-xs text-slate-900">SSRF Crawler Protection</h5>
-                  <p className="text-[10px] text-slate-500 mt-0.5">Blocks private IP & cloud metadata</p>
+                  <h5 className="font-semibold text-xs text-slate-900">SSRF Crawler Protection</h5>
+                  <p className="text-[10px] text-slate-400 mt-0.5">Blocks private subnets & metadata endpoints</p>
                 </div>
               </div>
             </div>
           </div>
 
           {/* Audit Logs Section */}
-          <div className="bg-white rounded-3xl border border-slate-200 p-6 sm:p-8 shadow-xs space-y-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="text-base font-bold text-slate-900">Security & Administration Audit Trail</h3>
-                <p className="text-xs text-slate-500">Live chronological logs of settings changes, team invites, and security events.</p>
-              </div>
+          <div className="bg-white rounded-xl border border-slate-200/80 p-5 sm:p-6 shadow-[0_1px_2px_rgba(0,0,0,0.02)] space-y-3.5">
+            <div>
+              <h3 className="text-xs font-semibold text-slate-900">Audit Trail</h3>
+              <p className="text-[11px] text-slate-400">Chronological logs of settings changes, team invites, and security events.</p>
             </div>
 
             <div className="divide-y divide-slate-100 text-xs">
               {auditLogs.map(log => (
-                <div key={log.id} className="py-3 flex items-center justify-between">
-                  <div className="flex items-center gap-3">
+                <div key={log.id} className="py-2.5 flex items-center justify-between">
+                  <div className="flex items-center gap-2.5">
                     <span className="font-mono text-slate-400 text-[10px]">{new Date(log.timestamp).toLocaleTimeString()}</span>
                     <div>
-                      <strong className="text-slate-800 font-bold">{log.action}: </strong>
-                      <span className="text-slate-600">{log.details}</span>
+                      <strong className="text-slate-800 font-medium">{log.action}: </strong>
+                      <span className="text-slate-500">{log.details}</span>
                     </div>
                   </div>
-                  <span className={`text-[10px] px-2.5 py-0.5 rounded-full font-bold uppercase ${
-                    log.severity === 'warning' ? 'bg-amber-100 text-amber-800' : 'bg-slate-100 text-slate-600'
+                  <span className={`text-[10px] px-2 py-0.5 rounded font-mono uppercase ${
+                    log.severity === 'warning' ? 'bg-amber-50 text-amber-800 border border-amber-200/60' : 'bg-slate-100 text-slate-600 border border-slate-200/60'
                   }`}>
                     {log.severity}
                   </span>
@@ -496,40 +493,40 @@ export const SettingsView: React.FC = () => {
       {/* Invite Modal */}
       {isInviteModalOpen && (
         <div className="fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl max-w-md w-full p-6 sm:p-8 shadow-2xl border border-slate-200 space-y-4 animate-in zoom-in-95 duration-150">
+          <div className="bg-white rounded-xl max-w-md w-full p-5 sm:p-6 shadow-xl border border-slate-200 space-y-4 animate-in zoom-in-95 duration-150">
             <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-              <h3 className="text-sm font-bold text-slate-900">Invite Team Member</h3>
-              <button onClick={() => setIsInviteModalOpen(false)} className="text-slate-400 hover:text-slate-600 font-bold cursor-pointer">✕</button>
+              <h3 className="text-sm font-semibold text-slate-900">Invite Team Member</h3>
+              <button onClick={() => setIsInviteModalOpen(false)} className="text-slate-400 hover:text-slate-600 cursor-pointer">✕</button>
             </div>
-            <form onSubmit={handleInvite} className="space-y-3.5 text-xs">
+            <form onSubmit={handleInvite} className="space-y-3 text-xs">
               <div>
-                <label className="font-semibold text-slate-700 block mb-1">Full Name</label>
+                <label className="font-medium text-slate-700 block mb-1">Full Name</label>
                 <input
                   type="text"
                   required
                   value={inviteName}
                   onChange={(e) => setInviteName(e.target.value)}
                   placeholder="Jane Doe"
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl"
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:ring-1 focus:ring-slate-900 focus:outline-hidden"
                 />
               </div>
               <div>
-                <label className="font-semibold text-slate-700 block mb-1">Email Address</label>
+                <label className="font-medium text-slate-700 block mb-1">Email Address</label>
                 <input
                   type="email"
                   required
                   value={inviteEmail}
                   onChange={(e) => setInviteEmail(e.target.value)}
                   placeholder="jane@company.com"
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl"
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:ring-1 focus:ring-slate-900 focus:outline-hidden"
                 />
               </div>
               <div>
-                <label className="font-semibold text-slate-700 block mb-1">Role</label>
+                <label className="font-medium text-slate-700 block mb-1">Role</label>
                 <select
                   value={inviteRole}
                   onChange={(e) => setInviteRole(e.target.value as any)}
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl"
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:ring-1 focus:ring-slate-900 focus:outline-hidden"
                 >
                   <option value="support_agent">Support Agent (Can Take Over Live Chats)</option>
                   <option value="admin">Admin (Manage Knowledge & Settings)</option>
@@ -540,13 +537,13 @@ export const SettingsView: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setIsInviteModalOpen(false)}
-                  className="px-3.5 py-2 text-slate-600 hover:bg-slate-100 rounded-xl font-semibold cursor-pointer"
+                  className="px-3.5 py-1.5 text-slate-600 hover:bg-slate-100 rounded-lg font-medium cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-bold cursor-pointer shadow-xs"
+                  className="px-4 py-1.5 bg-slate-900 hover:bg-slate-800 text-white rounded-lg font-medium cursor-pointer shadow-xs"
                 >
                   Send Invitation
                 </button>

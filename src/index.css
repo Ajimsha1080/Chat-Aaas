@@ -2,22 +2,20 @@
 
 @layer base {
   :root {
-    --primary: #4f46e5;
-    --primary-hover: #4338ca;
-    --primary-light: #eef2ff;
-    --bg-main: #fafafa;
-    --sidebar-bg: #090d16;
+    --primary: #0f172a;
+    --primary-hover: #1e293b;
+    --bg-main: #f8fafc;
+    --border-subtle: #e2e8f0;
     --card-bg: #ffffff;
-    --border-color: #e4e4e7;
   }
 
   body {
-    background-color: #fafafa;
-    color: #09090b;
+    background-color: #f8fafc;
+    color: #0f172a;
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Inter, "Helvetica Neue", Arial, sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
-    letter-spacing: -0.011em;
+    letter-spacing: -0.015em;
     margin: 0;
     padding: 0;
     min-height: 100vh;
@@ -32,9 +30,14 @@
     display: block;
     text-align: left;
   }
+
+  input, select, textarea, button {
+    font-family: inherit;
+    letter-spacing: inherit;
+  }
 }
 
-/* Custom Scrollbars */
+/* Slim Professional Scrollbars */
 ::-webkit-scrollbar {
   width: 5px;
   height: 5px;
@@ -45,84 +48,66 @@
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #e2e8f0;
-  border-radius: 9999px;
+  background: #cbd5e1;
+  border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #cbd5e1;
+  background: #94a3b8;
 }
 
-/* Pulse Glow & animations */
-@keyframes pulseGlow {
-  0%, 100% {
-    box-shadow: 0 0 15px rgba(99, 102, 241, 0.35);
-  }
-  50% {
-    box-shadow: 0 0 25px rgba(99, 102, 241, 0.6);
-  }
+/* Clean Enterprise Card Styles */
+.saas-card {
+  background-color: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 0.75rem; /* 12px */
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.04);
 }
 
-.glow-active {
-  animation: pulseGlow 2.5s infinite;
-}
-
-/* YC Premium Utilities */
-.yc-card {
-  background: #ffffff;
-  border: 1px solid rgba(228, 228, 231, 0.9);
-  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.03), 0 1px 6px -1px rgba(0, 0, 0, 0.02);
-  transition: all 0.15s cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-.yc-card:hover {
-  border-color: rgba(212, 212, 216, 1);
-  box-shadow: 0 4px 12px 0 rgba(0, 0, 0, 0.05);
-}
-
-.yc-badge {
+.saas-badge {
   display: inline-flex;
   align-items: center;
   gap: 0.375rem;
   font-size: 0.6875rem;
   font-weight: 600;
-  padding: 0.125rem 0.625rem;
-  border-radius: 9999px;
-  letter-spacing: -0.01em;
+  padding: 0.125rem 0.5rem;
+  border-radius: 0.375rem;
+  border: 1px solid transparent;
 }
 
-.yc-btn-primary {
-  background: #4f46e5;
+.saas-btn-primary {
+  background-color: #0f172a;
   color: #ffffff;
   font-weight: 600;
   font-size: 0.75rem;
-  padding: 0.5rem 1rem;
-  border-radius: 0.75rem;
-  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05), inset 0 1px 0 0 rgba(255, 255, 255, 0.15);
-  transition: all 0.15s cubic-bezier(0.16, 1, 0.3, 1);
+  padding: 0.5rem 0.875rem;
+  border-radius: 0.5rem;
+  border: 1px solid transparent;
+  transition: all 0.1s ease-in-out;
+  cursor: pointer;
 }
 
-.yc-btn-primary:hover {
-  background: #4338ca;
-  transform: translateY(-0.5px);
-  box-shadow: 0 4px 12px 0 rgba(79, 70, 229, 0.25);
+.saas-btn-primary:hover {
+  background-color: #1e293b;
 }
 
-.yc-btn-primary:active {
-  transform: translateY(0.5px);
+.saas-btn-secondary {
+  background-color: #ffffff;
+  color: #334155;
+  font-weight: 600;
+  font-size: 0.75rem;
+  padding: 0.5rem 0.875rem;
+  border-radius: 0.5rem;
+  border: 1px solid #e2e8f0;
+  transition: all 0.1s ease-in-out;
+  cursor: pointer;
 }
 
-/* Glass effect */
-.glass-panel {
-  background: rgba(255, 255, 255, 0.82);
-  backdrop-filter: blur(16px);
-  border: 1px solid rgba(228, 228, 231, 0.8);
+.saas-btn-secondary:hover {
+  background-color: #f8fafc;
+  color: #0f172a;
+  border-color: #cbd5e1;
 }
 
-.glass-panel-dark {
-  background: rgba(9, 13, 22, 0.88);
-  backdrop-filter: blur(16px);
-  border: 1px solid rgba(30, 41, 59, 0.8);
-}
 
 

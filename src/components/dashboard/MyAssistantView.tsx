@@ -1,18 +1,14 @@
 import React, { useState } from 'react';
 import { 
-  Sparkles, 
   Play, 
   PauseCircle, 
-  CheckCircle2, 
   Sliders, 
   BookOpen, 
   Save, 
   Check, 
   UserCheck, 
   Mail, 
-  MessageSquare, 
-  ArrowRight,
-  Info
+  MessageSquare
 } from 'lucide-react';
 import { useApp } from '../../context';
 import { AgentTone, AgentConfig } from '../../types';
@@ -75,81 +71,81 @@ export const MyAssistantView: React.FC = () => {
     publishAgentVersion('Saved assistant updates');
     setTimeout(() => {
       setIsSaving(false);
-      showToast('Changes Saved', 'Your assistant updates are now saved and active.', 'success');
-    }, 400);
+      showToast('Changes Saved', 'Your assistant configuration has been saved.', 'success');
+    }, 300);
   };
 
   const indexedSourcesCount = knowledgeItems.filter(k => k.status === 'indexed').length;
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-200">
+    <div className="space-y-5 animate-in fade-in duration-150">
       {/* 1. Assistant Profile Header */}
-      <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-xs flex flex-col lg:flex-row lg:items-center justify-between gap-6">
-        <div className="flex items-start sm:items-center gap-5">
+      <div className="bg-white rounded-xl p-5 sm:p-6 border border-slate-200/80 shadow-[0_1px_2px_rgba(0,0,0,0.02)] flex flex-col lg:flex-row lg:items-center justify-between gap-5">
+        <div className="flex items-start sm:items-center gap-4">
           <div className="relative shrink-0">
             <img 
               src={formState.avatarUrl || currentCompany.agent.avatarUrl} 
               alt={formState.name} 
-              className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl object-cover ring-4 ring-indigo-50 shadow-md" 
+              className="w-14 h-14 sm:w-16 sm:h-16 rounded-xl object-cover border border-slate-200" 
             />
-            <span className={`absolute -bottom-1 -right-1 w-5 h-5 rounded-full ring-3 ring-white flex items-center justify-center ${
+            <span className={`absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full ring-2 ring-white ${
               isLive ? 'bg-emerald-500' : 'bg-amber-500'
             }`} />
           </div>
 
           <div>
-            <div className="flex items-center gap-3 flex-wrap">
-              <h1 className="text-xl sm:text-2xl font-black text-slate-900">{formState.name}</h1>
-              <span className={`inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1 rounded-full ${
+            <div className="flex items-center gap-2.5 flex-wrap">
+              <h1 className="text-lg sm:text-xl font-semibold text-slate-900 tracking-tight">{formState.name}</h1>
+              <span className={`inline-flex items-center gap-1.5 text-xs font-medium px-2.5 py-0.5 rounded-md ${
                 isLive
-                  ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                  : 'bg-amber-50 text-amber-700 border border-amber-200'
+                  ? 'bg-emerald-50 text-emerald-700 border border-emerald-200/60'
+                  : 'bg-amber-50 text-amber-700 border border-amber-200/60'
               }`}>
-                <span className={`w-2 h-2 rounded-full ${isLive ? 'bg-emerald-500 animate-pulse' : 'bg-amber-500'}`} />
-                {isLive ? '● Live & Answering Questions' : '● Paused'}
+                <span className={`w-1.5 h-1.5 rounded-full ${isLive ? 'bg-emerald-500' : 'bg-amber-500'}`} />
+                {isLive ? 'Live & Answering' : 'Paused'}
               </span>
             </div>
 
-            <p className="text-slate-500 text-xs sm:text-sm mt-1 max-w-2xl">
-              {formState.description || `AI Q&A Assistant trained on ${currentCompany.name}'s business knowledge.`}
+            <p className="text-slate-500 text-xs sm:text-sm mt-0.5 max-w-2xl">
+              {formState.description || `AI Q&A Assistant trained on ${currentCompany.name}'s verified business knowledge.`}
             </p>
 
-            <div className="flex items-center gap-4 mt-3 text-xs text-slate-400 flex-wrap">
-              <span>Tone: <strong className="text-slate-700 capitalize">{formState.tone}</strong></span>
+            <div className="flex items-center gap-3 mt-2 text-xs text-slate-400 flex-wrap">
+              <span>Tone: <strong className="text-slate-700 capitalize font-medium">{formState.tone}</strong></span>
               <span>·</span>
-              <span>Knowledge: <strong className="text-slate-700">{indexedSourcesCount} Sources Ready</strong></span>
+              <span>Knowledge: <strong className="text-slate-700 font-medium">{indexedSourcesCount} Sources Indexed</strong></span>
               <span>·</span>
-              <span>Channels: <strong className="text-slate-700">Website Widget & API</strong></span>
+              <span>Deployments: <strong className="text-slate-700 font-medium">Website Widget & API</strong></span>
             </div>
           </div>
         </div>
 
         {/* Action Controls */}
-        <div className="flex items-center gap-3 shrink-0 flex-wrap">
+        <div className="flex items-center gap-2.5 shrink-0 flex-wrap">
           <button
             onClick={() => setIsQuickTestOpen(true)}
-            className="px-4 py-2.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-xl text-xs font-bold flex items-center gap-2 transition-all cursor-pointer"
+            className="px-3.5 py-2 bg-slate-100 hover:bg-slate-200/70 text-slate-700 rounded-lg text-xs font-medium flex items-center gap-2 transition-colors cursor-pointer border border-slate-200/60"
           >
-            <Play className="w-3.5 h-3.5 fill-indigo-600 text-indigo-600" />
-            <span>Test in Playground</span>
+            <Play className="w-3.5 h-3.5 text-slate-600" />
+            <span>Playground</span>
           </button>
 
           <button
             onClick={toggleAgentStatus}
-            className={`px-4 py-2.5 rounded-xl text-xs font-bold flex items-center gap-2 transition-all cursor-pointer border ${
+            className={`px-3.5 py-2 rounded-lg text-xs font-medium flex items-center gap-2 transition-colors cursor-pointer border ${
               isLive
-                ? 'bg-white hover:bg-amber-50 text-amber-700 border-amber-200'
-                : 'bg-emerald-600 hover:bg-emerald-500 text-white border-transparent shadow-xs'
+                ? 'bg-white hover:bg-amber-50 text-amber-700 border-amber-200/80'
+                : 'bg-emerald-600 hover:bg-emerald-500 text-white border-transparent shadow-2xs'
             }`}
           >
             {isLive ? <PauseCircle className="w-3.5 h-3.5" /> : <Play className="w-3.5 h-3.5" />}
-            <span>{isLive ? 'Pause Assistant' : 'Go Live'}</span>
+            <span>{isLive ? 'Pause Assistant' : 'Activate Live'}</span>
           </button>
 
           <button
             onClick={handleSave}
             disabled={isSaving}
-            className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-bold flex items-center gap-2 transition-all shadow-md shadow-indigo-600/20 cursor-pointer disabled:opacity-50"
+            className="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-lg text-xs font-medium flex items-center gap-2 transition-colors cursor-pointer disabled:opacity-50 shadow-xs"
           >
             <Save className="w-3.5 h-3.5" />
             <span>{isSaving ? 'Saving...' : 'Save Changes'}</span>
@@ -157,7 +153,7 @@ export const MyAssistantView: React.FC = () => {
         </div>
       </div>
 
-      {/* 2. Simplified Primary Tabs Navigation (3 Core Tabs) */}
+      {/* 2. Simplified Primary Tabs Navigation */}
       <div className="flex items-center gap-2 border-b border-slate-200 overflow-x-auto pb-px">
         {[
           { id: 'identity', label: 'Identity & Personality', icon: Sliders },
@@ -170,13 +166,13 @@ export const MyAssistantView: React.FC = () => {
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id as any)}
-              className={`flex items-center gap-2 px-5 py-3 text-xs sm:text-sm font-semibold border-b-2 transition-all whitespace-nowrap cursor-pointer ${
+              className={`flex items-center gap-2 px-4 py-2.5 text-xs font-medium border-b-2 transition-colors whitespace-nowrap cursor-pointer ${
                 isActive
-                  ? 'border-indigo-600 text-indigo-600 bg-indigo-50/40 rounded-t-xl'
+                  ? 'border-slate-900 text-slate-900'
                   : 'border-transparent text-slate-500 hover:text-slate-800 hover:border-slate-300'
               }`}
             >
-              <Icon className={`w-4 h-4 ${isActive ? 'text-indigo-600' : 'text-slate-400'}`} />
+              <Icon className={`w-3.5 h-3.5 ${isActive ? 'text-slate-900' : 'text-slate-400'}`} />
               <span>{tab.label}</span>
             </button>
           );
@@ -187,32 +183,32 @@ export const MyAssistantView: React.FC = () => {
 
       {/* TAB 1: IDENTITY & PERSONALITY */}
       {activeTab === 'identity' && (
-        <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-xs space-y-8">
+        <div className="bg-white rounded-xl p-5 sm:p-6 border border-slate-200/80 shadow-[0_1px_2px_rgba(0,0,0,0.02)] space-y-6">
           <div>
-            <h3 className="text-base font-bold text-slate-900">Assistant Identity & Tone</h3>
-            <p className="text-xs text-slate-500 mt-0.5">Customize the name, role, and communication style of your assistant.</p>
+            <h3 className="text-xs font-semibold text-slate-900">Communication Tone</h3>
+            <p className="text-[11px] text-slate-400 mt-0.5">Select how your AI assistant communicates with customers.</p>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5 mt-5">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 mt-3.5">
               {tones.map(t => (
                 <button
                   key={t.id}
                   onClick={() => setFormState(prev => ({ ...prev, tone: t.id }))}
-                  className={`p-4 rounded-2xl border text-left transition-all cursor-pointer relative flex flex-col justify-between ${
+                  className={`p-3.5 rounded-lg border text-left transition-all cursor-pointer relative flex flex-col justify-between ${
                     formState.tone === t.id
-                      ? 'bg-indigo-50/80 border-indigo-600 ring-2 ring-indigo-500/20'
+                      ? 'bg-slate-50 border-slate-900 ring-1 ring-slate-900/10'
                       : 'bg-white border-slate-200 hover:border-slate-300'
                   }`}
                 >
                   <div>
-                    <div className="flex items-center justify-between mb-1.5">
-                      <span className="font-bold text-xs text-slate-900">{t.label}</span>
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="font-semibold text-xs text-slate-900">{t.label}</span>
                       {formState.tone === t.id && (
-                        <Check className="w-4 h-4 text-indigo-600" />
+                        <Check className="w-3.5 h-3.5 text-slate-900" />
                       )}
                     </div>
                     <p className="text-[11px] text-slate-500 mb-2 leading-relaxed">{t.desc}</p>
                   </div>
-                  <div className="p-2.5 bg-slate-50 rounded-xl border border-slate-100 text-[10px] text-slate-600 italic">
+                  <div className="p-2 bg-white rounded border border-slate-200/70 text-[10px] text-slate-600 font-mono">
                     {t.sample}
                   </div>
                 </button>
@@ -220,60 +216,60 @@ export const MyAssistantView: React.FC = () => {
             </div>
           </div>
 
-          <div className="border-t border-slate-100 pt-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="border-t border-slate-100 pt-5 grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="block text-xs font-bold text-slate-900 mb-1">
+              <label className="block text-xs font-medium text-slate-900 mb-1">
                 Assistant Display Name *
               </label>
               <input
                 type="text"
                 value={formState.name}
                 onChange={e => setFormState(prev => ({ ...prev, name: e.target.value }))}
-                className="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 shadow-xs"
-                placeholder="e.g. Nova Support AI"
+                className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-xs sm:text-sm focus:outline-none focus:ring-1 focus:ring-slate-900 focus:border-slate-900 shadow-2xs"
+                placeholder="e.g. Acme Support Assistant"
               />
-              <p className="text-[11px] text-slate-400 mt-1">Shown to customers in the website chat header.</p>
+              <p className="text-[11px] text-slate-400 mt-1">Shown to visitors in the website chat header.</p>
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-slate-900 mb-1">
+              <label className="block text-xs font-medium text-slate-900 mb-1">
                 Role / Title
               </label>
               <input
                 type="text"
                 value={formState.role || ''}
                 onChange={e => setFormState(prev => ({ ...prev, role: e.target.value }))}
-                className="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 shadow-xs"
+                className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-xs sm:text-sm focus:outline-none focus:ring-1 focus:ring-slate-900 focus:border-slate-900 shadow-2xs"
                 placeholder="e.g. Customer Support Specialist"
               />
               <p className="text-[11px] text-slate-400 mt-1">Displayed below the assistant's name.</p>
             </div>
           </div>
 
-          <div className="border-t border-slate-100 pt-6">
-            <label className="block text-xs font-bold text-slate-900 mb-1">
-              Business Context & Special Instructions
+          <div className="border-t border-slate-100 pt-5">
+            <label className="block text-xs font-medium text-slate-900 mb-1">
+              Business Context & Directives
             </label>
-            <p className="text-xs text-slate-500 mb-2">
-              Tell your assistant about your company rules, hours, policies, or special guidance.
+            <p className="text-[11px] text-slate-400 mb-2">
+              Specific instructions for your assistant regarding policies, hours, or guidance.
             </p>
             <textarea
-              rows={5}
+              rows={4}
               value={formState.businessInstructions || ''}
               onChange={e => setFormState(prev => ({ ...prev, businessInstructions: e.target.value }))}
-              placeholder="e.g. You represent Acme Cloud. Always answer questions based on the uploaded knowledge base. If asked about custom enterprise pricing, encourage the visitor to schedule a personalized demo."
-              className="w-full p-3.5 bg-white border border-slate-200 rounded-2xl text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 font-sans leading-relaxed shadow-xs"
+              placeholder="e.g. You represent Acme Cloud. Always answer questions based on the uploaded knowledge base. If asked about custom enterprise pricing, guide visitors to schedule a demo."
+              className="w-full p-3 bg-white border border-slate-200 rounded-lg text-xs sm:text-sm focus:outline-none focus:ring-1 focus:ring-slate-900 focus:border-slate-900 font-sans leading-relaxed shadow-2xs"
             />
           </div>
 
-          <div className="flex justify-end pt-2">
+          <div className="flex justify-end pt-1">
             <button
               onClick={handleSave}
               disabled={isSaving}
-              className="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs sm:text-sm font-bold flex items-center gap-2 transition-all shadow-md shadow-indigo-600/20 cursor-pointer disabled:opacity-50"
+              className="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-lg text-xs font-medium flex items-center gap-2 transition-colors cursor-pointer disabled:opacity-50 shadow-xs"
             >
-              <Save className="w-4 h-4" />
-              <span>{isSaving ? 'Saving Changes...' : 'Save Changes'}</span>
+              <Save className="w-3.5 h-3.5" />
+              <span>{isSaving ? 'Saving...' : 'Save Changes'}</span>
             </button>
           </div>
         </div>
@@ -281,56 +277,56 @@ export const MyAssistantView: React.FC = () => {
 
       {/* TAB 2: WELCOME & FALLBACKS */}
       {activeTab === 'messaging' && (
-        <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-xs space-y-8">
+        <div className="bg-white rounded-xl p-5 sm:p-6 border border-slate-200/80 shadow-[0_1px_2px_rgba(0,0,0,0.02)] space-y-6">
           <div>
-            <h3 className="text-base font-bold text-slate-900">Welcome Greeting & Fallback Messages</h3>
-            <p className="text-xs text-slate-500 mt-0.5">Control the initial message visitors see and how missing information is handled.</p>
+            <h3 className="text-xs font-semibold text-slate-900">Welcome Greeting & Fallback Responses</h3>
+            <p className="text-[11px] text-slate-400 mt-0.5">Control initial messages and grounding safeguards.</p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="space-y-2">
-              <label className="block text-xs font-bold text-slate-900">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-1.5">
+              <label className="block text-xs font-medium text-slate-900">
                 Welcome Greeting Message
               </label>
               <textarea
                 rows={3}
                 value={formState.greetingMessage || ''}
                 onChange={e => setFormState(prev => ({ ...prev, greetingMessage: e.target.value }))}
-                className="w-full p-3.5 bg-white border border-slate-200 rounded-2xl text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 shadow-xs"
-                placeholder="Hi there! 👋 How can I help you today?"
+                className="w-full p-3 bg-white border border-slate-200 rounded-lg text-xs sm:text-sm focus:outline-none focus:ring-1 focus:ring-slate-900 focus:border-slate-900 shadow-2xs"
+                placeholder="Hello! How can I assist you today?"
               />
               <p className="text-[11px] text-slate-400">Sent automatically when a visitor opens the chat widget.</p>
             </div>
 
-            <div className="space-y-2">
-              <label className="block text-xs font-bold text-slate-900">
+            <div className="space-y-1.5">
+              <label className="block text-xs font-medium text-slate-900">
                 Fallback Refusal Message (Anti-Hallucination)
               </label>
               <textarea
                 rows={3}
                 value={formState.fallbackMessage || ''}
                 onChange={e => setFormState(prev => ({ ...prev, fallbackMessage: e.target.value }))}
-                className="w-full p-3.5 bg-white border border-slate-200 rounded-2xl text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 shadow-xs"
-                placeholder="I don't have that specific information in my knowledge base right now. Let me connect you with our support team."
+                className="w-full p-3 bg-white border border-slate-200 rounded-lg text-xs sm:text-sm focus:outline-none focus:ring-1 focus:ring-slate-900 focus:border-slate-900 shadow-2xs"
+                placeholder="I don't have that specific information in my verified knowledge base. Let me connect you with our support team."
               />
-              <p className="text-[11px] text-slate-400">Used whenever the assistant cannot find verified facts in your knowledge base.</p>
+              <p className="text-[11px] text-slate-400">Used whenever facts are not present in the indexed knowledge base.</p>
             </div>
           </div>
 
           {/* Human Escalation Settings */}
-          <div className="border-t border-slate-100 pt-6 space-y-4">
+          <div className="border-t border-slate-100 pt-5 space-y-3.5">
             <div className="flex items-center gap-2">
-              <UserCheck className="w-5 h-5 text-indigo-600" />
-              <h4 className="text-sm font-bold text-slate-900">Human Handoff & Escalation Alerts</h4>
+              <UserCheck className="w-4 h-4 text-slate-700" />
+              <h4 className="text-xs font-semibold text-slate-900">Human Escalation Routing</h4>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-xs font-bold text-slate-900 mb-1">
-                  Notification Email for Human Requests
+                <label className="block text-xs font-medium text-slate-900 mb-1">
+                  Notification Email for Escalations
                 </label>
                 <div className="relative">
-                  <Mail className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                  <Mail className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
                   <input
                     type="email"
                     value={formState.escalationSettings?.notifyEmail || 'support@enterprise.com'}
@@ -341,16 +337,16 @@ export const MyAssistantView: React.FC = () => {
                         notifyEmail: e.target.value
                       }
                     }))}
-                    className="w-full pl-9 pr-3.5 py-2.5 bg-white border border-slate-200 rounded-xl text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 shadow-xs"
+                    className="w-full pl-8.5 pr-3 py-2 bg-white border border-slate-200 rounded-lg text-xs sm:text-sm focus:outline-none focus:ring-1 focus:ring-slate-900 focus:border-slate-900 shadow-2xs"
                     placeholder="support@yourcompany.com"
                   />
                 </div>
-                <p className="text-[11px] text-slate-400 mt-1">Email alerts are sent here when a visitor asks for human help.</p>
+                <p className="text-[11px] text-slate-400 mt-1">Alerts are sent here when customer requests live staff.</p>
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-900 mb-1">
-                  Escalation Keywords (Comma separated)
+                <label className="block text-xs font-medium text-slate-900 mb-1">
+                  Escalation Trigger Keywords
                 </label>
                 <input
                   type="text"
@@ -362,22 +358,22 @@ export const MyAssistantView: React.FC = () => {
                       triggerKeywords: e.target.value.split(',').map(k => k.trim()).filter(Boolean)
                     }
                   }))}
-                  className="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 shadow-xs"
+                  className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-xs sm:text-sm focus:outline-none focus:ring-1 focus:ring-slate-900 focus:border-slate-900 shadow-2xs"
                   placeholder="agent, human, support, representative"
                 />
-                <p className="text-[11px] text-slate-400 mt-1">Keywords that immediately prompt the visitor to connect with live staff.</p>
+                <p className="text-[11px] text-slate-400 mt-1">Comma-separated triggers for live handoff.</p>
               </div>
             </div>
           </div>
 
-          <div className="flex justify-end pt-2">
+          <div className="flex justify-end pt-1">
             <button
               onClick={handleSave}
               disabled={isSaving}
-              className="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs sm:text-sm font-bold flex items-center gap-2 transition-all shadow-md shadow-indigo-600/20 cursor-pointer disabled:opacity-50"
+              className="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-lg text-xs font-medium flex items-center gap-2 transition-colors cursor-pointer disabled:opacity-50 shadow-xs"
             >
-              <Save className="w-4 h-4" />
-              <span>{isSaving ? 'Saving Changes...' : 'Save Changes'}</span>
+              <Save className="w-3.5 h-3.5" />
+              <span>{isSaving ? 'Saving...' : 'Save Changes'}</span>
             </button>
           </div>
         </div>
@@ -385,37 +381,37 @@ export const MyAssistantView: React.FC = () => {
 
       {/* TAB 3: KNOWLEDGE SUMMARY */}
       {activeTab === 'knowledge_summary' && (
-        <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-xs space-y-6">
-          <div className="flex items-center justify-between flex-wrap gap-4">
+        <div className="bg-white rounded-xl p-5 sm:p-6 border border-slate-200/80 shadow-[0_1px_2px_rgba(0,0,0,0.02)] space-y-5">
+          <div className="flex items-center justify-between flex-wrap gap-3">
             <div>
-              <h3 className="text-base font-bold text-slate-900">Knowledge Base Summary</h3>
-              <p className="text-xs text-slate-500">Your assistant grounds all answers in these verified business sources.</p>
+              <h3 className="text-xs font-semibold text-slate-900">Indexed Knowledge Sources</h3>
+              <p className="text-[11px] text-slate-400">Your assistant grounds all answers in these verified business sources.</p>
             </div>
             <button
               onClick={() => setCurrentTab('knowledge')}
-              className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-bold flex items-center gap-2 transition-all shadow-xs cursor-pointer"
+              className="px-3.5 py-1.5 bg-slate-900 hover:bg-slate-800 text-white rounded-lg text-xs font-medium flex items-center gap-2 transition-colors cursor-pointer shadow-xs"
             >
               <BookOpen className="w-3.5 h-3.5" />
-              <span>Open Knowledge Base Manager</span>
+              <span>Manage Knowledge Base</span>
             </button>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
             {knowledgeItems.map(item => (
-              <div key={item.id} className="p-4 rounded-2xl border border-slate-200 bg-slate-50/50 space-y-2 hover:border-indigo-200 transition-colors">
+              <div key={item.id} className="p-3.5 rounded-lg border border-slate-200 bg-slate-50/40 space-y-1.5 hover:border-slate-300 transition-colors">
                 <div className="flex items-center justify-between">
-                  <span className="text-[10px] uppercase font-bold text-indigo-600 bg-indigo-50 px-2.5 py-0.5 rounded-full border border-indigo-100">
+                  <span className="text-[10px] uppercase font-mono text-slate-600 bg-slate-100 px-2 py-0.5 rounded border border-slate-200">
                     {item.type}
                   </span>
-                  <span className="text-[10px] text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full font-semibold border border-emerald-100">
-                    ● Ready
+                  <span className="text-[10px] text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded font-medium border border-emerald-200/60">
+                    Indexed
                   </span>
                 </div>
-                <h4 className="text-xs font-bold text-slate-900 line-clamp-1">{item.title}</h4>
+                <h4 className="text-xs font-semibold text-slate-900 line-clamp-1">{item.title}</h4>
                 <p className="text-[11px] text-slate-500 line-clamp-2">{item.content}</p>
-                <div className="text-[10px] text-slate-400 pt-1 flex items-center justify-between">
-                  <span>{item.chunksCount} parsed sections</span>
-                  <span>{item.tokenCount ? `${item.tokenCount.toLocaleString()} tokens` : 'Indexed'}</span>
+                <div className="text-[10px] text-slate-400 pt-1 flex items-center justify-between font-mono">
+                  <span>{item.chunksCount} chunks</span>
+                  <span>{item.tokenCount ? `${item.tokenCount.toLocaleString()} tokens` : 'Ready'}</span>
                 </div>
               </div>
             ))}
