@@ -109,15 +109,15 @@ export const DeveloperConsole: React.FC = () => {
   return (
     <div className="space-y-6">
       {/* Top Banner */}
-      <div className="bg-slate-900 text-white rounded-3xl p-6 shadow-xl border border-slate-800 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+      <div className="bg-slate-900 text-white rounded-xl p-5 sm:p-6 shadow-sm border border-slate-800 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2 mb-1">
-            <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
-              Developer & Advanced Console
+            <span className="px-2 py-0.5 rounded text-[10px] font-semibold uppercase tracking-wider bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
+              Developer Console
             </span>
             <span className="text-xs text-slate-400 font-mono">Workspace: {currentCompany.slug}</span>
           </div>
-          <h1 className="text-xl font-black text-white">Technical Infrastructure Control</h1>
+          <h1 className="text-lg sm:text-xl font-bold text-white tracking-tight">Technical Infrastructure Control</h1>
           <p className="text-xs text-slate-400 mt-0.5">
             Manage raw REST APIs, webhook payloads, immutable agent version rollback, and low-level AI inference parameters.
           </p>
@@ -126,7 +126,7 @@ export const DeveloperConsole: React.FC = () => {
         <div className="flex items-center gap-2 shrink-0">
           <button
             onClick={() => handleCopy(currentCompany.apiKey, 'header-key')}
-            className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 rounded-xl text-xs font-mono flex items-center gap-1.5 transition-colors cursor-pointer"
+            className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 rounded-lg text-xs font-mono flex items-center gap-1.5 transition-colors cursor-pointer"
           >
             {copiedKey === 'header-key' ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
             <span>Copy API Key</span>
@@ -289,7 +289,7 @@ export const DeveloperConsole: React.FC = () => {
           {/* Create Webhook Modal */}
           {isCreateWebhookOpen && (
             <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
-              <div className="bg-white rounded-3xl max-w-lg w-full p-6 shadow-2xl border border-slate-200 animate-in fade-in">
+              <div className="bg-white rounded-xl max-w-lg w-full p-6 shadow-2xl border border-slate-200 animate-in fade-in">
                 <h3 className="text-base font-bold text-slate-900 mb-1">Add Webhook Endpoint</h3>
                 <p className="text-xs text-slate-500 mb-4">Enter the HTTPS URL on your server where events should be sent.</p>
                 <form onSubmit={handleCreateWebhookSubmit} className="space-y-4 text-xs">

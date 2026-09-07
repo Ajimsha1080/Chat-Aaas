@@ -134,7 +134,7 @@ export const ChatWidget: React.FC<ChatWidgetProps> = ({ isInlinePreview = false 
       {/* Floating Chat Container */}
       {(isOpen || isInlinePreview) && (
         <div 
-          className={`w-96 max-w-[calc(100vw-1.5rem)] h-[520px] sm:h-[580px] max-h-[calc(100vh-5rem)] bg-white rounded-2xl sm:rounded-3xl shadow-2xl border border-slate-200/90 flex flex-col overflow-hidden mb-2.5 sm:mb-3.5 animate-in slide-in-from-bottom-5 duration-200`}
+          className={`w-96 max-w-[calc(100vw-1.5rem)] h-[520px] sm:h-[580px] max-h-[calc(100vh-5rem)] bg-white rounded-2xl shadow-2xl border border-slate-200/90 flex flex-col overflow-hidden mb-2.5 sm:mb-3.5 animate-in slide-in-from-bottom-5 duration-200`}
         >
           {/* Widget Header */}
           <div 

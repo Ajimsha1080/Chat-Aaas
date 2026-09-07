@@ -57,12 +57,12 @@ export const HelpModal: React.FC<HelpModalProps> = ({ isOpen, onClose, onOpenTes
 
   return (
     <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-2.5 sm:p-4 animate-in fade-in duration-150">
-      <div className="bg-white rounded-2xl sm:rounded-3xl max-w-2xl w-full shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[92vh]">
+      <div className="bg-white rounded-xl sm:rounded-2xl max-w-2xl w-full shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[92vh]">
         {/* Header */}
-        <div className="px-4 sm:px-6 py-4 sm:py-5 border-b border-slate-100 bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white flex items-center justify-between">
+        <div className="px-4 sm:px-6 py-4 sm:py-5 border-b border-slate-100 bg-slate-900 text-white flex items-center justify-between">
           <div className="flex items-center gap-3 min-w-0">
-            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl sm:rounded-2xl bg-indigo-600/50 border border-indigo-400/30 flex items-center justify-center shrink-0">
-              <HelpCircle className="w-5 h-5 text-indigo-200" />
+            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl bg-slate-800 border border-slate-700 flex items-center justify-center shrink-0">
+              <HelpCircle className="w-5 h-5 text-indigo-300" />
             </div>
             <div className="min-w-0">
               <h3 className="text-sm sm:text-base font-bold text-white truncate">Help & Resource Center</h3>
