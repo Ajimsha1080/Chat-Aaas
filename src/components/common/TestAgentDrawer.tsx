@@ -8,8 +8,7 @@ import {
   RotateCcw, 
   ChevronDown, 
   ChevronUp, 
-  Cpu, 
-  Layers 
+  Cpu 
 } from 'lucide-react';
 import { useApp } from '../../context';
 import { Message, ToolExecutionTrace } from '../../types';
@@ -192,14 +191,6 @@ export const TestAgentDrawer: React.FC = () => {
           </div>
         </div>
 
-        {/* Grounded Q&A Context Badge */}
-        <div className="bg-slate-900 text-indigo-100 px-4 py-2.5 text-xs flex items-center justify-between border-b border-slate-800">
-          <div className="flex items-center gap-2 truncate mr-2">
-            <Layers className="w-4 h-4 text-indigo-400 shrink-0" />
-            <span className="truncate">Grounded Q&A: <strong>Knowledge ({knowledgeItems.length} sources)</strong></span>
-          </div>
-          <span className="text-emerald-400 font-mono text-xs font-bold shrink-0">● Anti-Hallucination</span>
-        </div>
 
         {/* Chat History */}
         <div className="flex-1 overflow-y-auto p-5 space-y-4 bg-slate-50/50">
