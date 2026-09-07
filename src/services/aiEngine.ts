@@ -207,17 +207,30 @@ export class AIAgentEngine {
     if (matchedDocs.length > 0) {
       const topMatch = matchedDocs[0].item;
       reasoning.push(`[RAG Retrieval Hit] Found top match: "${topMatch.title}" (similarity: ${(matchedDocs[0].score * 100).toFixed(0)}%)`);
+      reasoning.push(`[Hierarchy 2 Persona] Applying tone voice style: "${company.agent.tone.toUpperCase()}"`);
       reasoning.push(`[Hierarchy 3 Grounding] Synthesizing response strictly from retrieved chunk #${topMatch.id}`);
 
-      let responseContent = '';
-      if (topMatch.faqAnswer) {
-        responseContent = topMatch.faqAnswer;
-      } else {
-        responseContent = topMatch.content;
-      }
+      let responseContent = topMatch.faqAnswer ? topMatch.faqAnswer : topMatch.content;
+      let answer = '';
 
-      // Format grounded response
-      const answer = `Based on our official documentation (**${topMatch.title}**):\n\n${responseContent}`;
+      switch (company.agent.tone) {
+        case 'friendly':
+          answer = `Hey there! 😊 Happy to help you with that. Here is what our official guide (**${topMatch.title}**) says:\n\n${responseContent}\n\nLet me know if you need anything else!`;
+          break;
+        case 'empathetic':
+          answer = `I completely understand how important this is. Here is the verified information from **${topMatch.title}**:\n\n${responseContent}\n\nPlease let me know if there's anything else I can clarify for you!`;
+          break;
+        case 'direct':
+          answer = responseContent;
+          break;
+        case 'technical':
+          answer = `**Grounding Source**: \`${topMatch.title}\` (Vector Similarity: ${(matchedDocs[0].score * 100).toFixed(0)}%)\n\n${responseContent}`;
+          break;
+        case 'professional':
+        default:
+          answer = `Certainly. According to our official documentation (**${topMatch.title}**):\n\n${responseContent}`;
+          break;
+      }
 
       return {
         message: answer,
@@ -228,10 +241,22 @@ export class AIAgentEngine {
 
     // Step 5: Fallback - Grounded Strict Anti-Hallucination
     reasoning.push(`[RAG Retrieval Miss] No verified knowledge chunks met confidence threshold (>0.70).`);
+    reasoning.push(`[Hierarchy 2 Persona] Formatting refusal in tone: "${company.agent.tone.toUpperCase()}"`);
     reasoning.push(`[Strict Anti-Hallucination] Refusing to speculate or invent unverified company information.`);
 
+    let fallbackText = company.agent.fallbackMessage;
+    if (company.agent.tone === 'friendly') {
+      fallbackText = `I couldn't find an exact answer for that in our verified guides just yet! Would you like me to connect you with one of our team members?`;
+    } else if (company.agent.tone === 'empathetic') {
+      fallbackText = `I'm sorry, I don't have verified documentation in our system to answer that accurately. I want to make sure you get the right support, so let me connect you with our team.`;
+    } else if (company.agent.tone === 'direct') {
+      fallbackText = `No verified records found for this query. Handoff to human agent available.`;
+    } else if (company.agent.tone === 'technical') {
+      fallbackText = `[Refusal Gate: Anti-Hallucination] Query returned 0 vector matches above threshold (>0.70). Speculation suppressed.`;
+    }
+
     return {
-      message: `${company.agent.fallbackMessage}`,
+      message: fallbackText,
       reasoningSteps: reasoning,
       shouldEscalateToHuman: false
     };
