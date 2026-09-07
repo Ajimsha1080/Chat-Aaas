@@ -78,19 +78,19 @@ export const SettingsView: React.FC = () => {
   };
 
   return (
-    <div className="space-y-5 animate-in fade-in duration-150">
+    <div className="space-y-6 animate-in fade-in duration-150">
       {/* Header */}
-      <div className="bg-white rounded-xl p-5 sm:p-6 border border-slate-200/80 shadow-[0_1px_2px_rgba(0,0,0,0.02)] flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="bg-white rounded-2xl p-6 sm:p-7 border border-slate-200/90 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-lg sm:text-xl font-semibold text-slate-900 tracking-tight">Settings & Administration</h1>
-          <p className="text-xs text-slate-500 mt-0.5">
+          <h1 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">Settings & Administration</h1>
+          <p className="text-sm sm:text-base text-slate-600 mt-1">
             Configure assistant persona, team access control, billing subscription, and developer credentials.
           </p>
         </div>
       </div>
 
       {/* Streamlined Tabs */}
-      <div className="flex items-center gap-1 border-b border-slate-200 overflow-x-auto pb-px">
+      <div className="flex items-center gap-2 border-b border-slate-200 overflow-x-auto pb-px">
         {[
           { id: 'assistant', label: 'AI Assistant', icon: Bot },
           { id: 'team', label: 'Team & Access', icon: Users, count: teamMembers.length },
@@ -103,17 +103,17 @@ export const SettingsView: React.FC = () => {
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id as any)}
-              className={`px-3.5 py-2.5 text-xs font-medium flex items-center gap-2 whitespace-nowrap transition-colors border-b-2 cursor-pointer ${
+              className={`px-4 py-3 text-sm font-semibold flex items-center gap-2 whitespace-nowrap transition-colors border-b-2 cursor-pointer ${
                 isActive
                   ? 'border-slate-900 text-slate-900'
-                  : 'border-transparent text-slate-500 hover:text-slate-800 hover:border-slate-300'
+                  : 'border-transparent text-slate-500 hover:text-slate-900 hover:border-slate-300'
               }`}
             >
-              <Icon className="w-3.5 h-3.5" />
+              <Icon className="w-4 h-4" />
               <span>{tab.label}</span>
               {tab.count !== undefined && (
-                <span className={`text-[10px] font-mono px-1.5 py-0.2 rounded ${
-                  isActive ? 'bg-slate-100 text-slate-800' : 'bg-slate-100 text-slate-500'
+                <span className={`text-xs font-mono px-2 py-0.5 rounded-md font-semibold ${
+                  isActive ? 'bg-slate-100 text-slate-900' : 'bg-slate-100 text-slate-500'
                 }`}>
                   {tab.count}
                 </span>
@@ -125,45 +125,45 @@ export const SettingsView: React.FC = () => {
 
       {/* 1. AI Assistant Tab */}
       {activeTab === 'assistant' && (
-        <div className="bg-white rounded-xl border border-slate-200/80 p-5 sm:p-6 shadow-[0_1px_2px_rgba(0,0,0,0.02)] max-w-4xl space-y-5">
+        <div className="bg-white rounded-2xl border border-slate-200/90 p-6 sm:p-7 shadow-sm max-w-4xl space-y-6">
           <div>
-            <h3 className="text-xs font-semibold text-slate-900">Persona & Model Intelligence</h3>
-            <p className="text-[11px] text-slate-400 mt-0.5">Configure how your AI Assistant introduces itself and reasons through answers.</p>
+            <h3 className="text-base font-bold text-slate-900">Persona & Model Intelligence</h3>
+            <p className="text-sm text-slate-500 mt-0.5">Configure how your AI Assistant introduces itself and reasons through answers.</p>
           </div>
 
-          <form onSubmit={handleSaveAssistant} className="space-y-4 text-xs">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+          <form onSubmit={handleSaveAssistant} className="space-y-5 text-sm">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label className="font-medium text-slate-700 block mb-1">Assistant Name</label>
+                <label className="font-semibold text-slate-800 block mb-1.5">Assistant Name</label>
                 <input
                   type="text"
                   required
                   value={agentName}
                   onChange={(e) => setAgentName(e.target.value)}
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:ring-1 focus:ring-slate-900 focus:border-slate-900 text-slate-900 font-medium focus:outline-hidden"
+                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-1 focus:ring-slate-900 focus:border-slate-900 text-slate-900 font-medium focus:outline-hidden"
                 />
               </div>
 
               <div>
-                <label className="font-medium text-slate-700 block mb-1">Assigned Role</label>
+                <label className="font-semibold text-slate-800 block mb-1.5">Assigned Role</label>
                 <input
                   type="text"
                   required
                   value={agentRole}
                   onChange={(e) => setAgentRole(e.target.value)}
                   placeholder="e.g. Customer Support Specialist"
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:ring-1 focus:ring-slate-900 focus:border-slate-900 text-slate-900 font-medium focus:outline-hidden"
+                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-1 focus:ring-slate-900 focus:border-slate-900 text-slate-900 font-medium focus:outline-hidden"
                 />
               </div>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label className="font-medium text-slate-700 block mb-1">Conversation Tone</label>
+                <label className="font-semibold text-slate-800 block mb-1.5">Conversation Tone</label>
                 <select
                   value={agentTone}
                   onChange={(e) => setAgentTone(e.target.value as any)}
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg font-medium text-slate-900 focus:ring-1 focus:ring-slate-900 focus:outline-hidden"
+                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl font-medium text-slate-900 focus:ring-1 focus:ring-slate-900 focus:outline-hidden"
                 >
                   <option value="professional">Professional & Helpful</option>
                   <option value="friendly">Friendly & Warm</option>
@@ -174,33 +174,33 @@ export const SettingsView: React.FC = () => {
               </div>
 
               <div>
-                <label className="font-medium text-slate-700 block mb-1">Company Website Domain</label>
+                <label className="font-semibold text-slate-800 block mb-1.5">Company Website Domain</label>
                 <input
                   type="text"
                   disabled
                   value={currentCompany.domain}
-                  className="w-full px-3 py-2 bg-slate-100 border border-slate-200 rounded-lg text-slate-500 font-mono"
+                  className="w-full px-3.5 py-2.5 bg-slate-100 border border-slate-200 rounded-xl text-slate-600 font-mono"
                 />
               </div>
             </div>
 
             <div>
-              <label className="font-medium text-slate-700 block mb-1">Default Greeting Message</label>
+              <label className="font-semibold text-slate-800 block mb-1.5">Default Greeting Message</label>
               <textarea
                 rows={3}
                 required
                 value={agentGreeting}
                 onChange={(e) => setAgentGreeting(e.target.value)}
-                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:ring-1 focus:ring-slate-900 focus:border-slate-900 text-slate-900 focus:outline-hidden"
+                className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-1 focus:ring-slate-900 focus:border-slate-900 text-slate-900 focus:outline-hidden leading-relaxed"
               />
             </div>
 
             {/* AI Intelligence & Speed Tier */}
-            <div className="pt-2 border-t border-slate-100">
-              <label className="font-medium text-slate-900 block mb-0.5">Model Intelligence Tier</label>
-              <p className="text-[11px] text-slate-400 mb-3">Choose the balance between response speed and deep multi-step reasoning.</p>
+            <div className="pt-3 border-t border-slate-100">
+              <label className="font-bold text-base text-slate-900 block mb-1">Model Intelligence Tier</label>
+              <p className="text-xs sm:text-sm text-slate-500 mb-4">Choose the balance between response speed and deep multi-step reasoning.</p>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
                 {[
                   { id: 'automatic', name: 'Automatic (Recommended)', desc: 'Smart routing between fast embeddings and deep reasoning.', badge: 'Optimal' },
                   { id: 'fast', name: 'Fast & Lightweight', desc: 'Ultra-low latency (<300ms) for quick FAQs and greetings.', badge: '< 300ms' },
@@ -213,19 +213,19 @@ export const SettingsView: React.FC = () => {
                       key={tier.id}
                       type="button"
                       onClick={() => setModelTier(tier.id as any)}
-                      className={`p-3 rounded-lg border text-left transition-colors cursor-pointer ${
-                        isSel ? 'bg-slate-50 border-slate-900 ring-1 ring-slate-900/10' : 'border-slate-200 hover:bg-slate-50'
+                      className={`p-4 rounded-xl border text-left transition-colors cursor-pointer ${
+                        isSel ? 'bg-slate-50 border-slate-900 ring-1 ring-slate-900 shadow-xs' : 'border-slate-200 hover:bg-slate-50'
                       }`}
                     >
-                      <div className="flex items-center justify-between mb-1">
-                        <span className="font-semibold text-slate-900 text-xs">{tier.name}</span>
-                        <span className={`text-[10px] font-mono px-1.5 py-0.2 rounded ${
-                          isSel ? 'bg-slate-900 text-white' : 'bg-slate-100 text-slate-600'
+                      <div className="flex items-center justify-between mb-1.5">
+                        <span className="font-bold text-slate-900 text-sm">{tier.name}</span>
+                        <span className={`text-xs font-mono font-semibold px-2 py-0.5 rounded-md ${
+                          isSel ? 'bg-slate-900 text-white' : 'bg-slate-100 text-slate-700'
                         }`}>
                           {tier.badge}
                         </span>
                       </div>
-                      <p className="text-[11px] text-slate-500 leading-relaxed">{tier.desc}</p>
+                      <p className="text-xs sm:text-sm text-slate-600 leading-relaxed">{tier.desc}</p>
                     </button>
                   );
                 })}
@@ -235,7 +235,7 @@ export const SettingsView: React.FC = () => {
             <div className="pt-2 flex justify-start">
               <button
                 type="submit"
-                className="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white font-medium rounded-lg text-xs transition-colors cursor-pointer shadow-xs flex items-center gap-2"
+                className="px-5 py-2.5 bg-slate-900 hover:bg-slate-800 text-white font-semibold rounded-xl text-sm transition-colors cursor-pointer shadow-sm flex items-center gap-2"
               >
                 <span>Save Changes</span>
               </button>
@@ -246,38 +246,38 @@ export const SettingsView: React.FC = () => {
 
       {/* 2. Team & Access Tab */}
       {activeTab === 'team' && (
-        <div className="bg-white rounded-xl border border-slate-200/80 p-5 sm:p-6 shadow-[0_1px_2px_rgba(0,0,0,0.02)] space-y-4">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100">
+        <div className="bg-white rounded-2xl border border-slate-200/90 p-6 sm:p-7 shadow-sm space-y-5">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-100">
             <div>
-              <h3 className="text-xs font-semibold text-slate-900">Team Members & Access Control (RBAC)</h3>
-              <p className="text-[11px] text-slate-400">Manage staff members who can monitor conversations and take over chats live.</p>
+              <h3 className="text-base font-bold text-slate-900">Team Members & Access Control (RBAC)</h3>
+              <p className="text-xs sm:text-sm text-slate-500 mt-0.5">Manage staff members who can monitor conversations and take over chats live.</p>
             </div>
             <button
               onClick={() => setIsInviteModalOpen(true)}
-              className="px-3.5 py-1.5 bg-slate-900 hover:bg-slate-800 text-white rounded-lg text-xs font-medium flex items-center gap-1.5 cursor-pointer shadow-xs self-start sm:self-auto"
+              className="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-sm font-semibold flex items-center gap-2 cursor-pointer shadow-sm self-start sm:self-auto"
             >
-              <UserPlus className="w-3.5 h-3.5" />
+              <UserPlus className="w-4 h-4" />
               <span>Invite Member</span>
             </button>
           </div>
 
-          <div className="divide-y divide-slate-100 text-xs">
+          <div className="divide-y divide-slate-100 text-sm">
             {teamMembers.map(member => (
-              <div key={member.id} className="py-3 flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-lg bg-slate-100 border border-slate-200/60 flex items-center justify-center font-semibold text-slate-700 text-xs">
+              <div key={member.id} className="py-3.5 flex items-center justify-between">
+                <div className="flex items-center gap-3.5">
+                  <div className="w-9 h-9 rounded-xl bg-slate-100 border border-slate-200 flex items-center justify-center font-bold text-slate-700 text-sm">
                     {member.name.charAt(0)}
                   </div>
                   <div>
-                    <h4 className="font-semibold text-slate-900">{member.name}</h4>
-                    <p className="text-[11px] text-slate-400 font-mono">{member.email}</p>
+                    <h4 className="font-bold text-slate-900">{member.name}</h4>
+                    <p className="text-xs text-slate-500 font-mono mt-0.5">{member.email}</p>
                   </div>
                 </div>
-                <div className="flex items-center gap-2.5">
-                  <span className="capitalize font-mono px-2 py-0.5 rounded bg-slate-100 text-slate-700 text-[11px] border border-slate-200/60">
+                <div className="flex items-center gap-3">
+                  <span className="capitalize font-mono px-2.5 py-1 rounded-md bg-slate-100 text-slate-700 text-xs font-semibold border border-slate-200">
                     {member.role.replace('_', ' ')}
                   </span>
-                  <span className="text-[10px] text-emerald-700 font-medium bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200/60">
+                  <span className="text-xs text-emerald-700 font-semibold bg-emerald-50 px-2.5 py-1 rounded-md border border-emerald-200">
                     {member.status}
                   </span>
                 </div>
@@ -289,42 +289,42 @@ export const SettingsView: React.FC = () => {
 
       {/* 3. Billing & Plans Tab */}
       {activeTab === 'billing' && (
-        <div className="space-y-5">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-3.5">
+        <div className="space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             {allPlans.map(plan => {
               const isCurrent = plan.id === currentCompany.planId;
               return (
                 <div
                   key={plan.id}
-                  className={`bg-white rounded-xl p-5 border flex flex-col justify-between transition-all ${
-                    isCurrent ? 'border-slate-900 ring-1 ring-slate-900/10 shadow-xs' : 'border-slate-200/80 shadow-[0_1px_2px_rgba(0,0,0,0.02)]'
+                  className={`bg-white rounded-2xl p-6 border flex flex-col justify-between transition-all ${
+                    isCurrent ? 'border-slate-900 ring-1 ring-slate-900 shadow-sm' : 'border-slate-200/90 shadow-xs'
                   }`}
                 >
                   <div>
-                    <div className="flex items-center justify-between mb-2">
-                      <h4 className="font-semibold text-xs text-slate-900 capitalize">{plan.name}</h4>
+                    <div className="flex items-center justify-between mb-2.5">
+                      <h4 className="font-bold text-base text-slate-900 capitalize">{plan.name}</h4>
                       {isCurrent && (
-                        <span className="text-[10px] font-mono px-2 py-0.5 bg-slate-100 text-slate-700 rounded border border-slate-200">
+                        <span className="text-xs font-mono font-semibold px-2.5 py-0.5 bg-slate-100 text-slate-800 rounded-md border border-slate-200">
                           Current
                         </span>
                       )}
                     </div>
-                    <div className="mt-2 flex items-baseline gap-1">
-                      <span className="text-xl font-bold text-slate-900">₹{plan.priceMonthlyINR.toLocaleString()}</span>
-                      <span className="text-xs text-slate-400">/mo</span>
+                    <div className="mt-2.5 flex items-baseline gap-1">
+                      <span className="text-2xl sm:text-3xl font-bold text-slate-900">₹{plan.priceMonthlyINR.toLocaleString()}</span>
+                      <span className="text-xs font-medium text-slate-500">/mo</span>
                     </div>
-                    <p className="text-[11px] text-slate-500 mt-1">{plan.description}</p>
-                    <ul className="mt-3.5 space-y-2 text-xs text-slate-600">
-                      <li className="flex items-center gap-1.5">
-                        <Check className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                    <p className="text-xs text-slate-500 mt-1">{plan.description}</p>
+                    <ul className="mt-4 space-y-2.5 text-sm text-slate-700">
+                      <li className="flex items-center gap-2">
+                        <Check className="w-4 h-4 text-emerald-600 shrink-0" />
                         <span><strong>{plan.maxConversationsMonth.toLocaleString()}</strong> chats/mo</span>
                       </li>
-                      <li className="flex items-center gap-1.5">
-                        <Check className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                      <li className="flex items-center gap-2">
+                        <Check className="w-4 h-4 text-emerald-600 shrink-0" />
                         <span><strong>1 Dedicated</strong> AI Assistant</span>
                       </li>
-                      <li className="flex items-center gap-1.5">
-                        <Check className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                      <li className="flex items-center gap-2">
+                        <Check className="w-4 h-4 text-emerald-600 shrink-0" />
                         <span>Real-time Live Handoff</span>
                       </li>
                     </ul>
@@ -335,10 +335,10 @@ export const SettingsView: React.FC = () => {
                       if (!isCurrent) upgradeSubscription(plan.id, currentCompany.billingCycle || 'monthly');
                     }}
                     disabled={isCurrent}
-                    className={`w-full mt-5 py-2 rounded-lg text-xs font-medium transition-colors cursor-pointer ${
+                    className={`w-full mt-6 py-2.5 rounded-xl text-sm font-semibold transition-all cursor-pointer ${
                       isCurrent 
                         ? 'bg-slate-100 text-slate-400 cursor-not-allowed border border-slate-200' 
-                        : 'bg-slate-900 hover:bg-slate-800 text-white shadow-xs'
+                        : 'bg-slate-900 hover:bg-slate-800 text-white shadow-sm'
                     }`}
                   >
                     {isCurrent ? 'Active Plan' : `Upgrade to ${plan.name}`}
@@ -349,22 +349,22 @@ export const SettingsView: React.FC = () => {
           </div>
 
           {/* GST Invoices */}
-          <div className="bg-white rounded-xl border border-slate-200/80 p-5 sm:p-6 shadow-[0_1px_2px_rgba(0,0,0,0.02)] space-y-3.5">
-            <h3 className="text-xs font-semibold text-slate-900">GST Invoices (18% Tax Inclusive)</h3>
-            <div className="divide-y divide-slate-100 text-xs">
+          <div className="bg-white rounded-2xl border border-slate-200/90 p-6 sm:p-7 shadow-sm space-y-4">
+            <h3 className="text-base font-bold text-slate-900">GST Invoices (18% Tax Inclusive)</h3>
+            <div className="divide-y divide-slate-100 text-sm">
               {invoices.map(inv => (
-                <div key={inv.id} className="py-2.5 flex items-center justify-between">
+                <div key={inv.id} className="py-3 flex items-center justify-between">
                   <div>
-                    <h4 className="font-medium text-slate-900">{inv.number}</h4>
-                    <span className="text-[11px] text-slate-400 font-mono">{inv.date} · {inv.planName}</span>
+                    <h4 className="font-bold text-slate-900">{inv.number}</h4>
+                    <span className="text-xs text-slate-500 font-mono">{inv.date} · {inv.planName}</span>
                   </div>
-                  <div className="flex items-center gap-3">
-                    <span className="font-semibold text-slate-900">₹{inv.amountINR.toLocaleString()}</span>
+                  <div className="flex items-center gap-3.5">
+                    <span className="font-bold text-base text-slate-900">₹{inv.amountINR.toLocaleString()}</span>
                     <button
                       onClick={() => setSelectedInvoice(inv)}
-                      className="px-2.5 py-1 bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 rounded-md text-xs font-medium flex items-center gap-1.5 cursor-pointer"
+                      className="px-3.5 py-1.5 bg-white hover:bg-slate-50 border border-slate-200 text-slate-800 rounded-xl text-sm font-semibold flex items-center gap-1.5 cursor-pointer shadow-xs"
                     >
-                      <Download className="w-3 h-3 text-slate-500" />
+                      <Download className="w-4 h-4 text-slate-600" />
                       <span>Download</span>
                     </button>
                   </div>
@@ -377,109 +377,109 @@ export const SettingsView: React.FC = () => {
 
       {/* 4. Developer & Logs Tab */}
       {activeTab === 'developer' && (
-        <div className="space-y-5">
+        <div className="space-y-6">
           {/* API Keys & Webhook Section */}
-          <div className="bg-white rounded-xl border border-slate-200/80 p-5 sm:p-6 shadow-[0_1px_2px_rgba(0,0,0,0.02)] space-y-4">
+          <div className="bg-white rounded-2xl border border-slate-200/90 p-6 sm:p-7 shadow-sm space-y-5">
             <div>
-              <h3 className="text-xs font-semibold text-slate-900">API Credentials & Webhooks</h3>
-              <p className="text-[11px] text-slate-400">Authenticate API and webhook requests from your backend servers.</p>
+              <h3 className="text-base font-bold text-slate-900">API Credentials & Webhooks</h3>
+              <p className="text-sm text-slate-500 mt-0.5">Authenticate API and webhook requests from your backend servers.</p>
             </div>
 
-            <div className="space-y-3.5 text-xs">
+            <div className="space-y-4 text-sm">
               <div>
-                <label className="font-medium text-slate-700 block mb-1">Live Secret API Key</label>
-                <div className="flex items-center gap-2">
+                <label className="font-semibold text-slate-800 block mb-1.5">Live Secret API Key</label>
+                <div className="flex items-center gap-2.5">
                   <div className="relative flex-1">
                     <input
                       type={showApiKey ? "text" : "password"}
                       readOnly
                       value={currentCompany.apiKey}
-                      className="w-full pl-3 pr-9 py-2 bg-slate-50 border border-slate-200 rounded-lg font-mono text-xs text-slate-700"
+                      className="w-full pl-3.5 pr-10 py-2.5 bg-slate-50 border border-slate-200 rounded-xl font-mono text-sm text-slate-800 font-medium"
                     />
                     <button
                       type="button"
                       onClick={() => setShowApiKey(!showApiKey)}
-                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-0.5 cursor-pointer"
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-1 cursor-pointer"
                       title={showApiKey ? "Hide Secret Key" : "Reveal Secret Key"}
                     >
-                      {showApiKey ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                      {showApiKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                     </button>
                   </div>
                   <button
                     onClick={() => handleCopy(currentCompany.apiKey, 'apiKey')}
-                    className="px-3 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-lg text-xs font-medium flex items-center gap-1.5 cursor-pointer transition-colors shadow-xs"
+                    className="px-4 py-2.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-sm font-semibold flex items-center gap-2 cursor-pointer transition-colors shadow-sm"
                   >
-                    {copiedKey === 'apiKey' ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
+                    {copiedKey === 'apiKey' ? <Check className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4" />}
                     <span>{copiedKey === 'apiKey' ? 'Copied' : 'Copy'}</span>
                   </button>
                   <button
                     onClick={regenerateApiKey}
-                    className="px-3 py-2 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 rounded-lg text-xs font-medium flex items-center gap-1.5 cursor-pointer transition-colors"
+                    className="px-4 py-2.5 bg-white hover:bg-slate-50 text-slate-800 border border-slate-200 rounded-xl text-sm font-semibold flex items-center gap-2 cursor-pointer transition-colors shadow-xs"
                   >
-                    <RefreshCw className="w-3 h-3 text-slate-500" />
+                    <RefreshCw className="w-4 h-4 text-slate-600" />
                     <span>Rotate Key</span>
                   </button>
                 </div>
               </div>
 
               <div>
-                <label className="font-medium text-slate-700 block mb-1">Inbound Webhook URL</label>
+                <label className="font-semibold text-slate-800 block mb-1.5">Inbound Webhook URL</label>
                 <input
                   type="text"
                   readOnly
                   value={`https://api.chat-aaas.com/api/v1/webhook/${currentCompany.id}`}
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg font-mono text-xs text-slate-700"
+                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl font-mono text-sm text-slate-800 font-medium"
                 />
               </div>
             </div>
 
             {/* Subtle Security Guarantees Banner */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 pt-1">
-              <div className="p-3 bg-slate-50 rounded-lg border border-slate-200/80 flex items-start gap-2.5">
-                <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5 pt-2">
+              <div className="p-4 bg-slate-50 rounded-xl border border-slate-200 flex items-start gap-3">
+                <ShieldCheck className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5" />
                 <div>
-                  <h5 className="font-semibold text-xs text-slate-900">Row-Level Tenant Isolation</h5>
-                  <p className="text-[10px] text-slate-400 mt-0.5">Partitioned vector embeddings & tables</p>
+                  <h5 className="font-bold text-sm text-slate-900">Row-Level Tenant Isolation</h5>
+                  <p className="text-xs text-slate-500 mt-0.5">Partitioned vector embeddings & tables</p>
                 </div>
               </div>
 
-              <div className="p-3 bg-slate-50 rounded-lg border border-slate-200/80 flex items-start gap-2.5">
-                <Lock className="w-4 h-4 text-slate-600 shrink-0 mt-0.5" />
+              <div className="p-4 bg-slate-50 rounded-xl border border-slate-200 flex items-start gap-3">
+                <Lock className="w-5 h-5 text-slate-700 shrink-0 mt-0.5" />
                 <div>
-                  <h5 className="font-semibold text-xs text-slate-900">AES-256 Encryption</h5>
-                  <p className="text-[10px] text-slate-400 mt-0.5">Encrypted API tokens and connector keys</p>
+                  <h5 className="font-bold text-sm text-slate-900">AES-256 Encryption</h5>
+                  <p className="text-xs text-slate-500 mt-0.5">Encrypted API tokens and connector keys</p>
                 </div>
               </div>
 
-              <div className="p-3 bg-slate-50 rounded-lg border border-slate-200/80 flex items-start gap-2.5">
-                <ShieldCheck className="w-4 h-4 text-slate-600 shrink-0 mt-0.5" />
+              <div className="p-4 bg-slate-50 rounded-xl border border-slate-200 flex items-start gap-3">
+                <ShieldCheck className="w-5 h-5 text-slate-700 shrink-0 mt-0.5" />
                 <div>
-                  <h5 className="font-semibold text-xs text-slate-900">SSRF Crawler Protection</h5>
-                  <p className="text-[10px] text-slate-400 mt-0.5">Blocks private subnets & metadata endpoints</p>
+                  <h5 className="font-bold text-sm text-slate-900">SSRF Crawler Protection</h5>
+                  <p className="text-xs text-slate-500 mt-0.5">Blocks private subnets & metadata endpoints</p>
                 </div>
               </div>
             </div>
           </div>
 
           {/* Audit Logs Section */}
-          <div className="bg-white rounded-xl border border-slate-200/80 p-5 sm:p-6 shadow-[0_1px_2px_rgba(0,0,0,0.02)] space-y-3.5">
+          <div className="bg-white rounded-2xl border border-slate-200/90 p-6 sm:p-7 shadow-sm space-y-4">
             <div>
-              <h3 className="text-xs font-semibold text-slate-900">Audit Trail</h3>
-              <p className="text-[11px] text-slate-400">Chronological logs of settings changes, team invites, and security events.</p>
+              <h3 className="text-base font-bold text-slate-900">Audit Trail</h3>
+              <p className="text-sm text-slate-500 mt-0.5">Chronological logs of settings changes, team invites, and security events.</p>
             </div>
 
-            <div className="divide-y divide-slate-100 text-xs">
+            <div className="divide-y divide-slate-100 text-sm">
               {auditLogs.map(log => (
-                <div key={log.id} className="py-2.5 flex items-center justify-between">
-                  <div className="flex items-center gap-2.5">
-                    <span className="font-mono text-slate-400 text-[10px]">{new Date(log.timestamp).toLocaleTimeString()}</span>
+                <div key={log.id} className="py-3 flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <span className="font-mono text-slate-400 text-xs">{new Date(log.timestamp).toLocaleTimeString()}</span>
                     <div>
-                      <strong className="text-slate-800 font-medium">{log.action}: </strong>
-                      <span className="text-slate-500">{log.details}</span>
+                      <strong className="text-slate-900 font-semibold">{log.action}: </strong>
+                      <span className="text-slate-600">{log.details}</span>
                     </div>
                   </div>
-                  <span className={`text-[10px] px-2 py-0.5 rounded font-mono uppercase ${
-                    log.severity === 'warning' ? 'bg-amber-50 text-amber-800 border border-amber-200/60' : 'bg-slate-100 text-slate-600 border border-slate-200/60'
+                  <span className={`text-xs px-2.5 py-0.5 rounded-md font-mono font-semibold uppercase ${
+                    log.severity === 'warning' ? 'bg-amber-50 text-amber-800 border border-amber-200' : 'bg-slate-100 text-slate-700 border border-slate-200'
                   }`}>
                     {log.severity}
                   </span>
@@ -493,57 +493,57 @@ export const SettingsView: React.FC = () => {
       {/* Invite Modal */}
       {isInviteModalOpen && (
         <div className="fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-xl max-w-md w-full p-5 sm:p-6 shadow-xl border border-slate-200 space-y-4 animate-in zoom-in-95 duration-150">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-              <h3 className="text-sm font-semibold text-slate-900">Invite Team Member</h3>
-              <button onClick={() => setIsInviteModalOpen(false)} className="text-slate-400 hover:text-slate-600 cursor-pointer">✕</button>
+          <div className="bg-white rounded-2xl max-w-md w-full p-6 sm:p-7 shadow-2xl border border-slate-200 space-y-4 animate-in zoom-in-95 duration-150">
+            <div className="flex items-center justify-between pb-3.5 border-b border-slate-100">
+              <h3 className="text-base font-bold text-slate-900">Invite Team Member</h3>
+              <button onClick={() => setIsInviteModalOpen(false)} className="text-slate-400 hover:text-slate-600 cursor-pointer font-bold text-lg">✕</button>
             </div>
-            <form onSubmit={handleInvite} className="space-y-3 text-xs">
+            <form onSubmit={handleInvite} className="space-y-4 text-sm">
               <div>
-                <label className="font-medium text-slate-700 block mb-1">Full Name</label>
+                <label className="font-semibold text-slate-800 block mb-1.5">Full Name</label>
                 <input
                   type="text"
                   required
                   value={inviteName}
                   onChange={(e) => setInviteName(e.target.value)}
                   placeholder="Jane Doe"
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:ring-1 focus:ring-slate-900 focus:outline-hidden"
+                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-1 focus:ring-slate-900 focus:outline-hidden text-sm"
                 />
               </div>
               <div>
-                <label className="font-medium text-slate-700 block mb-1">Email Address</label>
+                <label className="font-semibold text-slate-800 block mb-1.5">Email Address</label>
                 <input
                   type="email"
                   required
                   value={inviteEmail}
                   onChange={(e) => setInviteEmail(e.target.value)}
                   placeholder="jane@company.com"
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:ring-1 focus:ring-slate-900 focus:outline-hidden"
+                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-1 focus:ring-slate-900 focus:outline-hidden text-sm"
                 />
               </div>
               <div>
-                <label className="font-medium text-slate-700 block mb-1">Role</label>
+                <label className="font-semibold text-slate-800 block mb-1.5">Role</label>
                 <select
                   value={inviteRole}
                   onChange={(e) => setInviteRole(e.target.value as any)}
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:ring-1 focus:ring-slate-900 focus:outline-hidden"
+                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-1 focus:ring-slate-900 focus:outline-hidden text-sm font-medium"
                 >
                   <option value="support_agent">Support Agent (Can Take Over Live Chats)</option>
                   <option value="admin">Admin (Manage Knowledge & Settings)</option>
                   <option value="viewer">Viewer (Read Only)</option>
                 </select>
               </div>
-              <div className="flex justify-end gap-2 pt-3 border-t border-slate-100">
+              <div className="flex justify-end gap-2.5 pt-3.5 border-t border-slate-100">
                 <button
                   type="button"
                   onClick={() => setIsInviteModalOpen(false)}
-                  className="px-3.5 py-1.5 text-slate-600 hover:bg-slate-100 rounded-lg font-medium cursor-pointer"
+                  className="px-4 py-2 text-slate-700 hover:bg-slate-100 rounded-xl font-semibold cursor-pointer text-sm"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-1.5 bg-slate-900 hover:bg-slate-800 text-white rounded-lg font-medium cursor-pointer shadow-xs"
+                  className="px-4.5 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-xl font-semibold cursor-pointer shadow-sm text-sm"
                 >
                   Send Invitation
                 </button>

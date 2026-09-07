@@ -86,14 +86,14 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({ isOpen, onClos
     <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-2.5 sm:p-4 animate-in fade-in duration-150">
       <div className="bg-white rounded-xl sm:rounded-2xl max-w-xl w-full shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[92vh]">
         {/* Header */}
-        <div className="px-4 sm:px-6 py-4 sm:py-5 border-b border-slate-100 bg-slate-50/80 flex items-center justify-between">
-          <div className="flex items-center gap-3 min-w-0">
-            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl bg-indigo-600 text-white flex items-center justify-center font-bold shadow-xs shrink-0">
+        <div className="px-5 sm:px-7 py-4 sm:py-5 border-b border-slate-100 bg-slate-50/80 flex items-center justify-between">
+          <div className="flex items-center gap-3.5 min-w-0">
+            <div className="w-10 h-10 rounded-xl bg-indigo-600 text-white flex items-center justify-center font-bold shadow-xs shrink-0">
               <Sparkles className="w-5 h-5" />
             </div>
             <div className="min-w-0">
-              <h3 className="text-sm sm:text-base font-bold text-slate-900 truncate">Set up your AI Assistant</h3>
-              <p className="text-[11px] sm:text-xs text-slate-500 truncate">
+              <h3 className="text-base sm:text-lg font-bold text-slate-900 truncate">Set up your AI Assistant</h3>
+              <p className="text-xs sm:text-sm text-slate-500 truncate">
                 Step {step} of 5 — {
                   step === 1 ? 'Business Information' :
                   step === 2 ? 'Add Knowledge' :
@@ -106,54 +106,54 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({ isOpen, onClos
 
           <button
             onClick={onClose}
-            className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-200/60 rounded-xl transition-colors cursor-pointer shrink-0"
+            className="p-2 text-slate-400 hover:text-slate-700 hover:bg-slate-200/60 rounded-xl transition-colors cursor-pointer shrink-0"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
         {/* Progress Bar */}
-        <div className="px-6 pt-3 pb-1">
-          <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
+        <div className="px-6 sm:px-7 pt-3.5 pb-1">
+          <div className="w-full bg-slate-100 h-2.5 rounded-full overflow-hidden">
             <div 
               className="bg-indigo-600 h-full rounded-full transition-all duration-300"
               style={{ width: `${progressPercent}%` }}
             />
           </div>
-          <div className="flex justify-between text-[10px] text-slate-400 mt-1 font-semibold">
+          <div className="flex justify-between text-xs text-slate-500 mt-1.5 font-semibold">
             <span>Progress: {progressPercent}%</span>
             <span>{step === 5 ? 'Launch Ready' : `${5 - step} steps remaining`}</span>
           </div>
         </div>
 
         {/* Body Content */}
-        <div className="flex-1 overflow-y-auto p-6 text-xs space-y-4">
+        <div className="flex-1 overflow-y-auto p-6 sm:p-7 text-sm space-y-5">
           {/* STEP 1: Business Profile */}
           {step === 1 && (
             <div className="space-y-4 animate-in fade-in duration-150">
               <div>
-                <h4 className="text-sm font-bold text-slate-900 mb-0.5">Tell us about your business</h4>
-                <p className="text-slate-500">Your AI Q&A assistant will represent your brand when answering customer questions.</p>
+                <h4 className="text-base font-bold text-slate-900 mb-1">Tell us about your business</h4>
+                <p className="text-sm text-slate-500">Your AI Q&A assistant will represent your brand when answering customer questions.</p>
               </div>
 
               <div>
-                <label className="block font-bold text-slate-900 mb-1">Business Name *</label>
+                <label className="block font-bold text-slate-900 mb-1.5 text-sm">Business Name *</label>
                 <input
                   type="text"
                   placeholder="e.g. Acme Cloud Systems"
                   value={businessName}
                   onChange={e => setBusinessName(e.target.value)}
-                  className="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 shadow-xs"
+                  className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 shadow-xs"
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-2 gap-3.5">
                 <div>
-                  <label className="block font-bold text-slate-900 mb-1">Industry</label>
+                  <label className="block font-bold text-slate-900 mb-1.5 text-sm">Industry</label>
                   <select
                     value={industry}
                     onChange={e => setIndustry(e.target.value)}
-                    className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500 shadow-xs"
+                    className="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 shadow-xs"
                   >
                     <option value="SaaS & Software">SaaS & Software</option>
                     <option value="E-Commerce & Retail">E-Commerce & Retail</option>
@@ -165,11 +165,11 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({ isOpen, onClos
                 </div>
 
                 <div>
-                  <label className="block font-bold text-slate-900 mb-1">Primary Language</label>
+                  <label className="block font-bold text-slate-900 mb-1.5 text-sm">Primary Language</label>
                   <select
                     value={preferredLanguage}
                     onChange={e => setPreferredLanguage(e.target.value)}
-                    className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500 shadow-xs"
+                    className="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 shadow-xs"
                   >
                     <option value="English">English</option>
                     <option value="Spanish">Spanish</option>
@@ -186,32 +186,32 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({ isOpen, onClos
           {step === 2 && (
             <div className="space-y-4 animate-in fade-in duration-150">
               <div>
-                <h4 className="text-sm font-bold text-slate-900 mb-0.5">Add your business knowledge</h4>
-                <p className="text-slate-500">Your assistant retrieves answers directly from your public website and uploaded files.</p>
+                <h4 className="text-base font-bold text-slate-900 mb-1">Add your business knowledge</h4>
+                <p className="text-sm text-slate-500">Your assistant retrieves answers directly from your public website and uploaded files.</p>
               </div>
 
               <div>
-                <label className="block font-bold text-slate-900 mb-1">Company Website URL</label>
+                <label className="block font-bold text-slate-900 mb-1.5 text-sm">Company Website URL</label>
                 <div className="relative">
-                  <Globe className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                  <Globe className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
                   <input
                     type="url"
                     placeholder="https://yourcompany.com"
                     value={websiteUrl}
                     onChange={e => setWebsiteUrl(e.target.value)}
-                    className="w-full pl-9 pr-3 py-2.5 bg-white border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500 shadow-xs"
+                    className="w-full pl-10 pr-3.5 py-2.5 bg-white border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 shadow-xs"
                   />
                 </div>
-                <p className="text-[11px] text-slate-400 mt-1">We will automatically index your homepage, FAQs, and help center.</p>
+                <p className="text-xs text-slate-400 mt-1.5">We will automatically index your homepage, FAQs, and help center.</p>
               </div>
 
-              <div className="p-4 border-2 border-dashed border-indigo-200 rounded-2xl bg-indigo-50/30 text-center space-y-2">
-                <Upload className="w-7 h-7 mx-auto text-indigo-600" />
-                <p className="font-bold text-slate-800">Upload Product Docs, Price Lists, or PDFs</p>
-                <p className="text-[11px] text-slate-400">PDF, DOCX, TXT, CSV up to 25MB</p>
+              <div className="p-5 border-2 border-dashed border-indigo-200 rounded-2xl bg-indigo-50/30 text-center space-y-2.5">
+                <Upload className="w-8 h-8 mx-auto text-indigo-600" />
+                <p className="font-bold text-slate-900 text-sm">Upload Product Docs, Price Lists, or PDFs</p>
+                <p className="text-xs text-slate-500">PDF, DOCX, TXT, CSV up to 25MB</p>
                 <button
                   type="button"
-                  className="px-3.5 py-1.5 bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 hover:bg-slate-50 shadow-2xs"
+                  className="px-4 py-2 bg-white border border-slate-200 rounded-xl text-xs sm:text-sm font-semibold text-slate-700 hover:bg-slate-50 shadow-2xs cursor-pointer"
                 >
                   Browse Files
                 </button>
@@ -223,52 +223,52 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({ isOpen, onClos
           {step === 3 && (
             <div className="space-y-4 animate-in fade-in duration-150">
               <div>
-                <h4 className="text-sm font-bold text-slate-900 mb-0.5">Customize Assistant Personality & Tone</h4>
-                <p className="text-slate-500">Choose how your assistant speaks with visitors and what greeting it uses.</p>
+                <h4 className="text-base font-bold text-slate-900 mb-1">Customize Assistant Personality & Tone</h4>
+                <p className="text-sm text-slate-500">Choose how your assistant speaks with visitors and what greeting it uses.</p>
               </div>
 
               <div>
-                <label className="block font-bold text-slate-900 mb-1">Assistant Name</label>
+                <label className="block font-bold text-slate-900 mb-1.5 text-sm">Assistant Name</label>
                 <input
                   type="text"
                   placeholder="e.g. Nova Support AI"
                   value={assistantName}
                   onChange={e => setAssistantName(e.target.value)}
-                  className="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 shadow-xs"
+                  className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 shadow-xs"
                 />
               </div>
 
               <div>
-                <label className="block font-bold text-slate-900 mb-1.5">Tone of Voice</label>
-                <div className="grid grid-cols-2 gap-2">
+                <label className="block font-bold text-slate-900 mb-1.5 text-sm">Tone of Voice</label>
+                <div className="grid grid-cols-2 gap-2.5">
                   {tones.map(t => (
                     <button
                       type="button"
                       key={t.id}
                       onClick={() => setTone(t.id)}
-                      className={`p-3 rounded-xl border text-left transition-all cursor-pointer ${
+                      className={`p-3.5 rounded-xl border text-left transition-all cursor-pointer ${
                         tone === t.id
                           ? 'bg-indigo-50/80 border-indigo-600 ring-2 ring-indigo-500/20 text-indigo-950 font-bold'
                           : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'
                       }`}
                     >
-                      <div className="flex items-center justify-between mb-0.5">
-                        <span className="text-xs font-bold">{t.label}</span>
-                        {tone === t.id && <Check className="w-3.5 h-3.5 text-indigo-600" />}
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="text-xs sm:text-sm font-bold">{t.label}</span>
+                        {tone === t.id && <Check className="w-4 h-4 text-indigo-600" />}
                       </div>
-                      <p className="text-[10px] text-slate-500">{t.desc}</p>
+                      <p className="text-xs text-slate-500">{t.desc}</p>
                     </button>
                   ))}
                 </div>
               </div>
 
               <div>
-                <label className="block font-bold text-slate-900 mb-1">Welcome Message</label>
+                <label className="block font-bold text-slate-900 mb-1.5 text-sm">Welcome Message</label>
                 <input
                   type="text"
                   value={greetingMessage}
                   onChange={e => setGreetingMessage(e.target.value)}
-                  className="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 shadow-xs"
+                  className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 shadow-xs"
                 />
               </div>
             </div>
@@ -278,45 +278,45 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({ isOpen, onClos
           {step === 4 && (
             <div className="space-y-4 animate-in fade-in duration-150">
               <div>
-                <h4 className="text-sm font-bold text-slate-900 mb-0.5">Test your Q&A Assistant</h4>
-                <p className="text-slate-500">Ask a question to see how your assistant formulates grounded responses.</p>
+                <h4 className="text-base font-bold text-slate-900 mb-1">Test your Q&A Assistant</h4>
+                <p className="text-sm text-slate-500">Ask a question to see how your assistant formulates grounded responses.</p>
               </div>
 
               <div className="space-y-2">
-                <label className="block font-bold text-slate-900">Sample Customer Question</label>
+                <label className="block font-bold text-slate-900 text-sm">Sample Customer Question</label>
                 <div className="flex gap-2">
                   <input
                     type="text"
                     value={testQuestion}
                     onChange={e => setTestQuestion(e.target.value)}
-                    className="flex-1 px-3.5 py-2 bg-white border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    className="flex-1 px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
                   />
                   <button
                     type="button"
                     onClick={handleSimulateTest}
                     disabled={isTesting}
-                    className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-bold flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                    className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-bold flex items-center gap-2 cursor-pointer disabled:opacity-50 text-sm shadow-xs"
                   >
-                    <Play className="w-3.5 h-3.5 fill-white" />
+                    <Play className="w-4 h-4 fill-white" />
                     <span>{isTesting ? 'Thinking...' : 'Ask'}</span>
                   </button>
                 </div>
               </div>
 
               {testAnswer && (
-                <div className="p-4 bg-slate-900 text-white rounded-2xl space-y-2 animate-in fade-in duration-150">
+                <div className="p-5 bg-slate-900 text-white rounded-2xl space-y-3 animate-in fade-in duration-150">
                   <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <div className="w-5 h-5 rounded-lg bg-indigo-600 flex items-center justify-center font-bold text-[10px]">
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-6 h-6 rounded-lg bg-indigo-600 flex items-center justify-center font-bold text-xs">
                         AI
                       </div>
-                      <span className="font-bold text-xs">{assistantName || 'Nova AI'}</span>
+                      <span className="font-bold text-sm">{assistantName || 'Nova AI'}</span>
                     </div>
-                    <span className="text-[10px] text-emerald-400 font-semibold bg-emerald-950/60 px-2 py-0.5 rounded-full border border-emerald-800/60">
+                    <span className="text-xs text-emerald-400 font-bold bg-emerald-950/60 px-2.5 py-1 rounded-full border border-emerald-800/60">
                       ● Grounded Answer
                     </span>
                   </div>
-                  <p className="text-xs text-slate-200 leading-relaxed bg-slate-800/80 p-3 rounded-xl border border-slate-700/60">
+                  <p className="text-sm text-slate-200 leading-relaxed bg-slate-800/80 p-3.5 rounded-xl border border-slate-700/60">
                     {testAnswer}
                   </p>
                 </div>
@@ -327,28 +327,28 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({ isOpen, onClos
           {/* STEP 5: Launch Ready */}
           {step === 5 && (
             <div className="space-y-4 animate-in fade-in duration-150 text-center py-2">
-              <div className="w-14 h-14 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-600 flex items-center justify-center mx-auto">
-                <Rocket className="w-7 h-7" />
+              <div className="w-16 h-16 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-600 flex items-center justify-center mx-auto">
+                <Rocket className="w-8 h-8" />
               </div>
 
               <div>
-                <h4 className="text-base font-bold text-slate-900">Your AI Q&A Assistant is Ready!</h4>
-                <p className="text-slate-500 mt-1 max-w-md mx-auto">
+                <h4 className="text-lg font-bold text-slate-900">Your AI Q&A Assistant is Ready!</h4>
+                <p className="text-slate-500 text-sm mt-1 max-w-md mx-auto">
                   Your business workspace is initialized with prebuilt RAG retrieval, anti-hallucination refusal, and multi-channel embed code.
                 </p>
               </div>
 
-              <div className="p-4 bg-indigo-50/70 border border-indigo-100 rounded-2xl text-left space-y-2 text-xs text-indigo-950">
-                <div className="flex items-center gap-2">
-                  <Check className="w-4 h-4 text-indigo-600" />
+              <div className="p-5 bg-indigo-50/70 border border-indigo-100 rounded-2xl text-left space-y-2.5 text-sm text-indigo-950">
+                <div className="flex items-center gap-2.5">
+                  <Check className="w-4 h-4 text-indigo-600 shrink-0" />
                   <span><strong>{businessName || 'Business'}</strong> workspace configured</span>
                 </div>
-                <div className="flex items-center gap-2">
-                  <Check className="w-4 h-4 text-indigo-600" />
+                <div className="flex items-center gap-2.5">
+                  <Check className="w-4 h-4 text-indigo-600 shrink-0" />
                   <span>Assistant: <strong>{assistantName || 'Nova AI'}</strong> ({tone} tone)</span>
                 </div>
-                <div className="flex items-center gap-2">
-                  <Check className="w-4 h-4 text-indigo-600" />
+                <div className="flex items-center gap-2.5">
+                  <Check className="w-4 h-4 text-indigo-600 shrink-0" />
                   <span>Website embed snippet & API keys generated</span>
                 </div>
               </div>

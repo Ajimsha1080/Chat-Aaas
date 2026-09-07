@@ -130,26 +130,26 @@ export const DeveloperConsole: React.FC = () => {
         {/* Brand Header */}
         <div className="p-4.5 border-b border-slate-800 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-indigo-600 text-white flex items-center justify-center font-bold shadow-md shadow-indigo-600/30 shrink-0">
-              <Code2 className="w-4.5 h-4.5" />
+            <div className="w-10 h-10 rounded-xl bg-indigo-600 text-white flex items-center justify-center font-bold shadow-md shadow-indigo-600/30 shrink-0">
+              <Code2 className="w-5 h-5" />
             </div>
             <div className="min-w-0 flex-1">
-              <span className="font-bold text-white text-sm tracking-tight block truncate">Dev Console</span>
-              <span className="text-[10px] font-mono text-indigo-400 block truncate">{currentCompany.slug}</span>
+              <span className="font-bold text-white text-base tracking-tight block truncate">Dev Console</span>
+              <span className="text-xs font-mono text-indigo-400 block truncate">{currentCompany.slug}</span>
             </div>
           </div>
 
           <button
             onClick={() => setIsMobileNavOpen(false)}
-            className="md:hidden p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 cursor-pointer"
+            className="md:hidden p-2 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 cursor-pointer"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
         {/* Feature Navigation List (On the SIDE) */}
-        <div className="flex-1 overflow-y-auto px-3 py-3 space-y-1">
-          <div className="px-2 py-1 text-[10px] font-mono font-semibold text-slate-500 uppercase tracking-wider">
+        <div className="flex-1 overflow-y-auto px-3 py-3 space-y-1.5">
+          <div className="px-2.5 py-1 text-xs font-mono font-bold text-slate-400 uppercase tracking-wider">
             Developer APIs & Tools
           </div>
           {navItems.map(tab => {
@@ -162,22 +162,22 @@ export const DeveloperConsole: React.FC = () => {
                   setCurrentDevTab(tab.id);
                   setIsMobileNavOpen(false);
                 }}
-                className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-xs font-medium transition-colors cursor-pointer group text-left ${
+                className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-sm font-medium transition-colors cursor-pointer group text-left ${
                   isActive 
                     ? 'bg-indigo-600 text-white font-semibold shadow-xs' 
-                    : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60'
+                    : 'text-slate-300 hover:text-white hover:bg-slate-800/60'
                 }`}
               >
-                <div className="flex items-center gap-2.5 min-w-0">
-                  <Icon className={`w-4 h-4 shrink-0 transition-colors ${
+                <div className="flex items-center gap-3 min-w-0">
+                  <Icon className={`w-4.5 h-4.5 shrink-0 transition-colors ${
                     isActive ? 'text-white' : 'text-slate-400 group-hover:text-slate-300'
                   }`} />
                   <span className="truncate">{tab.label}</span>
                 </div>
 
                 {tab.count !== undefined && (
-                  <span className={`text-[10px] font-mono px-1.5 py-0.2 rounded font-bold shrink-0 ml-1.5 ${
-                    isActive ? 'bg-indigo-700 text-white' : 'bg-slate-800 text-slate-400'
+                  <span className={`text-xs font-mono px-2 py-0.5 rounded-md font-bold shrink-0 ml-1.5 ${
+                    isActive ? 'bg-indigo-700 text-white' : 'bg-slate-800 text-slate-300'
                   }`}>
                     {tab.count}
                   </span>
@@ -188,20 +188,20 @@ export const DeveloperConsole: React.FC = () => {
         </div>
 
         {/* Bottom Actions */}
-        <div className="p-3 border-t border-slate-800 space-y-2 bg-[#04060c]">
+        <div className="p-3.5 border-t border-slate-800 space-y-2.5 bg-[#04060c]">
           <button
             onClick={() => handleCopy(currentCompany.apiKey, 'sidebar-key')}
-            className="w-full px-3 py-2 bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-white border border-slate-700/80 rounded-lg text-xs font-mono flex items-center justify-center gap-2 transition-colors cursor-pointer"
+            className="w-full px-3.5 py-2.5 bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-white border border-slate-700/80 rounded-xl text-xs font-mono flex items-center justify-center gap-2 transition-colors cursor-pointer"
           >
-            {copiedKey === 'sidebar-key' ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+            {copiedKey === 'sidebar-key' ? <Check className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4" />}
             <span>Copy Live API Key</span>
           </button>
 
           <button
             onClick={() => window.location.reload()}
-            className="w-full px-3 py-2 bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-300 hover:text-white rounded-lg text-xs font-medium transition-colors cursor-pointer flex items-center justify-center gap-2 border border-indigo-500/30"
+            className="w-full px-3.5 py-2.5 bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-300 hover:text-white rounded-xl text-sm font-semibold transition-colors cursor-pointer flex items-center justify-center gap-2 border border-indigo-500/30"
           >
-            <ArrowLeft className="w-3.5 h-3.5" />
+            <ArrowLeft className="w-4 h-4" />
             <span>Return to Workspace</span>
           </button>
         </div>
@@ -210,19 +210,19 @@ export const DeveloperConsole: React.FC = () => {
       {/* 2. MAIN RIGHT CONTENT AREA */}
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden bg-slate-900">
         {/* Top Header */}
-        <header className="h-14 sm:h-16 bg-slate-900/90 backdrop-blur-md border-b border-slate-800 px-4 sm:px-8 flex items-center justify-between shrink-0 sticky top-0 z-10">
-          <div className="flex items-center gap-3">
+        <header className="h-16 sm:h-18 bg-slate-900/90 backdrop-blur-md border-b border-slate-800 px-4 sm:px-8 flex items-center justify-between shrink-0 sticky top-0 z-10">
+          <div className="flex items-center gap-3.5">
             <button
               onClick={() => setIsMobileNavOpen(true)}
-              className="md:hidden p-1.5 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg cursor-pointer"
+              className="md:hidden p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg cursor-pointer"
             >
               <Menu className="w-5 h-5" />
             </button>
             <div>
-              <h1 className="text-base sm:text-lg font-bold text-white tracking-tight">
+              <h1 className="text-lg sm:text-xl font-bold text-white tracking-tight">
                 {currentNavTitle}
               </h1>
-              <p className="text-[11px] text-slate-400 hidden sm:block">
+              <p className="text-xs sm:text-sm text-slate-400 hidden sm:block mt-0.5">
                 Low-level REST endpoints, webhook callbacks, and runtime telemetry.
               </p>
             </div>
@@ -231,9 +231,9 @@ export const DeveloperConsole: React.FC = () => {
           <div className="flex items-center gap-2">
             <button
               onClick={() => handleCopy(currentCompany.apiKey, 'header-key')}
-              className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 rounded-lg text-xs font-mono flex items-center gap-1.5 transition-colors cursor-pointer"
+              className="px-3.5 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 rounded-xl text-xs sm:text-sm font-mono flex items-center gap-2 transition-colors cursor-pointer"
             >
-              {copiedKey === 'header-key' ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+              {copiedKey === 'header-key' ? <Check className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4" />}
               <span>Copy API Key</span>
             </button>
           </div>
@@ -245,40 +245,40 @@ export const DeveloperConsole: React.FC = () => {
             {/* 1. API Keys Tab */}
       {currentDevTab === 'api-keys' && (
         <div className="space-y-6 animate-in fade-in duration-150">
-          <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs space-y-5">
+          <div className="bg-white rounded-2xl border border-slate-200 p-6 sm:p-7 shadow-xs space-y-5">
             <div className="flex items-center justify-between">
               <div>
-                <h3 className="text-sm font-bold text-slate-900">Live Production API Key</h3>
-                <p className="text-xs text-slate-500">Authenticate requests to the Chat-AaaS REST API & Client Widget.</p>
+                <h3 className="text-base sm:text-lg font-bold text-slate-900">Live Production API Key</h3>
+                <p className="text-xs sm:text-sm text-slate-500">Authenticate requests to the Chat-AaaS REST API & Client Widget.</p>
               </div>
               <button
                 onClick={regenerateApiKey}
-                className="px-3 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer"
+                className="px-3.5 py-2 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-xl text-xs sm:text-sm font-semibold flex items-center gap-2 transition-colors cursor-pointer"
               >
-                <RefreshCw className="w-3.5 h-3.5" />
+                <RefreshCw className="w-4 h-4" />
                 <span>Rotate Secret Key</span>
               </button>
             </div>
 
-            <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 font-mono text-xs space-y-3">
+            <div className="bg-slate-50 p-5 rounded-2xl border border-slate-200 font-mono text-xs sm:text-sm space-y-4">
               <div>
-                <span className="text-slate-400 text-[11px] block mb-1">PUBLISHABLE CLIENT KEY</span>
-                <div className="flex items-center justify-between bg-white p-2.5 rounded-lg border border-slate-200">
-                  <span className="text-slate-800">{currentCompany.apiKey}</span>
+                <span className="text-slate-500 text-xs font-bold block mb-1.5 uppercase tracking-wider">PUBLISHABLE CLIENT KEY</span>
+                <div className="flex items-center justify-between bg-white p-3 rounded-xl border border-slate-200">
+                  <span className="text-slate-800 font-medium">{currentCompany.apiKey}</span>
                   <button
                     onClick={() => handleCopy(currentCompany.apiKey, 'prod-pub-key')}
-                    className="p-1 hover:bg-slate-100 rounded text-slate-500"
+                    className="p-1.5 hover:bg-slate-100 rounded-lg text-slate-500 cursor-pointer"
                   >
-                    {copiedKey === 'prod-pub-key' ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
+                    {copiedKey === 'prod-pub-key' ? <Check className="w-4 h-4 text-emerald-600" /> : <Copy className="w-4 h-4" />}
                   </button>
                 </div>
               </div>
 
               <div>
-                <span className="text-slate-400 text-[11px] block mb-1">SECRET API TOKEN (KMS AES-256-GCM ENCRYPTED)</span>
-                <div className="flex items-center justify-between bg-white p-2.5 rounded-lg border border-slate-200">
-                  <span className="text-slate-500">{currentCompany.apiSecretMasked}</span>
-                  <span className="text-[10px] px-2 py-0.5 bg-emerald-100 text-emerald-800 rounded font-semibold">
+                <span className="text-slate-500 text-xs font-bold block mb-1.5 uppercase tracking-wider">SECRET API TOKEN (KMS AES-256-GCM ENCRYPTED)</span>
+                <div className="flex items-center justify-between bg-white p-3 rounded-xl border border-slate-200">
+                  <span className="text-slate-500 font-medium">{currentCompany.apiSecretMasked}</span>
+                  <span className="text-xs px-2.5 py-1 bg-emerald-100 text-emerald-800 rounded-md font-bold uppercase">
                     Encrypted
                   </span>
                 </div>
@@ -287,19 +287,19 @@ export const DeveloperConsole: React.FC = () => {
 
             {/* Scopes Table */}
             <div>
-              <h4 className="text-xs font-bold text-slate-900 mb-2">Granted API Scopes</h4>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+              <h4 className="text-sm font-bold text-slate-900 mb-2.5">Granted API Scopes</h4>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 {[
                   { name: 'read:knowledge', desc: 'Query vector chunks & grounding docs', status: 'Allowed' },
                   { name: 'write:conversations', desc: 'Create sessions & send messages', status: 'Allowed' },
                   { name: 'execute:actions', desc: 'Trigger authorized business tools', status: 'Confirmation Gated' }
                 ].map((s, idx) => (
-                  <div key={idx} className="p-3 bg-slate-50 rounded-xl border border-slate-200 text-xs">
+                  <div key={idx} className="p-4 bg-slate-50 rounded-2xl border border-slate-200 text-xs sm:text-sm">
                     <div className="flex items-center justify-between font-mono font-bold text-indigo-600">
                       <span>{s.name}</span>
-                      <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
+                      <ShieldCheck className="w-4 h-4 text-emerald-600" />
                     </div>
-                    <p className="text-[11px] text-slate-500 mt-1">{s.desc}</p>
+                    <p className="text-xs text-slate-600 mt-1.5 leading-relaxed">{s.desc}</p>
                   </div>
                 ))}
               </div>
@@ -311,54 +311,54 @@ export const DeveloperConsole: React.FC = () => {
       {/* 2. Webhooks Tab */}
       {currentDevTab === 'webhooks' && (
         <div className="space-y-6 animate-in fade-in duration-150">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>
-              <h3 className="text-base font-bold text-slate-900">Webhook Endpoints</h3>
-              <p className="text-xs text-slate-500">Receive real-time HTTPS POST callbacks when events occur in your tenant.</p>
+              <h3 className="text-base sm:text-lg font-bold text-slate-900">Webhook Endpoints</h3>
+              <p className="text-xs sm:text-sm text-slate-500">Receive real-time HTTPS POST callbacks when events occur in your tenant.</p>
             </div>
             <button
               onClick={() => setIsCreateWebhookOpen(true)}
-              className="px-3.5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-semibold flex items-center gap-1.5 shadow-sm transition-colors cursor-pointer"
+              className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs sm:text-sm font-semibold flex items-center gap-2 shadow-xs transition-colors cursor-pointer shrink-0"
             >
               <Plus className="w-4 h-4" />
               <span>Add Webhook Endpoint</span>
             </button>
           </div>
 
-          <div className="space-y-3">
+          <div className="space-y-3.5">
             {webhooks.map(wh => (
-              <div key={wh.id} className="bg-white rounded-2xl border border-slate-200 p-5 shadow-xs flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-                <div className="space-y-1.5 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <span className="font-mono font-bold text-xs text-slate-900">{wh.url}</span>
-                    <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800">
+              <div key={wh.id} className="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+                <div className="space-y-2 min-w-0">
+                  <div className="flex items-center gap-2.5">
+                    <span className="font-mono font-bold text-sm text-slate-900">{wh.url}</span>
+                    <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800">
                       {wh.status}
                     </span>
                   </div>
-                  <p className="text-xs text-slate-500">{wh.description}</p>
-                  <div className="flex flex-wrap items-center gap-1.5 pt-1">
+                  <p className="text-xs sm:text-sm text-slate-600">{wh.description}</p>
+                  <div className="flex flex-wrap items-center gap-2 pt-1">
                     {wh.events.map(ev => (
-                      <span key={ev} className="px-2 py-0.5 bg-slate-100 text-slate-700 rounded text-[10px] font-mono">
+                      <span key={ev} className="px-2.5 py-1 bg-slate-100 text-slate-700 rounded-md text-xs font-mono font-medium">
                         {ev}
                       </span>
                     ))}
                   </div>
                 </div>
 
-                <div className="flex items-center gap-2 shrink-0">
+                <div className="flex items-center gap-2.5 shrink-0">
                   <button
                     onClick={() => handleTestWebhook(wh.id)}
                     disabled={testingWebhookId === wh.id}
-                    className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer"
+                    className="px-3.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs sm:text-sm font-semibold flex items-center gap-2 transition-colors cursor-pointer"
                   >
-                    <Play className={`w-3.5 h-3.5 text-indigo-600 ${testingWebhookId === wh.id ? 'animate-spin' : ''}`} />
+                    <Play className={`w-4 h-4 text-indigo-600 ${testingWebhookId === wh.id ? 'animate-spin' : ''}`} />
                     <span>{testingWebhookId === wh.id ? 'Sending...' : 'Test Ping'}</span>
                   </button>
                   <button
                     onClick={() => deleteWebhook(wh.id)}
                     className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-colors cursor-pointer"
                   >
-                    <Trash2 className="w-4 h-4" />
+                    <Trash2 className="w-4.5 h-4.5" />
                   </button>
                 </div>
               </div>
@@ -368,42 +368,42 @@ export const DeveloperConsole: React.FC = () => {
           {/* Create Webhook Modal */}
           {isCreateWebhookOpen && (
             <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
-              <div className="bg-white rounded-xl max-w-lg w-full p-6 shadow-2xl border border-slate-200 animate-in fade-in">
-                <h3 className="text-base font-bold text-slate-900 mb-1">Add Webhook Endpoint</h3>
-                <p className="text-xs text-slate-500 mb-4">Enter the HTTPS URL on your server where events should be sent.</p>
-                <form onSubmit={handleCreateWebhookSubmit} className="space-y-4 text-xs">
+              <div className="bg-white rounded-2xl max-w-lg w-full p-6 sm:p-7 shadow-2xl border border-slate-200 animate-in fade-in">
+                <h3 className="text-lg font-bold text-slate-900 mb-1">Add Webhook Endpoint</h3>
+                <p className="text-sm text-slate-500 mb-5">Enter the HTTPS URL on your server where events should be sent.</p>
+                <form onSubmit={handleCreateWebhookSubmit} className="space-y-4 text-sm">
                   <div>
-                    <label className="block font-bold text-slate-700 mb-1">Endpoint URL (HTTPS Required)</label>
+                    <label className="block font-bold text-slate-700 mb-1.5">Endpoint URL (HTTPS Required)</label>
                     <input
                       type="url"
                       required
                       value={newWebhookUrl}
                       onChange={e => setNewWebhookUrl(e.target.value)}
                       placeholder="https://api.yourdomain.com/webhooks/ai"
-                      className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:bg-white"
+                      className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:bg-white focus:ring-2 focus:ring-indigo-600 focus:outline-hidden"
                     />
                   </div>
                   <div>
-                    <label className="block font-bold text-slate-700 mb-1">Description</label>
+                    <label className="block font-bold text-slate-700 mb-1.5">Description</label>
                     <input
                       type="text"
                       value={newWebhookDesc}
                       onChange={e => setNewWebhookDesc(e.target.value)}
                       placeholder="e.g. Sync live escalations with internal Slack"
-                      className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:bg-white"
+                      className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:bg-white focus:ring-2 focus:ring-indigo-600 focus:outline-hidden"
                     />
                   </div>
-                  <div className="flex items-center justify-end gap-2 pt-3">
+                  <div className="flex items-center justify-end gap-3 pt-3">
                     <button
                       type="button"
                       onClick={() => setIsCreateWebhookOpen(false)}
-                      className="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-xl font-semibold cursor-pointer"
+                      className="px-4 py-2.5 text-slate-600 hover:bg-slate-100 rounded-xl font-semibold cursor-pointer text-sm"
                     >
                       Cancel
                     </button>
                     <button
                       type="submit"
-                      className="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold cursor-pointer"
+                      className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold cursor-pointer text-sm shadow-xs"
                     >
                       Save Webhook
                     </button>
@@ -418,28 +418,28 @@ export const DeveloperConsole: React.FC = () => {
       {/* 3. API Logs Tab */}
       {currentDevTab === 'api-logs' && (
         <div className="space-y-4 animate-in fade-in duration-150">
-          <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs">
+          <div className="bg-white rounded-2xl border border-slate-200 p-6 sm:p-7 shadow-xs">
             <div className="flex items-center justify-between mb-4">
               <div>
-                <h3 className="text-sm font-bold text-slate-900">Real-Time Request & Response Stream</h3>
-                <p className="text-xs text-slate-500">Live HTTP calls processed by the tenant runtime.</p>
+                <h3 className="text-base sm:text-lg font-bold text-slate-900">Real-Time Request & Response Stream</h3>
+                <p className="text-xs sm:text-sm text-slate-500">Live HTTP calls processed by the tenant runtime.</p>
               </div>
-              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-full text-xs font-semibold">
+              <span className="inline-flex items-center gap-2 px-3 py-1 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-full text-xs font-bold">
                 <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping" />
                 <span>Live Ingestion</span>
               </span>
             </div>
 
             <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs font-mono">
+              <table className="w-full text-left text-xs sm:text-sm font-mono">
                 <thead>
-                  <tr className="border-b border-slate-100 text-slate-400 uppercase text-[10px]">
-                    <th className="pb-2">Status</th>
-                    <th className="pb-2">Method</th>
-                    <th className="pb-2">Endpoint</th>
-                    <th className="pb-2">Latency</th>
-                    <th className="pb-2">Source IP</th>
-                    <th className="pb-2 text-right">Time</th>
+                  <tr className="border-b border-slate-200 text-slate-500 uppercase text-xs font-bold">
+                    <th className="pb-3">Status</th>
+                    <th className="pb-3">Method</th>
+                    <th className="pb-3">Endpoint</th>
+                    <th className="pb-3">Latency</th>
+                    <th className="pb-3">Source IP</th>
+                    <th className="pb-3 text-right">Time</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
@@ -449,18 +449,18 @@ export const DeveloperConsole: React.FC = () => {
                       onClick={() => setSelectedLog(log)}
                       className="hover:bg-slate-50 cursor-pointer transition-colors"
                     >
-                      <td className="py-2.5">
-                        <span className={`px-2 py-0.5 rounded text-[11px] font-bold ${
+                      <td className="py-3">
+                        <span className={`px-2.5 py-1 rounded-md text-xs font-bold ${
                           log.statusCode === 200 ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800'
                         }`}>
                           {log.statusCode}
                         </span>
                       </td>
-                      <td className="py-2.5 font-bold text-slate-700">{log.method}</td>
-                      <td className="py-2.5 text-slate-900 font-semibold truncate max-w-xs">{log.path}</td>
-                      <td className="py-2.5 text-slate-500">{log.durationMs} ms</td>
-                      <td className="py-2.5 text-slate-400">{log.ipAddress}</td>
-                      <td className="py-2.5 text-right text-slate-400">{log.timestamp}</td>
+                      <td className="py-3 font-bold text-slate-800">{log.method}</td>
+                      <td className="py-3 text-slate-900 font-semibold truncate max-w-xs">{log.path}</td>
+                      <td className="py-3 text-slate-600">{log.durationMs} ms</td>
+                      <td className="py-3 text-slate-500">{log.ipAddress}</td>
+                      <td className="py-3 text-right text-slate-500">{log.timestamp}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -469,14 +469,14 @@ export const DeveloperConsole: React.FC = () => {
 
             {/* Log Detail Inspector */}
             {selectedLog && (
-              <div className="mt-4 p-4 bg-slate-900 text-slate-200 rounded-xl font-mono text-xs space-y-2">
-                <div className="flex items-center justify-between border-b border-slate-800 pb-2">
-                  <span className="font-bold text-white">{selectedLog.method} {selectedLog.path}</span>
-                  <button onClick={() => setSelectedLog(null)} className="text-slate-400 hover:text-white">✕</button>
+              <div className="mt-5 p-5 bg-slate-900 text-slate-200 rounded-2xl font-mono text-xs sm:text-sm space-y-3">
+                <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+                  <span className="font-bold text-white text-sm sm:text-base">{selectedLog.method} {selectedLog.path}</span>
+                  <button onClick={() => setSelectedLog(null)} className="text-slate-400 hover:text-white p-1 cursor-pointer">✕</button>
                 </div>
                 <div>
-                  <span className="text-slate-400 text-[10px]">RESPONSE BODY:</span>
-                  <pre className="mt-1 bg-slate-950 p-2.5 rounded text-emerald-400 overflow-x-auto">{selectedLog.responseBodyPreview}</pre>
+                  <span className="text-slate-400 text-xs font-bold uppercase tracking-wider">RESPONSE BODY:</span>
+                  <pre className="mt-1.5 bg-slate-950 p-3.5 rounded-xl text-emerald-400 overflow-x-auto text-xs sm:text-sm">{selectedLog.responseBodyPreview}</pre>
                 </div>
               </div>
             )}
@@ -487,22 +487,22 @@ export const DeveloperConsole: React.FC = () => {
       {/* 4. Technical Integrations Tab */}
       {currentDevTab === 'integrations' && (
         <div className="space-y-4 animate-in fade-in duration-150">
-          <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs">
-            <h3 className="text-sm font-bold text-slate-900 mb-1">Connected Data Connectors</h3>
-            <p className="text-xs text-slate-500 mb-4">Underlying authentication tokens and sync frequencies.</p>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <div className="bg-white rounded-2xl border border-slate-200 p-6 sm:p-7 shadow-xs">
+            <h3 className="text-base sm:text-lg font-bold text-slate-900 mb-1">Connected Data Connectors</h3>
+            <p className="text-xs sm:text-sm text-slate-500 mb-5">Underlying authentication tokens and sync frequencies.</p>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {integrations.map(intg => (
-                <div key={intg.id} className="p-4 bg-slate-50 rounded-2xl border border-slate-200 text-xs space-y-2">
+                <div key={intg.id} className="p-5 bg-slate-50 rounded-2xl border border-slate-200 text-sm space-y-2.5">
                   <div className="flex items-center justify-between">
-                    <span className="font-bold text-slate-900">{intg.name}</span>
-                    <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                    <span className="font-bold text-slate-900 text-base">{intg.name}</span>
+                    <span className={`px-2.5 py-0.5 rounded-md text-xs font-bold ${
                       intg.connected ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-200 text-slate-600'
                     }`}>
                       {intg.connected ? 'Connected' : 'Disabled'}
                     </span>
                   </div>
-                  <p className="text-[11px] text-slate-500">{intg.description}</p>
-                  <div className="pt-2 border-t border-slate-200 font-mono text-[10px] text-slate-400 flex items-center justify-between">
+                  <p className="text-xs sm:text-sm text-slate-600">{intg.description}</p>
+                  <div className="pt-2.5 border-t border-slate-200 font-mono text-xs text-slate-500 flex items-center justify-between">
                     <span>Access: {intg.accessType}</span>
                     <span>Last Sync: {intg.lastSyncAt || 'Never'}</span>
                   </div>
@@ -516,15 +516,15 @@ export const DeveloperConsole: React.FC = () => {
       {/* 5. Agent Versioning Tab */}
       {currentDevTab === 'agent-versions' && (
         <div className="space-y-6 animate-in fade-in duration-150">
-          <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs space-y-4">
-            <div className="flex items-center justify-between">
+          <div className="bg-white rounded-2xl border border-slate-200 p-6 sm:p-7 shadow-xs space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div>
-                <h3 className="text-sm font-bold text-slate-900">Immutable Version Snapshots & Rollback</h3>
-                <p className="text-xs text-slate-500">Every publish creates a freeze of prompts, actions, and knowledge grounding.</p>
+                <h3 className="text-base sm:text-lg font-bold text-slate-900">Immutable Version Snapshots & Rollback</h3>
+                <p className="text-xs sm:text-sm text-slate-500">Every publish creates a freeze of prompts, actions, and knowledge grounding.</p>
               </div>
               <button
                 onClick={() => publishAgentVersion('Manual Snapshot from Developer Console')}
-                className="px-3.5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-semibold flex items-center gap-1.5 shadow-sm transition-colors cursor-pointer"
+                className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs sm:text-sm font-semibold flex items-center gap-2 shadow-xs transition-colors cursor-pointer shrink-0"
               >
                 <Plus className="w-4 h-4" />
                 <span>Publish New Version Snapshot</span>
@@ -538,22 +538,22 @@ export const DeveloperConsole: React.FC = () => {
                   <div
                     key={ver.id}
                     onClick={() => setSelectedVersion(ver)}
-                    className={`p-4 rounded-2xl border text-xs cursor-pointer transition-all ${
+                    className={`p-5 rounded-2xl border text-sm cursor-pointer transition-all ${
                       selectedVersion?.id === ver.id 
                         ? 'border-indigo-600 bg-indigo-50/40 ring-1 ring-indigo-600' 
                         : 'border-slate-200 bg-white hover:bg-slate-50'
                     }`}
                   >
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="font-bold text-slate-900 text-sm">{ver.versionLabel}</span>
-                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                    <div className="flex items-center justify-between mb-2.5">
+                      <span className="font-bold text-slate-900 text-base">{ver.versionLabel}</span>
+                      <span className={`px-2.5 py-0.5 rounded-full text-xs font-bold ${
                         isLive ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-600'
                       }`}>
                         {isLive ? '● Production Live' : 'Archived'}
                       </span>
                     </div>
-                    <p className="text-[11px] text-slate-500 line-clamp-2">{ver.description}</p>
-                    <div className="mt-3 pt-2 border-t border-slate-100 text-[10px] text-slate-400">
+                    <p className="text-xs sm:text-sm text-slate-600 line-clamp-2">{ver.description}</p>
+                    <div className="mt-3.5 pt-2.5 border-t border-slate-100 text-xs text-slate-500">
                       <span>Author: {ver.author}</span>
                     </div>
 
@@ -563,9 +563,9 @@ export const DeveloperConsole: React.FC = () => {
                           e.stopPropagation();
                           rollbackAgentVersion(ver.id);
                         }}
-                        className="w-full mt-3 py-1.5 bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 rounded-xl text-xs font-semibold flex items-center justify-center gap-1 transition-colors cursor-pointer"
+                        className="w-full mt-3.5 py-2 bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 rounded-xl text-xs sm:text-sm font-semibold flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
                       >
-                        <RotateCcw className="w-3.5 h-3.5" />
+                        <RotateCcw className="w-4 h-4" />
                         <span>Rollback to v{ver.version}</span>
                       </button>
                     )}
@@ -576,14 +576,14 @@ export const DeveloperConsole: React.FC = () => {
 
             {/* Selected Version Inspector */}
             {selectedVersion && (
-              <div className="mt-4 p-5 bg-slate-50 rounded-2xl border border-slate-200 text-xs space-y-3">
-                <div className="flex items-center justify-between border-b border-slate-200 pb-2">
-                  <h4 className="font-bold text-slate-900">Snapshot Diff: {selectedVersion.versionLabel}</h4>
-                  <span className="text-[11px] text-slate-400 font-mono">ID: {selectedVersion.id}</span>
+              <div className="mt-5 p-5 bg-slate-50 rounded-2xl border border-slate-200 text-sm space-y-3">
+                <div className="flex items-center justify-between border-b border-slate-200 pb-2.5">
+                  <h4 className="font-bold text-slate-900 text-base">Snapshot Diff: {selectedVersion.versionLabel}</h4>
+                  <span className="text-xs text-slate-500 font-mono">ID: {selectedVersion.id}</span>
                 </div>
-                <div className="space-y-1">
+                <div className="space-y-1.5">
                   {selectedVersion.diffSummary?.map((d: string, i: number) => (
-                    <div key={i} className="font-mono text-[11px] text-slate-700 bg-white p-2 rounded border border-slate-200">
+                    <div key={i} className="font-mono text-xs sm:text-sm text-slate-700 bg-white p-2.5 rounded-lg border border-slate-200">
                       {d}
                     </div>
                   ))}
@@ -596,17 +596,17 @@ export const DeveloperConsole: React.FC = () => {
 
       {/* 6. Advanced AI Parameters Tab */}
       {currentDevTab === 'advanced-ai' && (
-        <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs max-w-3xl space-y-5 text-xs animate-in fade-in duration-150">
+        <div className="bg-white rounded-2xl border border-slate-200 p-6 sm:p-7 shadow-xs max-w-3xl space-y-5 text-sm animate-in fade-in duration-150">
           <div>
-            <h3 className="text-sm font-bold text-slate-900">Low-Level AI Inference & Prompt Hyperparameters</h3>
-            <p className="text-xs text-slate-500">Fine-tune hallucination thresholds, temperature, and raw developer instructions.</p>
+            <h3 className="text-base sm:text-lg font-bold text-slate-900">Low-Level AI Inference & Prompt Hyperparameters</h3>
+            <p className="text-xs sm:text-sm text-slate-500">Fine-tune hallucination thresholds, temperature, and raw developer instructions.</p>
           </div>
 
-          <div className="space-y-4">
+          <div className="space-y-5">
             <div>
-              <div className="flex items-center justify-between mb-1.5">
-                <label className="font-bold text-slate-700">Temperature / Sampling Variance ({currentCompany.agent.creativityLevel})</label>
-                <span className="text-[10px] text-slate-400 font-mono">0.0 (Strict) - 1.0 (Creative)</span>
+              <div className="flex items-center justify-between mb-2">
+                <label className="font-bold text-slate-800">Temperature / Sampling Variance ({currentCompany.agent.creativityLevel})</label>
+                <span className="text-xs text-slate-500 font-mono">0.0 (Strict) - 1.0 (Creative)</span>
               </div>
               <input
                 type="range"
@@ -615,23 +615,23 @@ export const DeveloperConsole: React.FC = () => {
                 step="0.05"
                 value={currentCompany.agent.creativityLevel}
                 onChange={e => updateAgentConfig({ creativityLevel: parseFloat(e.target.value) })}
-                className="w-full accent-indigo-600"
+                className="w-full accent-indigo-600 cursor-pointer"
               />
             </div>
 
             <div>
-              <label className="block font-bold text-slate-700 mb-1">Developer System Prompt Override</label>
+              <label className="block font-bold text-slate-800 mb-1.5">Developer System Prompt Override</label>
               <textarea
                 rows={4}
                 value={currentCompany.agent.systemInstructions}
                 onChange={e => updateAgentConfig({ systemInstructions: e.target.value })}
-                className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl font-mono text-xs focus:bg-white"
+                className="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl font-mono text-xs sm:text-sm focus:bg-white focus:ring-2 focus:ring-indigo-600 focus:outline-hidden"
               />
             </div>
 
-            <div className="p-4 bg-amber-50 border border-amber-200 rounded-2xl flex items-start gap-3">
+            <div className="p-4.5 bg-amber-50 border border-amber-200 rounded-2xl flex items-start gap-3">
               <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
-              <p className="text-amber-800 text-[11px] leading-relaxed">
+              <p className="text-amber-900 text-xs sm:text-sm leading-relaxed">
                 Changes to developer parameters apply immediately across all live production inference endpoints without requiring frontend restarts.
               </p>
             </div>
@@ -642,19 +642,19 @@ export const DeveloperConsole: React.FC = () => {
       {/* 7. Developer SDK & Tools Tab */}
       {currentDevTab === 'dev-tools' && (
         <div className="space-y-6 animate-in fade-in duration-150">
-          <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs space-y-4">
-            <div className="flex items-center justify-between">
+          <div className="bg-white rounded-2xl border border-slate-200 p-6 sm:p-7 shadow-xs space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div>
-                <h3 className="text-sm font-bold text-slate-900">Code Generator & REST Snippets</h3>
-                <p className="text-xs text-slate-500">Query your AI employee programmatically from backend microservices.</p>
+                <h3 className="text-base sm:text-lg font-bold text-slate-900">Code Generator & REST Snippets</h3>
+                <p className="text-xs sm:text-sm text-slate-500">Query your AI employee programmatically from backend microservices.</p>
               </div>
-              <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-xl">
+              <div className="flex items-center gap-1.5 bg-slate-100 p-1.5 rounded-xl">
                 {(['curl', 'javascript', 'python'] as const).map(lang => (
                   <button
                     key={lang}
                     onClick={() => setDevLanguage(lang)}
-                    className={`px-3 py-1 rounded-lg text-xs font-semibold capitalize transition-all cursor-pointer ${
-                      devLanguage === lang ? 'bg-white text-indigo-600 shadow-xs' : 'text-slate-600 hover:text-slate-900'
+                    className={`px-3.5 py-1.5 rounded-lg text-xs sm:text-sm font-semibold capitalize transition-all cursor-pointer ${
+                      devLanguage === lang ? 'bg-white text-indigo-600 shadow-xs font-bold' : 'text-slate-600 hover:text-slate-900'
                     }`}
                   >
                     {lang}
@@ -663,12 +663,12 @@ export const DeveloperConsole: React.FC = () => {
               </div>
             </div>
 
-            <div className="bg-slate-950 text-slate-200 p-4 rounded-2xl font-mono text-xs relative">
+            <div className="bg-slate-950 text-slate-200 p-5 rounded-2xl font-mono text-xs sm:text-sm relative">
               <button
                 onClick={() => handleCopy(devLanguage === 'curl' ? `curl -X POST https://api.agentflow.ai/v1/chat/completions -H "Authorization: Bearer ${currentCompany.apiKey}" -d '{"messages":[{"role":"user","content":"Hello"}]}'` : 'code', 'snippet')}
-                className="absolute top-3 right-3 p-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg cursor-pointer"
+                className="absolute top-3.5 right-3.5 p-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg cursor-pointer"
               >
-                {copiedKey === 'snippet' ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+                {copiedKey === 'snippet' ? <Check className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4" />}
               </button>
               {devLanguage === 'curl' && (
                 <pre className="text-emerald-400 overflow-x-auto whitespace-pre-wrap">{`curl -X POST https://api.agentflow.ai/v1/chat/completions \\
@@ -712,28 +712,28 @@ print(res.json())`}</pre>
           </div>
 
           {/* SSE Streaming Interactive Sandbox */}
-          <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs space-y-3">
-            <h3 className="text-sm font-bold text-slate-900">Server-Sent Events (SSE) Live Stream Inspector</h3>
-            <p className="text-xs text-slate-500">Test real-time token streaming chunks directly in the browser.</p>
-            <div className="flex items-center gap-2">
+          <div className="bg-white rounded-2xl border border-slate-200 p-6 sm:p-7 shadow-xs space-y-4">
+            <h3 className="text-base sm:text-lg font-bold text-slate-900">Server-Sent Events (SSE) Live Stream Inspector</h3>
+            <p className="text-xs sm:text-sm text-slate-500">Test real-time token streaming chunks directly in the browser.</p>
+            <div className="flex items-center gap-2.5">
               <input
                 type="text"
                 value={sseTestInput}
                 onChange={e => setSseTestInput(e.target.value)}
-                className="flex-1 px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-mono"
+                className="flex-1 px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm font-mono focus:ring-2 focus:ring-indigo-600 focus:outline-hidden"
               />
               <button
                 onClick={runSseSimulation}
                 disabled={isSseStreaming}
-                className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer"
+                className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs sm:text-sm font-bold flex items-center gap-2 transition-colors cursor-pointer shadow-xs"
               >
-                <Play className="w-3.5 h-3.5" />
+                <Play className="w-4 h-4" />
                 <span>{isSseStreaming ? 'Streaming...' : 'Run Stream'}</span>
               </button>
             </div>
 
             {sseOutput.length > 0 && (
-              <div className="mt-3 p-4 bg-slate-900 text-slate-300 rounded-xl font-mono text-[11px] space-y-1">
+              <div className="mt-4 p-5 bg-slate-900 text-slate-300 rounded-2xl font-mono text-xs sm:text-sm space-y-1.5">
                 {sseOutput.map((c, i) => (
                   <div key={i} className="text-emerald-400">{c}</div>
                 ))}

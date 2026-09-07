@@ -329,58 +329,58 @@ export const KnowledgeView: React.FC = () => {
       {/* Header & Quick Action Buttons */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <div className="flex items-center gap-2.5">
-            <h1 className="text-lg sm:text-xl font-semibold text-slate-900 tracking-tight">Knowledge Base</h1>
-            <span className="inline-flex items-center gap-1.5 text-xs font-medium text-slate-700 bg-slate-100 border border-slate-200 px-2.5 py-0.5 rounded-md">
-              <Sparkles className="w-3 h-3 text-slate-600" /> Vector RAG Active
+          <div className="flex items-center gap-3">
+            <h1 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">Knowledge Base</h1>
+            <span className="inline-flex items-center gap-1.5 text-xs sm:text-sm font-semibold text-slate-700 bg-slate-100 border border-slate-200 px-3 py-1 rounded-lg">
+              <Sparkles className="w-3.5 h-3.5 text-slate-700" /> Vector RAG Active
             </span>
           </div>
-          <p className="text-xs text-slate-500 mt-0.5">
+          <p className="text-sm sm:text-base text-slate-600 mt-1">
             Ingest and ground <strong>{currentCompany.agent.name}</strong> on your verified company policies, documentation, URLs, and FAQs.
           </p>
         </div>
 
-        <div className="flex items-center gap-2 flex-wrap">
+        <div className="flex items-center gap-2.5 flex-wrap">
           <button
             onClick={() => setIsTestSandboxOpen(true)}
-            className="px-3.5 py-2 bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 rounded-lg text-xs font-medium flex items-center gap-1.5 transition-colors shadow-xs cursor-pointer"
+            className="px-4 py-2.5 bg-white hover:bg-slate-50 border border-slate-200 text-slate-800 rounded-xl text-sm font-semibold flex items-center gap-2 transition-colors shadow-xs cursor-pointer"
           >
-            <Play className="w-3.5 h-3.5 text-emerald-600" />
+            <Play className="w-4 h-4 text-emerald-600" />
             <span>Test Knowledge RAG</span>
           </button>
 
           <button
             onClick={() => handleOpenAddModal('document')}
-            className="px-3.5 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-lg text-xs font-medium flex items-center gap-1.5 transition-colors shadow-xs cursor-pointer"
+            className="px-4 py-2.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-sm font-semibold flex items-center gap-2 transition-colors shadow-sm cursor-pointer"
           >
-            <Plus className="w-3.5 h-3.5" />
+            <Plus className="w-4 h-4" />
             <span>Add Knowledge</span>
           </button>
         </div>
       </div>
 
       {/* 4 Health & Status Radar Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3.5">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Knowledge Health Radar */}
-        <div className="bg-white p-4.5 rounded-xl border border-slate-200/80 shadow-[0_1px_2px_rgba(0,0,0,0.02)] flex flex-col justify-between">
+        <div className="bg-white p-5 rounded-2xl border border-slate-200/90 shadow-sm flex flex-col justify-between">
           <div className="flex items-center justify-between">
-            <span className="text-[11px] font-medium text-slate-400 uppercase tracking-wider">Health Status</span>
-            <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
+            <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Health Status</span>
+            <ShieldCheck className="w-4 h-4 text-emerald-600" />
           </div>
-          <div className="mt-2.5">
-            <div className="flex items-center gap-2">
-              <span className="text-2xl font-bold text-emerald-600 tracking-tight">98%</span>
-              <span className="inline-flex items-center gap-1 text-[10px] font-medium text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200/60">
-                <Check className="w-3 h-3 text-emerald-600" /> Grounded
+          <div className="mt-3">
+            <div className="flex items-center gap-2.5">
+              <span className="text-3xl font-bold text-emerald-600 tracking-tight">98%</span>
+              <span className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-md border border-emerald-200">
+                <Check className="w-3.5 h-3.5 text-emerald-600" /> Grounded
               </span>
             </div>
-            <p className="text-[11px] text-slate-400 mt-0.5">{totalChunks} semantic vector chunks indexed</p>
+            <p className="text-xs text-slate-500 mt-1">{totalChunks} semantic vector chunks indexed</p>
             {knowledgeGaps.length > 0 && (
               <button 
                 onClick={() => setActiveTab('gaps')}
-                className="mt-2 text-[10px] text-amber-700 bg-amber-50 hover:bg-amber-100/80 border border-amber-200/60 px-2 py-0.5 rounded font-medium flex items-center gap-1 cursor-pointer transition-colors"
+                className="mt-2.5 text-xs text-amber-800 bg-amber-50 hover:bg-amber-100 border border-amber-200 px-2.5 py-1 rounded-md font-semibold flex items-center gap-1.5 cursor-pointer transition-colors"
               >
-                <AlertTriangle className="w-2.5 h-2.5 text-amber-600" />
+                <AlertTriangle className="w-3 h-3 text-amber-600" />
                 <span>{knowledgeGaps.length} gaps need answers</span>
               </button>
             )}
@@ -388,71 +388,71 @@ export const KnowledgeView: React.FC = () => {
         </div>
 
         {/* Website Sync */}
-        <div className="bg-white p-4.5 rounded-xl border border-slate-200/80 shadow-[0_1px_2px_rgba(0,0,0,0.02)] flex flex-col justify-between">
+        <div className="bg-white p-5 rounded-2xl border border-slate-200/90 shadow-sm flex flex-col justify-between">
           <div className="flex items-center justify-between">
-            <span className="text-[11px] font-medium text-slate-400 uppercase tracking-wider">Website Sources</span>
-            <Globe className="w-3.5 h-3.5 text-slate-600" />
+            <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Website Sources</span>
+            <Globe className="w-4 h-4 text-slate-700" />
           </div>
-          <div className="mt-2.5">
-            <div className="flex items-center gap-2">
-              <span className="text-2xl font-bold text-slate-900 tracking-tight">{websiteCount}</span>
-              <span className="inline-flex items-center gap-1 text-[10px] font-medium text-slate-700 bg-slate-100 px-2 py-0.5 rounded border border-slate-200/60">
-                <Check className="w-3 h-3 text-slate-600" /> Synced
+          <div className="mt-3">
+            <div className="flex items-center gap-2.5">
+              <span className="text-3xl font-bold text-slate-900 tracking-tight">{websiteCount}</span>
+              <span className="inline-flex items-center gap-1 text-xs font-semibold text-slate-700 bg-slate-100 px-2.5 py-0.5 rounded-md border border-slate-200">
+                <Check className="w-3.5 h-3.5 text-slate-600" /> Synced
               </span>
             </div>
-            <p className="text-[11px] text-slate-400 mt-0.5 truncate">{currentCompany.domain}</p>
+            <p className="text-xs text-slate-500 mt-1 truncate">{currentCompany.domain}</p>
           </div>
         </div>
 
         {/* Documents */}
-        <div className="bg-white p-4.5 rounded-xl border border-slate-200/80 shadow-[0_1px_2px_rgba(0,0,0,0.02)] flex flex-col justify-between">
+        <div className="bg-white p-5 rounded-2xl border border-slate-200/90 shadow-sm flex flex-col justify-between">
           <div className="flex items-center justify-between">
-            <span className="text-[11px] font-medium text-slate-400 uppercase tracking-wider">Documents</span>
-            <FileText className="w-3.5 h-3.5 text-slate-600" />
+            <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Documents</span>
+            <FileText className="w-4 h-4 text-slate-700" />
           </div>
-          <div className="mt-2.5">
-            <div className="flex items-center gap-2">
-              <span className="text-2xl font-bold text-slate-900 tracking-tight">{docCount}</span>
-              <span className="inline-flex items-center gap-1 text-[10px] font-medium text-slate-700 bg-slate-100 px-2 py-0.5 rounded border border-slate-200/60">
-                <Check className="w-3 h-3 text-slate-600" /> Ready
+          <div className="mt-3">
+            <div className="flex items-center gap-2.5">
+              <span className="text-3xl font-bold text-slate-900 tracking-tight">{docCount}</span>
+              <span className="inline-flex items-center gap-1 text-xs font-semibold text-slate-700 bg-slate-100 px-2.5 py-0.5 rounded-md border border-slate-200">
+                <Check className="w-3.5 h-3.5 text-slate-600" /> Ready
               </span>
             </div>
-            <p className="text-[11px] text-slate-400 mt-0.5">PDF, DOCX, TXT, MD & CSV</p>
+            <p className="text-xs text-slate-500 mt-1">PDF, DOCX, TXT, MD & CSV</p>
           </div>
         </div>
 
         {/* FAQs & Answers */}
-        <div className="bg-white p-4.5 rounded-xl border border-slate-200/80 shadow-[0_1px_2px_rgba(0,0,0,0.02)] flex flex-col justify-between">
+        <div className="bg-white p-5 rounded-2xl border border-slate-200/90 shadow-sm flex flex-col justify-between">
           <div className="flex items-center justify-between">
-            <span className="text-[11px] font-medium text-slate-400 uppercase tracking-wider">FAQs & Q&A</span>
-            <HelpCircle className="w-3.5 h-3.5 text-slate-600" />
+            <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">FAQs & Q&A</span>
+            <HelpCircle className="w-4 h-4 text-slate-700" />
           </div>
-          <div className="mt-2.5">
-            <div className="flex items-center gap-2">
-              <span className="text-2xl font-bold text-slate-900 tracking-tight">{faqCount}</span>
-              <span className="inline-flex items-center gap-1 text-[10px] font-medium text-slate-700 bg-slate-100 px-2 py-0.5 rounded border border-slate-200/60">
-                <Check className="w-3 h-3 text-slate-600" /> Active
+          <div className="mt-3">
+            <div className="flex items-center gap-2.5">
+              <span className="text-3xl font-bold text-slate-900 tracking-tight">{faqCount}</span>
+              <span className="inline-flex items-center gap-1 text-xs font-semibold text-slate-700 bg-slate-100 px-2.5 py-0.5 rounded-md border border-slate-200">
+                <Check className="w-3.5 h-3.5 text-slate-600" /> Active
               </span>
             </div>
-            <p className="text-[11px] text-slate-400 mt-0.5">Direct verified Q&A pairs</p>
+            <p className="text-xs text-slate-500 mt-1">Direct verified Q&A pairs</p>
           </div>
         </div>
       </div>
 
       {/* Collections Row */}
-      <div className="bg-white p-3 rounded-lg border border-slate-200/80 shadow-[0_1px_2px_rgba(0,0,0,0.02)] flex items-center justify-between gap-2.5 overflow-x-auto">
-        <div className="flex items-center gap-1.5">
-          <span className="text-xs font-medium text-slate-500 flex items-center gap-1.5 shrink-0 pl-1">
-            <Layers className="w-3.5 h-3.5 text-slate-500" />
+      <div className="bg-white p-3.5 rounded-xl border border-slate-200/90 shadow-xs flex items-center justify-between gap-3 overflow-x-auto">
+        <div className="flex items-center gap-2">
+          <span className="text-sm font-semibold text-slate-700 flex items-center gap-1.5 shrink-0 pl-1">
+            <Layers className="w-4 h-4 text-slate-600" />
             <span>Collections:</span>
           </span>
 
           <button
             onClick={() => setSelectedCollection('all')}
-            className={`px-2.5 py-1 rounded-md text-xs font-medium transition-colors cursor-pointer whitespace-nowrap ${
+            className={`px-3 py-1.5 rounded-lg text-sm font-semibold transition-colors cursor-pointer whitespace-nowrap ${
               selectedCollection === 'all'
                 ? 'bg-slate-900 text-white'
-                : 'bg-slate-100 text-slate-600 hover:bg-slate-200/70'
+                : 'bg-slate-100 text-slate-700 hover:bg-slate-200/80'
             }`}
           >
             All Collections
@@ -462,10 +462,10 @@ export const KnowledgeView: React.FC = () => {
             <button
               key={col.id}
               onClick={() => setSelectedCollection(col.id)}
-              className={`px-2.5 py-1 rounded-md text-xs font-medium transition-colors cursor-pointer whitespace-nowrap ${
+              className={`px-3 py-1.5 rounded-lg text-sm font-semibold transition-colors cursor-pointer whitespace-nowrap ${
                 selectedCollection === col.id
                   ? 'bg-slate-900 text-white'
-                  : 'bg-slate-100 text-slate-600 hover:bg-slate-200/70'
+                  : 'bg-slate-100 text-slate-700 hover:bg-slate-200/80'
               }`}
             >
               {col.name}
@@ -475,16 +475,16 @@ export const KnowledgeView: React.FC = () => {
 
         <button
           onClick={() => setIsNewCollectionModalOpen(true)}
-          className="px-2.5 py-1 text-slate-700 hover:bg-slate-100 border border-slate-200 rounded-md text-xs font-medium flex items-center gap-1 transition-colors cursor-pointer shrink-0"
+          className="px-3 py-1.5 text-slate-800 hover:bg-slate-100 border border-slate-200 rounded-lg text-sm font-semibold flex items-center gap-1.5 transition-colors cursor-pointer shrink-0"
         >
-          <FolderPlus className="w-3.5 h-3.5 text-slate-500" />
+          <FolderPlus className="w-4 h-4 text-slate-600" />
           <span>New Collection</span>
         </button>
       </div>
 
       {/* Filter Tabs & Search Bar */}
-      <div className="bg-white p-3 rounded-lg border border-slate-200/80 shadow-[0_1px_2px_rgba(0,0,0,0.02)] flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <div className="flex items-center gap-1 overflow-x-auto">
+      <div className="bg-white p-3.5 rounded-xl border border-slate-200/90 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div className="flex items-center gap-1.5 overflow-x-auto">
           {[
             { id: 'all', label: 'All Knowledge' },
             { id: 'url', label: 'Websites' },
@@ -496,14 +496,14 @@ export const KnowledgeView: React.FC = () => {
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id as any)}
-              className={`px-3 py-1.5 rounded-md text-xs font-medium whitespace-nowrap transition-colors cursor-pointer ${
+              className={`px-3.5 py-2 rounded-lg text-sm font-semibold whitespace-nowrap transition-colors cursor-pointer ${
                 activeTab === tab.id
                   ? tab.id === 'gaps' 
                     ? 'bg-amber-600 text-white' 
                     : 'bg-slate-900 text-white'
                   : tab.id === 'gaps' 
-                    ? 'bg-amber-50 text-amber-800 border border-amber-200/60 hover:bg-amber-100/80' 
-                    : 'text-slate-600 hover:bg-slate-100'
+                    ? 'bg-amber-50 text-amber-900 border border-amber-200 hover:bg-amber-100' 
+                    : 'text-slate-700 hover:bg-slate-100'
               }`}
             >
               {tab.label}
@@ -511,57 +511,57 @@ export const KnowledgeView: React.FC = () => {
           ))}
         </div>
 
-        <div className="relative w-full sm:w-64">
-          <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+        <div className="relative w-full sm:w-72">
+          <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
           <input
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search knowledge sources..."
-            className="w-full pl-8 pr-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-md focus:ring-1 focus:ring-slate-900 focus:border-slate-900 focus:outline-hidden"
+            className="w-full pl-9 pr-3.5 py-2 text-sm bg-slate-50 border border-slate-200 rounded-lg focus:ring-1 focus:ring-slate-900 focus:border-slate-900 focus:outline-hidden"
           />
         </div>
       </div>
 
       {/* Gaps Tab Active View */}
       {activeTab === 'gaps' ? (
-        <div className="space-y-3.5">
-          <div className="bg-amber-50/60 border border-amber-200/70 rounded-xl p-4 flex items-center justify-between gap-3">
-            <div className="flex items-center gap-2.5">
-              <div className="p-2 bg-amber-500/10 rounded-lg text-amber-700">
-                <AlertTriangle className="w-4 h-4" />
+        <div className="space-y-4">
+          <div className="bg-amber-50/70 border border-amber-200 rounded-2xl p-5 flex items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2.5 bg-amber-500/10 rounded-xl text-amber-700">
+                <AlertTriangle className="w-5 h-5" />
               </div>
               <div>
-                <h3 className="text-xs font-semibold text-amber-900">Unresolved Customer Questions ({knowledgeGaps.length})</h3>
-                <p className="text-[11px] text-amber-700">Questions real customers asked where the assistant lacked verified answers. Convert them into FAQs in 1 click.</p>
+                <h3 className="text-base font-bold text-amber-950">Unresolved Customer Questions ({knowledgeGaps.length})</h3>
+                <p className="text-sm text-amber-800 mt-0.5">Questions real customers asked where the assistant lacked verified answers. Convert them into FAQs in 1 click.</p>
               </div>
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {knowledgeGaps.map(gap => (
-              <div key={gap.id} className="bg-white rounded-xl p-4.5 border border-amber-200/80 shadow-[0_1px_2px_rgba(0,0,0,0.02)] flex flex-col justify-between">
+              <div key={gap.id} className="bg-white rounded-2xl p-5 border border-amber-200 shadow-sm flex flex-col justify-between">
                 <div>
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-[10px] font-medium uppercase font-mono text-amber-700 bg-amber-50 px-2 py-0.5 rounded border border-amber-200/60">
+                  <div className="flex items-center justify-between mb-2.5">
+                    <span className="text-xs font-semibold uppercase font-mono text-amber-800 bg-amber-50 px-2.5 py-0.5 rounded-md border border-amber-200">
                       {gap.suggestedCategory}
                     </span>
-                    <span className="text-xs font-medium text-amber-800">{gap.occurrences} customer asks</span>
+                    <span className="text-xs font-bold text-amber-900">{gap.occurrences} customer asks</span>
                   </div>
-                  <h4 className="text-xs font-semibold text-slate-900 mt-2">"{gap.query}"</h4>
-                  <p className="text-[11px] text-slate-400 mt-1">Last asked {gap.lastAskedAt}</p>
+                  <h4 className="text-base font-bold text-slate-900 mt-2 leading-snug">"{gap.query}"</h4>
+                  <p className="text-xs text-slate-500 mt-1.5">Last asked {gap.lastAskedAt}</p>
                 </div>
 
-                <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between">
-                  <span className="text-[11px] text-slate-400">Add verified answer</span>
+                <div className="mt-5 pt-3.5 border-t border-slate-100 flex items-center justify-between">
+                  <span className="text-xs text-slate-500">Add verified answer</span>
                   <button
                     onClick={() => {
                       setConvertingGap(gap);
                       setGapFaqAnswer('');
                     }}
-                    className="px-3 py-1.5 bg-amber-600 hover:bg-amber-500 text-white rounded-lg text-xs font-medium flex items-center gap-1.5 transition-colors cursor-pointer"
+                    className="px-3.5 py-2 bg-amber-600 hover:bg-amber-500 text-white rounded-xl text-sm font-semibold flex items-center gap-2 transition-colors cursor-pointer"
                   >
-                    <Plus className="w-3.5 h-3.5" />
+                    <Plus className="w-4 h-4" />
                     <span>Convert to FAQ</span>
                   </button>
                 </div>
@@ -571,7 +571,7 @@ export const KnowledgeView: React.FC = () => {
         </div>
       ) : (
         /* Standard Knowledge Item Cards Grid */
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {filteredItems.map(item => {
             const isUrl = item.type === 'url';
             const isDoc = item.type === 'document';
@@ -580,49 +580,49 @@ export const KnowledgeView: React.FC = () => {
             return (
               <div 
                 key={item.id}
-                className="bg-white rounded-xl p-4.5 border border-slate-200/80 shadow-[0_1px_2px_rgba(0,0,0,0.02)] hover:border-slate-300 transition-colors flex flex-col justify-between"
+                className="bg-white rounded-2xl p-5 border border-slate-200/90 shadow-sm hover:border-slate-300 transition-all flex flex-col justify-between"
               >
                 <div>
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="flex items-center gap-2">
-                      <div className="p-1.5 rounded bg-slate-100 text-slate-600 border border-slate-200/60">
-                        {isUrl ? <Globe className="w-3.5 h-3.5" /> : isDoc ? <FileText className="w-3.5 h-3.5" /> : isFaq ? <HelpCircle className="w-3.5 h-3.5" /> : <AlignLeft className="w-3.5 h-3.5" />}
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-2.5">
+                      <div className="p-2 rounded-lg bg-slate-100 text-slate-700 border border-slate-200">
+                        {isUrl ? <Globe className="w-4 h-4" /> : isDoc ? <FileText className="w-4 h-4" /> : isFaq ? <HelpCircle className="w-4 h-4" /> : <AlignLeft className="w-4 h-4" />}
                       </div>
-                      <span className="text-[10px] font-medium font-mono uppercase tracking-wider text-slate-400">{item.type}</span>
+                      <span className="text-xs font-bold font-mono uppercase tracking-wider text-slate-500">{item.type}</span>
                     </div>
-                    <span className="inline-flex items-center gap-1 text-[10px] font-medium text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200/60">
-                      <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                    <span className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-md border border-emerald-200">
+                      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
                       <span>Ready</span>
                     </span>
                   </div>
 
-                  <h3 className="text-xs font-semibold text-slate-900 line-clamp-1">{item.title}</h3>
-                  <p className="text-xs text-slate-500 mt-1 line-clamp-2 leading-relaxed">
+                  <h3 className="text-base font-bold text-slate-900 line-clamp-1">{item.title}</h3>
+                  <p className="text-sm text-slate-600 mt-1.5 line-clamp-2 leading-relaxed">
                     {item.faqAnswer || item.content}
                   </p>
                 </div>
 
-                <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-xs">
-                  <span className="text-[11px] text-slate-400 font-medium font-mono">
+                <div className="mt-5 pt-3.5 border-t border-slate-100 flex items-center justify-between text-sm">
+                  <span className="text-xs text-slate-500 font-semibold font-mono">
                     {item.category || 'General'} {item.chunksCount ? `· ${item.chunksCount} chunks` : ''}
                   </span>
                   <div className="flex items-center gap-1">
                     <button
                       onClick={() => setPreviewItem(item)}
-                      className="p-1.5 text-slate-400 hover:text-slate-800 hover:bg-slate-100 rounded transition-colors cursor-pointer"
+                      className="p-2 text-slate-500 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
                       title="Preview Chunks"
                     >
-                      <Eye className="w-3.5 h-3.5" />
+                      <Eye className="w-4 h-4" />
                     </button>
                     <button
                       onClick={() => {
                         deleteKnowledgeItem(item.id);
                         showToast('Knowledge Removed', `Removed "${item.title}".`, 'info');
                       }}
-                      className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded transition-colors cursor-pointer"
+                      className="p-2 text-slate-500 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer"
                       title="Delete"
                     >
-                      <Trash2 className="w-3.5 h-3.5" />
+                      <Trash2 className="w-4 h-4" />
                     </button>
                   </div>
                 </div>
@@ -634,22 +634,22 @@ export const KnowledgeView: React.FC = () => {
 
       {/* Clean Bottom Learning Section if Gaps Exist and Not on Gaps Tab */}
       {knowledgeGaps.length > 0 && activeTab !== 'gaps' && (
-        <div className="bg-amber-50/60 border border-amber-200/70 rounded-xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-          <div className="flex items-center gap-2.5">
-            <div className="p-2 bg-amber-500/10 rounded-lg text-amber-700 shrink-0">
-              <AlertTriangle className="w-4 h-4" />
+        <div className="bg-amber-50/70 border border-amber-200 rounded-2xl p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <div className="p-2.5 bg-amber-500/10 rounded-xl text-amber-700 shrink-0">
+              <AlertTriangle className="w-5 h-5" />
             </div>
             <div>
-              <p className="text-xs font-semibold text-amber-900">{knowledgeGaps.length} Unresolved Customer Questions Detected</p>
-              <p className="text-[11px] text-amber-700">Customers asked questions where the AI lacked verified answers.</p>
+              <p className="text-sm font-bold text-amber-950">{knowledgeGaps.length} Unresolved Customer Questions Detected</p>
+              <p className="text-xs text-amber-800 mt-0.5">Customers asked questions where the AI lacked verified answers.</p>
             </div>
           </div>
           <button
             onClick={() => setActiveTab('gaps')}
-            className="px-3.5 py-1.5 bg-amber-600 hover:bg-amber-500 text-white rounded-lg text-xs font-medium whitespace-nowrap transition-colors flex items-center gap-1 cursor-pointer shrink-0"
+            className="px-4 py-2 bg-amber-600 hover:bg-amber-500 text-white rounded-xl text-sm font-semibold whitespace-nowrap transition-colors flex items-center gap-1.5 cursor-pointer shrink-0"
           >
             <span>Review Gaps ({knowledgeGaps.length})</span>
-            <ChevronRight className="w-3.5 h-3.5" />
+            <ChevronRight className="w-4 h-4" />
           </button>
         </div>
       )}
@@ -657,43 +657,43 @@ export const KnowledgeView: React.FC = () => {
       {/* RAG Sandbox Modal */}
       {isTestSandboxOpen && (
         <div className="fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in">
-          <div className="bg-white rounded-xl max-w-xl w-full p-5 sm:p-6 shadow-xl border border-slate-200 space-y-4 animate-in zoom-in-95 duration-150 max-h-[90vh] flex flex-col">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-              <div className="flex items-center gap-2.5">
-                <div className="p-2 bg-slate-100 text-slate-700 rounded-lg border border-slate-200/60">
-                  <Play className="w-4 h-4" />
+          <div className="bg-white rounded-2xl max-w-xl w-full p-6 sm:p-7 shadow-2xl border border-slate-200 space-y-5 animate-in zoom-in-95 duration-150 max-h-[90vh] flex flex-col">
+            <div className="flex items-center justify-between pb-3.5 border-b border-slate-100">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-slate-100 text-slate-800 rounded-xl border border-slate-200">
+                  <Play className="w-5 h-5" />
                 </div>
                 <div>
-                  <h3 className="text-sm font-semibold text-slate-900">Knowledge RAG Playground</h3>
-                  <p className="text-[11px] text-slate-400">Test how {currentCompany.agent.name} retrieves verified company answers.</p>
+                  <h3 className="text-base font-bold text-slate-900">Knowledge RAG Playground</h3>
+                  <p className="text-xs text-slate-500">Test how {currentCompany.agent.name} retrieves verified company answers.</p>
                 </div>
               </div>
               <button
                 onClick={() => setIsTestSandboxOpen(false)}
-                className="text-slate-400 hover:text-slate-700 p-1 rounded-lg hover:bg-slate-100 cursor-pointer"
+                className="text-slate-400 hover:text-slate-700 p-1.5 rounded-lg hover:bg-slate-100 cursor-pointer"
               >
-                <X className="w-4 h-4" />
+                <X className="w-5 h-5" />
               </button>
             </div>
 
             {/* Test Query Input */}
-            <form onSubmit={handleRunRagTest} className="space-y-2">
-              <label className="text-xs font-medium text-slate-700 block">Ask an Inquiry as a Customer</label>
-              <div className="flex gap-2">
+            <form onSubmit={handleRunRagTest} className="space-y-2.5">
+              <label className="text-sm font-semibold text-slate-800 block">Ask an Inquiry as a Customer</label>
+              <div className="flex gap-2.5">
                 <input
                   type="text"
                   required
                   value={testQuery}
                   onChange={(e) => setTestQuery(e.target.value)}
                   placeholder="e.g. What is your refund policy timeframe?"
-                  className="flex-1 px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-lg focus:ring-1 focus:ring-slate-900 focus:border-slate-900 focus:outline-hidden"
+                  className="flex-1 px-3.5 py-2.5 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:ring-1 focus:ring-slate-900 focus:border-slate-900 focus:outline-hidden"
                 />
                 <button
                   type="submit"
                   disabled={isTestingRag || !testQuery.trim()}
-                  className="px-4 py-2 bg-slate-900 hover:bg-slate-800 disabled:opacity-50 text-white rounded-lg text-xs font-medium flex items-center gap-1.5 transition-colors shadow-xs cursor-pointer"
+                  className="px-4 py-2.5 bg-slate-900 hover:bg-slate-800 disabled:opacity-50 text-white rounded-xl text-sm font-semibold flex items-center gap-2 transition-colors shadow-sm cursor-pointer"
                 >
-                  {isTestingRag ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <ArrowRight className="w-3.5 h-3.5" />}
+                  {isTestingRag ? <RefreshCw className="w-4 h-4 animate-spin" /> : <ArrowRight className="w-4 h-4" />}
                   <span>Test</span>
                 </button>
               </div>
@@ -701,46 +701,46 @@ export const KnowledgeView: React.FC = () => {
 
             {/* Test Results */}
             {isTestingRag && (
-              <div className="p-4 bg-slate-50 rounded-lg border border-slate-200 text-center py-8 space-y-2">
-                <RefreshCw className="w-5 h-5 text-slate-700 animate-spin mx-auto" />
-                <p className="text-xs font-semibold text-slate-800">Executing Multi-Tenant RAG Pipeline...</p>
-                <p className="text-[11px] text-slate-400">Querying dense embeddings & verifying groundedness...</p>
+              <div className="p-5 bg-slate-50 rounded-xl border border-slate-200 text-center py-8 space-y-2.5">
+                <RefreshCw className="w-6 h-6 text-slate-700 animate-spin mx-auto" />
+                <p className="text-sm font-bold text-slate-800">Executing Multi-Tenant RAG Pipeline...</p>
+                <p className="text-xs text-slate-500">Querying dense embeddings & verifying groundedness...</p>
               </div>
             )}
 
             {ragResult && !isTestingRag && (
-              <div className="flex-1 overflow-y-auto space-y-3 pr-1">
+              <div className="flex-1 overflow-y-auto space-y-4 pr-1">
                 {/* Answer Box */}
-                <div className={`p-4 rounded-lg border ${
-                  ragResult.isGrounded ? 'bg-emerald-50/40 border-emerald-200/80' : 'bg-rose-50/40 border-rose-200/80'
+                <div className={`p-5 rounded-xl border ${
+                  ragResult.isGrounded ? 'bg-emerald-50/50 border-emerald-200' : 'bg-rose-50/50 border-rose-200'
                 }`}>
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-[11px] font-medium uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
-                      <Bot className="w-3.5 h-3.5 text-slate-700" />
+                  <div className="flex items-center justify-between mb-2.5">
+                    <span className="text-xs font-bold uppercase tracking-wider text-slate-600 flex items-center gap-1.5">
+                      <Bot className="w-4 h-4 text-slate-800" />
                       <span>{currentCompany.agent.name}'s Answer</span>
                     </span>
-                    <span className={`text-[10px] font-medium px-2 py-0.5 rounded border ${
+                    <span className={`text-xs font-semibold px-2.5 py-0.5 rounded-md border ${
                       ragResult.isGrounded 
-                        ? 'bg-emerald-50 text-emerald-700 border-emerald-200/60' 
-                        : 'bg-rose-50 text-rose-700 border-rose-200/60'
+                        ? 'bg-emerald-50 text-emerald-800 border-emerald-200' 
+                        : 'bg-rose-50 text-rose-800 border-rose-200'
                     }`}>
                       {ragResult.isGrounded ? `Grounded (${Math.round(ragResult.confidenceScore * 100)}%)` : 'Refused (Missing Knowledge)'}
                     </span>
                   </div>
-                  <p className="text-xs text-slate-800 leading-relaxed whitespace-pre-wrap">{ragResult.answer}</p>
+                  <p className="text-sm text-slate-900 leading-relaxed whitespace-pre-wrap">{ragResult.answer}</p>
                 </div>
 
                 {/* Citations Box */}
                 {ragResult.citations && ragResult.citations.length > 0 && (
-                  <div className="space-y-2">
-                    <span className="text-[11px] font-medium text-slate-600 block">Verified Source Citations:</span>
+                  <div className="space-y-2.5">
+                    <span className="text-xs font-bold uppercase tracking-wider text-slate-600 block">Verified Source Citations:</span>
                     {ragResult.citations.map((c, idx) => (
-                      <div key={idx} className="p-3 bg-slate-50 border border-slate-200 rounded-lg text-xs space-y-1">
-                        <div className="flex items-center justify-between font-medium text-slate-900 text-[11px]">
+                      <div key={idx} className="p-3.5 bg-slate-50 border border-slate-200 rounded-xl text-sm space-y-1.5">
+                        <div className="flex items-center justify-between font-bold text-slate-900 text-xs">
                           <span>{c.sourceTitle || 'Knowledge Document'}</span>
-                          <span className="text-slate-600 font-mono">{Math.round(c.score * 100)}% score</span>
+                          <span className="text-slate-600 font-mono font-semibold">{Math.round(c.score * 100)}% score</span>
                         </div>
-                        <p className="text-slate-600 text-[11px] font-mono bg-white p-2 rounded border border-slate-100">
+                        <p className="text-slate-700 text-xs font-mono bg-white p-2.5 rounded-lg border border-slate-100">
                           "{c.preview}"
                         </p>
                       </div>
@@ -749,19 +749,19 @@ export const KnowledgeView: React.FC = () => {
                 )}
 
                 {/* Feedback Buttons */}
-                <div className="pt-2 flex items-center justify-between text-xs border-t border-slate-100">
-                  <span className="text-slate-400 text-[11px]">Was this answer accurate?</span>
-                  <div className="flex items-center gap-1.5">
+                <div className="pt-2.5 flex items-center justify-between text-sm border-t border-slate-100">
+                  <span className="text-slate-500 text-xs">Was this answer accurate?</span>
+                  <div className="flex items-center gap-2">
                     <button
                       onClick={() => {
                         setRagFeedbackSubmitted('helpful');
                         showToast('Feedback Recorded', 'Recorded helpful response telemetry.', 'success');
                       }}
-                      className={`p-1.5 rounded border text-xs flex items-center gap-1 cursor-pointer transition-colors ${
-                        ragFeedbackSubmitted === 'helpful' ? 'bg-emerald-50 border-emerald-300 text-emerald-800 font-medium' : 'border-slate-200 text-slate-600 hover:bg-slate-100'
+                      className={`px-3 py-1.5 rounded-lg border text-xs font-semibold flex items-center gap-1.5 cursor-pointer transition-colors ${
+                        ragFeedbackSubmitted === 'helpful' ? 'bg-emerald-50 border-emerald-300 text-emerald-800' : 'border-slate-200 text-slate-700 hover:bg-slate-100'
                       }`}
                     >
-                      <ThumbsUp className="w-3.5 h-3.5" />
+                      <ThumbsUp className="w-4 h-4" />
                       <span>Accurate</span>
                     </button>
                     <button
@@ -769,11 +769,11 @@ export const KnowledgeView: React.FC = () => {
                         setRagFeedbackSubmitted('not_helpful');
                         showToast('Feedback Recorded', 'Recorded improvement flag for knowledge base.', 'info');
                       }}
-                      className={`p-1.5 rounded border text-xs flex items-center gap-1 cursor-pointer transition-colors ${
-                        ragFeedbackSubmitted === 'not_helpful' ? 'bg-rose-50 border-rose-300 text-rose-800 font-medium' : 'border-slate-200 text-slate-600 hover:bg-slate-100'
+                      className={`px-3 py-1.5 rounded-lg border text-xs font-semibold flex items-center gap-1.5 cursor-pointer transition-colors ${
+                        ragFeedbackSubmitted === 'not_helpful' ? 'bg-rose-50 border-rose-300 text-rose-800' : 'border-slate-200 text-slate-700 hover:bg-slate-100'
                       }`}
                     >
-                      <ThumbsDown className="w-3.5 h-3.5" />
+                      <ThumbsDown className="w-4 h-4" />
                       <span>Inaccurate</span>
                     </button>
                   </div>
@@ -787,57 +787,57 @@ export const KnowledgeView: React.FC = () => {
       {/* Convert Gap to FAQ Modal */}
       {convertingGap && (
         <div className="fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in">
-          <div className="bg-white rounded-xl max-w-lg w-full p-5 sm:p-6 shadow-xl border border-slate-200 space-y-4 animate-in zoom-in-95 duration-150">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+          <div className="bg-white rounded-2xl max-w-lg w-full p-6 sm:p-7 shadow-2xl border border-slate-200 space-y-4 animate-in zoom-in-95 duration-150">
+            <div className="flex items-center justify-between pb-3.5 border-b border-slate-100">
               <div>
-                <h3 className="text-sm font-semibold text-slate-900">Resolve Knowledge Gap</h3>
-                <p className="text-[11px] text-slate-400">Provide verified answer to resolve unanswered customer questions.</p>
+                <h3 className="text-base font-bold text-slate-900">Resolve Knowledge Gap</h3>
+                <p className="text-xs text-slate-500 mt-0.5">Provide verified answer to resolve unanswered customer questions.</p>
               </div>
               <button
                 onClick={() => setConvertingGap(null)}
-                className="text-slate-400 hover:text-slate-700 p-1 rounded-lg hover:bg-slate-100 cursor-pointer"
+                className="text-slate-400 hover:text-slate-700 p-1.5 rounded-lg hover:bg-slate-100 cursor-pointer"
               >
-                <X className="w-4 h-4" />
+                <X className="w-5 h-5" />
               </button>
             </div>
 
-            <form onSubmit={handleConvertGap} className="space-y-3 text-xs">
+            <form onSubmit={handleConvertGap} className="space-y-4 text-sm">
               <div>
-                <label className="font-medium text-slate-700 block mb-1">Customer Question</label>
+                <label className="font-semibold text-slate-800 block mb-1.5">Customer Question</label>
                 <input
                   type="text"
                   readOnly
                   value={convertingGap.query}
-                  className="w-full px-3 py-2 bg-slate-100 border border-slate-200 rounded-lg text-slate-700 font-medium"
+                  className="w-full px-3.5 py-2.5 bg-slate-100 border border-slate-200 rounded-xl text-slate-800 font-semibold"
                 />
               </div>
 
               <div>
-                <label className="font-medium text-slate-700 block mb-1">Verified Official Answer</label>
+                <label className="font-semibold text-slate-800 block mb-1.5">Verified Official Answer</label>
                 <textarea
                   rows={4}
                   required
                   value={gapFaqAnswer}
                   onChange={(e) => setGapFaqAnswer(e.target.value)}
                   placeholder="Provide the exact verified answer for this question..."
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:ring-1 focus:ring-slate-900 focus:border-slate-900 focus:outline-hidden text-xs"
+                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-1 focus:ring-slate-900 focus:border-slate-900 focus:outline-hidden text-sm"
                 />
               </div>
 
-              <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100">
+              <div className="flex items-center justify-end gap-2.5 pt-3.5 border-t border-slate-100">
                 <button
                   type="button"
                   onClick={() => setConvertingGap(null)}
-                  className="px-3.5 py-1.5 text-slate-600 hover:bg-slate-100 rounded-lg font-medium transition-colors cursor-pointer"
+                  className="px-4 py-2 text-slate-700 hover:bg-slate-100 rounded-xl font-semibold transition-colors cursor-pointer text-sm"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={!gapFaqAnswer.trim()}
-                  className="px-4 py-1.5 bg-slate-900 hover:bg-slate-800 disabled:opacity-50 text-white rounded-lg font-medium flex items-center gap-1.5 transition-colors shadow-xs cursor-pointer"
+                  className="px-4 py-2 bg-slate-900 hover:bg-slate-800 disabled:opacity-50 text-white rounded-xl font-semibold flex items-center gap-2 transition-colors shadow-sm cursor-pointer text-sm"
                 >
-                  <Check className="w-3.5 h-3.5" />
+                  <Check className="w-4 h-4" />
                   <span>Save FAQ & Resolve Gap</span>
                 </button>
               </div>
@@ -849,56 +849,56 @@ export const KnowledgeView: React.FC = () => {
       {/* New Collection Modal */}
       {isNewCollectionModalOpen && (
         <div className="fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in">
-          <div className="bg-white rounded-xl max-w-md w-full p-5 sm:p-6 shadow-xl border border-slate-200 space-y-4 animate-in zoom-in-95 duration-150">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+          <div className="bg-white rounded-2xl max-w-md w-full p-6 sm:p-7 shadow-2xl border border-slate-200 space-y-4 animate-in zoom-in-95 duration-150">
+            <div className="flex items-center justify-between pb-3.5 border-b border-slate-100">
               <div>
-                <h3 className="text-sm font-semibold text-slate-900">Create Knowledge Collection</h3>
-                <p className="text-[11px] text-slate-400">Group related knowledge documents and FAQs.</p>
+                <h3 className="text-base font-bold text-slate-900">Create Knowledge Collection</h3>
+                <p className="text-xs text-slate-500 mt-0.5">Group related knowledge documents and FAQs.</p>
               </div>
               <button
                 onClick={() => setIsNewCollectionModalOpen(false)}
-                className="text-slate-400 hover:text-slate-700 p-1 rounded-lg hover:bg-slate-100 cursor-pointer"
+                className="text-slate-400 hover:text-slate-700 p-1.5 rounded-lg hover:bg-slate-100 cursor-pointer"
               >
-                <X className="w-4 h-4" />
+                <X className="w-5 h-5" />
               </button>
             </div>
 
-            <form onSubmit={handleCreateCollection} className="space-y-3 text-xs">
+            <form onSubmit={handleCreateCollection} className="space-y-4 text-sm">
               <div>
-                <label className="font-medium text-slate-700 block mb-1">Collection Name</label>
+                <label className="font-semibold text-slate-800 block mb-1.5">Collection Name</label>
                 <input
                   type="text"
                   required
                   value={newColName}
                   onChange={(e) => setNewColName(e.target.value)}
                   placeholder="e.g. Sales Playbook 2026"
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:ring-1 focus:ring-slate-900 focus:border-slate-900 focus:outline-hidden"
+                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-1 focus:ring-slate-900 focus:border-slate-900 focus:outline-hidden text-sm"
                 />
               </div>
 
               <div>
-                <label className="font-medium text-slate-700 block mb-1">Description</label>
+                <label className="font-semibold text-slate-800 block mb-1.5">Description</label>
                 <textarea
                   rows={2}
                   value={newColDesc}
                   onChange={(e) => setNewColDesc(e.target.value)}
                   placeholder="What knowledge belongs in this collection?"
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:ring-1 focus:ring-slate-900 focus:border-slate-900 focus:outline-hidden"
+                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-1 focus:ring-slate-900 focus:border-slate-900 focus:outline-hidden text-sm"
                 />
               </div>
 
-              <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100">
+              <div className="flex items-center justify-end gap-2.5 pt-3.5 border-t border-slate-100">
                 <button
                   type="button"
                   onClick={() => setIsNewCollectionModalOpen(false)}
-                  className="px-3.5 py-1.5 text-slate-600 hover:bg-slate-100 rounded-lg font-medium transition-colors cursor-pointer"
+                  className="px-4 py-2 text-slate-700 hover:bg-slate-100 rounded-xl font-semibold transition-colors cursor-pointer text-sm"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={!newColName.trim()}
-                  className="px-4 py-1.5 bg-slate-900 hover:bg-slate-800 disabled:opacity-50 text-white rounded-lg font-medium flex items-center gap-1.5 transition-colors shadow-xs cursor-pointer"
+                  className="px-4 py-2 bg-slate-900 hover:bg-slate-800 disabled:opacity-50 text-white rounded-xl font-semibold flex items-center gap-2 transition-colors shadow-sm cursor-pointer text-sm"
                 >
                   <span>Create Collection</span>
                 </button>
@@ -911,22 +911,22 @@ export const KnowledgeView: React.FC = () => {
       {/* Add Knowledge Modal */}
       {isAddModalOpen && (
         <div className="fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in">
-          <div className="bg-white rounded-xl max-w-lg w-full p-5 sm:p-6 shadow-xl border border-slate-200 space-y-4 animate-in zoom-in-95 duration-150">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+          <div className="bg-white rounded-2xl max-w-lg w-full p-6 sm:p-7 shadow-2xl border border-slate-200 space-y-4 animate-in zoom-in-95 duration-150">
+            <div className="flex items-center justify-between pb-3.5 border-b border-slate-100">
               <div>
-                <h3 className="text-sm font-semibold text-slate-900">Add Business Knowledge</h3>
-                <p className="text-xs text-slate-400">Upload documents, crawl website URLs, or add direct FAQs.</p>
+                <h3 className="text-base font-bold text-slate-900">Add Business Knowledge</h3>
+                <p className="text-xs text-slate-500 mt-0.5">Upload documents, crawl website URLs, or add direct FAQs.</p>
               </div>
               <button
                 onClick={() => setIsAddModalOpen(false)}
-                className="text-slate-400 hover:text-slate-700 p-1 rounded-lg hover:bg-slate-100 cursor-pointer"
+                className="text-slate-400 hover:text-slate-700 p-1.5 rounded-lg hover:bg-slate-100 cursor-pointer"
               >
-                <X className="w-4 h-4" />
+                <X className="w-5 h-5" />
               </button>
             </div>
 
             {/* Type selector */}
-            <div className="grid grid-cols-4 gap-2">
+            <div className="grid grid-cols-4 gap-2.5">
               {[
                 { id: 'url', label: 'Website', icon: Globe },
                 { id: 'document', label: 'Document', icon: FileText },
@@ -940,20 +940,20 @@ export const KnowledgeView: React.FC = () => {
                     key={t.id}
                     type="button"
                     onClick={() => setModalType(t.id as any)}
-                    className={`p-2 rounded-lg border text-center transition-colors cursor-pointer ${
-                      isSel ? 'bg-slate-900 border-slate-900 text-white font-medium shadow-xs' : 'border-slate-200 text-slate-600 hover:bg-slate-50'
+                    className={`p-2.5 rounded-xl border text-center transition-all cursor-pointer ${
+                      isSel ? 'bg-slate-900 border-slate-900 text-white font-semibold shadow-xs' : 'border-slate-200 text-slate-700 hover:bg-slate-50 font-medium'
                     }`}
                   >
-                    <Icon className="w-3.5 h-3.5 mx-auto mb-1" />
-                    <span className="text-[11px] block">{t.label}</span>
+                    <Icon className="w-4 h-4 mx-auto mb-1" />
+                    <span className="text-xs block">{t.label}</span>
                   </button>
                 );
               })}
             </div>
 
-            <form onSubmit={handleCreateKnowledge} className="space-y-3 text-xs">
+            <form onSubmit={handleCreateKnowledge} className="space-y-4 text-sm">
               <div>
-                <label className="font-medium text-slate-700 block mb-1">
+                <label className="font-semibold text-slate-800 block mb-1.5">
                   {modalType === 'faq' ? 'Question' : 'Title / Source Name'}
                 </label>
                 <input
@@ -968,17 +968,17 @@ export const KnowledgeView: React.FC = () => {
                       ? 'e.g. Product Guide & Service Policies'
                       : 'e.g. Enterprise SLA Terms'
                   }
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:ring-1 focus:ring-slate-900 focus:border-slate-900 focus:outline-hidden"
+                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-1 focus:ring-slate-900 focus:border-slate-900 focus:outline-hidden text-sm"
                 />
               </div>
 
               {/* Target Collection Selector */}
               <div>
-                <label className="font-medium text-slate-700 block mb-1">Assign to Collection</label>
+                <label className="font-semibold text-slate-800 block mb-1.5">Assign to Collection</label>
                 <select
                   value={formCollectionId}
                   onChange={(e) => setFormCollectionId(e.target.value)}
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:ring-1 focus:ring-slate-900 focus:border-slate-900 focus:outline-hidden text-xs"
+                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-1 focus:ring-slate-900 focus:border-slate-900 focus:outline-hidden text-sm"
                 >
                   {collections.map(col => (
                     <option key={col.id} value={col.id}>{col.name}</option>
@@ -989,16 +989,16 @@ export const KnowledgeView: React.FC = () => {
               {/* WEBSITE URL INPUT */}
               {modalType === 'url' && (
                 <div>
-                  <label className="font-medium text-slate-700 block mb-1">Website URL (SSRF Protected)</label>
+                  <label className="font-semibold text-slate-800 block mb-1.5">Website URL (SSRF Protected)</label>
                   <input
                     type="url"
                     required
                     value={formUrl}
                     onChange={(e) => setFormUrl(e.target.value)}
                     placeholder="https://yourcompany.com/docs"
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:ring-1 focus:ring-slate-900 focus:border-slate-900 focus:outline-hidden"
+                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-1 focus:ring-slate-900 focus:border-slate-900 focus:outline-hidden text-sm"
                   />
-                  <p className="text-[10px] text-slate-400 mt-1">
+                  <p className="text-xs text-slate-500 mt-1">
                     Crawler validates target URL and strips private subnets, loopback, and metadata endpoints.
                   </p>
                 </div>
@@ -1007,7 +1007,7 @@ export const KnowledgeView: React.FC = () => {
               {/* DOCUMENT FILE UPLOAD ZONE */}
               {modalType === 'document' && (
                 <div>
-                  <label className="font-medium text-slate-700 block mb-1.5">
+                  <label className="font-semibold text-slate-800 block mb-1.5">
                     Upload Document File
                   </label>
 
@@ -1020,19 +1020,19 @@ export const KnowledgeView: React.FC = () => {
                   />
 
                   {selectedFile ? (
-                    <div className="p-3 bg-slate-50 border border-slate-200 rounded-lg flex items-center justify-between gap-3">
-                      <div className="flex items-center gap-2.5 overflow-hidden">
-                        <div className="w-8 h-8 rounded-md bg-slate-900 text-white flex items-center justify-center shrink-0">
-                          <FileCheck className="w-4 h-4" />
+                    <div className="p-3.5 bg-slate-50 border border-slate-200 rounded-xl flex items-center justify-between gap-3">
+                      <div className="flex items-center gap-3 overflow-hidden">
+                        <div className="w-9 h-9 rounded-lg bg-slate-900 text-white flex items-center justify-center shrink-0">
+                          <FileCheck className="w-5 h-5" />
                         </div>
                         <div className="overflow-hidden">
-                          <p className="text-xs font-semibold text-slate-900 truncate">{selectedFile.name}</p>
-                          <div className="flex items-center gap-2 mt-0.5 text-[10px] text-slate-500 font-mono">
+                          <p className="text-sm font-bold text-slate-900 truncate">{selectedFile.name}</p>
+                          <div className="flex items-center gap-2 mt-0.5 text-xs text-slate-600 font-mono">
                             <span>{fileSizeStr}</span>
                             <span>·</span>
                             <span className="uppercase">{selectedFile.name.split('.').pop()}</span>
                             <span>·</span>
-                            <span className="text-emerald-600 font-medium">Ready</span>
+                            <span className="text-emerald-600 font-semibold">Ready</span>
                           </div>
                         </div>
                       </div>
@@ -1045,7 +1045,7 @@ export const KnowledgeView: React.FC = () => {
                           setFileSizeStr('');
                           setFormContent('');
                         }}
-                        className="px-2 py-1 text-[11px] font-medium text-rose-600 hover:bg-rose-50 rounded transition-colors cursor-pointer"
+                        className="px-2.5 py-1 text-xs font-semibold text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer"
                       >
                         Remove
                       </button>
@@ -1056,19 +1056,19 @@ export const KnowledgeView: React.FC = () => {
                       onDragLeave={() => setIsDragging(false)}
                       onDrop={handleFileDrop}
                       onClick={() => fileInputRef.current?.click()}
-                      className={`p-5 border-2 border-dashed rounded-lg text-center transition-all cursor-pointer ${
+                      className={`p-6 border-2 border-dashed rounded-xl text-center transition-all cursor-pointer ${
                         isDragging 
                           ? 'border-slate-900 bg-slate-100' 
-                          : 'border-slate-200 hover:border-slate-400 bg-slate-50/50 hover:bg-slate-50'
+                          : 'border-slate-200 hover:border-slate-400 bg-slate-50/60 hover:bg-slate-50'
                       }`}
                     >
-                      <UploadCloud className={`w-6 h-6 mx-auto mb-1.5 transition-colors ${
-                        isDragging ? 'text-slate-900' : 'text-slate-400'
+                      <UploadCloud className={`w-7 h-7 mx-auto mb-2 transition-colors ${
+                        isDragging ? 'text-slate-900' : 'text-slate-500'
                       }`} />
-                      <p className="text-xs font-semibold text-slate-800">
+                      <p className="text-sm font-bold text-slate-800">
                         Click to upload or drag & drop files here
                       </p>
-                      <p className="text-[11px] text-slate-400 mt-0.5">
+                      <p className="text-xs text-slate-500 mt-1">
                         PDF, DOCX, TXT, MD, CSV, JSON (up to 25MB)
                       </p>
                     </div>
@@ -1079,19 +1079,19 @@ export const KnowledgeView: React.FC = () => {
               {/* FAQ ANSWER */}
               {modalType === 'faq' ? (
                 <div>
-                  <label className="font-medium text-slate-700 block mb-1">Official Answer</label>
+                  <label className="font-semibold text-slate-800 block mb-1.5">Official Answer</label>
                   <textarea
                     rows={4}
                     required
                     value={formFaqAnswer}
                     onChange={(e) => setFormFaqAnswer(e.target.value)}
                     placeholder="Provide the exact verified answer for this FAQ..."
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:ring-1 focus:ring-slate-900 focus:border-slate-900 focus:outline-hidden"
+                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-1 focus:ring-slate-900 focus:border-slate-900 focus:outline-hidden text-sm"
                   />
                 </div>
               ) : (
                 <div>
-                  <label className="font-medium text-slate-700 block mb-1">
+                  <label className="font-semibold text-slate-800 block mb-1.5">
                     {modalType === 'document' ? 'Extracted Content' : 'Document Content'}
                   </label>
                   <textarea
@@ -1100,49 +1100,49 @@ export const KnowledgeView: React.FC = () => {
                     value={formContent}
                     onChange={(e) => setFormContent(e.target.value)}
                     placeholder="Paste or review the company text here..."
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:ring-1 focus:ring-slate-900 focus:border-slate-900 focus:outline-hidden font-mono text-[11px]"
+                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-1 focus:ring-slate-900 focus:border-slate-900 focus:outline-hidden font-mono text-xs"
                   />
                 </div>
               )}
 
               {/* INGESTION PROGRESS INDICATOR */}
               {isIngesting && (
-                <div className="p-3 bg-slate-100 border border-slate-200 rounded-lg space-y-1.5 animate-in fade-in">
-                  <div className="flex items-center justify-between text-[11px] font-medium text-slate-900">
-                    <span className="flex items-center gap-1.5">
-                      <RefreshCw className="w-3.5 h-3.5 text-slate-700 animate-spin" />
+                <div className="p-3.5 bg-slate-100 border border-slate-200 rounded-xl space-y-2 animate-in fade-in">
+                  <div className="flex items-center justify-between text-xs font-semibold text-slate-900">
+                    <span className="flex items-center gap-2">
+                      <RefreshCw className="w-4 h-4 text-slate-700 animate-spin" />
                       <span>{ingestStep || 'Processing document...'}</span>
                     </span>
-                    <Sparkles className="w-3.5 h-3.5 text-slate-600" />
+                    <Sparkles className="w-4 h-4 text-slate-600" />
                   </div>
-                  <div className="w-full bg-slate-200 h-1.5 rounded-full overflow-hidden">
+                  <div className="w-full bg-slate-200 h-2 rounded-full overflow-hidden">
                     <div className="bg-slate-900 h-full rounded-full animate-pulse w-3/4" />
                   </div>
                 </div>
               )}
 
-              <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100">
+              <div className="flex items-center justify-end gap-2.5 pt-3.5 border-t border-slate-100">
                 <button
                   type="button"
                   onClick={() => setIsAddModalOpen(false)}
                   disabled={isIngesting}
-                  className="px-3.5 py-1.5 text-slate-600 hover:bg-slate-100 rounded-lg font-medium transition-colors cursor-pointer"
+                  className="px-4 py-2 text-slate-700 hover:bg-slate-100 rounded-xl font-semibold transition-colors cursor-pointer text-sm"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={isIngesting || (!formTitle.trim())}
-                  className="px-4 py-1.5 bg-slate-900 hover:bg-slate-800 disabled:opacity-50 text-white rounded-lg font-medium flex items-center gap-1.5 transition-colors shadow-xs cursor-pointer"
+                  className="px-4 py-2 bg-slate-900 hover:bg-slate-800 disabled:opacity-50 text-white rounded-xl font-semibold flex items-center gap-2 transition-colors shadow-sm cursor-pointer text-sm"
                 >
                   {isIngesting ? (
                     <>
-                      <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                      <RefreshCw className="w-4 h-4 animate-spin" />
                       <span>Indexing...</span>
                     </>
                   ) : (
                     <>
-                      <UploadCloud className="w-3.5 h-3.5" />
+                      <UploadCloud className="w-4 h-4" />
                       <span>Save & Index</span>
                     </>
                   )}
@@ -1156,44 +1156,44 @@ export const KnowledgeView: React.FC = () => {
       {/* Preview Content Modal */}
       {previewItem && (
         <div className="fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in">
-          <div className="bg-white rounded-xl max-w-xl w-full p-5 sm:p-6 shadow-xl border border-slate-200 space-y-4 animate-in zoom-in-95 duration-150 max-h-[85vh] flex flex-col">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-              <div className="flex items-center gap-2.5">
-                <div className="p-2 bg-slate-100 text-slate-700 rounded-lg border border-slate-200/60">
-                  {previewItem.type === 'url' ? <Globe className="w-4 h-4" /> : previewItem.type === 'document' ? <FileText className="w-4 h-4" /> : <HelpCircle className="w-4 h-4" />}
+          <div className="bg-white rounded-2xl max-w-xl w-full p-6 sm:p-7 shadow-2xl border border-slate-200 space-y-4 animate-in zoom-in-95 duration-150 max-h-[85vh] flex flex-col">
+            <div className="flex items-center justify-between pb-3.5 border-b border-slate-100">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-slate-100 text-slate-800 rounded-xl border border-slate-200">
+                  {previewItem.type === 'url' ? <Globe className="w-5 h-5" /> : previewItem.type === 'document' ? <FileText className="w-5 h-5" /> : <HelpCircle className="w-5 h-5" />}
                 </div>
                 <div>
-                  <h3 className="text-sm font-semibold text-slate-900">{previewItem.title}</h3>
-                  <span className="text-[11px] text-slate-400 capitalize font-mono">{previewItem.category || 'General'} · {previewItem.type}</span>
+                  <h3 className="text-base font-bold text-slate-900">{previewItem.title}</h3>
+                  <span className="text-xs text-slate-500 capitalize font-mono">{previewItem.category || 'General'} · {previewItem.type}</span>
                 </div>
               </div>
               <button
                 onClick={() => setPreviewItem(null)}
-                className="text-slate-400 hover:text-slate-700 p-1 rounded-lg hover:bg-slate-100 cursor-pointer"
+                className="text-slate-400 hover:text-slate-700 p-1.5 rounded-lg hover:bg-slate-100 cursor-pointer"
               >
-                <X className="w-4 h-4" />
+                <X className="w-5 h-5" />
               </button>
             </div>
 
-            <div className="flex-1 overflow-y-auto bg-slate-50 p-4 rounded-lg border border-slate-200 text-xs font-mono text-slate-700 whitespace-pre-wrap leading-relaxed">
+            <div className="flex-1 overflow-y-auto bg-slate-50 p-4.5 rounded-xl border border-slate-200 text-sm font-mono text-slate-800 whitespace-pre-wrap leading-relaxed">
               {previewItem.faqAnswer ? (
                 <div>
                   <p className="font-bold text-slate-900 mb-2">Q: {previewItem.title}</p>
-                  <p className="text-slate-700">A: {previewItem.faqAnswer}</p>
+                  <p className="text-slate-800">A: {previewItem.faqAnswer}</p>
                 </div>
               ) : (
                 previewItem.content
               )}
             </div>
 
-            <div className="pt-2 flex items-center justify-between text-xs text-slate-400">
-              <span className="inline-flex items-center gap-1.5 text-emerald-600 font-medium">
-                <CheckCircle2 className="w-3.5 h-3.5" />
+            <div className="pt-2.5 flex items-center justify-between text-sm text-slate-500">
+              <span className="inline-flex items-center gap-1.5 text-emerald-600 font-semibold text-xs sm:text-sm">
+                <CheckCircle2 className="w-4 h-4" />
                 <span>1536-dim Dense Embeddings Active</span>
               </span>
               <button
                 onClick={() => setPreviewItem(null)}
-                className="px-3.5 py-1.5 bg-slate-900 hover:bg-slate-800 text-white rounded-lg font-medium transition-colors cursor-pointer"
+                className="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-xl font-semibold transition-colors cursor-pointer text-sm"
               >
                 Close
               </button>
