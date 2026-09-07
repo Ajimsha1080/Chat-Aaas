@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { 
   Play, 
   CheckCircle2, 
@@ -6,14 +6,11 @@ import {
   Clock, 
   UserX, 
   BookOpen, 
-  Zap, 
   ArrowRight, 
   AlertTriangle, 
   SlidersHorizontal,
   ChevronRight,
   ExternalLink,
-  Copy,
-  Check,
   Upload,
   ArrowUpRight,
   ListTodo
@@ -30,11 +27,8 @@ export const HomeView: React.FC = () => {
     setCurrentTab, 
     setIsQuickTestOpen, 
     setActiveConversationId, 
-    setIsLiveSandboxOpen,
-    showToast
+    setIsLiveSandboxOpen
   } = useApp();
-
-  const [copiedSnippet, setCopiedSnippet] = useState(false);
 
   const stats = currentCompany.stats;
   const resolutionRate = stats.totalConversations > 0 
@@ -59,14 +53,6 @@ export const HomeView: React.FC = () => {
   const readyKnowledgeCount = knowledgeItems ? knowledgeItems.filter(k => k.status === 'indexed').length : 4;
 
   const isLive = currentCompany.agent.status === 'active';
-
-  const handleCopyScript = () => {
-    const snippet = `<script src="https://cdn.chat-aaas.com/v1/widget.js" data-agent-key="${currentCompany.apiKey}" defer></script>`;
-    navigator.clipboard.writeText(snippet);
-    setCopiedSnippet(true);
-    showToast('Script Copied', 'Website widget embed snippet copied to clipboard.', 'success');
-    setTimeout(() => setCopiedSnippet(false), 2500);
-  };
 
   const checklistItems = [
     { id: 1, title: 'Company profile and tone configured', completed: true, tab: 'assistant' },
@@ -156,27 +142,11 @@ export const HomeView: React.FC = () => {
           </button>
 
           <button
-            onClick={handleCopyScript}
-            className="px-3 py-2 bg-slate-100 hover:bg-slate-200/80 text-slate-800 rounded-lg text-sm font-medium flex items-center gap-2 transition-colors cursor-pointer border border-slate-200"
-          >
-            {copiedSnippet ? <Check className="w-4 h-4 text-emerald-600" /> : <Copy className="w-4 h-4 text-slate-600" />}
-            <span>{copiedSnippet ? 'Copied' : 'Copy Embed Code'}</span>
-          </button>
-
-          <button
             onClick={() => setIsLiveSandboxOpen(true)}
             className="px-3 py-2 bg-slate-100 hover:bg-slate-200/80 text-slate-800 rounded-lg text-sm font-medium flex items-center gap-2 transition-colors cursor-pointer border border-slate-200"
           >
             <ExternalLink className="w-4 h-4 text-slate-700" />
             <span>Live Web Preview</span>
-          </button>
-
-          <button
-            onClick={() => setCurrentTab('deploy')}
-            className="px-3 py-2 bg-slate-100 hover:bg-slate-200/80 text-slate-800 rounded-lg text-sm font-medium flex items-center gap-2 transition-colors cursor-pointer border border-slate-200"
-          >
-            <Zap className="w-4 h-4 text-amber-600" />
-            <span>Channels & API</span>
           </button>
         </div>
       </div>
