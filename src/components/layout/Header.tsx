@@ -4,10 +4,7 @@ import {
   ChevronDown, 
   Plus, 
   Play, 
-  Pause, 
-  Sparkles, 
   Check, 
-  Terminal, 
   HelpCircle, 
   Search,
   ShieldAlert,
@@ -37,7 +34,6 @@ export const Header: React.FC<HeaderProps> = ({
     currentCompany, 
     switchCompany, 
     currentPlan, 
-    toggleAgentStatus,
     setIsQuickTestOpen,
     currentExperience,
     setCurrentExperience,
@@ -113,40 +109,6 @@ export const Header: React.FC<HeaderProps> = ({
             </div>
           )}
         </div>
-
-        {/* Assistant Status Toggle Pill */}
-        <div className="flex items-center gap-2 pl-2 border-l border-slate-200">
-          <button
-            onClick={toggleAgentStatus}
-            className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold border transition-all cursor-pointer ${
-              currentCompany.agent.status === 'active'
-                ? 'bg-emerald-50 text-emerald-700 border-emerald-300 hover:bg-emerald-100'
-                : 'bg-amber-50 text-amber-700 border-amber-300 hover:bg-amber-100'
-            }`}
-            title="Click to toggle assistant status"
-          >
-            {currentCompany.agent.status === 'active' ? (
-              <>
-                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping" />
-                <span className="w-2 h-2 rounded-full bg-emerald-500 -ml-3.5" />
-                <span className="hidden xs:inline text-xs font-semibold">Active</span>
-                <Pause className="w-3.5 h-3.5 ml-0.5 text-emerald-600" />
-              </>
-            ) : (
-              <>
-                <span className="w-2 h-2 rounded-full bg-amber-500" />
-                <span className="hidden xs:inline text-xs font-semibold">Paused</span>
-                <Play className="w-3.5 h-3.5 ml-0.5 text-amber-600" />
-              </>
-            )}
-          </button>
-        </div>
-
-        {/* Subscription Plan Badge */}
-        <span className="hidden lg:inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-indigo-50 text-indigo-700 border border-indigo-200">
-          <Sparkles className="w-3.5 h-3.5" />
-          <span className="capitalize">{currentPlan.name} Plan</span>
-        </span>
       </div>
 
       {/* Middle: Command Palette Trigger */}
