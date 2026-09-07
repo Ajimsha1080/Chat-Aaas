@@ -107,7 +107,19 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const [auditLogs, setAuditLogs] = useState<AuditLogItem[]>(() => {
     const saved = localStorage.getItem(`${LOCAL_STORAGE_KEY}_audit`);
-    return saved ? JSON.parse(saved) : INITIAL_AUDIT_LOGS;
+    if (!saved) return INITIAL_AUDIT_LOGS;
+    try {
+      const parsed = JSON.parse(saved);
+      if (!Array.isArray(parsed)) return INITIAL_AUDIT_LOGS;
+      return parsed.map((item: any) => {
+        if (!item.timestamp || isNaN(new Date(item.timestamp).getTime())) {
+          return { ...item, timestamp: new Date().toISOString() };
+        }
+        return item;
+      });
+    } catch {
+      return INITIAL_AUDIT_LOGS;
+    }
   });
 
   const [versionsMap, setVersionsMap] = useState<Record<string, AgentVersionItem[]>>(() => {
@@ -178,8 +190,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const addAuditLog = (action: string, details: string, severity: 'info' | 'warning' | 'critical' = 'info') => {
     const newLog: AuditLogItem = {
-      id: `log-${Date.now()}`,
-      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
+      id: `log-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+      timestamp: new Date().toISOString(),
       actor: currentUserRole === 'platform_super_admin' ? 'Super Admin' : 'Current User',
       actorRole: currentUserRole,
       action,

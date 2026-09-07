@@ -13,7 +13,8 @@ import {
   Terminal,
   Lock,
   Eye,
-  EyeOff
+  EyeOff,
+  History
 } from 'lucide-react';
 import { useApp } from '../../context';
 import { TeamMember } from '../../types';
@@ -462,29 +463,122 @@ export const SettingsView: React.FC = () => {
           </div>
 
           {/* Audit Logs Section */}
-          <div className="bg-white rounded-2xl border border-slate-200/90 p-6 sm:p-7 shadow-sm space-y-4">
-            <div>
-              <h3 className="text-base font-bold text-slate-900">Audit Trail</h3>
-              <p className="text-sm text-slate-500 mt-0.5">Chronological logs of settings changes, team invites, and security events.</p>
+          <div className="bg-white rounded-2xl border border-slate-200/90 p-6 sm:p-7 shadow-sm space-y-5">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-1 border-b border-slate-100">
+              <div>
+                <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
+                  <History className="w-4 h-4 text-slate-700" />
+                  <span>Audit Trail</span>
+                </h3>
+                <p className="text-xs sm:text-sm text-slate-500 mt-0.5">Chronological logs of settings changes, team invites, and security events.</p>
+              </div>
+              <span className="text-xs font-semibold px-2.5 py-1 bg-slate-100 text-slate-700 rounded-lg border border-slate-200 self-start sm:self-auto">
+                {auditLogs.length} Events Recorded
+              </span>
             </div>
 
-            <div className="divide-y divide-slate-100 text-sm">
-              {auditLogs.map(log => (
-                <div key={log.id} className="py-3 flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <span className="font-mono text-slate-400 text-xs">{new Date(log.timestamp).toLocaleTimeString()}</span>
-                    <div>
-                      <strong className="text-slate-900 font-semibold">{log.action}: </strong>
-                      <span className="text-slate-600">{log.details}</span>
-                    </div>
-                  </div>
-                  <span className={`text-xs px-2.5 py-0.5 rounded-md font-mono font-semibold uppercase ${
-                    log.severity === 'warning' ? 'bg-amber-50 text-amber-800 border border-amber-200' : 'bg-slate-100 text-slate-700 border border-slate-200'
-                  }`}>
-                    {log.severity}
-                  </span>
-                </div>
-              ))}
+            <div className="overflow-x-auto border border-slate-200/80 rounded-xl">
+              <table className="w-full text-left text-sm border-collapse">
+                <thead>
+                  <tr className="border-b border-slate-200 text-xs font-bold text-slate-500 uppercase tracking-wider bg-slate-50/80">
+                    <th className="py-3 px-4">Timestamp</th>
+                    <th className="py-3 px-4">Event</th>
+                    <th className="py-3 px-4">Details</th>
+                    <th className="py-3 px-4">Actor</th>
+                    <th className="py-3 px-4 text-right">Severity</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {auditLogs.map(log => {
+                    // Safe timestamp parsing
+                    let dateStr = 'Recent';
+                    let timeStr = '--:--';
+                    if (log.timestamp) {
+                      const d = new Date(log.timestamp);
+                      if (!isNaN(d.getTime())) {
+                        dateStr = d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+                        timeStr = d.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+                      } else {
+                        timeStr = log.timestamp;
+                        dateStr = 'Today';
+                      }
+                    }
+
+                    // Prettify Action Badge
+                    let badgeLabel = log.action.replace(/_/g, ' ');
+                    let badgeColor = 'bg-slate-100 text-slate-700 border-slate-200';
+                    if (log.action === 'AGENT_VERSION_PUBLISHED') {
+                      badgeLabel = 'Version Published';
+                      badgeColor = 'bg-blue-50 text-blue-700 border-blue-200';
+                    } else if (log.action === 'AGENT_CONFIG_UPDATED') {
+                      badgeLabel = 'Config Updated';
+                      badgeColor = 'bg-indigo-50 text-indigo-700 border-indigo-200';
+                    } else if (log.action === 'API_KEY_ROTATED') {
+                      badgeLabel = 'API Key Rotated';
+                      badgeColor = 'bg-amber-50 text-amber-700 border-amber-200';
+                    } else if (log.action === 'TENANT_SWITCH') {
+                      badgeLabel = 'Workspace Switch';
+                      badgeColor = 'bg-purple-50 text-purple-700 border-purple-200';
+                    } else if (log.action === 'TOOL_EXECUTE') {
+                      badgeLabel = 'Tool Execution';
+                      badgeColor = 'bg-cyan-50 text-cyan-700 border-cyan-200';
+                    } else if (log.action === 'HUMAN_ESCALATION_TRIGGERED') {
+                      badgeLabel = 'Escalation';
+                      badgeColor = 'bg-rose-50 text-rose-700 border-rose-200';
+                    } else if (log.action === 'HUMAN_TAKEOVER') {
+                      badgeLabel = 'Human Takeover';
+                      badgeColor = 'bg-orange-50 text-orange-700 border-orange-200';
+                    } else if (log.action === 'KNOWLEDGE_INDEXED') {
+                      badgeLabel = 'Knowledge Indexed';
+                      badgeColor = 'bg-emerald-50 text-emerald-700 border-emerald-200';
+                    }
+
+                    // Clean details message
+                    let cleanMsg = log.details;
+                    if (cleanMsg && cleanMsg.includes('Updated AI assistant configuration fields:')) {
+                      const fieldsCount = cleanMsg.replace('Updated AI assistant configuration fields:', '').split(',').length;
+                      cleanMsg = `Updated AI assistant configuration (${fieldsCount} settings updated)`;
+                    }
+
+                    return (
+                      <tr key={log.id} className="hover:bg-slate-50/60 transition-colors">
+                        <td className="py-3 px-4 whitespace-nowrap">
+                          <div className="flex flex-col font-mono text-xs">
+                            <span className="font-semibold text-slate-800">{timeStr}</span>
+                            <span className="text-slate-400 text-[11px]">{dateStr}</span>
+                          </div>
+                        </td>
+                        <td className="py-3 px-4 whitespace-nowrap">
+                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-md text-xs font-semibold border ${badgeColor}`}>
+                            {badgeLabel}
+                          </span>
+                        </td>
+                        <td className="py-3 px-4 min-w-[240px]">
+                          <p className="text-slate-700 text-xs sm:text-sm font-normal leading-relaxed">
+                            {cleanMsg}
+                          </p>
+                        </td>
+                        <td className="py-3 px-4 whitespace-nowrap text-xs text-slate-600 font-medium">
+                          <span className="px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 border border-slate-200/80 font-mono text-[11px]">
+                            {log.actor || 'Current User'}
+                          </span>
+                        </td>
+                        <td className="py-3 px-4 text-right whitespace-nowrap">
+                          <span className={`text-[11px] px-2.5 py-0.5 rounded-md font-mono font-bold uppercase border ${
+                            log.severity === 'critical'
+                              ? 'bg-rose-50 text-rose-700 border-rose-200'
+                              : log.severity === 'warning'
+                              ? 'bg-amber-50 text-amber-700 border-amber-200'
+                              : 'bg-slate-100 text-slate-700 border-slate-200'
+                          }`}>
+                            {log.severity}
+                          </span>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
             </div>
           </div>
         </div>
