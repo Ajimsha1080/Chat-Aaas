@@ -6,7 +6,6 @@ import {
   Play, 
   Check, 
   HelpCircle, 
-  Search,
   ShieldAlert,
   ArrowLeft,
   Menu
@@ -111,20 +110,6 @@ export const Header: React.FC<HeaderProps> = ({
         </div>
       </div>
 
-      {/* Middle: Command Palette Trigger */}
-      {onOpenCommandPalette && (
-        <button
-          onClick={onOpenCommandPalette}
-          className="hidden md:flex items-center gap-2.5 px-4 py-2 bg-slate-100/80 hover:bg-slate-200/80 text-slate-600 rounded-xl text-sm font-medium transition-all border border-slate-200 cursor-pointer shadow-2xs"
-          title="Open Command Palette (Cmd+K / Ctrl+K)"
-        >
-          <Search className="w-4 h-4 text-slate-400" />
-          <span>Quick search or jump to...</span>
-          <kbd className="px-2 py-0.5 bg-white border border-slate-200 rounded text-xs font-mono text-slate-600 font-bold">
-            ⌘K
-          </kbd>
-        </button>
-      )}
 
       {/* Right: Quick actions, Quota meter, Test & Preview */}
       <div className="flex items-center gap-2 sm:gap-3">
