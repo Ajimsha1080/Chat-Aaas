@@ -6,7 +6,6 @@ import {
   BarChart3, 
   Globe, 
   Settings, 
-  PlaySquare, 
   Sparkles,
   X
 } from 'lucide-react';
@@ -22,13 +21,10 @@ export const Sidebar: React.FC<SidebarProps> = ({ isMobileOpen = false, onCloseM
   const { 
     currentTab, 
     setCurrentTab, 
-    currentCompany,
-    conversations,
-    setIsQuickTestOpen
+    conversations
   } = useApp();
 
   const unreadConversationsCount = conversations.filter(c => c.status === 'escalated_to_human' || c.status === 'flagged').length;
-  const isLive = currentCompany.agent.status === 'active';
 
   const handleSelectTab = (tab: NavigationTab) => {
     setCurrentTab(tab);
@@ -96,48 +92,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ isMobileOpen = false, onCloseM
         )}
       </div>
 
-      {/* AI Assistant Profile Card */}
-      <div className="px-3.5 pt-3.5 pb-2">
-        <div className="bg-slate-900/80 border border-slate-800/80 rounded-xl p-3.5 shadow-inner">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-xs font-bold text-indigo-300 uppercase tracking-wider">Your Assistant</span>
-            <span className={`inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-0.5 rounded-full ${
-              isLive 
-                ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30' 
-                : 'bg-amber-500/15 text-amber-400 border border-amber-500/30'
-            }`}>
-              <span className={`w-2 h-2 rounded-full ${isLive ? 'bg-emerald-400 animate-pulse' : 'bg-amber-400'}`} />
-              <span>{isLive ? 'Live' : 'Paused'}</span>
-            </span>
-          </div>
-
-          <div className="flex items-center gap-3">
-            <img 
-              src={currentCompany.agent.avatarUrl} 
-              alt={currentCompany.agent.name} 
-              className="w-10 h-10 rounded-xl object-cover ring-2 ring-indigo-500/30 shadow-md" 
-            />
-            <div className="overflow-hidden">
-              <h4 className="text-sm font-bold text-white truncate tracking-tight">{currentCompany.agent.name}</h4>
-              <p className="text-xs text-slate-400 truncate">{currentCompany.agent.role || 'Q&A Assistant'}</p>
-            </div>
-          </div>
-
-          <button
-            onClick={() => {
-              setIsQuickTestOpen(true);
-              if (onCloseMobile) onCloseMobile();
-            }}
-            className="w-full mt-3 py-2 px-3 bg-indigo-600/25 hover:bg-indigo-600/35 border border-indigo-500/40 text-indigo-200 hover:text-white text-xs font-bold rounded-lg flex items-center justify-center gap-2 transition-all cursor-pointer shadow-xs active:scale-[0.99]"
-          >
-            <PlaySquare className="w-4 h-4 text-indigo-400" />
-            <span>Test Assistant</span>
-          </button>
-        </div>
-      </div>
-
       {/* Primary Navigation Items */}
-      <div className="flex-1 overflow-y-auto px-3.5 py-2 space-y-3">
+      <div className="flex-1 overflow-y-auto px-3.5 py-3 space-y-3">
         {customerNavGroups.map((group, gIdx) => (
           <div key={gIdx} className="space-y-1">
             {group.groupName && (
