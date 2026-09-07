@@ -4,7 +4,6 @@ import {
   Check, 
   Sparkles, 
   ExternalLink, 
-  Key, 
   RefreshCw, 
   Paintbrush, 
   Terminal, 
@@ -17,7 +16,6 @@ export const DeployView: React.FC = () => {
   const { 
     currentCompany, 
     updateWidgetSettings, 
-    regenerateApiKey, 
     setIsLiveSandboxOpen,
     setIsQuickTestOpen
   } = useApp();
@@ -351,32 +349,6 @@ export default function App() {
               </div>
             </div>
           </div>
-        </div>
-      </div>
-
-      {/* Clean Developer & API Settings Link at Bottom */}
-      <div className="bg-white border border-slate-200/90 rounded-2xl p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 text-sm shadow-sm">
-        <div className="flex items-center gap-3">
-          <div className="p-2 bg-slate-100 text-slate-800 rounded-xl border border-slate-200">
-            <Key className="w-4 h-4" />
-          </div>
-          <div>
-            <p className="font-bold text-base text-slate-900">REST API Key & Access Tokens</p>
-            <p className="text-slate-500 text-xs sm:text-sm mt-0.5">Authorize programmatic chat requests and webhook events.</p>
-          </div>
-        </div>
-        
-        <div className="flex items-center gap-2.5 shrink-0">
-          <span className="text-xs sm:text-sm font-mono bg-slate-100 px-3 py-1.5 rounded-lg border border-slate-200 text-slate-700 font-semibold">
-            {currentCompany.apiKey.slice(0, 14)}...
-          </span>
-          <button
-            onClick={() => handleCopy(currentCompany.apiKey, 'apiKey')}
-            className="px-3.5 py-1.5 bg-white hover:bg-slate-50 border border-slate-200 text-slate-800 rounded-lg font-semibold transition-colors flex items-center gap-1.5 cursor-pointer shadow-xs"
-          >
-            {copiedKey === 'apiKey' ? <Check className="w-4 h-4 text-emerald-600" /> : <Copy className="w-4 h-4" />}
-            <span>{copiedKey === 'apiKey' ? 'Copied' : 'Copy'}</span>
-          </button>
         </div>
       </div>
     </div>
