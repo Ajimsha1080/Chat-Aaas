@@ -965,7 +965,7 @@ export default function App() {
 
             {/* Realistic Stage Canvas */}
             <div 
-              className="rounded-3xl border border-slate-200/90 bg-gradient-to-b from-slate-100/80 via-slate-50 to-slate-200/50 p-4 sm:p-6 min-h-[580px] flex flex-col justify-between relative overflow-hidden shadow-inner"
+              className="rounded-3xl border border-slate-200/90 bg-gradient-to-b from-slate-100/80 via-slate-50 to-slate-200/50 p-4 sm:p-6 min-h-[660px] flex flex-col justify-between relative overflow-hidden shadow-inner"
             >
               {/* Top simulation canvas bar */}
               <div className="flex items-center justify-between text-[11px] text-slate-400 font-mono pb-2 border-b border-slate-200/60 mb-3">
@@ -990,7 +990,8 @@ export default function App() {
                         : 'bg-white text-slate-900 border-slate-200 shadow-slate-300/60'
                     }`}
                     style={{
-                      maxHeight: '460px'
+                      height: '550px',
+                      maxHeight: '560px'
                     }}
                   >
                     {/* Background ambient gradient glow if animation enabled */}
@@ -1045,7 +1046,7 @@ export default function App() {
                     </div>
 
                     {/* Chat Message Stream & Starter Prompts */}
-                    <div className="px-5 py-2 flex-1 space-y-2.5 overflow-y-auto max-h-[200px] text-xs z-10 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
+                    <div className="px-5 py-2 flex-1 space-y-2.5 overflow-y-auto max-h-[290px] text-xs z-10 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
                       {previewChat.map((msg, mIdx) => (
                         <div 
                           key={mIdx}
