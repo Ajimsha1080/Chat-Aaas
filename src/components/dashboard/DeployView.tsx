@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { 
   Copy, 
   Check, 
@@ -8,6 +8,9 @@ import {
   Terminal, 
   CheckCircle2,
   MessageCircle,
+  MessageSquare,
+  MessagesSquare,
+  MessageSquareQuote,
   Plus,
   Trash2,
   HelpCircle,
@@ -25,13 +28,7 @@ import {
   Code2,
   FileText,
   Send,
-  Globe,
-  QrCode,
-  Share2,
-  ShoppingBag,
-  Link2,
-  Download,
-  Layers
+  X
 } from 'lucide-react';
 import { useApp } from '../../context';
 import { WidgetCustomization } from '../../types';
@@ -45,32 +42,51 @@ export const DeployView: React.FC = () => {
   } = useApp();
 
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const brandLogoInputRef = useRef<HTMLInputElement>(null);
+  const iconPickerRef = useRef<HTMLDivElement>(null);
+
   const [activeMainTab, setActiveMainTab] = useState<'general' | 'content' | 'appearance' | 'install'>('appearance');
-  const [installMode, setInstallMode] = useState<'nocode' | 'code'>('nocode');
-  const [showQrModal, setShowQrModal] = useState(false);
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
   const [activeSnippetTab, setActiveSnippetTab] = useState<'script' | 'react' | 'iframe' | 'api'>('script');
   const [localSettings, setLocalSettings] = useState<WidgetCustomization>({ 
     themeMode: 'dark',
     headerTextColor: 'white',
     backgroundAnimation: true,
+    bottomPadding: 20,
+    sidePadding: 20,
     ...currentCompany.widgetSettings 
   });
   const [isSaved, setIsSaved] = useState(false);
+  const [isIconPickerOpen, setIsIconPickerOpen] = useState(false);
   const [showLogoEditModal, setShowLogoEditModal] = useState(false);
 
+  // Close popover when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (iconPickerRef.current && !iconPickerRef.current.contains(event.target as Node)) {
+        setIsIconPickerOpen(false);
+      }
+    };
+    if (isIconPickerOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isIconPickerOpen]);
+
   const COLOR_PRESETS = [
+    { name: 'Teal', hex: '#007074' },
     { name: 'Royal Blue', hex: '#4f46e5' },
     { name: 'Indigo', hex: '#4338ca' },
     { name: 'Violet', hex: '#7c3aed' },
     { name: 'Emerald', hex: '#059669' },
     { name: 'Sky Blue', hex: '#0284c7' },
     { name: 'Rose', hex: '#e11d48' },
-    { name: 'Amber', hex: '#d97706' },
     { name: 'Obsidian', hex: '#0f172a' }
   ];
 
-  const [launcherStyle, setLauncherStyle] = useState<'pill' | 'bubble'>('pill');
+  const [launcherStyle, setLauncherStyle] = useState<'pill' | 'bubble'>('bubble');
   const [starterQuestions, setStarterQuestions] = useState<string[]>([
     'What are your pricing plans?',
     'How do I get started?',
@@ -86,7 +102,7 @@ export const DeployView: React.FC = () => {
     if (!file) return;
 
     if (file.size > 5 * 1024 * 1024) {
-      alert('Logo file size must be less than 5MB');
+      alert('Icon file size must be less than 5MB');
       return;
     }
 
@@ -98,6 +114,25 @@ export const DeployView: React.FC = () => {
           ...prev, 
           launcherIcon: 'logo',
           launcherLogoUrl: result 
+        }));
+        setIsIconPickerOpen(false);
+      }
+    };
+    reader.readAsDataURL(file);
+    e.target.value = '';
+  };
+
+  const handleBrandLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const result = event.target?.result as string;
+      if (result) {
+        setLocalSettings(prev => ({ 
+          ...prev, 
+          botAvatar: result 
         }));
       }
     };
@@ -222,12 +257,19 @@ export default function App() {
 
   return (
     <div className="space-y-6 animate-in fade-in duration-150">
-      {/* Hidden File Input for Logo Upload */}
+      {/* Hidden File Inputs */}
       <input 
         type="file" 
         ref={fileInputRef} 
         accept="image/*" 
         onChange={handleLogoFileUpload} 
+        className="hidden" 
+      />
+      <input 
+        type="file" 
+        ref={brandLogoInputRef} 
+        accept="image/*" 
+        onChange={handleBrandLogoUpload} 
         className="hidden" 
       />
 
@@ -261,7 +303,7 @@ export default function App() {
 
       {/* Main Card with Navigation Tabs */}
       <div className="bg-white rounded-2xl p-6 sm:p-7 border border-slate-200/90 shadow-sm">
-        {/* Navigation Tabs Bar matching Screenshot */}
+        {/* Navigation Tabs Bar */}
         <div className="flex items-center justify-between border-b border-slate-100 mb-6 pb-2">
           <div className="flex items-center gap-8">
             {[
@@ -289,10 +331,10 @@ export default function App() {
 
           <button
             onClick={handleSaveBranding}
-            className="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-sm font-semibold flex items-center gap-2 shadow-sm transition-colors cursor-pointer"
+            className="px-5 py-2.5 bg-[#007074] hover:bg-[#005a5d] text-white rounded-xl text-sm font-bold flex items-center gap-2 shadow-sm transition-colors cursor-pointer"
           >
-            {isSaved ? <Check className="w-4 h-4 text-emerald-400" /> : <CheckCircle2 className="w-4 h-4" />}
-            <span>{isSaved ? 'Saved' : 'Save Appearance'}</span>
+            {isSaved ? <Check className="w-4 h-4 text-emerald-300 stroke-[3]" /> : <CheckCircle2 className="w-4 h-4" />}
+            <span>{isSaved ? 'Saved' : 'Save Changes'}</span>
           </button>
         </div>
 
@@ -304,7 +346,7 @@ export default function App() {
             {/* TAB: APPEARANCE */}
             {activeMainTab === 'appearance' && (
               <div className="space-y-6 animate-in fade-in duration-150">
-                {/* 1. Dark / Light Theme Mode Selector (Matching Screenshot) */}
+                {/* 1. Dark / Light Theme Mode Selector */}
                 <div className="grid grid-cols-2 gap-4">
                   {/* Dark Mode Card */}
                   <button
@@ -353,21 +395,23 @@ export default function App() {
                   </button>
                 </div>
 
-                {/* 2. Branding Section (Matching Screenshot) */}
+                {/* 2. Branding Section */}
                 <div className="space-y-4 pt-2">
                   <h4 className="font-bold text-slate-900 text-sm">Branding</h4>
 
-                  {/* Logo Row */}
+                  {/* Brand Logo Row */}
                   <div className="flex items-center justify-between py-1">
-                    <div className="flex items-center gap-1.5">
-                      <span className="font-semibold text-slate-800 text-xs sm:text-sm">Logo:</span>
-                      <Info className="w-3.5 h-3.5 text-slate-400" />
+                    <div>
+                      <div className="flex items-center gap-1.5">
+                        <span className="font-semibold text-slate-800 text-xs sm:text-sm">Brand Logo</span>
+                      </div>
+                      <p className="text-xs text-slate-400">Will be used to send first message</p>
                     </div>
 
                     <div className="flex items-center gap-2">
                       <button
                         type="button"
-                        onClick={() => fileInputRef.current?.click()}
+                        onClick={() => brandLogoInputRef.current?.click()}
                         className="inline-flex items-center gap-2 px-3 py-1.5 bg-indigo-50 hover:bg-indigo-100/80 border border-indigo-200/80 text-slate-800 rounded-xl text-xs font-semibold transition-all cursor-pointer shadow-2xs group"
                       >
                         <img 
@@ -383,39 +427,8 @@ export default function App() {
                           <Pencil className="w-2.5 h-2.5" />
                         </div>
                       </button>
-
-                      <button
-                        type="button"
-                        onClick={() => setShowLogoEditModal(!showLogoEditModal)}
-                        className="text-xs text-indigo-600 hover:text-indigo-800 font-semibold cursor-pointer underline"
-                      >
-                        {showLogoEditModal ? 'Hide URL' : 'Edit URL'}
-                      </button>
                     </div>
                   </div>
-
-                  {/* Logo URL Input toggle if expanded */}
-                  {showLogoEditModal && (
-                    <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-2 animate-in fade-in duration-150">
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs font-semibold text-slate-700">Logo Image URL:</span>
-                        <button
-                          type="button"
-                          onClick={() => setLocalSettings(prev => ({ ...prev, launcherLogoUrl: currentCompany.agent.avatarUrl }))}
-                          className="text-[11px] text-indigo-600 hover:underline cursor-pointer"
-                        >
-                          Use Agent Avatar
-                        </button>
-                      </div>
-                      <input
-                        type="text"
-                        value={localSettings.launcherLogoUrl || ''}
-                        onChange={(e) => setLocalSettings({ ...localSettings, launcherLogoUrl: e.target.value })}
-                        placeholder="https://your-domain.com/logo.png"
-                        className="w-full px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-xs font-mono"
-                      />
-                    </div>
-                  )}
 
                   {/* Header Color Row */}
                   <div className="flex items-center justify-between py-1">
@@ -486,25 +499,161 @@ export default function App() {
                       <div className="w-11 h-6 bg-slate-200 peer-focus:outline-hidden rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-500"></div>
                     </label>
                   </div>
+
+                  {/* Bottom Padding & Side Padding Row */}
+                  <div className="grid grid-cols-2 gap-4 pt-2">
+                    <div>
+                      <label className="block font-semibold text-slate-800 text-xs mb-1">Bottom Padding</label>
+                      <div className="flex items-center bg-white border border-slate-200 rounded-xl px-3 py-1.5 shadow-2xs focus-within:ring-1 focus-within:ring-slate-900">
+                        <span className="text-slate-400 text-xs font-mono mr-1">⎕</span>
+                        <input
+                          type="number"
+                          value={localSettings.bottomPadding || 20}
+                          onChange={(e) => setLocalSettings({ ...localSettings, bottomPadding: parseInt(e.target.value) || 0 })}
+                          className="w-full text-xs font-semibold text-slate-900 focus:outline-hidden"
+                        />
+                        <span className="text-slate-400 text-xs font-mono">px</span>
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block font-semibold text-slate-800 text-xs mb-1">Side Padding</label>
+                      <div className="flex items-center bg-white border border-slate-200 rounded-xl px-3 py-1.5 shadow-2xs focus-within:ring-1 focus-within:ring-slate-900">
+                        <span className="text-slate-400 text-xs font-mono mr-1">⎕</span>
+                        <input
+                          type="number"
+                          value={localSettings.sidePadding || 20}
+                          onChange={(e) => setLocalSettings({ ...localSettings, sidePadding: parseInt(e.target.value) || 0 })}
+                          className="w-full text-xs font-semibold text-slate-900 focus:outline-hidden"
+                        />
+                        <span className="text-slate-400 text-xs font-mono">px</span>
+                      </div>
+                    </div>
+                  </div>
                 </div>
 
-                {/* 3. Launcher Icon & Style */}
+                {/* 3. Launcher Icon with Popover Selector (Exact Match to Screenshot) */}
                 <div className="space-y-3 pt-3 border-t border-slate-100">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h4 className="font-bold text-slate-900 text-sm">Launcher Trigger</h4>
-                      <p className="text-xs text-slate-500">Select button style and icon preset</p>
+                  <div className="relative">
+                    <div className="flex items-center justify-between py-1">
+                      <div>
+                        <h4 className="font-bold text-slate-900 text-sm">Launcher icon</h4>
+                        <p className="text-xs text-slate-400">Shown as the chat launcher icon.</p>
+                      </div>
+
+                      {/* Clickable Badge Trigger */}
+                      <div className="relative">
+                        <button
+                          type="button"
+                          onClick={() => setIsIconPickerOpen(!isIconPickerOpen)}
+                          title="Click to change launcher icon"
+                          className="w-11 h-11 rounded-2xl flex items-center justify-center text-white relative shadow-sm cursor-pointer hover:scale-105 active:scale-95 transition-all overflow-hidden p-1"
+                          style={{ backgroundColor: localSettings.primaryColor }}
+                        >
+                          <div className="w-6 h-6 rounded-full flex items-center justify-center overflow-hidden">
+                            {renderLauncherIcon(localSettings.launcherIcon || 'chat', "w-5 h-5")}
+                          </div>
+
+                          {/* Pencil Edit Badge in corner */}
+                          <div className="absolute -bottom-1 -left-1 w-4.5 h-4.5 rounded-full bg-slate-700 hover:bg-slate-900 text-white flex items-center justify-center shadow-xs border border-white">
+                            <Pencil className="w-2.5 h-2.5" />
+                          </div>
+                        </button>
+
+                        {/* Popover Card (Exact match to screenshot) */}
+                        {isIconPickerOpen && (
+                          <div 
+                            ref={iconPickerRef}
+                            className="absolute right-0 bottom-full mb-3 w-72 bg-white rounded-3xl border border-slate-200/90 shadow-2xl p-4 z-50 animate-in fade-in zoom-in-95 duration-150"
+                          >
+                            <div className="flex items-center justify-between mb-3">
+                              <span className="text-xs font-bold text-slate-700">Choose your launcher icon</span>
+                              <button
+                                type="button"
+                                onClick={() => setIsIconPickerOpen(false)}
+                                className="text-slate-400 hover:text-slate-600 cursor-pointer"
+                              >
+                                <X className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+
+                            {/* Icon Presets Row */}
+                            <div className="flex items-center justify-between gap-1.5 mb-3">
+                              {[
+                                { id: 'logo', icon: null, isLogo: true },
+                                { id: 'chat', icon: MessageSquareQuote },
+                                { id: 'chat_sq', icon: MessageSquare },
+                                { id: 'help', icon: HelpCircle },
+                                { id: 'bot', icon: Bot },
+                                { id: 'sparkles', icon: Sparkles }
+                              ].map(item => {
+                                const IconComp = item.icon;
+                                const isSelected = (localSettings.launcherIcon || 'chat') === item.id;
+                                return (
+                                  <button
+                                    key={item.id}
+                                    type="button"
+                                    onClick={() => {
+                                      setLocalSettings(prev => ({ ...prev, launcherIcon: item.id as any }));
+                                      setIsIconPickerOpen(false);
+                                    }}
+                                    className={`w-9 h-9 rounded-xl flex items-center justify-center transition-all cursor-pointer border ${
+                                      isSelected
+                                        ? 'bg-slate-900 text-white border-slate-900 shadow-sm'
+                                        : 'bg-white hover:bg-slate-100 text-slate-700 border-slate-200'
+                                    }`}
+                                  >
+                                    {item.isLogo ? (
+                                      <img 
+                                        src={companyLogoUrl} 
+                                        alt="Logo" 
+                                        className="w-5 h-5 rounded-md object-cover"
+                                        onError={(e) => {
+                                          (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=150&auto=format&fit=crop&q=80';
+                                        }}
+                                      />
+                                    ) : (
+                                      IconComp && <IconComp className="w-4.5 h-4.5" />
+                                    )}
+                                  </button>
+                                );
+                              })}
+                            </div>
+
+                            {/* Divider with OR */}
+                            <div className="relative my-3">
+                              <div className="absolute inset-0 flex items-center">
+                                <div className="w-full border-t border-slate-200"></div>
+                              </div>
+                              <div className="relative flex justify-center text-[10px] uppercase font-bold text-slate-400">
+                                <span className="bg-white px-2">OR</span>
+                              </div>
+                            </div>
+
+                            {/* Upload Icon Button */}
+                            <button
+                              type="button"
+                              onClick={() => fileInputRef.current?.click()}
+                              className="w-full py-2.5 px-3 bg-slate-50 hover:bg-slate-100/90 text-slate-800 rounded-xl text-xs font-bold flex items-center justify-center gap-2 border border-slate-200 transition-colors cursor-pointer shadow-2xs"
+                            >
+                              <Upload className="w-3.5 h-3.5 text-slate-600" />
+                              <span>Upload icon</span>
+                            </button>
+
+                            <p className="text-[10px] text-slate-400 text-center mt-2 leading-relaxed">
+                              Upload a transparent PNG icon<br />
+                              64×64px recommended
+                            </p>
+                          </div>
+                        )}
+                      </div>
                     </div>
+                  </div>
+
+                  {/* Launcher Style Toggle */}
+                  <div className="flex items-center justify-between pt-2">
+                    <span className="font-semibold text-slate-800 text-xs sm:text-sm">Launcher Style</span>
                     <div className="grid grid-cols-2 gap-1.5 bg-slate-100 p-1 rounded-xl">
-                      <button
-                        type="button"
-                        onClick={() => setLauncherStyle('pill')}
-                        className={`px-3 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
-                          launcherStyle === 'pill' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-600'
-                        }`}
-                      >
-                        Pill
-                      </button>
                       <button
                         type="button"
                         onClick={() => setLauncherStyle('bubble')}
@@ -513,6 +662,15 @@ export default function App() {
                         }`}
                       >
                         Bubble
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setLauncherStyle('pill')}
+                        className={`px-3 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                          launcherStyle === 'pill' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-600'
+                        }`}
+                      >
+                        Pill with Text
                       </button>
                     </div>
                   </div>
@@ -529,79 +687,18 @@ export default function App() {
                       />
                     </div>
                   )}
+                </div>
 
-                  {/* Launcher Icon Cards */}
-                  <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2">
-                    {[
-                      { id: 'logo', label: 'Logo', sub: 'Brand Avatar', isLogo: true },
-                      { id: 'chat', label: 'Chat', sub: 'Classic', icon: MessageCircle },
-                      { id: 'bot', label: 'AI Bot', sub: 'Agent', icon: Bot },
-                      { id: 'sparkles', label: 'Sparkles', sub: 'Magic AI', icon: Sparkles },
-                      { id: 'support', label: 'Support', sub: 'Helpdesk', icon: Headphones },
-                      { id: 'help', label: 'Help', sub: 'FAQ & Q&A', icon: HelpCircle },
-                      { id: 'zap', label: 'Instant', sub: 'Fast AI', icon: Zap }
-                    ].map(item => {
-                      const IconComp = item.icon;
-                      const isSelected = (localSettings.launcherIcon || 'chat') === item.id;
-                      return (
-                        <button
-                          key={item.id}
-                          type="button"
-                          onClick={() => setLocalSettings({ ...localSettings, launcherIcon: item.id as any })}
-                          className={`group relative p-2 rounded-2xl border text-center flex flex-col items-center justify-between gap-1.5 transition-all cursor-pointer ${
-                            isSelected
-                              ? 'bg-white ring-2 ring-offset-1 shadow-sm border-transparent'
-                              : 'bg-white hover:bg-slate-50/90 border-slate-200 shadow-2xs'
-                          }`}
-                          style={{
-                            borderColor: isSelected ? localSettings.primaryColor : undefined,
-                            boxShadow: isSelected ? `0 0 0 2px ${localSettings.primaryColor}` : undefined
-                          }}
-                        >
-                          {isSelected && (
-                            <div 
-                              className="absolute top-1 right-1 w-3 h-3 rounded-full flex items-center justify-center text-white z-10"
-                              style={{ backgroundColor: localSettings.primaryColor }}
-                            >
-                              <Check className="w-2 h-2 stroke-[3]" />
-                            </div>
-                          )}
-
-                          <div 
-                            className={`w-8 h-8 rounded-xl flex items-center justify-center overflow-hidden transition-all ${
-                              isSelected ? 'shadow-xs scale-105' : 'bg-slate-100 text-slate-600'
-                            }`}
-                            style={{
-                              backgroundColor: !item.isLogo && isSelected ? localSettings.primaryColor : undefined,
-                              color: !item.isLogo && isSelected ? '#ffffff' : undefined
-                            }}
-                          >
-                            {item.isLogo ? (
-                              <img 
-                                src={companyLogoUrl} 
-                                alt="Logo" 
-                                className="w-full h-full object-cover rounded-xl"
-                                onError={(e) => {
-                                  (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=150&auto=format&fit=crop&q=80';
-                                }}
-                              />
-                            ) : (
-                              IconComp && <IconComp className="w-4 h-4" />
-                            )}
-                          </div>
-
-                          <div className="min-w-0 w-full">
-                            <span className={`block text-[11px] truncate ${isSelected ? 'font-bold text-slate-900' : 'font-semibold text-slate-700'}`}>
-                              {item.label}
-                            </span>
-                            <span className="block text-[9px] text-slate-400 truncate">
-                              {item.sub}
-                            </span>
-                          </div>
-                        </button>
-                      );
-                    })}
-                  </div>
+                {/* Save Changes Bottom Button */}
+                <div className="pt-4 border-t border-slate-100 flex justify-start">
+                  <button
+                    type="button"
+                    onClick={handleSaveBranding}
+                    className="px-6 py-2.5 bg-[#007074] hover:bg-[#005a5d] text-white rounded-xl text-sm font-bold flex items-center gap-2 shadow-sm transition-colors cursor-pointer"
+                  >
+                    {isSaved ? <Check className="w-4 h-4 text-emerald-300 stroke-[3]" /> : <CheckCircle2 className="w-4 h-4" />}
+                    <span>{isSaved ? 'Saved' : 'Save Changes'}</span>
+                  </button>
                 </div>
               </div>
             )}
@@ -751,258 +848,65 @@ export default function App() {
             {/* TAB: INSTALL */}
             {activeMainTab === 'install' && (
               <div className="space-y-4 animate-in fade-in duration-150">
-                {/* Mode Selector */}
-                <div className="flex items-center justify-between bg-slate-100 p-1.5 rounded-2xl">
-                  <button
-                    type="button"
-                    onClick={() => setInstallMode('nocode')}
-                    className={`flex-1 py-2 px-3 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-2 ${
-                      installMode === 'nocode'
-                        ? 'bg-white text-slate-900 shadow-xs border border-slate-200/80'
-                        : 'text-slate-600 hover:text-slate-900'
-                    }`}
-                  >
-                    <Sparkles className="w-3.5 h-3.5 text-indigo-600" />
-                    <span>No-Code & 1-Click (Zero Code)</span>
-                  </button>
+                <div className="bg-slate-950 text-slate-200 rounded-2xl p-5 border border-slate-800 shadow-md">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-3">
+                    <div className="flex items-center gap-2">
+                      <Terminal className="w-4 h-4 text-slate-400" />
+                      <h4 className="text-sm font-bold text-white">Embed Installation Snippet</h4>
+                    </div>
 
-                  <button
-                    type="button"
-                    onClick={() => setInstallMode('code')}
-                    className={`flex-1 py-2 px-3 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-2 ${
-                      installMode === 'code'
-                        ? 'bg-white text-slate-900 shadow-xs border border-slate-200/80'
-                        : 'text-slate-600 hover:text-slate-900'
-                    }`}
-                  >
-                    <Terminal className="w-3.5 h-3.5 text-slate-700" />
-                    <span>Developer Code Snippets</span>
-                  </button>
+                    <div className="flex items-center gap-1 bg-slate-900 p-1 rounded-xl border border-slate-800">
+                      {[
+                        { id: 'script', label: 'HTML <script>' },
+                        { id: 'react', label: 'React SDK' },
+                        { id: 'iframe', label: 'Iframe' },
+                        { id: 'api', label: 'REST API' }
+                      ].map(tab => (
+                        <button
+                          key={tab.id}
+                          onClick={() => setActiveSnippetTab(tab.id as any)}
+                          className={`px-2.5 py-1 text-xs font-semibold rounded-lg transition-colors cursor-pointer ${
+                            activeSnippetTab === tab.id
+                              ? 'bg-slate-800 text-white shadow-xs'
+                              : 'text-slate-400 hover:text-slate-200'
+                          }`}
+                        >
+                          {tab.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="relative bg-slate-900/90 border border-slate-800 rounded-xl p-3.5 font-mono text-xs text-slate-200 overflow-x-auto">
+                    <button
+                      onClick={() => {
+                        const codeMap = {
+                          script: scriptSnippet,
+                          react: reactSnippet,
+                          iframe: iframeSnippet,
+                          api: curlSnippet
+                        };
+                        handleCopy(codeMap[activeSnippetTab], 'snippet');
+                      }}
+                      className="absolute top-2.5 right-2.5 px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-100 rounded-lg text-[11px] font-sans font-semibold flex items-center gap-1 transition-colors border border-slate-700 cursor-pointer"
+                    >
+                      {copiedKey === 'snippet' ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
+                      <span>{copiedKey === 'snippet' ? 'Copied' : 'Copy'}</span>
+                    </button>
+
+                    <pre className="pr-16 leading-relaxed font-mono">
+                      {activeSnippetTab === 'script' && scriptSnippet}
+                      {activeSnippetTab === 'react' && reactSnippet}
+                      {activeSnippetTab === 'iframe' && iframeSnippet}
+                      {activeSnippetTab === 'api' && curlSnippet}
+                    </pre>
+                  </div>
                 </div>
-
-                {/* NO-CODE METHODS */}
-                {installMode === 'nocode' && (
-                  <div className="space-y-3.5 animate-in fade-in duration-150">
-                    {/* Method 1: Shareable Hosted Standalone Link (0 Install) */}
-                    <div className="p-4 bg-gradient-to-br from-indigo-50/70 via-white to-purple-50/50 border border-indigo-100 rounded-2xl space-y-3 shadow-2xs">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <div className="p-1.5 bg-indigo-600 text-white rounded-lg">
-                            <Globe className="w-4 h-4" />
-                          </div>
-                          <div>
-                            <h4 className="font-bold text-slate-900 text-xs sm:text-sm">Hosted Standalone Chat Web App</h4>
-                            <p className="text-[11px] text-slate-500">No installation needed. Share directly with customers.</p>
-                          </div>
-                        </div>
-                        <span className="text-[10px] font-bold font-mono px-2 py-0.5 rounded-md bg-indigo-100 text-indigo-700">
-                          ZERO CODE
-                        </span>
-                      </div>
-
-                      <div className="flex items-center gap-2">
-                        <input
-                          type="text"
-                          readOnly
-                          value={`${origin}/chat/${currentCompany.slug}`}
-                          className="flex-1 px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs text-slate-800 font-mono"
-                        />
-                        <button
-                          type="button"
-                          onClick={() => handleCopy(`${origin}/chat/${currentCompany.slug}`, 'link')}
-                          className="px-3 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer shadow-2xs shrink-0"
-                        >
-                          {copiedKey === 'link' ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
-                          <span>{copiedKey === 'link' ? 'Copied' : 'Copy Link'}</span>
-                        </button>
-
-                        <a
-                          href={`${origin}/chat/${currentCompany.slug}`}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="p-2 bg-white hover:bg-slate-100 border border-slate-200 rounded-xl text-slate-700 transition-colors cursor-pointer"
-                          title="Open in new tab"
-                        >
-                          <ExternalLink className="w-4 h-4" />
-                        </a>
-                      </div>
-
-                      <p className="text-[10px] text-slate-500">
-                        Use in <strong>WhatsApp Business</strong>, Instagram bio, email signatures, SMS campaigns, or print on in-store QR codes.
-                      </p>
-                    </div>
-
-                    {/* Method 2: CMS & No-Code Platforms Grid */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      {/* WordPress / WooCommerce */}
-                      <div className="p-3.5 bg-white border border-slate-200/90 rounded-2xl space-y-2 hover:border-slate-300 transition-colors shadow-2xs">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-2">
-                            <div className="w-7 h-7 rounded-lg bg-blue-600 text-white flex items-center justify-center font-bold text-xs">
-                              W
-                            </div>
-                            <span className="font-bold text-xs text-slate-900">WordPress & WooCommerce</span>
-                          </div>
-                          <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-md">Plugin</span>
-                        </div>
-                        <p className="text-[11px] text-slate-500">
-                          Upload plugin ZIP into WordPress Admin and paste your API key without touching theme code.
-                        </p>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            alert('Downloading Chat-AaaS WordPress Plugin package (chat-aaas-wp.zip)...');
-                          }}
-                          className="w-full py-1.5 bg-slate-100 hover:bg-slate-200/80 text-slate-800 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
-                        >
-                          <Download className="w-3.5 h-3.5" />
-                          <span>Download WP Plugin (.zip)</span>
-                        </button>
-                      </div>
-
-                      {/* Shopify 1-Click */}
-                      <div className="p-3.5 bg-white border border-slate-200/90 rounded-2xl space-y-2 hover:border-slate-300 transition-colors shadow-2xs">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-2">
-                            <div className="w-7 h-7 rounded-lg bg-emerald-600 text-white flex items-center justify-center font-bold text-xs">
-                              <ShoppingBag className="w-3.5 h-3.5" />
-                            </div>
-                            <span className="font-bold text-xs text-slate-900">Shopify 1-Click Embed</span>
-                          </div>
-                          <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-md">App Embed</span>
-                        </div>
-                        <p className="text-[11px] text-slate-500">
-                          Enable via Shopify Theme Customizer &gt; App Embeds toggle with 1 click.
-                        </p>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            window.open('https://admin.shopify.com', '_blank');
-                          }}
-                          className="w-full py-1.5 bg-slate-100 hover:bg-slate-200/80 text-slate-800 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
-                        >
-                          <ExternalLink className="w-3.5 h-3.5" />
-                          <span>Open Shopify Theme Editor</span>
-                        </button>
-                      </div>
-
-                      {/* Google Tag Manager */}
-                      <div className="p-3.5 bg-white border border-slate-200/90 rounded-2xl space-y-2 hover:border-slate-300 transition-colors shadow-2xs">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-2">
-                            <div className="w-7 h-7 rounded-lg bg-amber-500 text-white flex items-center justify-center font-bold text-xs">
-                              <Layers className="w-3.5 h-3.5" />
-                            </div>
-                            <span className="font-bold text-xs text-slate-900">Google Tag Manager</span>
-                          </div>
-                          <span className="text-[10px] font-bold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-md">GTM Tag</span>
-                        </div>
-                        <p className="text-[11px] text-slate-500">
-                          Inject the assistant across your whole website via GTM container without code deploy.
-                        </p>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            handleCopy(scriptSnippet, 'gtm');
-                          }}
-                          className="w-full py-1.5 bg-slate-100 hover:bg-slate-200/80 text-slate-800 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
-                        >
-                          {copiedKey === 'gtm' ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
-                          <span>{copiedKey === 'gtm' ? 'GTM Tag Copied' : 'Copy GTM Custom Tag'}</span>
-                        </button>
-                      </div>
-
-                      {/* Webflow & Wix */}
-                      <div className="p-3.5 bg-white border border-slate-200/90 rounded-2xl space-y-2 hover:border-slate-300 transition-colors shadow-2xs">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-2">
-                            <div className="w-7 h-7 rounded-lg bg-indigo-600 text-white flex items-center justify-center font-bold text-xs">
-                              <Globe className="w-3.5 h-3.5" />
-                            </div>
-                            <span className="font-bold text-xs text-slate-900">Webflow, Wix & Framer</span>
-                          </div>
-                          <span className="text-[10px] font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-md">No-Code</span>
-                        </div>
-                        <p className="text-[11px] text-slate-500">
-                          Paste into Project Settings &gt; Custom Code Footer once to enable globally.
-                        </p>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            handleCopy(scriptSnippet, 'nocode_script');
-                          }}
-                          className="w-full py-1.5 bg-slate-100 hover:bg-slate-200/80 text-slate-800 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
-                        >
-                          {copiedKey === 'nocode_script' ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
-                          <span>{copiedKey === 'nocode_script' ? 'Copied' : 'Copy Embed Code'}</span>
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {/* DEVELOPER CODE SNIPPETS */}
-                {installMode === 'code' && (
-                  <div className="bg-slate-950 text-slate-200 rounded-2xl p-5 border border-slate-800 shadow-md space-y-3 animate-in fade-in duration-150">
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-2">
-                      <div className="flex items-center gap-2">
-                        <Terminal className="w-4 h-4 text-slate-400" />
-                        <h4 className="text-sm font-bold text-white">Embed Installation Snippet</h4>
-                      </div>
-
-                      <div className="flex items-center gap-1 bg-slate-900 p-1 rounded-xl border border-slate-800">
-                        {[
-                          { id: 'script', label: 'HTML <script>' },
-                          { id: 'react', label: 'React SDK' },
-                          { id: 'iframe', label: 'Iframe' },
-                          { id: 'api', label: 'REST API' }
-                        ].map(tab => (
-                          <button
-                            key={tab.id}
-                            onClick={() => setActiveSnippetTab(tab.id as any)}
-                            className={`px-2.5 py-1 text-xs font-semibold rounded-lg transition-colors cursor-pointer ${
-                              activeSnippetTab === tab.id
-                                ? 'bg-slate-800 text-white shadow-xs'
-                                : 'text-slate-400 hover:text-slate-200'
-                            }`}
-                          >
-                            {tab.label}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-
-                    <div className="relative bg-slate-900/90 border border-slate-800 rounded-xl p-3.5 font-mono text-xs text-slate-200 overflow-x-auto">
-                      <button
-                        onClick={() => {
-                          const codeMap = {
-                            script: scriptSnippet,
-                            react: reactSnippet,
-                            iframe: iframeSnippet,
-                            api: curlSnippet
-                          };
-                          handleCopy(codeMap[activeSnippetTab], 'snippet');
-                        }}
-                        className="absolute top-2.5 right-2.5 px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-100 rounded-lg text-[11px] font-sans font-semibold flex items-center gap-1 transition-colors border border-slate-700 cursor-pointer"
-                      >
-                        {copiedKey === 'snippet' ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
-                        <span>{copiedKey === 'snippet' ? 'Copied' : 'Copy'}</span>
-                      </button>
-
-                      <pre className="pr-16 leading-relaxed font-mono">
-                        {activeSnippetTab === 'script' && scriptSnippet}
-                        {activeSnippetTab === 'react' && reactSnippet}
-                        {activeSnippetTab === 'iframe' && iframeSnippet}
-                        {activeSnippetTab === 'api' && curlSnippet}
-                      </pre>
-                    </div>
-                  </div>
-                )}
               </div>
             )}
           </div>
 
-          {/* Right Live Visual Mockup Area (5 Cols - Matching Screenshot) */}
+          {/* Right Live Visual Mockup Area (5 Cols) */}
           <div className="lg:col-span-5 flex flex-col justify-between relative">
             <div className="flex items-center justify-between mb-2">
               <span className="text-[11px] font-bold font-mono uppercase tracking-wider text-slate-400">Live Preview</span>
@@ -1015,7 +919,7 @@ export default function App() {
               </button>
             </div>
 
-            {/* Sleek Mockup Widget Container (Dark / Light dynamically matched) */}
+            {/* Sleek Mockup Widget Container */}
             <div 
               className={`rounded-3xl border shadow-xl overflow-hidden flex flex-col justify-between relative min-h-[460px] transition-all duration-300 ${
                 isDarkMode 
@@ -1103,7 +1007,7 @@ export default function App() {
                 )}
               </div>
 
-              {/* Bottom "Send us a message" input pill (Exact match to screenshot) */}
+              {/* Bottom "Send us a message" input pill */}
               <div className="p-4 pt-2 z-10">
                 <div className={`p-1.5 rounded-2xl flex items-center justify-between border shadow-xs ${
                   isDarkMode ? 'bg-white text-slate-900 border-white/20' : 'bg-slate-900 text-white border-slate-800'

@@ -240,6 +240,8 @@ export interface WidgetCustomization {
   themeMode?: 'dark' | 'light';
   headerTextColor?: 'white' | 'black';
   backgroundAnimation?: boolean;
+  bottomPadding?: number;
+  sidePadding?: number;
   customCss?: string;
 }
 
