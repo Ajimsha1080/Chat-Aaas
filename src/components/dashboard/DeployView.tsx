@@ -1045,7 +1045,7 @@ export default function App() {
                     </div>
 
                     {/* Chat Message Stream & Starter Prompts */}
-                    <div className="px-5 py-2 flex-1 space-y-2.5 overflow-y-auto max-h-[190px] text-xs z-10">
+                    <div className="px-5 py-2 flex-1 space-y-2.5 overflow-y-auto max-h-[200px] text-xs z-10 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
                       {previewChat.map((msg, mIdx) => (
                         <div 
                           key={mIdx}
