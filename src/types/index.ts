@@ -237,6 +237,9 @@ export interface WidgetCustomization {
   autoExpandSeconds: number; // 0 = disabled
   launcherIcon?: 'chat' | 'bot' | 'sparkles' | 'support' | 'help' | 'zap' | 'logo' | 'custom';
   launcherLogoUrl?: string;
+  themeMode?: 'dark' | 'light';
+  headerTextColor?: 'white' | 'black';
+  backgroundAnimation?: boolean;
   customCss?: string;
 }
 

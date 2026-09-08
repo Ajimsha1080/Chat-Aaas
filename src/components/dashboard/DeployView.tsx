@@ -16,7 +16,15 @@ import {
   Headphones,
   Zap,
   Upload,
-  Image as ImageIcon
+  Image as ImageIcon,
+  Info,
+  Pencil,
+  Moon,
+  Sun,
+  Settings as SettingsIcon,
+  Code2,
+  FileText,
+  Send
 } from 'lucide-react';
 import { useApp } from '../../context';
 import { WidgetCustomization } from '../../types';
@@ -30,33 +38,21 @@ export const DeployView: React.FC = () => {
   } = useApp();
 
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [activeMainTab, setActiveMainTab] = useState<'general' | 'content' | 'appearance' | 'install'>('appearance');
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
   const [activeSnippetTab, setActiveSnippetTab] = useState<'script' | 'react' | 'iframe' | 'api'>('script');
-  const [localSettings, setLocalSettings] = useState<WidgetCustomization>({ ...currentCompany.widgetSettings });
+  const [localSettings, setLocalSettings] = useState<WidgetCustomization>({ 
+    themeMode: 'dark',
+    headerTextColor: 'white',
+    backgroundAnimation: true,
+    ...currentCompany.widgetSettings 
+  });
   const [isSaved, setIsSaved] = useState(false);
+  const [showLogoEditModal, setShowLogoEditModal] = useState(false);
 
-  const handleLogoFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    if (file.size > 5 * 1024 * 1024) {
-      alert('Logo file size must be less than 5MB');
-      return;
-    }
-
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      const result = event.target?.result as string;
-      if (result) {
-        setLocalSettings(prev => ({ ...prev, launcherLogoUrl: result }));
-      }
-    };
-    reader.readAsDataURL(file);
-    // Reset file input so user can re-upload same file if desired
-    e.target.value = '';
-  };
   const COLOR_PRESETS = [
-    { name: 'Indigo', hex: '#4f46e5' },
+    { name: 'Royal Blue', hex: '#4f46e5' },
+    { name: 'Indigo', hex: '#4338ca' },
     { name: 'Violet', hex: '#7c3aed' },
     { name: 'Emerald', hex: '#059669' },
     { name: 'Sky Blue', hex: '#0284c7' },
@@ -73,8 +69,32 @@ export const DeployView: React.FC = () => {
   ]);
   const [newQuestionInput, setNewQuestionInput] = useState('');
   const [previewChat, setPreviewChat] = useState<{ sender: 'agent' | 'user'; text: string }[]>([
-    { sender: 'agent', text: currentCompany.agent.greetingMessage || 'Hello! How can I help you today?' }
+    { sender: 'agent', text: currentCompany.agent.greetingMessage || 'Hello! How can I assist you today?' }
   ]);
+
+  const handleLogoFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 5 * 1024 * 1024) {
+      alert('Logo file size must be less than 5MB');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const result = event.target?.result as string;
+      if (result) {
+        setLocalSettings(prev => ({ 
+          ...prev, 
+          launcherIcon: 'logo',
+          launcherLogoUrl: result 
+        }));
+      }
+    };
+    reader.readAsDataURL(file);
+    e.target.value = '';
+  };
 
   const handleAddStarterQuestion = () => {
     if (!newQuestionInput.trim() || starterQuestions.length >= 4) return;
@@ -96,7 +116,7 @@ export const DeployView: React.FC = () => {
 
   const handleResetPreview = () => {
     setPreviewChat([
-      { sender: 'agent', text: currentCompany.agent.greetingMessage || 'Hello! How can I help you today?' }
+      { sender: 'agent', text: currentCompany.agent.greetingMessage || 'Hello! How can I assist you today?' }
     ]);
   };
 
@@ -143,7 +163,6 @@ export const DeployView: React.FC = () => {
   const widgetScriptSrc = isLocal ? `${origin}/widget.js` : 'https://cdn.chat-aaas.com/v1/widget.js';
   const apiEndpointUrl = isLocal ? 'http://127.0.0.1:8001/api/v1/chat' : 'https://api.chat-aaas.com/api/v1/chat';
 
-  // Embed script snippet
   const isLogoSelected = localSettings.launcherIcon === 'logo' || localSettings.launcherIcon === 'custom';
   const scriptSnippet = `<!-- Chat-AaaS AI Assistant Widget for ${currentCompany.name} -->
 <script
@@ -155,7 +174,6 @@ export const DeployView: React.FC = () => {
   defer>
 </script>`;
 
-  // React component snippet
   const reactSnippet = `import { AssistantChatWidget } from '@chat-aaas/react-sdk';
 
 export default function App() {
@@ -173,7 +191,6 @@ export default function App() {
   );
 }`;
 
-  // Iframe snippet
   const iframeSnippet = `<iframe
   src="https://embed.chat-aaas.com/chat/${currentCompany.slug}?key=${currentCompany.apiKey}"
   width="400"
@@ -183,8 +200,7 @@ export default function App() {
   style="border-radius: 16px; box-shadow: 0 10px 25px rgba(0,0,0,0.15);"
 ></iframe>`;
 
-  // cURL REST API snippet
-  const curlSnippet = `curl -X POST https://api.chat-aaas.com/api/v1/chat \\
+  const curlSnippet = `curl -X POST ${apiEndpointUrl} \\
   -H "Authorization: Bearer ${currentCompany.apiKey}" \\
   -H "Content-Type: application/json" \\
   -d '{
@@ -193,8 +209,19 @@ export default function App() {
     "customerEmail": "alex@enterprise.com"
   }'`;
 
+  const isDarkMode = (localSettings.themeMode || 'dark') === 'dark';
+
   return (
     <div className="space-y-6 animate-in fade-in duration-150">
+      {/* Hidden File Input for Logo Upload */}
+      <input 
+        type="file" 
+        ref={fileInputRef} 
+        accept="image/*" 
+        onChange={handleLogoFileUpload} 
+        className="hidden" 
+      />
+
       {/* Header */}
       <div className="bg-white rounded-2xl p-6 sm:p-7 border border-slate-200/90 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-5">
         <div>
@@ -223,74 +250,32 @@ export default function App() {
         </div>
       </div>
 
-      {/* Embed Code Snippet Card */}
-      <div className="bg-slate-950 text-slate-200 rounded-2xl p-6 border border-slate-800 shadow-md">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
-          <div className="flex items-center gap-2.5">
-            <Terminal className="w-5 h-5 text-slate-400" />
-            <h3 className="text-base font-bold text-white">Embed Installation Snippet</h3>
-          </div>
-
-          <div className="flex items-center gap-1.5 bg-slate-900 p-1 rounded-xl border border-slate-800">
+      {/* Main Card with Navigation Tabs */}
+      <div className="bg-white rounded-2xl p-6 sm:p-7 border border-slate-200/90 shadow-sm">
+        {/* Navigation Tabs Bar matching Screenshot */}
+        <div className="flex items-center justify-between border-b border-slate-100 mb-6 pb-2">
+          <div className="flex items-center gap-8">
             {[
-              { id: 'script', label: 'HTML <script>' },
-              { id: 'react', label: 'React SDK' },
-              { id: 'iframe', label: 'Iframe Embed' },
-              { id: 'api', label: 'REST API' }
+              { id: 'general', label: 'General' },
+              { id: 'content', label: 'Content' },
+              { id: 'appearance', label: 'Appearance' },
+              { id: 'install', label: 'Install' }
             ].map(tab => (
               <button
                 key={tab.id}
-                onClick={() => setActiveSnippetTab(tab.id as any)}
-                className={`px-3 py-1.5 text-xs sm:text-sm font-semibold rounded-lg transition-colors cursor-pointer ${
-                  activeSnippetTab === tab.id
-                    ? 'bg-slate-800 text-white shadow-xs'
-                    : 'text-slate-400 hover:text-slate-200'
+                onClick={() => setActiveMainTab(tab.id as any)}
+                className={`pb-3 font-semibold text-sm transition-all relative cursor-pointer ${
+                  activeMainTab === tab.id
+                    ? 'text-pink-600 font-bold'
+                    : 'text-slate-500 hover:text-slate-900'
                 }`}
               >
                 {tab.label}
+                {activeMainTab === tab.id && (
+                  <span className="absolute bottom-[-1px] left-0 right-0 h-0.5 bg-pink-500 rounded-full" />
+                )}
               </button>
             ))}
-          </div>
-        </div>
-
-        {/* Code View Area */}
-        <div className="relative bg-slate-900/90 border border-slate-800 rounded-xl p-4 font-mono text-xs sm:text-sm text-slate-200 overflow-x-auto">
-          <button
-            onClick={() => {
-              const codeMap = {
-                script: scriptSnippet,
-                react: reactSnippet,
-                iframe: iframeSnippet,
-                api: curlSnippet
-              };
-              handleCopy(codeMap[activeSnippetTab], 'snippet');
-            }}
-            className="absolute top-3 right-3 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-100 rounded-lg text-xs font-sans font-semibold flex items-center gap-1.5 transition-colors border border-slate-700 cursor-pointer"
-          >
-            {copiedKey === 'snippet' ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
-            <span>{copiedKey === 'snippet' ? 'Copied' : 'Copy Code'}</span>
-          </button>
-
-          <pre className="pr-24 leading-relaxed font-mono">
-            {activeSnippetTab === 'script' && scriptSnippet}
-            {activeSnippetTab === 'react' && reactSnippet}
-            {activeSnippetTab === 'iframe' && iframeSnippet}
-            {activeSnippetTab === 'api' && curlSnippet}
-          </pre>
-        </div>
-      </div>
-
-      {/* Visual Customizer & Live Mini-Preview */}
-      <div className="bg-white rounded-2xl p-6 sm:p-7 border border-slate-200/90 shadow-sm">
-        <div className="flex items-center justify-between mb-6 pb-4 border-b border-slate-100">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-slate-100 text-slate-800 rounded-xl border border-slate-200">
-              <Paintbrush className="w-5 h-5" />
-            </div>
-            <div>
-              <h3 className="text-base font-bold text-slate-900">Appearance & Behavior</h3>
-              <p className="text-xs sm:text-sm text-slate-500 mt-0.5">Configure theme colors, header subtitle, launcher style, and starter questions.</p>
-            </div>
           </div>
 
           <button
@@ -302,466 +287,640 @@ export default function App() {
           </button>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-7">
-          {/* Left Form (7 cols) */}
-          <div className="lg:col-span-7 space-y-5 text-sm">
-            {/* 1. Theme Color & Presets */}
-            <div className="space-y-2.5">
-              <label className="block font-semibold text-slate-800">Theme Accent Color</label>
-              <div className="flex items-center gap-2 flex-wrap">
-                {COLOR_PRESETS.map(preset => {
-                  const isSelected = localSettings.primaryColor.toLowerCase() === preset.hex.toLowerCase();
-                  return (
-                    <button
-                      key={preset.hex}
-                      type="button"
-                      onClick={() => setLocalSettings(prev => ({ ...prev, primaryColor: preset.hex }))}
-                      title={preset.name}
-                      style={{ backgroundColor: preset.hex }}
-                      className={`w-7 h-7 rounded-full transition-transform cursor-pointer flex items-center justify-center ${
-                        isSelected ? 'scale-115 ring-2 ring-slate-900 ring-offset-2' : 'hover:scale-105 opacity-90'
-                      }`}
-                    >
-                      {isSelected && <Check className="w-3.5 h-3.5 text-white" />}
-                    </button>
-                  );
-                })}
-              </div>
-
-              <div className="flex items-center gap-2.5 pt-1">
-                <input
-                  type="color"
-                  value={localSettings.primaryColor}
-                  onChange={(e) => setLocalSettings({ ...localSettings, primaryColor: e.target.value })}
-                  className="w-9 h-9 rounded-xl border border-slate-200 cursor-pointer p-0.5"
-                />
-                <input
-                  type="text"
-                  value={localSettings.primaryColor}
-                  onChange={(e) => setLocalSettings({ ...localSettings, primaryColor: e.target.value })}
-                  className="flex-1 max-w-[160px] px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-xl font-mono text-xs text-slate-800 font-medium"
-                />
-              </div>
-            </div>
-
-            {/* 2. Titles & Subtitle */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <label className="block font-semibold text-slate-800 mb-1.5">Header Title</label>
-                <input
-                  type="text"
-                  value={localSettings.headerTitle}
-                  onChange={(e) => setLocalSettings({ ...localSettings, headerTitle: e.target.value })}
-                  placeholder="e.g. Acme Support AI"
-                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-900 focus:ring-1 focus:ring-slate-900 focus:border-slate-900 focus:outline-hidden font-medium"
-                />
-              </div>
-
-              <div>
-                <label className="block font-semibold text-slate-800 mb-1.5">Header Subtitle</label>
-                <input
-                  type="text"
-                  value={localSettings.headerSubtitle || ''}
-                  onChange={(e) => setLocalSettings({ ...localSettings, headerSubtitle: e.target.value })}
-                  placeholder="e.g. Typically replies in seconds"
-                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-900 focus:ring-1 focus:ring-slate-900 focus:border-slate-900 focus:outline-hidden font-medium"
-                />
-              </div>
-            </div>
-
-            {/* 3. Launcher Button Configuration */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <label className="block font-semibold text-slate-800 mb-1.5">Launcher Style</label>
-                <div className="grid grid-cols-2 gap-2">
+        {/* 2-Column Grid: Form Left, Simulation Mockup Right */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+          {/* Left Form Area (7 Cols) */}
+          <div className="lg:col-span-7 space-y-6 text-sm">
+            
+            {/* TAB: APPEARANCE */}
+            {activeMainTab === 'appearance' && (
+              <div className="space-y-6 animate-in fade-in duration-150">
+                {/* 1. Dark / Light Theme Mode Selector (Matching Screenshot) */}
+                <div className="grid grid-cols-2 gap-4">
+                  {/* Dark Mode Card */}
                   <button
                     type="button"
-                    onClick={() => setLauncherStyle('pill')}
-                    className={`py-2 px-3 rounded-xl border font-semibold text-center transition-colors cursor-pointer text-xs ${
-                      launcherStyle === 'pill'
-                        ? 'border-slate-900 bg-slate-900 text-white shadow-xs'
-                        : 'border-slate-200 text-slate-700 hover:bg-slate-50'
+                    onClick={() => setLocalSettings(prev => ({ ...prev, themeMode: 'dark' }))}
+                    className={`p-4 rounded-2xl border text-center transition-all cursor-pointer flex flex-col items-center gap-3 ${
+                      isDarkMode
+                        ? 'border-indigo-600 bg-indigo-50/20 ring-2 ring-indigo-600 ring-offset-1 shadow-sm'
+                        : 'border-slate-200 hover:border-slate-300 bg-slate-50/50'
                     }`}
                   >
-                    Pill with Text
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setLauncherStyle('bubble')}
-                    className={`py-2 px-3 rounded-xl border font-semibold text-center transition-colors cursor-pointer text-xs ${
-                      launcherStyle === 'bubble'
-                        ? 'border-slate-900 bg-slate-900 text-white shadow-xs'
-                        : 'border-slate-200 text-slate-700 hover:bg-slate-50'
-                    }`}
-                  >
-                    Circle Bubble
-                  </button>
-                </div>
-              </div>
-
-              <div>
-                <label className="block font-semibold text-slate-800 mb-1.5">Launcher Text (for Pill)</label>
-                <input
-                  type="text"
-                  disabled={launcherStyle === 'bubble'}
-                  value={localSettings.launcherText}
-                  onChange={(e) => setLocalSettings({ ...localSettings, launcherText: e.target.value })}
-                  placeholder="e.g. Chat with Us"
-                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-900 focus:ring-1 focus:ring-slate-900 focus:border-slate-900 focus:outline-hidden font-medium disabled:opacity-50"
-                />
-              </div>
-            </div>
-
-            {/* 4. Launcher Icon Selection */}
-            <div className="space-y-2.5 pt-1">
-              <div className="flex items-center justify-between">
-                <div>
-                  <label className="block font-semibold text-slate-800 text-sm">Launcher Icon</label>
-                  <p className="text-xs text-slate-500">Select the trigger icon shown on your floating widget button</p>
-                </div>
-                <span className="text-[11px] font-mono font-medium px-2 py-0.5 rounded-md bg-slate-100 text-slate-600 border border-slate-200">
-                  {localSettings.launcherIcon ? localSettings.launcherIcon.toUpperCase() : 'CHAT'}
-                </span>
-              </div>
-
-              <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2.5">
-                {[
-                  { id: 'logo', label: 'Logo', sub: 'Brand Avatar', isLogo: true },
-                  { id: 'chat', label: 'Chat', sub: 'Classic', icon: MessageCircle },
-                  { id: 'bot', label: 'AI Bot', sub: 'Agent', icon: Bot },
-                  { id: 'sparkles', label: 'Sparkles', sub: 'Magic AI', icon: Sparkles },
-                  { id: 'support', label: 'Support', sub: 'Helpdesk', icon: Headphones },
-                  { id: 'help', label: 'Help', sub: 'FAQ & Q&A', icon: HelpCircle },
-                  { id: 'zap', label: 'Instant', sub: 'Fast AI', icon: Zap }
-                ].map(item => {
-                  const IconComp = item.icon;
-                  const isSelected = (localSettings.launcherIcon || 'chat') === item.id;
-                  return (
-                    <button
-                      key={item.id}
-                      type="button"
-                      onClick={() => setLocalSettings({ ...localSettings, launcherIcon: item.id as any })}
-                      className={`group relative p-2.5 rounded-2xl border text-center flex flex-col items-center justify-between gap-2 transition-all duration-150 cursor-pointer ${
-                        isSelected
-                          ? 'bg-white ring-2 ring-offset-1 shadow-sm border-transparent'
-                          : 'bg-white hover:bg-slate-50/90 border-slate-200/90 hover:border-slate-300 shadow-2xs'
-                      }`}
-                      style={{
-                        borderColor: isSelected ? localSettings.primaryColor : undefined,
-                        boxShadow: isSelected ? `0 0 0 2px ${localSettings.primaryColor}` : undefined
-                      }}
-                    >
-                      {/* Active Check Indicator */}
-                      {isSelected && (
-                        <div 
-                          className="absolute top-1.5 right-1.5 w-3.5 h-3.5 rounded-full flex items-center justify-center text-white z-10"
-                          style={{ backgroundColor: localSettings.primaryColor }}
-                        >
-                          <Check className="w-2.5 h-2.5 stroke-[3]" />
-                        </div>
-                      )}
-
-                      {/* Icon / Logo Container */}
-                      <div 
-                        className={`w-9 h-9 rounded-xl flex items-center justify-center overflow-hidden transition-all ${
-                          isSelected ? 'shadow-xs scale-105' : 'bg-slate-100 text-slate-600 group-hover:bg-slate-200/70 group-hover:text-slate-900'
-                        }`}
-                        style={{
-                          backgroundColor: !item.isLogo && isSelected ? localSettings.primaryColor : undefined,
-                          color: !item.isLogo && isSelected ? '#ffffff' : undefined
-                        }}
-                      >
-                        {item.isLogo ? (
-                          <img 
-                            src={companyLogoUrl} 
-                            alt="Logo" 
-                            className="w-full h-full object-cover rounded-xl"
-                            onError={(e) => {
-                              (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=150&auto=format&fit=crop&q=80';
-                            }}
-                          />
-                        ) : (
-                          IconComp && <IconComp className="w-4.5 h-4.5" />
-                        )}
+                    <div className="w-full h-24 rounded-xl bg-slate-900 p-2.5 flex flex-col justify-between overflow-hidden shadow-inner border border-slate-800">
+                      <div className="w-8 h-2 rounded-full bg-slate-700" />
+                      <div className="space-y-1">
+                        <div className="w-12 h-2 rounded-full bg-slate-800" />
+                        <div className="w-16 h-2 rounded-full bg-white ml-auto" />
+                        <div className="w-20 h-3 rounded-lg bg-slate-800" />
                       </div>
-
-                      {/* Text Label & Subtitle */}
-                      <div className="min-w-0 w-full">
-                        <span className={`block text-xs truncate ${isSelected ? 'font-bold text-slate-900' : 'font-semibold text-slate-700'}`}>
-                          {item.label}
-                        </span>
-                        <span className="block text-[10px] text-slate-400 truncate">
-                          {item.sub}
-                        </span>
-                      </div>
-                    </button>
-                  );
-                })}
-              </div>
-
-              {/* Company Logo Settings Panel */}
-              {isLogoSelected && (
-                <div className="p-4 bg-slate-50/90 border border-slate-200 rounded-2xl space-y-3 animate-in fade-in duration-150">
-                  {/* Hidden File Input */}
-                  <input 
-                    type="file" 
-                    ref={fileInputRef} 
-                    accept="image/*" 
-                    onChange={handleLogoFileUpload} 
-                    className="hidden" 
-                  />
-
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <ImageIcon className="w-4 h-4 text-slate-700" />
-                      <span className="font-bold text-xs text-slate-900">Custom Brand Logo</span>
                     </div>
-                    <div className="flex items-center gap-3">
+                    <span className={`text-xs font-bold ${isDarkMode ? 'text-slate-900' : 'text-slate-600'}`}>
+                      Dark
+                    </span>
+                  </button>
+
+                  {/* Light Mode Card */}
+                  <button
+                    type="button"
+                    onClick={() => setLocalSettings(prev => ({ ...prev, themeMode: 'light' }))}
+                    className={`p-4 rounded-2xl border text-center transition-all cursor-pointer flex flex-col items-center gap-3 ${
+                      !isDarkMode
+                        ? 'border-indigo-600 bg-indigo-50/20 ring-2 ring-indigo-600 ring-offset-1 shadow-sm'
+                        : 'border-slate-200 hover:border-slate-300 bg-slate-50/50'
+                    }`}
+                  >
+                    <div className="w-full h-24 rounded-xl bg-slate-100 p-2.5 flex flex-col justify-between overflow-hidden shadow-inner border border-slate-200">
+                      <div className="w-8 h-2 rounded-full bg-slate-300" />
+                      <div className="space-y-1">
+                        <div className="w-12 h-2 rounded-full bg-slate-200" />
+                        <div className="w-16 h-2 rounded-full bg-slate-900 ml-auto" />
+                        <div className="w-20 h-3 rounded-lg bg-slate-200" />
+                      </div>
+                    </div>
+                    <span className={`text-xs font-bold ${!isDarkMode ? 'text-slate-900' : 'text-slate-600'}`}>
+                      Light
+                    </span>
+                  </button>
+                </div>
+
+                {/* 2. Branding Section (Matching Screenshot) */}
+                <div className="space-y-4 pt-2">
+                  <h4 className="font-bold text-slate-900 text-sm">Branding</h4>
+
+                  {/* Logo Row */}
+                  <div className="flex items-center justify-between py-1">
+                    <div className="flex items-center gap-1.5">
+                      <span className="font-semibold text-slate-800 text-xs sm:text-sm">Logo:</span>
+                      <Info className="w-3.5 h-3.5 text-slate-400" />
+                    </div>
+
+                    <div className="flex items-center gap-2">
                       <button
                         type="button"
-                        onClick={() => setLocalSettings(prev => ({ ...prev, launcherLogoUrl: currentCompany.agent.avatarUrl }))}
-                        className="text-[11px] text-indigo-600 hover:text-indigo-800 font-semibold cursor-pointer underline"
+                        onClick={() => fileInputRef.current?.click()}
+                        className="inline-flex items-center gap-2 px-3 py-1.5 bg-indigo-50 hover:bg-indigo-100/80 border border-indigo-200/80 text-slate-800 rounded-xl text-xs font-semibold transition-all cursor-pointer shadow-2xs group"
                       >
-                        Use Agent Avatar
-                      </button>
-                      {localSettings.launcherLogoUrl && (
-                        <button
-                          type="button"
-                          onClick={() => setLocalSettings(prev => ({ ...prev, launcherLogoUrl: undefined }))}
-                          className="text-[11px] text-slate-500 hover:text-rose-600 font-semibold cursor-pointer"
-                        >
-                          Clear
-                        </button>
-                      )}
-                    </div>
-                  </div>
-
-                  <div className="flex flex-col sm:flex-row sm:items-center gap-3">
-                    {/* Clickable Avatar Thumbnail */}
-                    <div 
-                      onClick={() => fileInputRef.current?.click()}
-                      title="Click to upload logo"
-                      className="group relative w-12 h-12 rounded-2xl overflow-hidden border border-slate-200 bg-white shrink-0 shadow-xs flex items-center justify-center cursor-pointer hover:border-slate-400 transition-colors"
-                    >
-                      <img 
-                        src={companyLogoUrl} 
-                        alt="Logo Preview" 
-                        className="w-full h-full object-cover group-hover:opacity-75 transition-opacity"
-                        onError={(e) => {
-                          (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=150&auto=format&fit=crop&q=80';
-                        }}
-                      />
-                      <div className="absolute inset-0 bg-black/40 text-white opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
-                        <Upload className="w-4 h-4" />
-                      </div>
-                    </div>
-
-                    {/* Controls */}
-                    <div className="flex-1 space-y-2">
-                      <div className="flex items-center gap-2">
-                        <button
-                          type="button"
-                          onClick={() => fileInputRef.current?.click()}
-                          className="px-3 py-1.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer shadow-2xs shrink-0"
-                        >
-                          <Upload className="w-3.5 h-3.5" />
-                          <span>Upload File</span>
-                        </button>
-
-                        <div className="flex-1 relative">
-                          <input
-                            type="text"
-                            value={localSettings.launcherLogoUrl || ''}
-                            onChange={(e) => setLocalSettings({ ...localSettings, launcherLogoUrl: e.target.value })}
-                            placeholder="Or paste public logo URL..."
-                            className="w-full px-3 py-1.5 bg-white border border-slate-200 rounded-xl text-xs text-slate-900 focus:ring-1 focus:ring-slate-900 focus:outline-hidden font-mono"
-                          />
+                        <img 
+                          src={companyLogoUrl} 
+                          alt="Logo" 
+                          className="w-4 h-4 rounded-md object-cover"
+                          onError={(e) => {
+                            (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=150&auto=format&fit=crop&q=80';
+                          }}
+                        />
+                        <span className="font-bold text-slate-800">{currentCompany.name}</span>
+                        <div className="w-5 h-5 rounded-full bg-slate-700 text-white flex items-center justify-center group-hover:bg-slate-900 transition-colors ml-1">
+                          <Pencil className="w-2.5 h-2.5" />
                         </div>
-                      </div>
-                      <p className="text-[10px] text-slate-500">Supports PNG, SVG, JPG, WebP up to 5MB. 1:1 square ratio recommended.</p>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => setShowLogoEditModal(!showLogoEditModal)}
+                        className="text-xs text-indigo-600 hover:text-indigo-800 font-semibold cursor-pointer underline"
+                      >
+                        {showLogoEditModal ? 'Hide URL' : 'Edit URL'}
+                      </button>
                     </div>
                   </div>
-                </div>
-              )}
-            </div>
 
-            {/* 4. Screen Position */}
-            <div>
-              <label className="block font-semibold text-slate-800 mb-1.5">Screen Position</label>
-              <div className="grid grid-cols-2 gap-2.5 max-w-xs">
-                {[
-                  { id: 'bottom_right', label: 'Bottom Right' },
-                  { id: 'bottom_left', label: 'Bottom Left' }
-                ].map(pos => (
-                  <button
-                    key={pos.id}
-                    type="button"
-                    onClick={() => setLocalSettings({ ...localSettings, position: pos.id as any })}
-                    className={`py-2 px-3 rounded-xl border font-semibold text-center transition-colors cursor-pointer text-sm ${
-                      localSettings.position === pos.id
-                        ? 'border-slate-900 bg-slate-900 text-white shadow-xs'
-                        : 'border-slate-200 text-slate-700 hover:bg-slate-50'
-                    }`}
-                  >
-                    {pos.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* 5. Starter Question Chips Manager */}
-            <div className="pt-3 border-t border-slate-100 space-y-2.5">
-              <div className="flex items-center justify-between">
-                <label className="block font-semibold text-slate-800">
-                  Starter Question Chips <span className="text-xs font-normal text-slate-500">(1-click prompt chips)</span>
-                </label>
-                <span className="text-xs text-slate-400 font-mono">{starterQuestions.length}/4</span>
-              </div>
-
-              <div className="flex flex-wrap gap-2">
-                {starterQuestions.map((q, idx) => (
-                  <span 
-                    key={idx}
-                    className="inline-flex items-center gap-1.5 px-3 py-1 bg-slate-100 border border-slate-200 text-slate-800 rounded-lg text-xs font-medium"
-                  >
-                    <HelpCircle className="w-3.5 h-3.5 text-slate-500" />
-                    <span>{q}</span>
-                    <button
-                      type="button"
-                      onClick={() => handleRemoveStarterQuestion(idx)}
-                      className="text-slate-400 hover:text-rose-600 transition-colors ml-1 cursor-pointer"
-                    >
-                      <Trash2 className="w-3 h-3" />
-                    </button>
-                  </span>
-                ))}
-              </div>
-
-              {starterQuestions.length < 4 && (
-                <div className="flex items-center gap-2 pt-1">
-                  <input
-                    type="text"
-                    value={newQuestionInput}
-                    onChange={(e) => setNewQuestionInput(e.target.value)}
-                    onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleAddStarterQuestion(); } }}
-                    placeholder="Type a starter question and click Add..."
-                    className="flex-1 px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 focus:ring-1 focus:ring-slate-900 focus:outline-hidden"
-                  />
-                  <button
-                    type="button"
-                    onClick={handleAddStarterQuestion}
-                    className="px-3 py-1.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-semibold flex items-center gap-1 cursor-pointer"
-                  >
-                    <Plus className="w-3.5 h-3.5" />
-                    <span>Add Chip</span>
-                  </button>
-                </div>
-              )}
-            </div>
-
-            {/* 6. Toggles */}
-            <div className="pt-3 border-t border-slate-100 space-y-3">
-              <label className="flex items-center gap-3 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={localSettings.enableSound}
-                  onChange={(e) => setLocalSettings({ ...localSettings, enableSound: e.target.checked })}
-                  className="rounded text-slate-900 w-4 h-4 cursor-pointer"
-                />
-                <span className="font-semibold text-slate-800 text-sm">Play subtle notification audio on message</span>
-              </label>
-
-              <label className="flex items-center gap-3 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={localSettings.showPoweredBy}
-                  onChange={(e) => setLocalSettings({ ...localSettings, showPoweredBy: e.target.checked })}
-                  className="rounded text-slate-900 w-4 h-4 cursor-pointer"
-                />
-                <span className="font-semibold text-slate-800 text-sm">Display "Powered by Chat-AaaS" badge</span>
-              </label>
-            </div>
-          </div>
-
-          {/* Right Live Visual Mockup (5 cols) */}
-          <div className="lg:col-span-5 bg-slate-50/70 border border-slate-200 rounded-2xl p-5 flex flex-col justify-between relative overflow-hidden">
-            <div>
-              <div className="flex items-center justify-between mb-3">
-                <span className="text-xs font-bold font-mono uppercase tracking-wider text-slate-500">Live Simulation Preview</span>
-                <button
-                  type="button"
-                  onClick={handleResetPreview}
-                  className="text-[11px] text-slate-500 hover:text-slate-800 font-medium underline cursor-pointer"
-                >
-                  Reset Chat
-                </button>
-              </div>
-              
-              {/* Mini Widget Card */}
-              <div className="bg-white rounded-2xl border border-slate-200 shadow-md overflow-hidden max-w-xs mx-auto">
-                <div 
-                  className="p-3 text-white flex items-center justify-between"
-                  style={{ backgroundColor: localSettings.primaryColor }}
-                >
-                  <div className="min-w-0 pr-2">
-                    <h5 className="font-bold text-sm truncate">{localSettings.headerTitle || currentCompany.name}</h5>
-                    <p className="text-[11px] opacity-90 truncate">{localSettings.headerSubtitle || 'Active & Answering'}</p>
-                  </div>
-                  <span className="text-sm opacity-80 cursor-pointer shrink-0">✕</span>
-                </div>
-
-                <div className="p-3 space-y-2 bg-slate-50 min-h-[160px] max-h-[220px] overflow-y-auto text-xs">
-                  {previewChat.map((msg, mIdx) => (
-                    <div 
-                      key={mIdx}
-                      style={{
-                        backgroundColor: msg.sender === 'user' ? localSettings.primaryColor : '#ffffff',
-                        color: msg.sender === 'user' ? '#ffffff' : '#0f172a'
-                      }}
-                      className={`p-2.5 rounded-xl border max-w-[85%] font-medium leading-relaxed ${
-                        msg.sender === 'user' ? 'ml-auto border-transparent shadow-xs' : 'border-slate-200 text-slate-800 shadow-2xs'
-                      }`}
-                    >
-                      {msg.text}
-                    </div>
-                  ))}
-
-                  {/* Clickable Starter Question Chips in Preview */}
-                  {starterQuestions.length > 0 && (
-                    <div className="pt-2 space-y-1.5">
-                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Suggested Questions:</p>
-                      <div className="flex flex-col gap-1.5">
-                        {starterQuestions.map((q, qIdx) => (
-                          <button
-                            key={qIdx}
-                            type="button"
-                            onClick={() => handlePreviewStarterClick(q)}
-                            className="text-left px-2.5 py-1.5 bg-white hover:bg-slate-100/90 border border-slate-200 rounded-lg text-[11px] text-slate-700 font-medium transition-colors cursor-pointer shadow-2xs"
-                          >
-                            💬 {q}
-                          </button>
-                        ))}
+                  {/* Logo URL Input toggle if expanded */}
+                  {showLogoEditModal && (
+                    <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-2 animate-in fade-in duration-150">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-semibold text-slate-700">Logo Image URL:</span>
+                        <button
+                          type="button"
+                          onClick={() => setLocalSettings(prev => ({ ...prev, launcherLogoUrl: currentCompany.agent.avatarUrl }))}
+                          className="text-[11px] text-indigo-600 hover:underline cursor-pointer"
+                        >
+                          Use Agent Avatar
+                        </button>
                       </div>
+                      <input
+                        type="text"
+                        value={localSettings.launcherLogoUrl || ''}
+                        onChange={(e) => setLocalSettings({ ...localSettings, launcherLogoUrl: e.target.value })}
+                        placeholder="https://your-domain.com/logo.png"
+                        className="w-full px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-xs font-mono"
+                      />
                     </div>
                   )}
+
+                  {/* Header Color Row */}
+                  <div className="flex items-center justify-between py-1">
+                    <div className="flex items-center gap-1.5">
+                      <span className="font-semibold text-slate-800 text-xs sm:text-sm">Header Color:</span>
+                      <Info className="w-3.5 h-3.5 text-slate-400" />
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-1.5 bg-white border border-slate-200 rounded-xl px-3 py-1.5 shadow-2xs">
+                        <input
+                          type="color"
+                          value={localSettings.primaryColor}
+                          onChange={(e) => setLocalSettings({ ...localSettings, primaryColor: e.target.value })}
+                          className="w-5 h-5 rounded-full border-0 cursor-pointer p-0"
+                        />
+                        <span className="font-mono text-xs font-bold text-slate-800 uppercase">
+                          # {localSettings.primaryColor.replace('#', '')}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Color Presets */}
+                  <div className="flex items-center justify-end gap-1.5 pt-0.5">
+                    {COLOR_PRESETS.map(preset => {
+                      const isSelected = localSettings.primaryColor.toLowerCase() === preset.hex.toLowerCase();
+                      return (
+                        <button
+                          key={preset.hex}
+                          type="button"
+                          onClick={() => setLocalSettings(prev => ({ ...prev, primaryColor: preset.hex }))}
+                          title={preset.name}
+                          style={{ backgroundColor: preset.hex }}
+                          className={`w-5 h-5 rounded-full transition-transform cursor-pointer flex items-center justify-center ${
+                            isSelected ? 'scale-120 ring-2 ring-slate-900 ring-offset-1' : 'hover:scale-110 opacity-90'
+                          }`}
+                        >
+                          {isSelected && <Check className="w-3 h-3 text-white stroke-[3]" />}
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  {/* Header Text Color Row */}
+                  <div className="flex items-center justify-between py-1">
+                    <span className="font-semibold text-slate-800 text-xs sm:text-sm">Header Text Color:</span>
+                    <select
+                      value={localSettings.headerTextColor || 'white'}
+                      onChange={(e) => setLocalSettings({ ...localSettings, headerTextColor: e.target.value as any })}
+                      className="px-3 py-1.5 bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 shadow-2xs cursor-pointer focus:outline-hidden"
+                    >
+                      <option value="white">⚪ White</option>
+                      <option value="black">⚫ Black</option>
+                    </select>
+                  </div>
+
+                  {/* Background Animation Row */}
+                  <div className="flex items-center justify-between py-1">
+                    <span className="font-semibold text-slate-800 text-xs sm:text-sm">Background Animation</span>
+                    <label className="relative inline-flex items-center cursor-pointer">
+                      <input 
+                        type="checkbox" 
+                        checked={localSettings.backgroundAnimation !== false}
+                        onChange={(e) => setLocalSettings({ ...localSettings, backgroundAnimation: e.target.checked })}
+                        className="sr-only peer" 
+                      />
+                      <div className="w-11 h-6 bg-slate-200 peer-focus:outline-hidden rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-500"></div>
+                    </label>
+                  </div>
                 </div>
 
-                <div className="p-2.5 bg-white border-t border-slate-100 flex items-center gap-2">
-                  <div className="flex-1 bg-slate-100 rounded-lg px-2.5 py-1.5 text-xs text-slate-400 font-medium">
-                    Type a message...
+                {/* 3. Launcher Icon & Style */}
+                <div className="space-y-3 pt-3 border-t border-slate-100">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h4 className="font-bold text-slate-900 text-sm">Launcher Trigger</h4>
+                      <p className="text-xs text-slate-500">Select button style and icon preset</p>
+                    </div>
+                    <div className="grid grid-cols-2 gap-1.5 bg-slate-100 p-1 rounded-xl">
+                      <button
+                        type="button"
+                        onClick={() => setLauncherStyle('pill')}
+                        className={`px-3 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                          launcherStyle === 'pill' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-600'
+                        }`}
+                      >
+                        Pill
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setLauncherStyle('bubble')}
+                        className={`px-3 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                          launcherStyle === 'bubble' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-600'
+                        }`}
+                      >
+                        Bubble
+                      </button>
+                    </div>
                   </div>
+
+                  {launcherStyle === 'pill' && (
+                    <div>
+                      <label className="block font-semibold text-slate-800 text-xs mb-1">Launcher Button Text</label>
+                      <input
+                        type="text"
+                        value={localSettings.launcherText}
+                        onChange={(e) => setLocalSettings({ ...localSettings, launcherText: e.target.value })}
+                        placeholder="e.g. Chat with Us"
+                        className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium"
+                      />
+                    </div>
+                  )}
+
+                  {/* Launcher Icon Cards */}
+                  <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2">
+                    {[
+                      { id: 'logo', label: 'Logo', sub: 'Brand Avatar', isLogo: true },
+                      { id: 'chat', label: 'Chat', sub: 'Classic', icon: MessageCircle },
+                      { id: 'bot', label: 'AI Bot', sub: 'Agent', icon: Bot },
+                      { id: 'sparkles', label: 'Sparkles', sub: 'Magic AI', icon: Sparkles },
+                      { id: 'support', label: 'Support', sub: 'Helpdesk', icon: Headphones },
+                      { id: 'help', label: 'Help', sub: 'FAQ & Q&A', icon: HelpCircle },
+                      { id: 'zap', label: 'Instant', sub: 'Fast AI', icon: Zap }
+                    ].map(item => {
+                      const IconComp = item.icon;
+                      const isSelected = (localSettings.launcherIcon || 'chat') === item.id;
+                      return (
+                        <button
+                          key={item.id}
+                          type="button"
+                          onClick={() => setLocalSettings({ ...localSettings, launcherIcon: item.id as any })}
+                          className={`group relative p-2 rounded-2xl border text-center flex flex-col items-center justify-between gap-1.5 transition-all cursor-pointer ${
+                            isSelected
+                              ? 'bg-white ring-2 ring-offset-1 shadow-sm border-transparent'
+                              : 'bg-white hover:bg-slate-50/90 border-slate-200 shadow-2xs'
+                          }`}
+                          style={{
+                            borderColor: isSelected ? localSettings.primaryColor : undefined,
+                            boxShadow: isSelected ? `0 0 0 2px ${localSettings.primaryColor}` : undefined
+                          }}
+                        >
+                          {isSelected && (
+                            <div 
+                              className="absolute top-1 right-1 w-3 h-3 rounded-full flex items-center justify-center text-white z-10"
+                              style={{ backgroundColor: localSettings.primaryColor }}
+                            >
+                              <Check className="w-2 h-2 stroke-[3]" />
+                            </div>
+                          )}
+
+                          <div 
+                            className={`w-8 h-8 rounded-xl flex items-center justify-center overflow-hidden transition-all ${
+                              isSelected ? 'shadow-xs scale-105' : 'bg-slate-100 text-slate-600'
+                            }`}
+                            style={{
+                              backgroundColor: !item.isLogo && isSelected ? localSettings.primaryColor : undefined,
+                              color: !item.isLogo && isSelected ? '#ffffff' : undefined
+                            }}
+                          >
+                            {item.isLogo ? (
+                              <img 
+                                src={companyLogoUrl} 
+                                alt="Logo" 
+                                className="w-full h-full object-cover rounded-xl"
+                                onError={(e) => {
+                                  (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=150&auto=format&fit=crop&q=80';
+                                }}
+                              />
+                            ) : (
+                              IconComp && <IconComp className="w-4 h-4" />
+                            )}
+                          </div>
+
+                          <div className="min-w-0 w-full">
+                            <span className={`block text-[11px] truncate ${isSelected ? 'font-bold text-slate-900' : 'font-semibold text-slate-700'}`}>
+                              {item.label}
+                            </span>
+                            <span className="block text-[9px] text-slate-400 truncate">
+                              {item.sub}
+                            </span>
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* TAB: CONTENT */}
+            {activeMainTab === 'content' && (
+              <div className="space-y-5 animate-in fade-in duration-150">
+                <div className="space-y-4">
+                  <div>
+                    <label className="block font-semibold text-slate-800 mb-1.5">Header Title</label>
+                    <input
+                      type="text"
+                      value={localSettings.headerTitle}
+                      onChange={(e) => setLocalSettings({ ...localSettings, headerTitle: e.target.value })}
+                      placeholder="e.g. ACME Support"
+                      className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block font-semibold text-slate-800 mb-1.5">Header Subtitle</label>
+                    <input
+                      type="text"
+                      value={localSettings.headerSubtitle || ''}
+                      onChange={(e) => setLocalSettings({ ...localSettings, headerSubtitle: e.target.value })}
+                      placeholder="e.g. Ask us anything or share your feedback"
+                      className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium"
+                    />
+                  </div>
+
+                  {/* Starter Question Chips */}
+                  <div className="pt-3 border-t border-slate-100 space-y-2.5">
+                    <div className="flex items-center justify-between">
+                      <label className="block font-semibold text-slate-800">
+                        Starter Prompt Chips <span className="text-xs font-normal text-slate-500">(1-click prompt chips)</span>
+                      </label>
+                      <span className="text-xs text-slate-400 font-mono">{starterQuestions.length}/4</span>
+                    </div>
+
+                    <div className="flex flex-wrap gap-2">
+                      {starterQuestions.map((q, idx) => (
+                        <span 
+                          key={idx}
+                          className="inline-flex items-center gap-1.5 px-3 py-1 bg-slate-100 border border-slate-200 text-slate-800 rounded-lg text-xs font-medium"
+                        >
+                          <HelpCircle className="w-3.5 h-3.5 text-slate-500" />
+                          <span>{q}</span>
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveStarterQuestion(idx)}
+                            className="text-slate-400 hover:text-rose-600 transition-colors ml-1 cursor-pointer"
+                          >
+                            <Trash2 className="w-3 h-3" />
+                          </button>
+                        </span>
+                      ))}
+                    </div>
+
+                    {starterQuestions.length < 4 && (
+                      <div className="flex items-center gap-2 pt-1">
+                        <input
+                          type="text"
+                          value={newQuestionInput}
+                          onChange={(e) => setNewQuestionInput(e.target.value)}
+                          onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleAddStarterQuestion(); } }}
+                          placeholder="Type a starter question and click Add..."
+                          className="flex-1 px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 focus:ring-1 focus:ring-slate-900 focus:outline-hidden"
+                        />
+                        <button
+                          type="button"
+                          onClick={handleAddStarterQuestion}
+                          className="px-3 py-1.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-semibold flex items-center gap-1 cursor-pointer"
+                        >
+                          <Plus className="w-3.5 h-3.5" />
+                          <span>Add Chip</span>
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* TAB: GENERAL */}
+            {activeMainTab === 'general' && (
+              <div className="space-y-5 animate-in fade-in duration-150">
+                <div className="space-y-4">
+                  <div>
+                    <label className="block font-semibold text-slate-800 mb-1.5">Assistant Name</label>
+                    <input
+                      type="text"
+                      disabled
+                      value={currentCompany.agent.name}
+                      className="w-full px-3.5 py-2.5 bg-slate-100 border border-slate-200 rounded-xl text-sm font-medium text-slate-600 cursor-not-allowed"
+                    />
+                    <p className="text-[11px] text-slate-500 mt-1">Managed in Assistant Config tab.</p>
+                  </div>
+
+                  <div>
+                    <label className="block font-semibold text-slate-800 mb-1.5">Screen Position</label>
+                    <div className="grid grid-cols-2 gap-2.5 max-w-xs">
+                      {[
+                        { id: 'bottom_right', label: 'Bottom Right' },
+                        { id: 'bottom_left', label: 'Bottom Left' }
+                      ].map(pos => (
+                        <button
+                          key={pos.id}
+                          type="button"
+                          onClick={() => setLocalSettings({ ...localSettings, position: pos.id as any })}
+                          className={`py-2 px-3 rounded-xl border font-semibold text-center transition-colors cursor-pointer text-sm ${
+                            localSettings.position === pos.id
+                              ? 'border-slate-900 bg-slate-900 text-white shadow-xs'
+                              : 'border-slate-200 text-slate-700 hover:bg-slate-50'
+                          }`}
+                        >
+                          {pos.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="pt-2 border-t border-slate-100 space-y-3">
+                    <label className="flex items-center gap-3 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={localSettings.enableSound}
+                        onChange={(e) => setLocalSettings({ ...localSettings, enableSound: e.target.checked })}
+                        className="rounded text-slate-900 w-4 h-4 cursor-pointer"
+                      />
+                      <span className="font-semibold text-slate-800 text-sm">Play subtle notification audio on message</span>
+                    </label>
+
+                    <label className="flex items-center gap-3 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={localSettings.showPoweredBy}
+                        onChange={(e) => setLocalSettings({ ...localSettings, showPoweredBy: e.target.checked })}
+                        className="rounded text-slate-900 w-4 h-4 cursor-pointer"
+                      />
+                      <span className="font-semibold text-slate-800 text-sm">Display "Powered by Chat-AaaS" badge</span>
+                    </label>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* TAB: INSTALL */}
+            {activeMainTab === 'install' && (
+              <div className="space-y-4 animate-in fade-in duration-150">
+                <div className="bg-slate-950 text-slate-200 rounded-2xl p-5 border border-slate-800 shadow-md">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-3">
+                    <div className="flex items-center gap-2">
+                      <Terminal className="w-4 h-4 text-slate-400" />
+                      <h4 className="text-sm font-bold text-white">Embed Installation Snippet</h4>
+                    </div>
+
+                    <div className="flex items-center gap-1 bg-slate-900 p-1 rounded-xl border border-slate-800">
+                      {[
+                        { id: 'script', label: 'HTML <script>' },
+                        { id: 'react', label: 'React SDK' },
+                        { id: 'iframe', label: 'Iframe' },
+                        { id: 'api', label: 'REST API' }
+                      ].map(tab => (
+                        <button
+                          key={tab.id}
+                          onClick={() => setActiveSnippetTab(tab.id as any)}
+                          className={`px-2.5 py-1 text-xs font-semibold rounded-lg transition-colors cursor-pointer ${
+                            activeSnippetTab === tab.id
+                              ? 'bg-slate-800 text-white shadow-xs'
+                              : 'text-slate-400 hover:text-slate-200'
+                          }`}
+                        >
+                          {tab.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="relative bg-slate-900/90 border border-slate-800 rounded-xl p-3.5 font-mono text-xs text-slate-200 overflow-x-auto">
+                    <button
+                      onClick={() => {
+                        const codeMap = {
+                          script: scriptSnippet,
+                          react: reactSnippet,
+                          iframe: iframeSnippet,
+                          api: curlSnippet
+                        };
+                        handleCopy(codeMap[activeSnippetTab], 'snippet');
+                      }}
+                      className="absolute top-2.5 right-2.5 px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-100 rounded-lg text-[11px] font-sans font-semibold flex items-center gap-1 transition-colors border border-slate-700 cursor-pointer"
+                    >
+                      {copiedKey === 'snippet' ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
+                      <span>{copiedKey === 'snippet' ? 'Copied' : 'Copy'}</span>
+                    </button>
+
+                    <pre className="pr-16 leading-relaxed font-mono">
+                      {activeSnippetTab === 'script' && scriptSnippet}
+                      {activeSnippetTab === 'react' && reactSnippet}
+                      {activeSnippetTab === 'iframe' && iframeSnippet}
+                      {activeSnippetTab === 'api' && curlSnippet}
+                    </pre>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Right Live Visual Mockup Area (5 Cols - Matching Screenshot) */}
+          <div className="lg:col-span-5 flex flex-col justify-between relative">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-[11px] font-bold font-mono uppercase tracking-wider text-slate-400">Live Preview</span>
+              <button
+                type="button"
+                onClick={handleResetPreview}
+                className="text-[11px] text-slate-500 hover:text-slate-800 font-medium underline cursor-pointer"
+              >
+                Reset Chat
+              </button>
+            </div>
+
+            {/* Sleek Mockup Widget Container (Dark / Light dynamically matched) */}
+            <div 
+              className={`rounded-3xl border shadow-xl overflow-hidden flex flex-col justify-between relative min-h-[460px] transition-all duration-300 ${
+                isDarkMode 
+                  ? 'bg-[#090d16] text-white border-slate-800/80 shadow-slate-950/40' 
+                  : 'bg-white text-slate-900 border-slate-200 shadow-slate-200/50'
+              }`}
+            >
+              {/* Background ambient gradient glow if animation enabled */}
+              {localSettings.backgroundAnimation !== false && (
+                <div 
+                  className="absolute -top-16 -right-16 w-56 h-56 rounded-full opacity-20 blur-3xl pointer-events-none"
+                  style={{ backgroundColor: localSettings.primaryColor }}
+                />
+              )}
+
+              {/* Mockup Top Brand Header */}
+              <div className="p-5 pb-3 z-10">
+                {/* Brand Badge Pill */}
+                <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white/10 backdrop-blur-md border border-white/10 text-xs font-bold mb-4 shadow-2xs">
+                  <img 
+                    src={companyLogoUrl} 
+                    alt="Brand" 
+                    className="w-4 h-4 rounded-md object-cover"
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=150&auto=format&fit=crop&q=80';
+                    }}
+                  />
+                  <span className={isDarkMode ? 'text-white' : 'text-slate-900'}>{currentCompany.name}</span>
+                </div>
+
+                {/* Big Prominent Title & Subtitle */}
+                <div className="space-y-1">
+                  <h3 
+                    className="text-2xl font-extrabold tracking-tight"
+                    style={{ color: localSettings.primaryColor }}
+                  >
+                    {localSettings.headerTitle || currentCompany.name + ' Support'}
+                  </h3>
+                  <p className={`text-xs ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
+                    {localSettings.headerSubtitle || 'Ask us anything or share your feedback'}
+                  </p>
+                </div>
+              </div>
+
+              {/* Chat Message Stream & Starter Prompts */}
+              <div className="px-5 py-2 flex-1 space-y-2.5 overflow-y-auto max-h-[220px] text-xs z-10">
+                {previewChat.map((msg, mIdx) => (
                   <div 
-                    className="px-3 py-1.5 rounded-lg text-white font-semibold text-xs"
+                    key={mIdx}
+                    style={{
+                      backgroundColor: msg.sender === 'user' ? localSettings.primaryColor : (isDarkMode ? '#1e293b' : '#f1f5f9'),
+                      color: msg.sender === 'user' ? '#ffffff' : (isDarkMode ? '#f8fafc' : '#0f172a')
+                    }}
+                    className={`p-2.5 rounded-2xl max-w-[88%] font-medium leading-relaxed shadow-xs ${
+                      msg.sender === 'user' ? 'ml-auto border-transparent' : 'border border-white/5 text-left'
+                    }`}
+                  >
+                    {msg.text}
+                  </div>
+                ))}
+
+                {/* Starter Questions Chips */}
+                {starterQuestions.length > 0 && (
+                  <div className="pt-2 space-y-1.5">
+                    <p className={`text-[10px] font-bold uppercase tracking-wider ${isDarkMode ? 'text-slate-500' : 'text-slate-400'}`}>
+                      Suggested Questions:
+                    </p>
+                    <div className="flex flex-col gap-1.5">
+                      {starterQuestions.map((q, qIdx) => (
+                        <button
+                          key={qIdx}
+                          type="button"
+                          onClick={() => handlePreviewStarterClick(q)}
+                          className={`text-left px-3 py-2 rounded-xl text-xs font-medium transition-colors cursor-pointer border ${
+                            isDarkMode 
+                              ? 'bg-slate-900/90 hover:bg-slate-800/90 text-slate-200 border-slate-800' 
+                              : 'bg-white hover:bg-slate-100 text-slate-700 border-slate-200'
+                          }`}
+                        >
+                          💬 {q}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Bottom "Send us a message" input pill (Exact match to screenshot) */}
+              <div className="p-4 pt-2 z-10">
+                <div className={`p-1.5 rounded-2xl flex items-center justify-between border shadow-xs ${
+                  isDarkMode ? 'bg-white text-slate-900 border-white/20' : 'bg-slate-900 text-white border-slate-800'
+                }`}>
+                  <span className={`text-xs font-semibold px-3 ${isDarkMode ? 'text-slate-700' : 'text-slate-200'}`}>
+                    Send us a message
+                  </span>
+                  <div 
+                    className="w-8 h-8 rounded-xl flex items-center justify-center text-white shrink-0 shadow-2xs"
                     style={{ backgroundColor: localSettings.primaryColor }}
                   >
-                    Send
+                    <Send className="w-3.5 h-3.5" />
                   </div>
                 </div>
               </div>
             </div>
 
-            {/* Mini Floating Button Preview */}
-            <div className="mt-4 pt-3.5 border-t border-slate-200/80 flex items-center justify-between">
+            {/* Bottom Floating Launcher Preview Indicator */}
+            <div className="mt-4 pt-3 border-t border-slate-200/80 flex items-center justify-between">
               <span className="text-xs text-slate-500 font-semibold">Launcher Preview:</span>
               {launcherStyle === 'pill' ? (
                 <div 
