@@ -320,29 +320,29 @@ export const AdminDashboard: React.FC = () => {
       )}
 
       {/* 1. LEFT SIDEBAR NAVIGATION: Features on the SIDE */}
-      <aside className={`fixed md:static inset-y-0 left-0 z-50 w-64 lg:w-72 bg-[#090d16] text-slate-300 flex flex-col h-full shrink-0 border-r border-slate-800/80 select-none transition-transform duration-200 ${
+      <aside className={`fixed md:static inset-y-0 left-0 z-50 w-64 lg:w-72 bg-gradient-to-b from-[#1b0a15] via-[#11040d] to-[#0a0208] text-rose-100/90 flex flex-col h-full shrink-0 border-r border-rose-950/60 select-none transition-transform duration-200 shadow-xl ${
         isMobileNavOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'
       }`}>
         {/* Top Operator Brand Header */}
-        <div className="p-4.5 border-b border-slate-800/80 flex items-center justify-between">
+        <div className="p-4.5 border-b border-rose-950/60 bg-gradient-to-r from-rose-950/40 via-transparent to-amber-950/30 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-rose-600 via-rose-500 to-amber-500 flex items-center justify-center shadow-lg shadow-rose-500/20 text-white font-bold shrink-0">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-rose-600 via-rose-500 to-amber-500 flex items-center justify-center shadow-lg shadow-rose-500/25 text-white font-bold shrink-0">
               <Lock className="w-5 h-5 text-white" />
             </div>
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-2">
                 <span className="font-bold text-white text-base tracking-tight block truncate">Master Plane</span>
-                <span className="px-2 py-0.5 rounded text-xs font-mono font-bold bg-rose-500/20 text-rose-300 border border-rose-500/30 uppercase">
+                <span className="px-2 py-0.5 rounded text-xs font-mono font-bold bg-gradient-to-r from-rose-500/20 to-amber-500/20 text-rose-300 border border-rose-500/30 uppercase">
                   ROOT
                 </span>
               </div>
-              <span className="text-xs font-medium text-slate-400 block truncate">SaaS Operator Admin</span>
+              <span className="text-xs font-medium text-rose-200/70 block truncate">SaaS Operator Admin</span>
             </div>
           </div>
 
           <button
             onClick={() => setIsMobileNavOpen(false)}
-            className="md:hidden p-2 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 cursor-pointer"
+            className="md:hidden p-2 text-rose-300 hover:text-white rounded-lg hover:bg-rose-900/40 cursor-pointer"
           >
             <X className="w-5 h-5" />
           </button>
@@ -350,10 +350,10 @@ export const AdminDashboard: React.FC = () => {
 
         {/* Isolation & Status Pill */}
         <div className="px-3.5 pt-3.5 pb-2">
-          <div className="p-3 rounded-xl bg-slate-900/90 border border-slate-800/80 text-xs flex items-center justify-between">
+          <div className="p-3 rounded-xl bg-[#200a18]/70 border border-rose-900/40 text-xs flex items-center justify-between">
             <div className="flex items-center gap-2">
               <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse" />
-              <span className="text-slate-200 font-semibold font-mono">Tenant Isolation</span>
+              <span className="text-rose-100 font-semibold font-mono">Tenant Isolation</span>
             </div>
             <span className="text-emerald-400 font-mono font-bold text-xs uppercase">Enforced</span>
           </div>
@@ -361,7 +361,7 @@ export const AdminDashboard: React.FC = () => {
 
         {/* Feature Navigation List (On the SIDE) */}
         <div className="flex-1 overflow-y-auto px-3 py-2 space-y-1.5">
-          <div className="px-2.5 py-1 text-xs font-mono font-bold text-slate-400 uppercase tracking-wider">
+          <div className="px-2.5 py-1 text-xs font-mono font-bold text-rose-300/60 uppercase tracking-wider">
             Platform Features
           </div>
           {adminNavs.map(tab => {
@@ -374,29 +374,29 @@ export const AdminDashboard: React.FC = () => {
                   setActiveTab(tab.id);
                   setIsMobileNavOpen(false);
                 }}
-                className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-sm font-medium transition-colors cursor-pointer group text-left ${
+                className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all cursor-pointer group text-left ${
                   isActive 
-                    ? 'bg-slate-800 text-white font-semibold shadow-xs border border-slate-700/80' 
-                    : 'text-slate-300 hover:text-white hover:bg-slate-800/60'
+                    ? 'bg-gradient-to-r from-rose-600 via-rose-500 to-amber-500 text-white font-bold shadow-lg shadow-rose-600/30' 
+                    : 'text-rose-200/70 hover:text-white hover:bg-rose-950/50'
                 }`}
               >
                 <div className="flex items-center gap-3 min-w-0">
                   <Icon className={`w-4.5 h-4.5 shrink-0 transition-colors ${
-                    isActive ? 'text-rose-400' : 'text-slate-400 group-hover:text-slate-300'
+                    isActive ? 'text-white' : 'text-rose-300/70 group-hover:text-white'
                   }`} />
                   <span className="truncate">{tab.label}</span>
                 </div>
 
                 {tab.badge && (
                   <span className={`text-xs font-mono px-2 py-0.5 rounded-md shrink-0 ml-1.5 font-semibold ${
-                    isActive ? 'bg-slate-900 text-rose-300' : 'bg-slate-800 text-slate-300'
+                    isActive ? 'bg-black/30 text-white border border-white/20' : 'bg-rose-950/60 text-rose-300 border border-rose-900/40'
                   }`}>
                     {tab.badge}
                   </span>
                 )}
                 {tab.count !== undefined && (
                   <span className={`text-xs font-mono px-2 py-0.5 rounded-md shrink-0 ml-1.5 font-semibold ${
-                    isActive ? 'bg-slate-900 text-rose-300' : 'bg-slate-800 text-slate-300'
+                    isActive ? 'bg-black/30 text-white border border-white/20' : 'bg-rose-950/60 text-rose-300 border border-rose-900/40'
                   }`}>
                     {tab.count}
                   </span>
@@ -407,15 +407,15 @@ export const AdminDashboard: React.FC = () => {
         </div>
 
         {/* Bottom System & Return to Workspace Controls */}
-        <div className="p-3.5 border-t border-slate-800/80 space-y-2.5 bg-[#060910]">
-          <div className="px-2 py-1 text-xs font-mono text-slate-400 flex items-center justify-between">
+        <div className="p-3.5 border-t border-rose-950/60 space-y-2.5 bg-[#0e030b]">
+          <div className="px-2 py-1 text-xs font-mono text-rose-300/70 flex items-center justify-between">
             <span>Cluster: ap-south-1</span>
             <span className="text-emerald-400 font-bold">99.99% SLA</span>
           </div>
 
           <button
             onClick={() => setCurrentExperience('customer')}
-            className="w-full px-3.5 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white rounded-xl text-sm font-semibold transition-colors cursor-pointer flex items-center justify-center gap-2 border border-slate-700/70"
+            className="w-full px-3.5 py-2.5 bg-gradient-to-r from-rose-950/80 to-amber-950/60 hover:from-rose-900/80 hover:to-amber-900/60 text-rose-100 hover:text-white rounded-xl text-sm font-semibold transition-all cursor-pointer flex items-center justify-center gap-2 border border-rose-800/50 shadow-xs"
           >
             <ArrowLeft className="w-4 h-4" />
             <span>Return to Workspace</span>
