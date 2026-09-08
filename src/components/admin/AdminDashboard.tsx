@@ -320,29 +320,29 @@ export const AdminDashboard: React.FC = () => {
       )}
 
       {/* 1. LEFT SIDEBAR NAVIGATION: Features on the SIDE */}
-      <aside className={`fixed md:static inset-y-0 left-0 z-50 w-64 lg:w-72 bg-gradient-to-b from-rose-600 via-rose-700 to-amber-700 text-white flex flex-col h-full shrink-0 border-r border-rose-600/30 select-none transition-transform duration-200 shadow-2xl ${
+      <aside className={`fixed md:static inset-y-0 left-0 z-50 w-64 lg:w-72 bg-[#090d16] text-slate-300 flex flex-col h-full shrink-0 border-r border-slate-800/80 select-none transition-transform duration-200 ${
         isMobileNavOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'
       }`}>
         {/* Top Operator Brand Header */}
-        <div className="p-4.5 border-b border-white/15 bg-white/10 backdrop-blur-xs flex items-center justify-between">
+        <div className="p-4.5 border-b border-slate-800/80 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-white/20 backdrop-blur-md flex items-center justify-center shadow-md text-white font-bold shrink-0 border border-white/30">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-rose-600 via-rose-500 to-amber-500 flex items-center justify-center shadow-lg shadow-rose-500/20 text-white font-bold shrink-0">
               <Lock className="w-5 h-5 text-white" />
             </div>
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-2">
                 <span className="font-bold text-white text-base tracking-tight block truncate">Master Plane</span>
-                <span className="px-2 py-0.5 rounded text-xs font-mono font-bold bg-white/20 text-white border border-white/30 uppercase">
+                <span className="px-2 py-0.5 rounded text-xs font-mono font-bold bg-rose-500/20 text-rose-300 border border-rose-500/30 uppercase">
                   ROOT
                 </span>
               </div>
-              <span className="text-xs font-medium text-rose-100 block truncate">SaaS Operator Admin</span>
+              <span className="text-xs font-medium text-slate-400 block truncate">SaaS Operator Admin</span>
             </div>
           </div>
 
           <button
             onClick={() => setIsMobileNavOpen(false)}
-            className="md:hidden p-2 text-white/80 hover:text-white rounded-lg hover:bg-white/15 cursor-pointer"
+            className="md:hidden p-2 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 cursor-pointer"
           >
             <X className="w-5 h-5" />
           </button>
@@ -350,18 +350,18 @@ export const AdminDashboard: React.FC = () => {
 
         {/* Isolation & Status Pill */}
         <div className="px-3.5 pt-3.5 pb-2">
-          <div className="p-3 rounded-xl bg-white/15 backdrop-blur-xs border border-white/20 text-xs flex items-center justify-between">
+          <div className="p-3 rounded-xl bg-slate-900/90 border border-slate-800/80 text-xs flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <span className="w-2.5 h-2.5 rounded-full bg-emerald-300 animate-pulse" />
-              <span className="text-white font-semibold font-mono">Tenant Isolation</span>
+              <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse" />
+              <span className="text-slate-200 font-semibold font-mono">Tenant Isolation</span>
             </div>
-            <span className="text-emerald-300 font-mono font-bold text-xs uppercase drop-shadow-xs">Enforced</span>
+            <span className="text-emerald-400 font-mono font-bold text-xs uppercase">Enforced</span>
           </div>
         </div>
 
         {/* Feature Navigation List (On the SIDE) */}
         <div className="flex-1 overflow-y-auto px-3 py-2 space-y-1.5">
-          <div className="px-2.5 py-1 text-xs font-mono font-bold text-rose-100/90 uppercase tracking-wider">
+          <div className="px-2.5 py-1 text-xs font-mono font-bold text-slate-400 uppercase tracking-wider">
             Platform Features
           </div>
           {adminNavs.map(tab => {
@@ -374,29 +374,29 @@ export const AdminDashboard: React.FC = () => {
                   setActiveTab(tab.id);
                   setIsMobileNavOpen(false);
                 }}
-                className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all cursor-pointer group text-left ${
+                className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-sm font-medium transition-colors cursor-pointer group text-left ${
                   isActive 
-                    ? 'bg-white text-rose-700 font-bold shadow-lg shadow-black/10 ring-1 ring-black/5' 
-                    : 'text-white/85 hover:text-white hover:bg-white/15'
+                    ? 'bg-slate-800 text-white font-semibold shadow-xs border border-slate-700/80' 
+                    : 'text-slate-300 hover:text-white hover:bg-slate-800/60'
                 }`}
               >
                 <div className="flex items-center gap-3 min-w-0">
                   <Icon className={`w-4.5 h-4.5 shrink-0 transition-colors ${
-                    isActive ? 'text-rose-600' : 'text-white/80 group-hover:text-white'
+                    isActive ? 'text-rose-400' : 'text-slate-400 group-hover:text-slate-300'
                   }`} />
                   <span className="truncate">{tab.label}</span>
                 </div>
 
                 {tab.badge && (
                   <span className={`text-xs font-mono px-2 py-0.5 rounded-md shrink-0 ml-1.5 font-semibold ${
-                    isActive ? 'bg-rose-100 text-rose-800 font-bold border border-rose-200' : 'bg-white/20 text-white border border-white/25'
+                    isActive ? 'bg-slate-900 text-rose-300' : 'bg-slate-800 text-slate-300'
                   }`}>
                     {tab.badge}
                   </span>
                 )}
                 {tab.count !== undefined && (
                   <span className={`text-xs font-mono px-2 py-0.5 rounded-md shrink-0 ml-1.5 font-semibold ${
-                    isActive ? 'bg-rose-100 text-rose-800 font-bold border border-rose-200' : 'bg-white/20 text-white border border-white/25'
+                    isActive ? 'bg-slate-900 text-rose-300' : 'bg-slate-800 text-slate-300'
                   }`}>
                     {tab.count}
                   </span>
@@ -407,15 +407,15 @@ export const AdminDashboard: React.FC = () => {
         </div>
 
         {/* Bottom System & Return to Workspace Controls */}
-        <div className="p-3.5 border-t border-white/15 space-y-2.5 bg-black/15 backdrop-blur-xs">
-          <div className="px-2 py-1 text-xs font-mono text-rose-100/90 flex items-center justify-between">
+        <div className="p-3.5 border-t border-slate-800/80 space-y-2.5 bg-[#060910]">
+          <div className="px-2 py-1 text-xs font-mono text-slate-400 flex items-center justify-between">
             <span>Cluster: ap-south-1</span>
-            <span className="text-emerald-300 font-bold">99.99% SLA</span>
+            <span className="text-emerald-400 font-bold">99.99% SLA</span>
           </div>
 
           <button
             onClick={() => setCurrentExperience('customer')}
-            className="w-full px-3.5 py-2.5 bg-white/20 hover:bg-white/30 text-white rounded-xl text-sm font-semibold transition-all cursor-pointer flex items-center justify-center gap-2 border border-white/30 shadow-xs"
+            className="w-full px-3.5 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white rounded-xl text-sm font-semibold transition-colors cursor-pointer flex items-center justify-center gap-2 border border-slate-700/70"
           >
             <ArrowLeft className="w-4 h-4" />
             <span>Return to Workspace</span>

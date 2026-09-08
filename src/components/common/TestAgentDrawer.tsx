@@ -144,56 +144,90 @@ export const TestAgentDrawer: React.FC = () => {
     ]);
   };
 
+  const primaryColor = currentCompany.widgetSettings?.primaryColor || '#4f46e5';
+  const isDarkMode = currentCompany.widgetSettings?.themeMode === 'dark';
+  const companyLogo = currentCompany.widgetSettings?.launcherLogoUrl || currentCompany.agent.avatarUrl;
+  const headerTitle = currentCompany.widgetSettings?.headerTitle || currentCompany.name + ' Support';
+  const headerSubtitle = currentCompany.widgetSettings?.headerSubtitle || 'Instant answers & server actions';
+
   return (
     <div className="fixed inset-0 z-50 overflow-hidden flex justify-end animate-in fade-in duration-200">
       {/* Backdrop */}
       <div 
-        className="fixed inset-0 bg-slate-900/50 backdrop-blur-xs transition-opacity" 
+        className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs transition-opacity" 
         onClick={() => setIsQuickTestOpen(false)} 
       />
-      <div className="relative w-full max-w-lg bg-white h-full shadow-2xl flex flex-col border-l border-slate-200 animate-in slide-in-from-right duration-300 z-10">
-        {/* Drawer Header */}
-        <div className="px-5 py-4 border-b border-slate-200 bg-slate-50 flex items-center justify-between">
-          <div className="flex items-center gap-3 min-w-0">
-            <div className="relative shrink-0">
+      <div 
+        className={`relative w-full max-w-lg h-full shadow-2xl flex flex-col border-l border-slate-200 animate-in slide-in-from-right duration-300 z-10 ${
+          isDarkMode ? 'bg-[#090d16] text-white border-slate-800' : 'bg-white text-slate-900'
+        }`}
+      >
+        {/* Background ambient gradient glow */}
+        <div 
+          className="absolute -top-20 -right-20 w-72 h-72 rounded-full opacity-15 blur-3xl pointer-events-none"
+          style={{ backgroundColor: primaryColor }}
+        />
+
+        {/* Drawer Unified Brand Header */}
+        <div className={`p-5 pb-4 border-b z-10 flex flex-col gap-3 ${
+          isDarkMode ? 'border-slate-800/80 bg-slate-950/40' : 'border-slate-100 bg-slate-50/70'
+        }`}>
+          <div className="flex items-center justify-between">
+            {/* Brand Badge Pill */}
+            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white/10 backdrop-blur-md border border-white/10 text-xs font-bold shadow-2xs">
               <img 
-                src={currentCompany.agent.avatarUrl} 
-                alt={currentCompany.agent.name} 
-                className="w-10 h-10 rounded-full object-cover ring-2 ring-indigo-500/30"
+                src={companyLogo} 
+                alt="Brand" 
+                className="w-4 h-4 rounded-md object-cover"
+                onError={(e) => {
+                  (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=150&auto=format&fit=crop&q=80';
+                }}
               />
-              <span className="absolute bottom-0 right-0 w-3 h-3 rounded-full bg-emerald-500 ring-2 ring-white" />
+              <span className={isDarkMode ? 'text-white' : 'text-slate-900'}>{currentCompany.name}</span>
+              <span className="px-1.5 py-0.5 rounded text-[10px] font-mono font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 uppercase ml-1">
+                Live Test
+              </span>
             </div>
-            <div className="min-w-0">
-              <div className="flex items-center gap-2">
-                <h3 className="text-sm sm:text-base font-bold text-slate-900 truncate">{currentCompany.agent.name}</h3>
-                <span className="text-xs px-2 py-0.5 bg-indigo-50 text-indigo-700 font-mono rounded-md font-bold border border-indigo-200 shrink-0">
-                  Single Agent
-                </span>
-              </div>
-              <p className="text-xs sm:text-sm text-slate-500 truncate">Live Workspace Test & Hierarchy Inspector</p>
+
+            <div className="flex items-center gap-1.5 shrink-0">
+              <button
+                onClick={resetChat}
+                title="Reset Test Conversation"
+                className={`p-2 rounded-xl transition-colors cursor-pointer ${
+                  isDarkMode ? 'text-slate-400 hover:text-white hover:bg-slate-800' : 'text-slate-500 hover:text-slate-800 hover:bg-slate-200/60'
+                }`}
+              >
+                <RotateCcw className="w-4 h-4" />
+              </button>
+              <button
+                onClick={() => setIsQuickTestOpen(false)}
+                className={`p-2 rounded-xl transition-colors cursor-pointer ${
+                  isDarkMode ? 'text-slate-400 hover:text-white hover:bg-slate-800' : 'text-slate-500 hover:text-slate-800 hover:bg-slate-200/60'
+                }`}
+              >
+                <X className="w-5 h-5" />
+              </button>
             </div>
           </div>
 
-          <div className="flex items-center gap-1.5 shrink-0">
-            <button
-              onClick={resetChat}
-              title="Reset Test Conversation"
-              className="p-2 text-slate-500 hover:text-slate-800 hover:bg-slate-200/60 rounded-xl transition-colors cursor-pointer"
+          {/* Big Prominent Title & Subtitle */}
+          <div className="space-y-0.5">
+            <h3 
+              className="text-2xl font-extrabold tracking-tight"
+              style={{ color: primaryColor }}
             >
-              <RotateCcw className="w-4 h-4" />
-            </button>
-            <button
-              onClick={() => setIsQuickTestOpen(false)}
-              className="p-2 text-slate-500 hover:text-slate-800 hover:bg-slate-200/60 rounded-xl transition-colors cursor-pointer"
-            >
-              <X className="w-5 h-5" />
-            </button>
+              {headerTitle}
+            </h3>
+            <p className={`text-xs ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
+              {headerSubtitle}
+            </p>
           </div>
         </div>
 
-
         {/* Chat History */}
-        <div className="flex-1 overflow-y-auto p-5 space-y-4 bg-slate-50/50">
+        <div className={`flex-1 overflow-y-auto p-5 space-y-4 z-10 ${
+          isDarkMode ? 'bg-[#090d16]' : 'bg-slate-50/40'
+        }`}>
           {messages.map((msg) => {
             const isUser = msg.sender === 'user';
             const showReasoning = showReasoningMap[msg.id];
@@ -205,15 +239,19 @@ export const TestAgentDrawer: React.FC = () => {
                     <img 
                       src={currentCompany.agent.avatarUrl} 
                       alt="Avatar" 
-                      className="w-8 h-8 rounded-full object-cover shrink-0 mt-0.5 ring-1 ring-slate-200" 
+                      className="w-8 h-8 rounded-full object-cover shrink-0 mt-0.5 ring-2 ring-white/10 shadow-xs" 
                     />
                   )}
                   <div className="flex flex-col">
                     <div
+                      style={{
+                        backgroundColor: isUser ? primaryColor : (isDarkMode ? '#1e293b' : '#ffffff'),
+                        color: isUser ? '#ffffff' : (isDarkMode ? '#f8fafc' : '#0f172a')
+                      }}
                       className={`px-4 py-3 rounded-2xl text-sm leading-relaxed ${
                         isUser
-                          ? 'bg-indigo-600 text-white rounded-br-xs'
-                          : 'bg-white text-slate-800 border border-slate-200 shadow-xs rounded-bl-xs'
+                          ? 'rounded-br-xs shadow-xs'
+                          : 'border border-slate-200/80 shadow-xs rounded-bl-xs'
                       }`}
                     >
                       <div className="whitespace-pre-wrap">{msg.text}</div>
@@ -296,8 +334,13 @@ export const TestAgentDrawer: React.FC = () => {
           })}
 
           {isProcessing && (
-            <div className="flex items-center gap-2.5 text-xs sm:text-sm text-slate-600 bg-white border border-slate-200 p-3 rounded-2xl w-fit">
-              <div className="w-2.5 h-2.5 rounded-full bg-indigo-600 animate-pulse" />
+            <div className={`flex items-center gap-2.5 text-xs sm:text-sm p-3 rounded-2xl w-fit ${
+              isDarkMode ? 'bg-slate-800 border border-slate-700 text-slate-300' : 'bg-white border border-slate-200 text-slate-600 shadow-xs'
+            }`}>
+              <div 
+                className="w-2.5 h-2.5 rounded-full animate-pulse" 
+                style={{ backgroundColor: primaryColor }}
+              />
               <span>{currentCompany.agent.name} is reasoning & querying knowledge base...</span>
             </div>
           )}
@@ -306,53 +349,72 @@ export const TestAgentDrawer: React.FC = () => {
         </div>
 
         {/* Suggestion Prompts */}
-        <div className="px-4 py-2.5 border-t border-slate-200 bg-white flex items-center gap-2 overflow-x-auto text-xs">
-          <span className="text-slate-400 font-semibold shrink-0">Try:</span>
+        <div className={`px-4 py-2.5 border-t flex items-center gap-2 overflow-x-auto text-xs ${
+          isDarkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'
+        }`}>
+          <span className={`font-semibold shrink-0 ${isDarkMode ? 'text-slate-500' : 'text-slate-400'}`}>Try:</span>
           <button
             onClick={() => { setInput('What is your SLA and uptime credit policy?'); }}
-            className="px-3 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium rounded-full shrink-0 transition-colors cursor-pointer"
+            className={`px-3 py-1 font-medium rounded-full shrink-0 transition-colors cursor-pointer ${
+              isDarkMode ? 'bg-slate-800 hover:bg-slate-700 text-slate-300' : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
+            }`}
           >
             SLA policy
           </button>
           <button
             onClick={() => { setInput('Check node count and spend for cls-prod-9941'); }}
-            className="px-3 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium rounded-full shrink-0 transition-colors cursor-pointer"
+            className={`px-3 py-1 font-medium rounded-full shrink-0 transition-colors cursor-pointer ${
+              isDarkMode ? 'bg-slate-800 hover:bg-slate-700 text-slate-300' : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
+            }`}
           >
             Check Cluster Quota
           </button>
           <button
             onClick={() => { setInput('Can we book a 30-min architecture demo?'); }}
-            className="px-3 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium rounded-full shrink-0 transition-colors cursor-pointer"
+            className={`px-3 py-1 font-medium rounded-full shrink-0 transition-colors cursor-pointer ${
+              isDarkMode ? 'bg-slate-800 hover:bg-slate-700 text-slate-300' : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
+            }`}
           >
             Book Demo (Action)
           </button>
           <button
             onClick={() => { setInput('Rotate sandbox API access token'); }}
-            className="px-3 py-1 bg-amber-50 hover:bg-amber-100 text-amber-800 font-medium rounded-full shrink-0 border border-amber-200 transition-colors cursor-pointer"
+            className={`px-3 py-1 font-medium rounded-full shrink-0 border transition-colors cursor-pointer ${
+              isDarkMode ? 'bg-amber-950/40 hover:bg-amber-900/60 text-amber-300 border-amber-800/60' : 'bg-amber-50 hover:bg-amber-100 text-amber-800 border-amber-200'
+            }`}
           >
             Rotate Key (High Risk)
           </button>
           <button
             onClick={() => { setInput('URGENT: Production outage 502 gateway error!'); }}
-            className="px-3 py-1 bg-rose-50 hover:bg-rose-100 text-rose-800 font-medium rounded-full shrink-0 border border-rose-200 transition-colors cursor-pointer"
+            className={`px-3 py-1 font-medium rounded-full shrink-0 border transition-colors cursor-pointer ${
+              isDarkMode ? 'bg-rose-950/40 hover:bg-rose-900/60 text-rose-300 border-rose-800/60' : 'bg-rose-50 hover:bg-rose-100 text-rose-800 border-rose-200'
+            }`}
           >
             Trigger Human Handoff
           </button>
         </div>
 
         {/* Input Bar */}
-        <form onSubmit={handleSend} className="p-3.5 border-t border-slate-200 bg-white flex items-center gap-2.5">
+        <form onSubmit={handleSend} className={`p-3.5 border-t flex items-center gap-2.5 ${
+          isDarkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'
+        }`}>
           <input
             type="text"
             value={input}
             onChange={(e) => setInput(e.target.value)}
             placeholder={`Message ${currentCompany.agent.name}...`}
-            className="flex-1 px-4 py-2.5 text-sm font-medium bg-slate-50 border border-slate-200 rounded-xl focus:outline-hidden focus:ring-2 focus:ring-indigo-500 focus:bg-white"
+            className={`flex-1 px-4 py-2.5 text-sm font-medium rounded-xl focus:outline-hidden focus:ring-2 focus:ring-indigo-500 ${
+              isDarkMode 
+                ? 'bg-slate-800 border border-slate-700 text-white placeholder-slate-500 focus:bg-slate-800' 
+                : 'bg-slate-50 border border-slate-200 text-slate-900 placeholder-slate-400 focus:bg-white'
+            }`}
           />
           <button
             type="submit"
             disabled={!input.trim() || isProcessing}
-            className="p-2.5 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white rounded-xl shadow-xs transition-colors cursor-pointer"
+            style={{ backgroundColor: primaryColor }}
+            className="p-2.5 text-white rounded-xl shadow-xs transition-transform active:scale-95 disabled:opacity-50 shrink-0 cursor-pointer"
           >
             <Send className="w-4.5 h-4.5" />
           </button>
