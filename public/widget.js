@@ -14,6 +14,7 @@
   const primaryColor = currentScript?.getAttribute('data-primary-color') || '#4f46e5';
   const position = currentScript?.getAttribute('data-position') || 'bottom_right';
   const launcherIcon = currentScript?.getAttribute('data-launcher-icon') || 'chat';
+  const launcherLogoUrl = currentScript?.getAttribute('data-launcher-logo-url') || '';
   const launcherText = currentScript?.getAttribute('data-launcher-text') || 'Chat with Us';
   const isLeft = position === 'bottom_left';
 
@@ -217,8 +218,14 @@
   // Create launcher button
   const launcher = document.createElement('button');
   launcher.className = 'aaas-widget-launcher';
+
+  let iconHtml = iconSvgs[launcherIcon] || iconSvgs.chat;
+  if ((launcherIcon === 'logo' || launcherIcon === 'custom') && launcherLogoUrl) {
+    iconHtml = `<img src="${launcherLogoUrl}" alt="Logo" style="width: 20px; height: 20px; border-radius: 50%; object-fit: cover;" onerror="this.onerror=null; this.parentElement.innerHTML='${iconSvgs.chat.replace(/'/g, "\\'")}' + '<span>' + '${launcherText}' + '</span>';" />`;
+  }
+
   launcher.innerHTML = `
-    ${iconSvgs[launcherIcon] || iconSvgs.chat}
+    ${iconHtml}
     <span>${launcherText}</span>
   `;
   document.body.appendChild(launcher);

@@ -14,7 +14,9 @@ import {
   Clock,
   Bot,
   Headphones,
-  Zap
+  Zap,
+  Upload,
+  Image as ImageIcon
 } from 'lucide-react';
 import { useApp } from '../../context';
 import { WidgetCustomization } from '../../types';
@@ -88,8 +90,22 @@ export const DeployView: React.FC = () => {
     setTimeout(() => setIsSaved(false), 2500);
   };
 
+  const companyLogoUrl = localSettings.launcherLogoUrl || localSettings.botAvatar || currentCompany.agent.avatarUrl || 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=150&auto=format&fit=crop&q=80';
+
   const renderLauncherIcon = (iconType: string = 'chat', className = "w-4 h-4") => {
     switch (iconType) {
+      case 'logo':
+      case 'custom':
+        return (
+          <img 
+            src={companyLogoUrl} 
+            alt={currentCompany.name} 
+            className="w-full h-full object-cover rounded-full"
+            onError={(e) => {
+              (e.target as HTMLElement).style.display = 'none';
+            }}
+          />
+        );
       case 'bot': return <Bot className={className} />;
       case 'sparkles': return <Sparkles className={className} />;
       case 'support': return <Headphones className={className} />;
@@ -106,13 +122,14 @@ export const DeployView: React.FC = () => {
   const apiEndpointUrl = isLocal ? 'http://127.0.0.1:8001/api/v1/chat' : 'https://api.chat-aaas.com/api/v1/chat';
 
   // Embed script snippet
+  const isLogoSelected = localSettings.launcherIcon === 'logo' || localSettings.launcherIcon === 'custom';
   const scriptSnippet = `<!-- Chat-AaaS AI Assistant Widget for ${currentCompany.name} -->
 <script
   src="${widgetScriptSrc}"
   data-agent-key="${currentCompany.apiKey}"
   data-position="${localSettings.position}"
   data-primary-color="${localSettings.primaryColor}"
-  data-launcher-icon="${localSettings.launcherIcon || 'chat'}"
+  data-launcher-icon="${localSettings.launcherIcon || 'chat'}"${isLogoSelected ? `\n  data-launcher-logo-url="${companyLogoUrl}"` : ''}
   defer>
 </script>`;
 
@@ -127,7 +144,7 @@ export default function App() {
         apiKey="${currentCompany.apiKey}"
         primaryColor="${localSettings.primaryColor}"
         position="${localSettings.position}"
-        launcherIcon="${localSettings.launcherIcon || 'chat'}"
+        launcherIcon="${localSettings.launcherIcon || 'chat'}"${isLogoSelected ? `\n        launcherLogoUrl="${companyLogoUrl}"` : ''}
         welcomeMessage="${currentCompany.agent.greetingMessage}"
       />
     </div>
@@ -385,8 +402,9 @@ export default function App() {
                 </span>
               </div>
 
-              <div className="grid grid-cols-3 sm:grid-cols-6 gap-2.5">
+              <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2.5">
                 {[
+                  { id: 'logo', label: 'Logo', sub: 'Brand Avatar', isLogo: true },
                   { id: 'chat', label: 'Chat', sub: 'Classic', icon: MessageCircle },
                   { id: 'bot', label: 'AI Bot', sub: 'Agent', icon: Bot },
                   { id: 'sparkles', label: 'Sparkles', sub: 'Magic AI', icon: Sparkles },
@@ -414,24 +432,35 @@ export default function App() {
                       {/* Active Check Indicator */}
                       {isSelected && (
                         <div 
-                          className="absolute top-1.5 right-1.5 w-3.5 h-3.5 rounded-full flex items-center justify-center text-white"
+                          className="absolute top-1.5 right-1.5 w-3.5 h-3.5 rounded-full flex items-center justify-center text-white z-10"
                           style={{ backgroundColor: localSettings.primaryColor }}
                         >
                           <Check className="w-2.5 h-2.5 stroke-[3]" />
                         </div>
                       )}
 
-                      {/* Icon Container */}
+                      {/* Icon / Logo Container */}
                       <div 
-                        className={`w-9 h-9 rounded-xl flex items-center justify-center transition-all ${
+                        className={`w-9 h-9 rounded-xl flex items-center justify-center overflow-hidden transition-all ${
                           isSelected ? 'shadow-xs scale-105' : 'bg-slate-100 text-slate-600 group-hover:bg-slate-200/70 group-hover:text-slate-900'
                         }`}
                         style={{
-                          backgroundColor: isSelected ? localSettings.primaryColor : undefined,
-                          color: isSelected ? '#ffffff' : undefined
+                          backgroundColor: !item.isLogo && isSelected ? localSettings.primaryColor : undefined,
+                          color: !item.isLogo && isSelected ? '#ffffff' : undefined
                         }}
                       >
-                        <IconComp className="w-4.5 h-4.5" />
+                        {item.isLogo ? (
+                          <img 
+                            src={companyLogoUrl} 
+                            alt="Logo" 
+                            className="w-full h-full object-cover rounded-xl"
+                            onError={(e) => {
+                              (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=150&auto=format&fit=crop&q=80';
+                            }}
+                          />
+                        ) : (
+                          IconComp && <IconComp className="w-4.5 h-4.5" />
+                        )}
                       </div>
 
                       {/* Text Label & Subtitle */}
@@ -447,6 +476,49 @@ export default function App() {
                   );
                 })}
               </div>
+
+              {/* Company Logo Settings Panel */}
+              {isLogoSelected && (
+                <div className="p-3.5 bg-slate-50/90 border border-slate-200 rounded-2xl space-y-2.5 animate-in fade-in duration-150">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <ImageIcon className="w-4 h-4 text-slate-700" />
+                      <span className="font-bold text-xs text-slate-900">Company Logo / Brand Avatar URL</span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setLocalSettings(prev => ({ ...prev, launcherLogoUrl: currentCompany.agent.avatarUrl }))}
+                      className="text-[11px] text-indigo-600 hover:text-indigo-800 font-semibold cursor-pointer underline"
+                    >
+                      Use Agent Avatar
+                    </button>
+                  </div>
+
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl overflow-hidden border border-slate-200 bg-white shrink-0 shadow-2xs flex items-center justify-center">
+                      <img 
+                        src={companyLogoUrl} 
+                        alt="Logo Preview" 
+                        className="w-full h-full object-cover"
+                        onError={(e) => {
+                          (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=150&auto=format&fit=crop&q=80';
+                        }}
+                      />
+                    </div>
+
+                    <div className="flex-1 space-y-1">
+                      <input
+                        type="text"
+                        value={localSettings.launcherLogoUrl || ''}
+                        onChange={(e) => setLocalSettings({ ...localSettings, launcherLogoUrl: e.target.value })}
+                        placeholder="https://your-domain.com/logo.png"
+                        className="w-full px-3 py-1.5 bg-white border border-slate-200 rounded-xl text-xs text-slate-900 focus:ring-1 focus:ring-slate-900 focus:outline-hidden font-mono"
+                      />
+                      <p className="text-[10px] text-slate-500">Provide any public image URL (PNG, SVG, JPG, WebP) for your brand icon.</p>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* 4. Screen Position */}
@@ -632,15 +704,19 @@ export default function App() {
                   className="px-4 py-2 rounded-full text-white text-xs font-bold flex items-center gap-2 shadow-sm transition-all"
                   style={{ backgroundColor: localSettings.primaryColor }}
                 >
-                  {renderLauncherIcon(localSettings.launcherIcon || 'chat', "w-3.5 h-3.5")}
+                  <div className="w-4 h-4 rounded-full overflow-hidden flex items-center justify-center shrink-0">
+                    {renderLauncherIcon(localSettings.launcherIcon || 'chat', "w-3.5 h-3.5")}
+                  </div>
                   <span>{localSettings.launcherText || 'Chat with Us'}</span>
                 </div>
               ) : (
                 <div 
-                  className="w-10 h-10 rounded-full text-white flex items-center justify-center shadow-sm transition-all"
+                  className="w-10 h-10 rounded-full text-white flex items-center justify-center shadow-sm transition-all overflow-hidden p-1.5"
                   style={{ backgroundColor: localSettings.primaryColor }}
                 >
-                  {renderLauncherIcon(localSettings.launcherIcon || 'chat', "w-5 h-5")}
+                  <div className="w-full h-full rounded-full overflow-hidden flex items-center justify-center">
+                    {renderLauncherIcon(localSettings.launcherIcon || 'chat', "w-5 h-5")}
+                  </div>
                 </div>
               )}
             </div>

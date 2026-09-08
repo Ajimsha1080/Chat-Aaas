@@ -312,6 +312,20 @@ export const ChatWidget: React.FC<ChatWidgetProps> = ({ isInlinePreview = false 
         >
           {(() => {
             switch (settings.launcherIcon) {
+              case 'logo':
+              case 'custom': {
+                const logoUrl = settings.launcherLogoUrl || settings.botAvatar || currentCompany.agent.avatarUrl;
+                return (
+                  <img
+                    src={logoUrl}
+                    alt={currentCompany.name}
+                    className="w-5 h-5 rounded-full object-cover border border-white/40 shrink-0"
+                    onError={(e) => {
+                      (e.target as HTMLElement).style.display = 'none';
+                    }}
+                  />
+                );
+              }
               case 'bot': return <Bot className="w-5 h-5 text-white" />;
               case 'sparkles': return <Sparkles className="w-5 h-5 text-white" />;
               case 'support': return <Headphones className="w-5 h-5 text-white" />;
