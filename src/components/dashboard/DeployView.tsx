@@ -178,7 +178,33 @@ export const DeployView: React.FC = () => {
 
   const companyLogoUrl = localSettings.launcherLogoUrl || localSettings.botAvatar || currentCompany.agent.avatarUrl || 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=150&auto=format&fit=crop&q=80';
 
-  const renderLauncherIcon = (iconType: string = 'chat', className = "w-4 h-4") => {
+// Custom Solid Icons matching exact UI design
+const ChatDotsIcon: React.FC<{ className?: string }> = ({ className = "w-4.5 h-4.5" }) => (
+  <svg viewBox="0 0 24 24" fill="currentColor" className={className}>
+    <path d="M12 2C6.477 2 2 6.03 2 11c0 2.68 1.31 5.09 3.4 6.69-.17 1.25-.8 2.82-1.92 3.86-.23.21-.11.6.2.62 2.37.13 4.67-.93 6.07-1.92.73.16 1.48.25 2.25.25 5.523 0 10-4.03 10-9s-4.477-9-10-9zm-4.5 10a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3zm4.5 0a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3zm4.5 0a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3z" />
+  </svg>
+);
+
+const ChatLinesIcon: React.FC<{ className?: string }> = ({ className = "w-4.5 h-4.5" }) => (
+  <svg viewBox="0 0 24 24" fill="currentColor" className={className}>
+    <path d="M4 3h16a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H8.414l-4.707 4.707A1 1 0 0 1 2 22V5a2 2 0 0 1 2-2zm3 5a1 1 0 0 0 0 2h10a1 1 0 1 0 0-2H7zm0 4a1 1 0 1 0 0 2h6a1 1 0 1 0 0-2H7z" />
+  </svg>
+);
+
+const HelpFilledIcon: React.FC<{ className?: string }> = ({ className = "w-4.5 h-4.5" }) => (
+  <svg viewBox="0 0 24 24" fill="currentColor" className={className}>
+    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm.88 15.75h-1.75v-1.75h1.75v1.75zm1.5-6.22l-.79.81c-.63.64-1.02 1.16-1.02 2.41h-1.5v-.5c0-.83.34-1.58.88-2.12l.93-.94c.28-.28.45-.66.45-1.09 0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5H8.38c0-1.99 1.62-3.62 3.62-3.62s3.62 1.62 3.62 3.62c0 .78-.31 1.49-.84 1.98z" />
+  </svg>
+);
+
+const ChatDoubleIcon: React.FC<{ className?: string }> = ({ className = "w-4.5 h-4.5" }) => (
+  <svg viewBox="0 0 24 24" fill="currentColor" className={className}>
+    <path d="M17 3H5a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h1v3.5a.5.5 0 0 0 .854.354L10.707 16H17a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2z" />
+    <path d="M13 18h2.293l3.853 3.854A.5.5 0 0 0 20 21.5V18h1a2 2 0 0 0 2-2v-7a2 2 0 0 0-1-1.732V14a3 3 0 0 1-3 3h-5.268A2 2 0 0 0 13 18z" opacity="0.9" />
+  </svg>
+);
+
+  const renderLauncherIcon = (iconType: string = 'chat_dots', className = "w-4 h-4") => {
     switch (iconType) {
       case 'logo':
       case 'custom':
@@ -192,13 +218,17 @@ export const DeployView: React.FC = () => {
             }}
           />
         );
+      case 'chat_dots': return <ChatDotsIcon className={className} />;
+      case 'chat_lines': return <ChatLinesIcon className={className} />;
+      case 'help_filled': return <HelpFilledIcon className={className} />;
+      case 'chat_double': return <ChatDoubleIcon className={className} />;
       case 'bot': return <Bot className={className} />;
       case 'sparkles': return <Sparkles className={className} />;
       case 'support': return <Headphones className={className} />;
-      case 'help': return <HelpCircle className={className} />;
+      case 'help': return <HelpFilledIcon className={className} />;
       case 'zap': return <Zap className={className} />;
       case 'chat':
-      default: return <MessageCircle className={className} />;
+      default: return <ChatDotsIcon className={className} />;
     }
   };
 
@@ -580,19 +610,21 @@ export default function App() {
                             {/* Icon Presets Row */}
                             <div className="flex items-center justify-between gap-1.5 mb-3">
                               {[
-                                { id: 'logo', icon: null, isLogo: true },
-                                { id: 'chat', icon: MessageSquareQuote },
-                                { id: 'chat_sq', icon: MessageSquare },
-                                { id: 'help', icon: HelpCircle },
-                                { id: 'bot', icon: Bot },
-                                { id: 'sparkles', icon: Sparkles }
+                                { id: 'logo', icon: null, isLogo: true, title: 'Company Logo' },
+                                { id: 'chat_dots', icon: ChatDotsIcon, title: 'Chat Bubble' },
+                                { id: 'chat_lines', icon: ChatLinesIcon, title: 'Chat Box' },
+                                { id: 'help_filled', icon: HelpFilledIcon, title: 'Help & FAQ' },
+                                { id: 'chat_double', icon: ChatDoubleIcon, title: 'Multi Chat' },
+                                { id: 'bot', icon: Bot, title: 'AI Bot' },
+                                { id: 'sparkles', icon: Sparkles, title: 'Magic AI' }
                               ].map(item => {
                                 const IconComp = item.icon;
-                                const isSelected = (localSettings.launcherIcon || 'chat') === item.id;
+                                const isSelected = (localSettings.launcherIcon || 'chat_dots') === item.id;
                                 return (
                                   <button
                                     key={item.id}
                                     type="button"
+                                    title={item.title}
                                     onClick={() => {
                                       setLocalSettings(prev => ({ ...prev, launcherIcon: item.id as any }));
                                       setIsIconPickerOpen(false);
@@ -600,7 +632,7 @@ export default function App() {
                                     className={`w-9 h-9 rounded-xl flex items-center justify-center transition-all cursor-pointer border ${
                                       isSelected
                                         ? 'bg-slate-900 text-white border-slate-900 shadow-sm'
-                                        : 'bg-white hover:bg-slate-100 text-slate-700 border-slate-200'
+                                        : 'bg-white hover:bg-slate-100 text-slate-700 border-slate-200 hover:border-slate-300'
                                     }`}
                                   >
                                     {item.isLogo ? (

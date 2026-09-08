@@ -326,13 +326,43 @@ export const ChatWidget: React.FC<ChatWidgetProps> = ({ isInlinePreview = false 
                   />
                 );
               }
+              case 'chat_dots':
+                return (
+                  <svg viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5 text-white shrink-0">
+                    <path d="M12 2C6.477 2 2 6.03 2 11c0 2.68 1.31 5.09 3.4 6.69-.17 1.25-.8 2.82-1.92 3.86-.23.21-.11.6.2.62 2.37.13 4.67-.93 6.07-1.92.73.16 1.48.25 2.25.25 5.523 0 10-4.03 10-9s-4.477-9-10-9zm-4.5 10a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3zm4.5 0a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3zm4.5 0a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3z" />
+                  </svg>
+                );
+              case 'chat_lines':
+                return (
+                  <svg viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5 text-white shrink-0">
+                    <path d="M4 3h16a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H8.414l-4.707 4.707A1 1 0 0 1 2 22V5a2 2 0 0 1 2-2zm3 5a1 1 0 0 0 0 2h10a1 1 0 1 0 0-2H7zm0 4a1 1 0 1 0 0 2h6a1 1 0 1 0 0-2H7z" />
+                  </svg>
+                );
+              case 'help_filled':
+              case 'help':
+                return (
+                  <svg viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5 text-white shrink-0">
+                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm.88 15.75h-1.75v-1.75h1.75v1.75zm1.5-6.22l-.79.81c-.63.64-1.02 1.16-1.02 2.41h-1.5v-.5c0-.83.34-1.58.88-2.12l.93-.94c.28-.28.45-.66.45-1.09 0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5H8.38c0-1.99 1.62-3.62 3.62-3.62s3.62 1.62 3.62 3.62c0 .78-.31 1.49-.84 1.98z" />
+                  </svg>
+                );
+              case 'chat_double':
+                return (
+                  <svg viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5 text-white shrink-0">
+                    <path d="M17 3H5a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h1v3.5a.5.5 0 0 0 .854.354L10.707 16H17a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2z" />
+                    <path d="M13 18h2.293l3.853 3.854A.5.5 0 0 0 20 21.5V18h1a2 2 0 0 0 2-2v-7a2 2 0 0 0-1-1.732V14a3 3 0 0 1-3 3h-5.268A2 2 0 0 0 13 18z" opacity="0.9" />
+                  </svg>
+                );
               case 'bot': return <Bot className="w-5 h-5 text-white" />;
               case 'sparkles': return <Sparkles className="w-5 h-5 text-white" />;
               case 'support': return <Headphones className="w-5 h-5 text-white" />;
-              case 'help': return <HelpCircle className="w-5 h-5 text-white" />;
               case 'zap': return <Zap className="w-5 h-5 text-white" />;
               case 'chat':
-              default: return <MessageCircle className="w-5 h-5 text-white" />;
+              default:
+                return (
+                  <svg viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5 text-white shrink-0">
+                    <path d="M12 2C6.477 2 2 6.03 2 11c0 2.68 1.31 5.09 3.4 6.69-.17 1.25-.8 2.82-1.92 3.86-.23.21-.11.6.2.62 2.37.13 4.67-.93 6.07-1.92.73.16 1.48.25 2.25.25 5.523 0 10-4.03 10-9s-4.477-9-10-9zm-4.5 10a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3zm4.5 0a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3zm4.5 0a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3z" />
+                  </svg>
+                );
             }
           })()}
           <span>{settings.launcherText}</span>
