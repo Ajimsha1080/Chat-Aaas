@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { 
   Copy, 
   Check, 
@@ -29,10 +29,32 @@ export const DeployView: React.FC = () => {
     setIsQuickTestOpen
   } = useApp();
 
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
   const [activeSnippetTab, setActiveSnippetTab] = useState<'script' | 'react' | 'iframe' | 'api'>('script');
   const [localSettings, setLocalSettings] = useState<WidgetCustomization>({ ...currentCompany.widgetSettings });
   const [isSaved, setIsSaved] = useState(false);
+
+  const handleLogoFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 5 * 1024 * 1024) {
+      alert('Logo file size must be less than 5MB');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const result = event.target?.result as string;
+      if (result) {
+        setLocalSettings(prev => ({ ...prev, launcherLogoUrl: result }));
+      }
+    };
+    reader.readAsDataURL(file);
+    // Reset file input so user can re-upload same file if desired
+    e.target.value = '';
+  };
   const COLOR_PRESETS = [
     { name: 'Indigo', hex: '#4f46e5' },
     { name: 'Violet', hex: '#7c3aed' },
@@ -479,42 +501,84 @@ export default function App() {
 
               {/* Company Logo Settings Panel */}
               {isLogoSelected && (
-                <div className="p-3.5 bg-slate-50/90 border border-slate-200 rounded-2xl space-y-2.5 animate-in fade-in duration-150">
+                <div className="p-4 bg-slate-50/90 border border-slate-200 rounded-2xl space-y-3 animate-in fade-in duration-150">
+                  {/* Hidden File Input */}
+                  <input 
+                    type="file" 
+                    ref={fileInputRef} 
+                    accept="image/*" 
+                    onChange={handleLogoFileUpload} 
+                    className="hidden" 
+                  />
+
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <ImageIcon className="w-4 h-4 text-slate-700" />
-                      <span className="font-bold text-xs text-slate-900">Company Logo / Brand Avatar URL</span>
+                      <span className="font-bold text-xs text-slate-900">Custom Brand Logo</span>
                     </div>
-                    <button
-                      type="button"
-                      onClick={() => setLocalSettings(prev => ({ ...prev, launcherLogoUrl: currentCompany.agent.avatarUrl }))}
-                      className="text-[11px] text-indigo-600 hover:text-indigo-800 font-semibold cursor-pointer underline"
-                    >
-                      Use Agent Avatar
-                    </button>
+                    <div className="flex items-center gap-3">
+                      <button
+                        type="button"
+                        onClick={() => setLocalSettings(prev => ({ ...prev, launcherLogoUrl: currentCompany.agent.avatarUrl }))}
+                        className="text-[11px] text-indigo-600 hover:text-indigo-800 font-semibold cursor-pointer underline"
+                      >
+                        Use Agent Avatar
+                      </button>
+                      {localSettings.launcherLogoUrl && (
+                        <button
+                          type="button"
+                          onClick={() => setLocalSettings(prev => ({ ...prev, launcherLogoUrl: undefined }))}
+                          className="text-[11px] text-slate-500 hover:text-rose-600 font-semibold cursor-pointer"
+                        >
+                          Clear
+                        </button>
+                      )}
+                    </div>
                   </div>
 
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl overflow-hidden border border-slate-200 bg-white shrink-0 shadow-2xs flex items-center justify-center">
+                  <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+                    {/* Clickable Avatar Thumbnail */}
+                    <div 
+                      onClick={() => fileInputRef.current?.click()}
+                      title="Click to upload logo"
+                      className="group relative w-12 h-12 rounded-2xl overflow-hidden border border-slate-200 bg-white shrink-0 shadow-xs flex items-center justify-center cursor-pointer hover:border-slate-400 transition-colors"
+                    >
                       <img 
                         src={companyLogoUrl} 
                         alt="Logo Preview" 
-                        className="w-full h-full object-cover"
+                        className="w-full h-full object-cover group-hover:opacity-75 transition-opacity"
                         onError={(e) => {
                           (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=150&auto=format&fit=crop&q=80';
                         }}
                       />
+                      <div className="absolute inset-0 bg-black/40 text-white opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
+                        <Upload className="w-4 h-4" />
+                      </div>
                     </div>
 
-                    <div className="flex-1 space-y-1">
-                      <input
-                        type="text"
-                        value={localSettings.launcherLogoUrl || ''}
-                        onChange={(e) => setLocalSettings({ ...localSettings, launcherLogoUrl: e.target.value })}
-                        placeholder="https://your-domain.com/logo.png"
-                        className="w-full px-3 py-1.5 bg-white border border-slate-200 rounded-xl text-xs text-slate-900 focus:ring-1 focus:ring-slate-900 focus:outline-hidden font-mono"
-                      />
-                      <p className="text-[10px] text-slate-500">Provide any public image URL (PNG, SVG, JPG, WebP) for your brand icon.</p>
+                    {/* Controls */}
+                    <div className="flex-1 space-y-2">
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => fileInputRef.current?.click()}
+                          className="px-3 py-1.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer shadow-2xs shrink-0"
+                        >
+                          <Upload className="w-3.5 h-3.5" />
+                          <span>Upload File</span>
+                        </button>
+
+                        <div className="flex-1 relative">
+                          <input
+                            type="text"
+                            value={localSettings.launcherLogoUrl || ''}
+                            onChange={(e) => setLocalSettings({ ...localSettings, launcherLogoUrl: e.target.value })}
+                            placeholder="Or paste public logo URL..."
+                            className="w-full px-3 py-1.5 bg-white border border-slate-200 rounded-xl text-xs text-slate-900 focus:ring-1 focus:ring-slate-900 focus:outline-hidden font-mono"
+                          />
+                        </div>
+                      </div>
+                      <p className="text-[10px] text-slate-500">Supports PNG, SVG, JPG, WebP up to 5MB. 1:1 square ratio recommended.</p>
                     </div>
                   </div>
                 </div>
