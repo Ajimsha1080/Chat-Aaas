@@ -30,6 +30,7 @@
       z-index: 999999;
       display: flex;
       align-items: center;
+      justify-content: center;
       gap: 8px;
       background: ${primaryColor};
       color: #ffffff;
@@ -41,20 +42,26 @@
       font-weight: 600;
       cursor: pointer;
       border: none;
-      transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+      transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1), padding 0.25s ease, width 0.25s ease, height 0.25s ease;
     }
     .aaas-widget-launcher:hover {
       transform: scale(1.05);
     }
+    .aaas-widget-launcher.aaas-launcher-open {
+      width: 54px;
+      height: 54px;
+      padding: 0;
+      border-radius: 50%;
+    }
     .aaas-widget-container {
-      display: none;
+      display: flex;
       position: fixed;
-      bottom: ${bottomPaddingNum + 60}px;
+      bottom: ${bottomPaddingNum + 64}px;
       ${isLeft ? `left: ${sidePaddingNum}px;` : `right: ${sidePaddingNum}px;`}
       width: 380px;
       height: 560px;
       max-width: calc(100vw - 32px);
-      max-height: calc(100vh - 110px);
+      max-height: calc(100vh - 120px);
       z-index: 999999;
       background: #ffffff;
       border-radius: 20px;
@@ -63,14 +70,17 @@
       flex-direction: column;
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
       border: 1px solid #e2e8f0;
-      animation: aaasFadeIn 0.2s ease-out;
+      opacity: 0;
+      visibility: hidden;
+      transform: translateY(20px) scale(0.96);
+      pointer-events: none;
+      transition: opacity 0.25s cubic-bezier(0.16, 1, 0.3, 1), transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), visibility 0.25s;
     }
     .aaas-widget-container.aaas-open {
-      display: flex;
-    }
-    @keyframes aaasFadeIn {
-      from { opacity: 0; transform: translateY(8px); }
-      to { opacity: 1; transform: translateY(0); }
+      opacity: 1;
+      visibility: visible;
+      transform: translateY(0) scale(1);
+      pointer-events: auto;
     }
     .aaas-widget-header {
       background: ${primaryColor};
@@ -236,16 +246,36 @@
   `;
   document.body.appendChild(launcher);
 
+  const chevronDownSvg = '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>';
+
+  function setLauncherState(isOpen) {
+    if (isOpen) {
+      launcher.classList.add('aaas-launcher-open');
+      launcher.innerHTML = chevronDownSvg;
+      launcher.setAttribute('aria-label', 'Close chat');
+    } else {
+      launcher.classList.remove('aaas-launcher-open');
+      launcher.innerHTML = `${iconHtml}<span>${launcherText}</span>`;
+      launcher.setAttribute('aria-label', 'Open chat');
+    }
+  }
+
   // Event Listeners
   launcher.addEventListener('click', () => {
-    container.classList.toggle('aaas-open');
-    if (container.classList.contains('aaas-open')) {
+    const willOpen = !container.classList.contains('aaas-open');
+    if (willOpen) {
+      container.classList.add('aaas-open');
+      setLauncherState(true);
       container.querySelector('.aaas-widget-input')?.focus();
+    } else {
+      container.classList.remove('aaas-open');
+      setLauncherState(false);
     }
   });
 
   container.querySelector('.aaas-widget-close').addEventListener('click', () => {
     container.classList.remove('aaas-open');
+    setLauncherState(false);
   });
 
   const form = container.querySelector('.aaas-widget-input-row');

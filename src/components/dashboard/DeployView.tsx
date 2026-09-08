@@ -28,7 +28,8 @@ import {
   Code2,
   FileText,
   Send,
-  X
+  X,
+  ChevronDown
 } from 'lucide-react';
 import { useApp } from '../../context';
 import { WidgetCustomization } from '../../types';
@@ -1063,27 +1064,44 @@ export default function App() {
 
             {/* Bottom Floating Launcher Preview Indicator */}
             <div className="mt-4 pt-3 border-t border-slate-200/80 flex items-center justify-between">
-              <span className="text-xs text-slate-500 font-semibold">Launcher Preview:</span>
-              {launcherStyle === 'pill' ? (
+              <div>
+                <span className="text-xs text-slate-700 font-bold block">Launcher State:</span>
+                <span className="text-[10px] text-slate-400">Opens upwards with smooth transition</span>
+              </div>
+              <div className="flex items-center gap-2">
+                {/* Closed State preview */}
+                {launcherStyle === 'pill' ? (
+                  <div 
+                    title="Closed state (Pill)"
+                    className="px-3.5 py-1.5 rounded-full text-white text-xs font-bold flex items-center gap-2 shadow-xs transition-all"
+                    style={{ backgroundColor: localSettings.primaryColor }}
+                  >
+                    <div className="w-3.5 h-3.5 rounded-full overflow-hidden flex items-center justify-center shrink-0">
+                      {renderLauncherIcon(localSettings.launcherIcon || 'chat', "w-3.5 h-3.5")}
+                    </div>
+                    <span>{localSettings.launcherText || 'Chat with Us'}</span>
+                  </div>
+                ) : (
+                  <div 
+                    title="Closed state (Bubble)"
+                    className="w-8 h-8 rounded-full text-white flex items-center justify-center shadow-xs transition-all overflow-hidden p-1"
+                    style={{ backgroundColor: localSettings.primaryColor }}
+                  >
+                    <div className="w-full h-full rounded-full overflow-hidden flex items-center justify-center">
+                      {renderLauncherIcon(localSettings.launcherIcon || 'chat', "w-4 h-4")}
+                    </div>
+                  </div>
+                )}
+
+                {/* Open State (Chevron Down) preview */}
                 <div 
-                  className="px-4 py-2 rounded-full text-white text-xs font-bold flex items-center gap-2 shadow-sm transition-all"
+                  title="Open state (Chevron Down - collapses chat)"
+                  className="w-8 h-8 rounded-full text-white flex items-center justify-center shadow-xs transition-all ring-2 ring-slate-900/10"
                   style={{ backgroundColor: localSettings.primaryColor }}
                 >
-                  <div className="w-4 h-4 rounded-full overflow-hidden flex items-center justify-center shrink-0">
-                    {renderLauncherIcon(localSettings.launcherIcon || 'chat', "w-3.5 h-3.5")}
-                  </div>
-                  <span>{localSettings.launcherText || 'Chat with Us'}</span>
+                  <ChevronDown className="w-4 h-4 text-white" />
                 </div>
-              ) : (
-                <div 
-                  className="w-10 h-10 rounded-full text-white flex items-center justify-center shadow-sm transition-all overflow-hidden p-1.5"
-                  style={{ backgroundColor: localSettings.primaryColor }}
-                >
-                  <div className="w-full h-full rounded-full overflow-hidden flex items-center justify-center">
-                    {renderLauncherIcon(localSettings.launcherIcon || 'chat', "w-5 h-5")}
-                  </div>
-                </div>
-              )}
+              </div>
             </div>
           </div>
         </div>
