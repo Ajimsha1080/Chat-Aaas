@@ -13,7 +13,8 @@ import {
   HelpCircle,
   Clock,
   Bot,
-  Headphones
+  Headphones,
+  Zap
 } from 'lucide-react';
 import { useApp } from '../../context';
 import { WidgetCustomization } from '../../types';
@@ -93,6 +94,7 @@ export const DeployView: React.FC = () => {
       case 'sparkles': return <Sparkles className={className} />;
       case 'support': return <Headphones className={className} />;
       case 'help': return <HelpCircle className={className} />;
+      case 'zap': return <Zap className={className} />;
       case 'chat':
       default: return <MessageCircle className={className} />;
     }
@@ -372,15 +374,25 @@ export default function App() {
             </div>
 
             {/* 4. Launcher Icon Selection */}
-            <div className="space-y-2">
-              <label className="block font-semibold text-slate-800">Launcher Icon</label>
-              <div className="grid grid-cols-5 gap-2">
+            <div className="space-y-2.5 pt-1">
+              <div className="flex items-center justify-between">
+                <div>
+                  <label className="block font-semibold text-slate-800 text-sm">Launcher Icon</label>
+                  <p className="text-xs text-slate-500">Select the trigger icon shown on your floating widget button</p>
+                </div>
+                <span className="text-[11px] font-mono font-medium px-2 py-0.5 rounded-md bg-slate-100 text-slate-600 border border-slate-200">
+                  {localSettings.launcherIcon ? localSettings.launcherIcon.toUpperCase() : 'CHAT'}
+                </span>
+              </div>
+
+              <div className="grid grid-cols-3 sm:grid-cols-6 gap-2.5">
                 {[
-                  { id: 'chat', label: 'Chat', icon: MessageCircle },
-                  { id: 'bot', label: 'Bot', icon: Bot },
-                  { id: 'sparkles', label: 'Sparkles', icon: Sparkles },
-                  { id: 'support', label: 'Support', icon: Headphones },
-                  { id: 'help', label: 'Help', icon: HelpCircle }
+                  { id: 'chat', label: 'Chat', sub: 'Classic', icon: MessageCircle },
+                  { id: 'bot', label: 'AI Bot', sub: 'Agent', icon: Bot },
+                  { id: 'sparkles', label: 'Sparkles', sub: 'Magic AI', icon: Sparkles },
+                  { id: 'support', label: 'Support', sub: 'Helpdesk', icon: Headphones },
+                  { id: 'help', label: 'Help', sub: 'FAQ & Q&A', icon: HelpCircle },
+                  { id: 'zap', label: 'Instant', sub: 'Fast AI', icon: Zap }
                 ].map(item => {
                   const IconComp = item.icon;
                   const isSelected = (localSettings.launcherIcon || 'chat') === item.id;
@@ -389,14 +401,48 @@ export default function App() {
                       key={item.id}
                       type="button"
                       onClick={() => setLocalSettings({ ...localSettings, launcherIcon: item.id as any })}
-                      className={`py-2 px-2 rounded-xl border font-semibold flex flex-col items-center justify-center gap-1.5 transition-all cursor-pointer text-xs ${
+                      className={`group relative p-2.5 rounded-2xl border text-center flex flex-col items-center justify-between gap-2 transition-all duration-150 cursor-pointer ${
                         isSelected
-                          ? 'border-slate-900 bg-slate-900 text-white shadow-xs'
-                          : 'border-slate-200 text-slate-700 hover:bg-slate-50 hover:border-slate-300'
+                          ? 'bg-white ring-2 ring-offset-1 shadow-sm border-transparent'
+                          : 'bg-white hover:bg-slate-50/90 border-slate-200/90 hover:border-slate-300 shadow-2xs'
                       }`}
+                      style={{
+                        borderColor: isSelected ? localSettings.primaryColor : undefined,
+                        boxShadow: isSelected ? `0 0 0 2px ${localSettings.primaryColor}` : undefined
+                      }}
                     >
-                      <IconComp className={`w-4 h-4 ${isSelected ? 'text-white' : 'text-slate-600'}`} />
-                      <span className="text-[11px] leading-tight">{item.label}</span>
+                      {/* Active Check Indicator */}
+                      {isSelected && (
+                        <div 
+                          className="absolute top-1.5 right-1.5 w-3.5 h-3.5 rounded-full flex items-center justify-center text-white"
+                          style={{ backgroundColor: localSettings.primaryColor }}
+                        >
+                          <Check className="w-2.5 h-2.5 stroke-[3]" />
+                        </div>
+                      )}
+
+                      {/* Icon Container */}
+                      <div 
+                        className={`w-9 h-9 rounded-xl flex items-center justify-center transition-all ${
+                          isSelected ? 'shadow-xs scale-105' : 'bg-slate-100 text-slate-600 group-hover:bg-slate-200/70 group-hover:text-slate-900'
+                        }`}
+                        style={{
+                          backgroundColor: isSelected ? localSettings.primaryColor : undefined,
+                          color: isSelected ? '#ffffff' : undefined
+                        }}
+                      >
+                        <IconComp className="w-4.5 h-4.5" />
+                      </div>
+
+                      {/* Text Label & Subtitle */}
+                      <div className="min-w-0 w-full">
+                        <span className={`block text-xs truncate ${isSelected ? 'font-bold text-slate-900' : 'font-semibold text-slate-700'}`}>
+                          {item.label}
+                        </span>
+                        <span className="block text-[10px] text-slate-400 truncate">
+                          {item.sub}
+                        </span>
+                      </div>
                     </button>
                   );
                 })}

@@ -235,7 +235,7 @@ export interface WidgetCustomization {
   showPoweredBy: boolean;
   enableSound: boolean;
   autoExpandSeconds: number; // 0 = disabled
-  launcherIcon?: 'chat' | 'bot' | 'sparkles' | 'support' | 'help';
+  launcherIcon?: 'chat' | 'bot' | 'sparkles' | 'support' | 'help' | 'zap';
   customCss?: string;
 }
 
