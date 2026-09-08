@@ -30,204 +30,138 @@
       z-index: 999999;
       display: flex;
       align-items: center;
-      justify-content: center;
+      gap: 8px;
       background: ${primaryColor};
       color: #ffffff;
-      width: 56px;
-      height: 56px;
-      padding: 0;
-      border-radius: ${isLeft ? '24px 24px 24px 4px' : '24px 24px 4px 24px'};
+      padding: 12px 20px;
+      border-radius: 9999px;
       box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.25), 0 8px 10px -6px rgba(0, 0, 0, 0.2);
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      font-size: 14px;
+      font-weight: 600;
       cursor: pointer;
       border: none;
-      transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1), border-radius 0.25s ease;
+      transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
     }
     .aaas-widget-launcher:hover {
-      transform: scale(1.06);
-    }
-    .aaas-widget-launcher.aaas-launcher-open {
-      border-radius: ${isLeft ? '24px 24px 24px 4px' : '24px 24px 4px 24px'};
+      transform: scale(1.05);
     }
     .aaas-widget-container {
-      display: flex;
+      display: none;
       position: fixed;
-      bottom: ${bottomPaddingNum + 68}px;
+      bottom: ${bottomPaddingNum + 60}px;
       ${isLeft ? `left: ${sidePaddingNum}px;` : `right: ${sidePaddingNum}px;`}
       width: 380px;
       height: 560px;
       max-width: calc(100vw - 32px);
-      max-height: calc(100vh - 120px);
+      max-height: calc(100vh - 110px);
       z-index: 999999;
       background: #ffffff;
-      border-radius: 24px;
+      border-radius: 20px;
       box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.15), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
       overflow: hidden;
       flex-direction: column;
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
       border: 1px solid #e2e8f0;
-      opacity: 0;
-      visibility: hidden;
-      transform: translateY(20px) scale(0.96);
-      pointer-events: none;
-      transition: opacity 0.25s cubic-bezier(0.16, 1, 0.3, 1), transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), visibility 0.25s;
+      animation: aaasFadeIn 0.2s ease-out;
     }
     .aaas-widget-container.aaas-open {
-      opacity: 1;
-      visibility: visible;
-      transform: translateY(0) scale(1);
-      pointer-events: auto;
+      display: flex;
+    }
+    @keyframes aaasFadeIn {
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: translateY(0); }
     }
     .aaas-widget-header {
-      background: #ffffff;
-      color: #0f172a;
-      padding: 14px 16px;
+      background: ${primaryColor};
+      color: #ffffff;
+      padding: 16px;
       display: flex;
       align-items: center;
       justify-content: space-between;
-      border-bottom: 1px solid #f1f5f9;
     }
-    .aaas-widget-header-brand {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-    }
-    .aaas-widget-header-brand h4 {
+    .aaas-widget-header h4 {
       margin: 0;
       font-size: 15px;
       font-weight: 700;
-      color: #0f172a;
+    }
+    .aaas-widget-header p {
+      margin: 2px 0 0;
+      font-size: 11px;
+      opacity: 0.85;
     }
     .aaas-widget-close {
       background: transparent;
       border: none;
-      color: #64748b;
+      color: #ffffff;
       cursor: pointer;
-      font-size: 16px;
-      padding: 4px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      border-radius: 50%;
-    }
-    .aaas-widget-close:hover {
-      color: #0f172a;
-      background: #f1f5f9;
+      font-size: 18px;
+      padding: 4px 8px;
+      border-radius: 8px;
     }
     .aaas-widget-messages {
       flex: 1;
       padding: 16px;
       overflow-y: auto;
-      background: #ffffff;
+      background: #f8fafc;
       display: flex;
       flex-direction: column;
-      gap: 14px;
-    }
-    .aaas-msg-wrapper {
-      display: flex;
-      flex-direction: column;
-      max-width: 85%;
-    }
-    .aaas-msg-wrapper.aaas-msg-bot-wrap {
-      align-self: flex-start;
-    }
-    .aaas-msg-wrapper.aaas-msg-user-wrap {
-      align-self: flex-end;
+      gap: 12px;
     }
     .aaas-msg {
-      padding: 12px 14px;
-      border-radius: 16px;
+      max-width: 82%;
+      padding: 10px 14px;
+      border-radius: 14px;
       font-size: 13px;
-      line-height: 1.5;
+      line-height: 1.45;
     }
     .aaas-msg-bot {
-      background: #f1f5f9;
-      color: #0f172a;
-      border-top-left-radius: 4px;
+      background: #ffffff;
+      color: #1e293b;
+      border: 1px solid #e2e8f0;
+      align-self: flex-start;
+      border-bottom-left-radius: 4px;
     }
     .aaas-msg-user {
       background: ${primaryColor};
       color: #ffffff;
+      align-self: flex-end;
       border-bottom-right-radius: 4px;
     }
-    .aaas-msg-meta {
-      font-size: 10px;
-      color: #94a3b8;
-      margin-top: 4px;
-      font-weight: 500;
-    }
-    .aaas-msg-bot-wrap .aaas-msg-meta {
-      padding-left: 2px;
-    }
-    .aaas-msg-user-wrap .aaas-msg-meta {
-      text-align: right;
-      padding-right: 2px;
-    }
-    .aaas-widget-notice {
-      margin: 0 16px 8px;
-      padding: 10px 12px;
-      background: #f1f5f9;
-      border-radius: 14px;
-      font-size: 11px;
-      line-height: 1.4;
-      color: #64748b;
-      text-align: center;
-    }
     .aaas-widget-input-row {
-      margin: 0 16px 14px;
-      padding: 6px 8px 6px 14px;
+      padding: 12px;
       background: #ffffff;
-      border: 1px solid #cbd5e1;
-      border-radius: 16px;
+      border-top: 1px solid #e2e8f0;
       display: flex;
-      align-items: center;
       gap: 8px;
-      box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-    }
-    .aaas-widget-input-row:focus-within {
-      border-color: #64748b;
     }
     .aaas-widget-input {
       flex: 1;
-      border: none;
+      border: 1px solid #cbd5e1;
+      border-radius: 12px;
+      padding: 10px 14px;
       font-size: 13px;
       outline: none;
-      background: transparent;
-      color: #0f172a;
     }
-    .aaas-widget-paperclip {
-      background: transparent;
-      border: none;
-      color: #94a3b8;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      padding: 4px;
-    }
-    .aaas-widget-paperclip:hover {
-      color: #64748b;
+    .aaas-widget-input:focus {
+      border-color: ${primaryColor};
     }
     .aaas-widget-send {
       background: ${primaryColor};
       color: #ffffff;
       border: none;
-      border-radius: 50%;
-      width: 30px;
-      height: 30px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
+      border-radius: 12px;
+      padding: 0 16px;
+      font-weight: 600;
       cursor: pointer;
-      flex-shrink: 0;
-      transition: transform 0.15s ease;
-    }
-    .aaas-widget-send:active {
-      transform: scale(0.95);
+      font-size: 13px;
     }
     @media (max-width: 480px) {
       .aaas-widget-launcher {
         bottom: 16px;
         right: 16px;
+        padding: 10px 16px;
+        font-size: 13px;
       }
       .aaas-widget-container {
         position: fixed;
@@ -243,6 +177,9 @@
         border: none;
         z-index: 1000000;
       }
+      .aaas-widget-input-row {
+        padding-bottom: max(12px, env(safe-area-inset-bottom));
+      }
     }
   `;
   document.head.appendChild(style);
@@ -252,40 +189,27 @@
   container.className = 'aaas-widget-container';
   container.innerHTML = `
     <div class="aaas-widget-header">
-      <div class="aaas-widget-header-brand">
-        <button class="aaas-widget-close" title="Minimize">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
-        </button>
-        ${launcherLogoUrl ? `<img src="${launcherLogoUrl}" alt="Logo" style="width: 28px; height: 28px; border-radius: 50%; object-fit: cover;" onerror="this.style.display='none'" />` : ''}
-        <h4>${launcherText || 'AI Assistant'}</h4>
+      <div>
+        <h4>AI Assistant</h4>
+        <p>● Ready to answer questions</p>
       </div>
-      <button class="aaas-widget-close" title="Close">✕</button>
+      <button class="aaas-widget-close">✕</button>
     </div>
     <div class="aaas-widget-messages">
-      <div class="aaas-msg-wrapper aaas-msg-bot-wrap">
-        <div class="aaas-msg aaas-msg-bot">
-          Welcome 👋 ,<br>Got any questions ? We are happy to help.
-        </div>
-        <div class="aaas-msg-meta">${launcherText || 'AI'} · Just now</div>
+      <div class="aaas-msg aaas-msg-bot">
+        Hi there! 👋 How can I help you with our products, pricing, or policies today?
       </div>
     </div>
-    <div class="aaas-widget-notice">
-      Our agents are not available right now, but you can still send messages, we'll reach out once we are back.
-    </div>
     <form class="aaas-widget-input-row">
-      <input type="text" class="aaas-widget-input" placeholder="Enter your message" />
-      <button type="button" class="aaas-widget-paperclip" title="Attach file">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l8.57-8.57A4 4 0 1 1 18 8.84l-8.59 8.57a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
-      </button>
-      <button type="submit" class="aaas-widget-send" title="Send message">
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 7-7 7 7"/><path d="M12 19V5"/></svg>
-      </button>
+      <input type="text" class="aaas-widget-input" placeholder="Ask a question..." />
+      <button type="submit" class="aaas-widget-send">Send</button>
     </form>
   `;
   document.body.appendChild(container);
 
   // Icon SVG Definitions
   const iconSvgs = {
+    swirl: '<svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M6.5 9.8C6.5 7 9.2 5.5 12.5 5.5c4.6 0 8 3.2 8 7.5 0 4.4-3.6 7.8-8.2 7.8-4.3 0-7.2-3-7.2-6.6 0-3 2.3-5.2 5.2-5.2 2.3 0 4 1.4 4 3.2 0 1.4-1.1 2.4-2.4 2.4-1 0-1.7-.7-1.7-1.5 0-.5.4-.9.9-.9.3 0 .5.2.5.4 0 .3.2.4.5.4.4 0 .8-.5.8-1 0-1-.9-1.8-2.2-1.8-1.7 0-3 1.3-3 3 0 2.2 1.9 4 4.5 4 3.2 0 5.8-2.4 5.8-5.7 0-3.3-2.6-5.6-5.8-5.6-2.3 0-4.2 1.2-4.2 2.8 0 .4-.3.7-.7.7s-.7-.3-.7-.7z" /></svg>',
     chat_dots: '<svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.477 2 2 6.03 2 11c0 2.68 1.31 5.09 3.4 6.69-.17 1.25-.8 2.82-1.92 3.86-.23.21-.11.6.2.62 2.37.13 4.67-.93 6.07-1.92.73.16 1.48.25 2.25.25 5.523 0 10-4.03 10-9s-4.477-9-10-9zm-4.5 10a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3zm4.5 0a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3zm4.5 0a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3z" /></svg>',
     chat_lines: '<svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M4 3h16a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H8.414l-4.707 4.707A1 1 0 0 1 2 22V5a2 2 0 0 1 2-2zm3 5a1 1 0 0 0 0 2h10a1 1 0 1 0 0-2H7zm0 4a1 1 0 1 0 0 2h6a1 1 0 1 0 0-2H7z" /></svg>',
     help_filled: '<svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm.88 15.75h-1.75v-1.75h1.75v1.75zm1.5-6.22l-.79.81c-.63.64-1.02 1.16-1.02 2.41h-1.5v-.5c0-.83.34-1.58.88-2.12l.93-.94c.28-.28.45-.66.45-1.09 0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5H8.38c0-1.99 1.62-3.62 3.62-3.62s3.62 1.62 3.62 3.62c0 .78-.31 1.49-.84 1.98z" /></svg>',
@@ -313,36 +237,16 @@
   `;
   document.body.appendChild(launcher);
 
-  const chevronDownSvg = '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>';
-
-  function setLauncherState(isOpen) {
-    if (isOpen) {
-      launcher.classList.add('aaas-launcher-open');
-      launcher.innerHTML = chevronDownSvg;
-      launcher.setAttribute('aria-label', 'Close chat');
-    } else {
-      launcher.classList.remove('aaas-launcher-open');
-      launcher.innerHTML = `${iconHtml}<span>${launcherText}</span>`;
-      launcher.setAttribute('aria-label', 'Open chat');
-    }
-  }
-
   // Event Listeners
   launcher.addEventListener('click', () => {
-    const willOpen = !container.classList.contains('aaas-open');
-    if (willOpen) {
-      container.classList.add('aaas-open');
-      setLauncherState(true);
+    container.classList.toggle('aaas-open');
+    if (container.classList.contains('aaas-open')) {
       container.querySelector('.aaas-widget-input')?.focus();
-    } else {
-      container.classList.remove('aaas-open');
-      setLauncherState(false);
     }
   });
 
   container.querySelector('.aaas-widget-close').addEventListener('click', () => {
     container.classList.remove('aaas-open');
-    setLauncherState(false);
   });
 
   const form = container.querySelector('.aaas-widget-input-row');
