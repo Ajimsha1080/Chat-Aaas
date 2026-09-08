@@ -16,6 +16,8 @@
   const launcherIcon = currentScript?.getAttribute('data-launcher-icon') || 'chat';
   const launcherLogoUrl = currentScript?.getAttribute('data-launcher-logo-url') || '';
   const launcherText = currentScript?.getAttribute('data-launcher-text') || 'Chat with Us';
+  const bottomPaddingNum = parseInt(currentScript?.getAttribute('data-bottom-padding') || '20', 10) || 20;
+  const sidePaddingNum = parseInt(currentScript?.getAttribute('data-side-padding') || '20', 10) || 20;
   const isLeft = position === 'bottom_left';
 
   // Inject Styles
@@ -23,8 +25,8 @@
   style.innerHTML = `
     .aaas-widget-launcher {
       position: fixed;
-      bottom: 24px;
-      ${isLeft ? 'left: 24px;' : 'right: 24px;'}
+      bottom: ${bottomPaddingNum}px;
+      ${isLeft ? `left: ${sidePaddingNum}px;` : `right: ${sidePaddingNum}px;`}
       z-index: 999999;
       display: flex;
       align-items: center;
@@ -47,8 +49,8 @@
     .aaas-widget-container {
       display: none;
       position: fixed;
-      bottom: 84px;
-      ${isLeft ? 'left: 24px;' : 'right: 24px;'}
+      bottom: ${bottomPaddingNum + 60}px;
+      ${isLeft ? `left: ${sidePaddingNum}px;` : `right: ${sidePaddingNum}px;`}
       width: 380px;
       height: 560px;
       max-width: calc(100vw - 32px);

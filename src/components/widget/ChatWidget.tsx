@@ -133,9 +133,17 @@ export const ChatWidget: React.FC<ChatWidgetProps> = ({ isInlinePreview = false 
   };
 
   const isBottomLeft = settings.position === 'bottom_left';
+  const bottomPad = settings.bottomPadding !== undefined ? `${settings.bottomPadding}px` : undefined;
+  const sidePad = settings.sidePadding !== undefined ? `${settings.sidePadding}px` : undefined;
 
   return (
-    <div className={isInlinePreview ? 'w-full h-full' : `fixed ${isBottomLeft ? 'left-3 sm:left-6' : 'right-3 sm:right-6'} bottom-3 sm:bottom-6 z-50 flex flex-col ${isBottomLeft ? 'items-start' : 'items-end'}`}>
+    <div 
+      style={!isInlinePreview ? {
+        bottom: bottomPad,
+        [isBottomLeft ? 'left' : 'right']: sidePad
+      } : undefined}
+      className={isInlinePreview ? 'w-full h-full' : `fixed ${!sidePad ? (isBottomLeft ? 'left-3 sm:left-6' : 'right-3 sm:right-6') : ''} ${!bottomPad ? 'bottom-3 sm:bottom-6' : ''} z-50 flex flex-col ${isBottomLeft ? 'items-start' : 'items-end'}`}
+    >
       {/* Floating Chat Container */}
       {(isOpen || isInlinePreview) && (
         <div 

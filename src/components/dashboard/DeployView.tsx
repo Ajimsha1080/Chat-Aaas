@@ -244,6 +244,8 @@ const ChatDoubleIcon: React.FC<{ className?: string }> = ({ className = "w-4.5 h
   data-agent-key="${currentCompany.apiKey}"
   data-position="${localSettings.position}"
   data-primary-color="${localSettings.primaryColor}"
+  data-bottom-padding="${localSettings.bottomPadding ?? 20}"
+  data-side-padding="${localSettings.sidePadding ?? 20}"
   data-launcher-icon="${localSettings.launcherIcon || 'chat'}"${isLogoSelected ? `\n  data-launcher-logo-url="${companyLogoUrl}"` : ''}
   defer>
 </script>`;
@@ -258,6 +260,8 @@ export default function App() {
         apiKey="${currentCompany.apiKey}"
         primaryColor="${localSettings.primaryColor}"
         position="${localSettings.position}"
+        bottomPadding={${localSettings.bottomPadding ?? 20}}
+        sidePadding={${localSettings.sidePadding ?? 20}}
         launcherIcon="${localSettings.launcherIcon || 'chat'}"${isLogoSelected ? `\n        launcherLogoUrl="${companyLogoUrl}"` : ''}
         welcomeMessage="${currentCompany.agent.greetingMessage}"
       />
