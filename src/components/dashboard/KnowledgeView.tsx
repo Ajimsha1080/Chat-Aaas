@@ -25,10 +25,14 @@ import {
   ThumbsDown,
   ArrowRight,
   ChevronRight,
-  Bot
+  Bot,
+  Info,
+  BookOpen
 } from 'lucide-react';
 import { useApp } from '../../context';
 import { KnowledgeItem, KnowledgeType, KnowledgeCollection, KnowledgeGap, RagTestResponse } from '../../types';
+
+type SidebarTab = 'all' | 'published' | 'draft' | 'archived' | 'document' | 'faq' | 'url' | 'gaps';
 
 export const KnowledgeView: React.FC = () => {
   const { 
@@ -36,13 +40,15 @@ export const KnowledgeView: React.FC = () => {
     addKnowledgeItem, 
     deleteKnowledgeItem, 
     currentCompany,
-    showToast
+    showToast,
+    setIsQuickTestOpen
   } = useApp();
 
   // Navigation & Filtering
-  const [activeTab, setActiveTab] = useState<KnowledgeType | 'all' | 'gaps'>('all');
+  const [sidebarTab, setSidebarTab] = useState<SidebarTab>('all');
   const [selectedCollection, setSelectedCollection] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
+  const [articleStatuses, setArticleStatuses] = useState<Record<string, 'published' | 'draft' | 'archived'>>({});
   
   // Modals & Panels
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -52,6 +58,7 @@ export const KnowledgeView: React.FC = () => {
   const [isNewCollectionModalOpen, setIsNewCollectionModalOpen] = useState(false);
   const [convertingGap, setConvertingGap] = useState<KnowledgeGap | null>(null);
   const [gapFaqAnswer, setGapFaqAnswer] = useState('');
+  const [showInfoTooltip, setShowInfoTooltip] = useState(false);
 
   // Collections & Gaps State
   const [collections, setCollections] = useState<KnowledgeCollection[]>([
@@ -104,17 +111,46 @@ export const KnowledgeView: React.FC = () => {
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // Helper to determine item status
+  const getItemStatus = (item: KnowledgeItem): 'published' | 'draft' | 'archived' => {
+    if (articleStatuses[item.id]) return articleStatuses[item.id];
+    if (item.articleStatus) return item.articleStatus;
+    return 'published';
+  };
+
+  const handleToggleStatus = (itemId: string, newStatus: 'published' | 'draft' | 'archived') => {
+    setArticleStatuses(prev => ({ ...prev, [itemId]: newStatus }));
+    showToast('Status Updated', `Knowledge source marked as ${newStatus}.`, 'success');
+  };
+
   // Sync health metrics
-  const websiteCount = knowledgeItems.filter(i => i.type === 'url').length;
+  const totalCount = knowledgeItems.length;
+  const publishedCount = knowledgeItems.filter(i => getItemStatus(i) === 'published').length;
+  const draftCount = knowledgeItems.filter(i => getItemStatus(i) === 'draft').length;
+  const archivedCount = knowledgeItems.filter(i => getItemStatus(i) === 'archived').length;
   const docCount = knowledgeItems.filter(i => i.type === 'document').length;
   const faqCount = knowledgeItems.filter(i => i.type === 'faq').length;
+  const websiteCount = knowledgeItems.filter(i => i.type === 'url').length;
   const totalChunks = knowledgeItems.reduce((acc, curr) => acc + (curr.chunksCount || 1), 0);
 
   const filteredItems = knowledgeItems.filter(item => {
-    const matchesTab = activeTab === 'all' || item.type === activeTab;
+    const itemStatus = getItemStatus(item);
+
+    let matchesTab = true;
+    if (sidebarTab === 'all') matchesTab = true;
+    else if (sidebarTab === 'published') matchesTab = itemStatus === 'published';
+    else if (sidebarTab === 'draft') matchesTab = itemStatus === 'draft';
+    else if (sidebarTab === 'archived') matchesTab = itemStatus === 'archived';
+    else if (sidebarTab === 'document') matchesTab = item.type === 'document';
+    else if (sidebarTab === 'faq') matchesTab = item.type === 'faq';
+    else if (sidebarTab === 'url') matchesTab = item.type === 'url';
+
     const matchesSearch = item.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                          item.content.toLowerCase().includes(searchQuery.toLowerCase());
+                          item.content.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                          (item.faqAnswer && item.faqAnswer.toLowerCase().includes(searchQuery.toLowerCase()));
+
     const matchesCollection = selectedCollection === 'all' || item.collectionId === selectedCollection || item.category === selectedCollection;
+
     return matchesTab && matchesSearch && matchesCollection;
   });
 
@@ -324,335 +360,461 @@ export const KnowledgeView: React.FC = () => {
     }, 700);
   };
 
+  const getTabTitle = () => {
+    switch (sidebarTab) {
+      case 'all': return 'All Knowledge Articles';
+      case 'published': return 'Published Knowledge';
+      case 'draft': return 'Draft Articles';
+      case 'archived': return 'Archived Knowledge';
+      case 'document': return 'Verified Documents';
+      case 'faq': return 'Q&A Pairs & FAQs';
+      case 'url': return 'Website Sources';
+      case 'gaps': return 'Unresolved Customer Questions';
+      default: return 'Knowledge Base';
+    }
+  };
+
   return (
-    <div className="space-y-6 animate-in fade-in duration-200 pb-12">
-      {/* Header & Quick Action Buttons */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-3">
-            <h1 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">Knowledge Base</h1>
-            <span className="inline-flex items-center gap-1.5 text-xs sm:text-sm font-semibold text-slate-700 bg-slate-100 border border-slate-200 px-3 py-1 rounded-lg">
-              <Sparkles className="w-3.5 h-3.5 text-slate-700" /> Vector RAG Active
-            </span>
-          </div>
-          <p className="text-sm sm:text-base text-slate-600 mt-1">
-            Ingest and ground <strong>{currentCompany.agent.name}</strong> on your verified company policies, documentation, URLs, and FAQs.
-          </p>
-        </div>
-
-        <div className="flex items-center gap-2.5 flex-wrap">
-          <button
-            onClick={() => setIsTestSandboxOpen(true)}
-            className="px-4 py-2.5 bg-white hover:bg-slate-50 border border-slate-200 text-slate-800 rounded-xl text-sm font-semibold flex items-center gap-2 transition-colors shadow-xs cursor-pointer"
-          >
-            <Play className="w-4 h-4 text-emerald-600" />
-            <span>Test Knowledge RAG</span>
-          </button>
-
-          <button
-            onClick={() => handleOpenAddModal('document')}
-            className="px-4 py-2.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-sm font-semibold flex items-center gap-2 transition-colors shadow-sm cursor-pointer"
-          >
-            <Plus className="w-4 h-4" />
-            <span>Add Knowledge</span>
-          </button>
-        </div>
-      </div>
-
-      {/* 4 Health & Status Radar Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        {/* Knowledge Health Radar */}
-        <div className="bg-white p-5 rounded-2xl border border-slate-200/90 shadow-sm flex flex-col justify-between">
+    <div className="flex flex-col lg:flex-row gap-6 animate-in fade-in duration-200 pb-12 items-start">
+      
+      {/* LEFT SIDEBAR NAVIGATION PANE (MATCHES UPLOADED REFERENCE DESIGN) */}
+      <aside className="w-full lg:w-64 shrink-0 bg-gradient-to-b from-indigo-50/50 via-purple-50/20 to-slate-50/40 rounded-3xl p-5 border border-slate-200/80 shadow-xs flex flex-col justify-between">
+        <div className="space-y-6">
+          
+          {/* Top Header: Knowledge + Quick Search/Sync Action Button */}
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Health Status</span>
-            <ShieldCheck className="w-4 h-4 text-emerald-600" />
+            <h2 className="text-2xl sm:text-[26px] font-extrabold text-slate-900 tracking-tight">
+              Knowledge
+            </h2>
+            <button
+              onClick={() => setIsTestSandboxOpen(true)}
+              title="Quick Search & RAG Test"
+              className="w-9 h-9 bg-white hover:bg-slate-100 border border-slate-200/90 rounded-xl shadow-xs flex items-center justify-center text-slate-700 hover:text-indigo-600 transition-colors cursor-pointer"
+            >
+              <Search className="w-4 h-4" />
+            </button>
           </div>
-          <div className="mt-3">
-            <div className="flex items-center gap-2.5">
-              <span className="text-3xl font-bold text-emerald-600 tracking-tight">98%</span>
-              <span className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-md border border-emerald-200">
-                <Check className="w-3.5 h-3.5 text-emerald-600" /> Grounded
+
+          {/* Top Category List: All Articles, Published, Draft, Archived */}
+          <div className="space-y-1">
+            <button
+              onClick={() => setSidebarTab('all')}
+              className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-sm font-semibold transition-all cursor-pointer ${
+                sidebarTab === 'all'
+                  ? 'bg-sky-100/70 text-slate-900 border border-sky-200/80 shadow-2xs font-bold'
+                  : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'
+              }`}
+            >
+              <span>All Articles</span>
+              <span className={`text-xs px-2 py-0.5 rounded-full font-mono ${sidebarTab === 'all' ? 'bg-sky-200/80 text-slate-900 font-bold' : 'text-slate-400'}`}>
+                {totalCount}
               </span>
-            </div>
-            <p className="text-xs text-slate-500 mt-1">{totalChunks} semantic vector chunks indexed</p>
-            {knowledgeGaps.length > 0 && (
+            </button>
+
+            <button
+              onClick={() => setSidebarTab('published')}
+              className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-sm font-semibold transition-all cursor-pointer ${
+                sidebarTab === 'published'
+                  ? 'bg-sky-100/70 text-slate-900 border border-sky-200/80 shadow-2xs font-bold'
+                  : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'
+              }`}
+            >
+              <span>Published</span>
+              <span className={`text-xs px-2 py-0.5 rounded-full font-mono ${sidebarTab === 'published' ? 'bg-sky-200/80 text-slate-900 font-bold' : 'text-slate-400'}`}>
+                {publishedCount}
+              </span>
+            </button>
+
+            <button
+              onClick={() => setSidebarTab('draft')}
+              className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-sm font-semibold transition-all cursor-pointer ${
+                sidebarTab === 'draft'
+                  ? 'bg-sky-100/70 text-slate-900 border border-sky-200/80 shadow-2xs font-bold'
+                  : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'
+              }`}
+            >
+              <span>Draft</span>
+              <span className={`text-xs px-2 py-0.5 rounded-full font-mono ${sidebarTab === 'draft' ? 'bg-sky-200/80 text-slate-900 font-bold' : 'text-slate-400'}`}>
+                {draftCount}
+              </span>
+            </button>
+
+            <button
+              onClick={() => setSidebarTab('archived')}
+              className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-sm font-semibold transition-all cursor-pointer ${
+                sidebarTab === 'archived'
+                  ? 'bg-sky-100/70 text-slate-900 border border-sky-200/80 shadow-2xs font-bold'
+                  : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'
+              }`}
+            >
+              <span>Archived</span>
+              <span className={`text-xs px-2 py-0.5 rounded-full font-mono ${sidebarTab === 'archived' ? 'bg-sky-200/80 text-slate-900 font-bold' : 'text-slate-400'}`}>
+                {archivedCount}
+              </span>
+            </button>
+          </div>
+
+          {/* Section: AGENT AI Knowledge with Info Icon */}
+          <div className="pt-2 border-t border-slate-200/60">
+            <div className="relative flex items-center justify-between px-2 mb-2">
+              <span className="text-xs font-black tracking-wider text-slate-900 uppercase font-mono">
+                {currentCompany.agent.name.toUpperCase()} AI
+              </span>
               <button 
-                onClick={() => setActiveTab('gaps')}
-                className="mt-2.5 text-xs text-amber-800 bg-amber-50 hover:bg-amber-100 border border-amber-200 px-2.5 py-1 rounded-md font-semibold flex items-center gap-1.5 cursor-pointer transition-colors"
+                onClick={() => setShowInfoTooltip(!showInfoTooltip)}
+                className="text-slate-400 hover:text-slate-700 cursor-pointer p-0.5 rounded-full hover:bg-slate-200/60 transition-colors"
               >
-                <AlertTriangle className="w-3 h-3 text-amber-600" />
-                <span>{knowledgeGaps.length} gaps need answers</span>
+                <Info className="w-3.5 h-3.5" />
               </button>
-            )}
-          </div>
-        </div>
 
-        {/* Website Sync */}
-        <div className="bg-white p-5 rounded-2xl border border-slate-200/90 shadow-sm flex flex-col justify-between">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Website Sources</span>
-            <Globe className="w-4 h-4 text-slate-700" />
-          </div>
-          <div className="mt-3">
-            <div className="flex items-center gap-2.5">
-              <span className="text-3xl font-bold text-slate-900 tracking-tight">{websiteCount}</span>
-              <span className="inline-flex items-center gap-1 text-xs font-semibold text-slate-700 bg-slate-100 px-2.5 py-0.5 rounded-md border border-slate-200">
-                <Check className="w-3.5 h-3.5 text-slate-600" /> Synced
-              </span>
-            </div>
-            <p className="text-xs text-slate-500 mt-1 truncate">{currentCompany.domain}</p>
-          </div>
-        </div>
-
-        {/* Documents */}
-        <div className="bg-white p-5 rounded-2xl border border-slate-200/90 shadow-sm flex flex-col justify-between">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Documents</span>
-            <FileText className="w-4 h-4 text-slate-700" />
-          </div>
-          <div className="mt-3">
-            <div className="flex items-center gap-2.5">
-              <span className="text-3xl font-bold text-slate-900 tracking-tight">{docCount}</span>
-              <span className="inline-flex items-center gap-1 text-xs font-semibold text-slate-700 bg-slate-100 px-2.5 py-0.5 rounded-md border border-slate-200">
-                <Check className="w-3.5 h-3.5 text-slate-600" /> Ready
-              </span>
-            </div>
-            <p className="text-xs text-slate-500 mt-1">PDF, DOCX, TXT, MD & CSV</p>
-          </div>
-        </div>
-
-        {/* FAQs & Answers */}
-        <div className="bg-white p-5 rounded-2xl border border-slate-200/90 shadow-sm flex flex-col justify-between">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">FAQs & Q&A</span>
-            <HelpCircle className="w-4 h-4 text-slate-700" />
-          </div>
-          <div className="mt-3">
-            <div className="flex items-center gap-2.5">
-              <span className="text-3xl font-bold text-slate-900 tracking-tight">{faqCount}</span>
-              <span className="inline-flex items-center gap-1 text-xs font-semibold text-slate-700 bg-slate-100 px-2.5 py-0.5 rounded-md border border-slate-200">
-                <Check className="w-3.5 h-3.5 text-slate-600" /> Active
-              </span>
-            </div>
-            <p className="text-xs text-slate-500 mt-1">Direct verified Q&A pairs</p>
-          </div>
-        </div>
-      </div>
-
-      {/* Collections Row */}
-      <div className="bg-white p-3.5 rounded-xl border border-slate-200/90 shadow-xs flex items-center justify-between gap-3 overflow-x-auto">
-        <div className="flex items-center gap-2">
-          <span className="text-sm font-semibold text-slate-700 flex items-center gap-1.5 shrink-0 pl-1">
-            <Layers className="w-4 h-4 text-slate-600" />
-            <span>Collections:</span>
-          </span>
-
-          <button
-            onClick={() => setSelectedCollection('all')}
-            className={`px-3 py-1.5 rounded-lg text-sm font-semibold transition-colors cursor-pointer whitespace-nowrap ${
-              selectedCollection === 'all'
-                ? 'bg-slate-900 text-white'
-                : 'bg-slate-100 text-slate-700 hover:bg-slate-200/80'
-            }`}
-          >
-            All Collections
-          </button>
-
-          {collections.map(col => (
-            <button
-              key={col.id}
-              onClick={() => setSelectedCollection(col.id)}
-              className={`px-3 py-1.5 rounded-lg text-sm font-semibold transition-colors cursor-pointer whitespace-nowrap ${
-                selectedCollection === col.id
-                  ? 'bg-slate-900 text-white'
-                  : 'bg-slate-100 text-slate-700 hover:bg-slate-200/80'
-              }`}
-            >
-              {col.name}
-            </button>
-          ))}
-        </div>
-
-        <button
-          onClick={() => setIsNewCollectionModalOpen(true)}
-          className="px-3 py-1.5 text-slate-800 hover:bg-slate-100 border border-slate-200 rounded-lg text-sm font-semibold flex items-center gap-1.5 transition-colors cursor-pointer shrink-0"
-        >
-          <FolderPlus className="w-4 h-4 text-slate-600" />
-          <span>New Collection</span>
-        </button>
-      </div>
-
-      {/* Filter Tabs & Search Bar */}
-      <div className="bg-white p-3.5 rounded-xl border border-slate-200/90 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <div className="flex items-center gap-1.5 overflow-x-auto">
-          {[
-            { id: 'all', label: 'All Knowledge' },
-            { id: 'url', label: 'Websites' },
-            { id: 'document', label: 'Documents' },
-            { id: 'faq', label: 'FAQs' },
-            { id: 'text', label: 'Custom Text' },
-            ...(knowledgeGaps.length > 0 ? [{ id: 'gaps', label: `Needs Answers (${knowledgeGaps.length})` }] : [])
-          ].map(tab => (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id as any)}
-              className={`px-3.5 py-2 rounded-lg text-sm font-semibold whitespace-nowrap transition-colors cursor-pointer ${
-                activeTab === tab.id
-                  ? tab.id === 'gaps' 
-                    ? 'bg-amber-600 text-white' 
-                    : 'bg-slate-900 text-white'
-                  : tab.id === 'gaps' 
-                    ? 'bg-amber-50 text-amber-900 border border-amber-200 hover:bg-amber-100' 
-                    : 'text-slate-700 hover:bg-slate-100'
-              }`}
-            >
-              {tab.label}
-            </button>
-          ))}
-        </div>
-
-        <div className="relative w-full sm:w-72">
-          <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search knowledge sources..."
-            className="w-full pl-9 pr-3.5 py-2 text-sm bg-slate-50 border border-slate-200 rounded-lg focus:ring-1 focus:ring-slate-900 focus:border-slate-900 focus:outline-hidden"
-          />
-        </div>
-      </div>
-
-      {/* Gaps Tab Active View */}
-      {activeTab === 'gaps' ? (
-        <div className="space-y-4">
-          <div className="bg-amber-50/70 border border-amber-200 rounded-2xl p-5 flex items-center justify-between gap-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2.5 bg-amber-500/10 rounded-xl text-amber-700">
-                <AlertTriangle className="w-5 h-5" />
-              </div>
-              <div>
-                <h3 className="text-base font-bold text-amber-950">Unresolved Customer Questions ({knowledgeGaps.length})</h3>
-                <p className="text-sm text-amber-800 mt-0.5">Questions real customers asked where the assistant lacked verified answers. Convert them into FAQs in 1 click.</p>
-              </div>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {knowledgeGaps.map(gap => (
-              <div key={gap.id} className="bg-white rounded-2xl p-5 border border-amber-200 shadow-sm flex flex-col justify-between">
-                <div>
-                  <div className="flex items-center justify-between mb-2.5">
-                    <span className="text-xs font-semibold uppercase font-mono text-amber-800 bg-amber-50 px-2.5 py-0.5 rounded-md border border-amber-200">
-                      {gap.suggestedCategory}
-                    </span>
-                    <span className="text-xs font-bold text-amber-900">{gap.occurrences} customer asks</span>
-                  </div>
-                  <h4 className="text-base font-bold text-slate-900 mt-2 leading-snug">"{gap.query}"</h4>
-                  <p className="text-xs text-slate-500 mt-1.5">Last asked {gap.lastAskedAt}</p>
+              {showInfoTooltip && (
+                <div className="absolute left-0 top-7 z-30 w-52 bg-slate-900 text-white text-xs p-2.5 rounded-xl shadow-lg border border-slate-800 animate-in fade-in">
+                  Knowledge items ingested here ground {currentCompany.agent.name}'s multi-tenant vector RAG pipeline.
                 </div>
+              )}
+            </div>
 
-                <div className="mt-5 pt-3.5 border-t border-slate-100 flex items-center justify-between">
-                  <span className="text-xs text-slate-500">Add verified answer</span>
-                  <button
-                    onClick={() => {
-                      setConvertingGap(gap);
-                      setGapFaqAnswer('');
-                    }}
-                    className="px-3.5 py-2 bg-amber-600 hover:bg-amber-500 text-white rounded-xl text-sm font-semibold flex items-center gap-2 transition-colors cursor-pointer"
-                  >
-                    <Plus className="w-4 h-4" />
-                    <span>Convert to FAQ</span>
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      ) : (
-        /* Standard Knowledge Item Cards Grid */
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {filteredItems.map(item => {
-            const isUrl = item.type === 'url';
-            const isDoc = item.type === 'document';
-            const isFaq = item.type === 'faq';
-
-            return (
-              <div 
-                key={item.id}
-                className="bg-white rounded-2xl p-5 border border-slate-200/90 shadow-sm hover:border-slate-300 transition-all flex flex-col justify-between"
+            <div className="space-y-1">
+              <button
+                onClick={() => setSidebarTab('document')}
+                className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-sm font-semibold transition-all cursor-pointer ${
+                  sidebarTab === 'document'
+                    ? 'bg-sky-100/70 text-slate-900 border border-sky-200/80 shadow-2xs font-bold'
+                    : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'
+                }`}
               >
-                <div>
-                  <div className="flex items-center justify-between mb-3">
-                    <div className="flex items-center gap-2.5">
-                      <div className="p-2 rounded-lg bg-slate-100 text-slate-700 border border-slate-200">
-                        {isUrl ? <Globe className="w-4 h-4" /> : isDoc ? <FileText className="w-4 h-4" /> : isFaq ? <HelpCircle className="w-4 h-4" /> : <AlignLeft className="w-4 h-4" />}
-                      </div>
-                      <span className="text-xs font-bold font-mono uppercase tracking-wider text-slate-500">{item.type}</span>
-                    </div>
-                    <span className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-md border border-emerald-200">
-                      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
-                      <span>Ready</span>
-                    </span>
-                  </div>
+                <span className="flex items-center gap-2.5">
+                  <FileText className="w-4 h-4 text-slate-600" />
+                  <span>Documents</span>
+                </span>
+                <span className={`text-xs px-2 py-0.5 rounded-full font-mono ${sidebarTab === 'document' ? 'bg-sky-200/80 text-slate-900 font-bold' : 'text-slate-400'}`}>
+                  {docCount}
+                </span>
+              </button>
 
-                  <h3 className="text-base font-bold text-slate-900 line-clamp-1">{item.title}</h3>
-                  <p className="text-sm text-slate-600 mt-1.5 line-clamp-2 leading-relaxed">
-                    {item.faqAnswer || item.content}
+              <button
+                onClick={() => setSidebarTab('faq')}
+                className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-sm font-semibold transition-all cursor-pointer ${
+                  sidebarTab === 'faq'
+                    ? 'bg-sky-100/70 text-slate-900 border border-sky-200/80 shadow-2xs font-bold'
+                    : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'
+                }`}
+              >
+                <span className="flex items-center gap-2.5">
+                  <HelpCircle className="w-4 h-4 text-slate-600" />
+                  <span>Q&A</span>
+                </span>
+                <span className={`text-xs px-2 py-0.5 rounded-full font-mono ${sidebarTab === 'faq' ? 'bg-sky-200/80 text-slate-900 font-bold' : 'text-slate-400'}`}>
+                  {faqCount}
+                </span>
+              </button>
+
+              <button
+                onClick={() => setSidebarTab('url')}
+                className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-sm font-semibold transition-all cursor-pointer ${
+                  sidebarTab === 'url'
+                    ? 'bg-sky-100/70 text-slate-900 border border-sky-200/80 shadow-2xs font-bold'
+                    : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'
+                }`}
+              >
+                <span className="flex items-center gap-2.5">
+                  <Globe className="w-4 h-4 text-slate-600" />
+                  <span>Websites</span>
+                </span>
+                <span className={`text-xs px-2 py-0.5 rounded-full font-mono ${sidebarTab === 'url' ? 'bg-sky-200/80 text-slate-900 font-bold' : 'text-slate-400'}`}>
+                  {websiteCount}
+                </span>
+              </button>
+
+              {knowledgeGaps.length > 0 && (
+                <button
+                  onClick={() => setSidebarTab('gaps')}
+                  className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-sm font-semibold transition-all cursor-pointer ${
+                    sidebarTab === 'gaps'
+                      ? 'bg-amber-100/80 text-amber-950 border border-amber-300 shadow-2xs font-bold'
+                      : 'text-amber-800 hover:text-amber-950 hover:bg-amber-50'
+                  }`}
+                >
+                  <span className="flex items-center gap-2.5">
+                    <AlertTriangle className="w-4 h-4 text-amber-600" />
+                    <span>Needs Answers</span>
+                  </span>
+                  <span className="text-xs px-2 py-0.5 rounded-full font-mono font-bold bg-amber-200/80 text-amber-950">
+                    {knowledgeGaps.length}
+                  </span>
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Bottom Preview Widget Card */}
+        <div className="mt-8 pt-4 border-t border-slate-200/60">
+          <div className="bg-white/90 backdrop-blur-xs p-3.5 rounded-2xl border border-slate-200/90 shadow-xs flex items-center gap-3">
+            <img 
+              src={currentCompany.agent.avatarUrl} 
+              alt="" 
+              className="w-9 h-9 rounded-full object-cover ring-2 ring-indigo-500/20"
+            />
+            <div className="flex-1 overflow-hidden">
+              <p className="text-xs font-bold text-slate-900 truncate">{currentCompany.agent.name}</p>
+              <div className="flex items-center gap-1.5 mt-0.5">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                <span className="text-[11px] text-slate-500 font-medium">98% Grounded</span>
+              </div>
+            </div>
+            <button
+              onClick={() => setIsQuickTestOpen(true)}
+              className="p-1.5 bg-slate-100 hover:bg-indigo-50 text-slate-700 hover:text-indigo-600 rounded-lg transition-colors cursor-pointer"
+              title="Test in Chat Drawer"
+            >
+              <Play className="w-3.5 h-3.5 fill-current" />
+            </button>
+          </div>
+        </div>
+      </aside>
+
+      {/* RIGHT MAIN CONTENT PANEL */}
+      <main className="flex-1 w-full bg-white rounded-3xl border border-slate-200/80 shadow-xs p-5 sm:p-7 min-h-[640px] space-y-6">
+        
+        {/* Top Header & Action Row */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <div className="flex items-center gap-3">
+              <h1 className="text-xl sm:text-2xl font-extrabold text-slate-900 tracking-tight">
+                {getTabTitle()}
+              </h1>
+              <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-indigo-700 bg-indigo-50 border border-indigo-200 px-3 py-1 rounded-full">
+                <Sparkles className="w-3.5 h-3.5 text-indigo-600" /> {totalChunks} Chunks Vectorized
+              </span>
+            </div>
+            <p className="text-xs sm:text-sm text-slate-500 mt-1">
+              Showing verified company knowledge grounding <strong>{currentCompany.agent.name}</strong>.
+            </p>
+          </div>
+
+          <div className="flex items-center gap-2.5 flex-wrap">
+            <button
+              onClick={() => setIsTestSandboxOpen(true)}
+              className="px-4 py-2.5 bg-white hover:bg-slate-50 border border-slate-200 text-slate-800 rounded-xl text-sm font-semibold flex items-center gap-2 transition-colors shadow-2xs cursor-pointer"
+            >
+              <Play className="w-4 h-4 text-emerald-600" />
+              <span>Test Knowledge RAG</span>
+            </button>
+
+            <button
+              onClick={() => handleOpenAddModal('document')}
+              className="px-4 py-2.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-sm font-semibold flex items-center gap-2 transition-colors shadow-sm cursor-pointer"
+            >
+              <Plus className="w-4 h-4" />
+              <span>Add Knowledge</span>
+            </button>
+          </div>
+        </div>
+
+        {/* Collections Filter Bar & Search Input */}
+        <div className="bg-slate-50/80 p-3 rounded-2xl border border-slate-200/70 flex flex-col md:flex-row md:items-center justify-between gap-3">
+          
+          {/* Collection Filter Buttons */}
+          <div className="flex items-center gap-1.5 overflow-x-auto text-xs py-0.5">
+            <span className="font-bold text-slate-500 uppercase tracking-wider pl-1 shrink-0">Collections:</span>
+            <button
+              onClick={() => setSelectedCollection('all')}
+              className={`px-3 py-1.5 rounded-lg font-semibold transition-colors cursor-pointer whitespace-nowrap ${
+                selectedCollection === 'all'
+                  ? 'bg-slate-900 text-white shadow-2xs'
+                  : 'bg-white text-slate-700 border border-slate-200 hover:bg-slate-100'
+              }`}
+            >
+              All
+            </button>
+
+            {collections.map(col => (
+              <button
+                key={col.id}
+                onClick={() => setSelectedCollection(col.id)}
+                className={`px-3 py-1.5 rounded-lg font-semibold transition-colors cursor-pointer whitespace-nowrap ${
+                  selectedCollection === col.id
+                    ? 'bg-slate-900 text-white shadow-2xs'
+                    : 'bg-white text-slate-700 border border-slate-200 hover:bg-slate-100'
+                }`}
+              >
+                {col.name}
+              </button>
+            ))}
+
+            <button
+              onClick={() => setIsNewCollectionModalOpen(true)}
+              className="px-2.5 py-1.5 text-indigo-700 bg-indigo-50/70 hover:bg-indigo-100/70 border border-indigo-200 rounded-lg font-semibold flex items-center gap-1 transition-colors cursor-pointer shrink-0"
+            >
+              <FolderPlus className="w-3.5 h-3.5" />
+              <span>New</span>
+            </button>
+          </div>
+
+          {/* Search Box */}
+          <div className="relative w-full md:w-64 shrink-0">
+            <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search knowledge..."
+              className="w-full pl-9 pr-3.5 py-1.5 text-xs sm:text-sm bg-white border border-slate-200 rounded-xl focus:ring-1 focus:ring-indigo-600 focus:border-indigo-600 focus:outline-hidden shadow-2xs"
+            />
+          </div>
+        </div>
+
+        {/* MAIN BODY: GAPS VIEW OR KNOWLEDGE ITEMS GRID */}
+        {sidebarTab === 'gaps' ? (
+          /* GAPS / UNANSWERED QUESTIONS VIEW */
+          <div className="space-y-4 animate-in fade-in">
+            <div className="bg-amber-50/70 border border-amber-200 rounded-2xl p-5 flex items-center justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 bg-amber-500/10 rounded-xl text-amber-700 shrink-0">
+                  <AlertTriangle className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-amber-950">Unresolved Customer Questions ({knowledgeGaps.length})</h3>
+                  <p className="text-xs sm:text-sm text-amber-800 mt-0.5">
+                    Questions customers asked where {currentCompany.agent.name} lacked verified answers. Convert them into published FAQs with 1 click.
                   </p>
                 </div>
+              </div>
+            </div>
 
-                <div className="mt-5 pt-3.5 border-t border-slate-100 flex items-center justify-between text-sm">
-                  <span className="text-xs text-slate-500 font-semibold font-mono">
-                    {item.category || 'General'} {item.chunksCount ? `· ${item.chunksCount} chunks` : ''}
-                  </span>
-                  <div className="flex items-center gap-1">
-                    <button
-                      onClick={() => setPreviewItem(item)}
-                      className="p-2 text-slate-500 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
-                      title="Preview Chunks"
-                    >
-                      <Eye className="w-4 h-4" />
-                    </button>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {knowledgeGaps.map(gap => (
+                <div key={gap.id} className="bg-white rounded-2xl p-5 border border-amber-200/90 shadow-xs flex flex-col justify-between">
+                  <div>
+                    <div className="flex items-center justify-between mb-2.5">
+                      <span className="text-xs font-semibold uppercase font-mono text-amber-800 bg-amber-50 px-2.5 py-0.5 rounded-md border border-amber-200">
+                        {gap.suggestedCategory}
+                      </span>
+                      <span className="text-xs font-bold text-amber-900">{gap.occurrences} customer asks</span>
+                    </div>
+                    <h4 className="text-base font-bold text-slate-900 mt-2 leading-snug">"{gap.query}"</h4>
+                    <p className="text-xs text-slate-500 mt-1.5">Last asked {gap.lastAskedAt}</p>
+                  </div>
+
+                  <div className="mt-5 pt-3.5 border-t border-slate-100 flex items-center justify-between">
+                    <span className="text-xs text-slate-500 font-medium">Add verified answer</span>
                     <button
                       onClick={() => {
-                        deleteKnowledgeItem(item.id);
-                        showToast('Knowledge Removed', `Removed "${item.title}".`, 'info');
+                        setConvertingGap(gap);
+                        setGapFaqAnswer('');
                       }}
-                      className="p-2 text-slate-500 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer"
-                      title="Delete"
+                      className="px-3.5 py-2 bg-amber-600 hover:bg-amber-500 text-white rounded-xl text-xs font-semibold flex items-center gap-2 transition-colors cursor-pointer"
                     >
-                      <Trash2 className="w-4 h-4" />
+                      <Plus className="w-4 h-4" />
+                      <span>Convert to FAQ</span>
                     </button>
                   </div>
                 </div>
-              </div>
-            );
-          })}
-        </div>
-      )}
-
-      {/* Clean Bottom Learning Section if Gaps Exist and Not on Gaps Tab */}
-      {knowledgeGaps.length > 0 && activeTab !== 'gaps' && (
-        <div className="bg-amber-50/70 border border-amber-200 rounded-2xl p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <div className="p-2.5 bg-amber-500/10 rounded-xl text-amber-700 shrink-0">
-              <AlertTriangle className="w-5 h-5" />
-            </div>
-            <div>
-              <p className="text-sm font-bold text-amber-950">{knowledgeGaps.length} Unresolved Customer Questions Detected</p>
-              <p className="text-xs text-amber-800 mt-0.5">Customers asked questions where the AI lacked verified answers.</p>
+              ))}
             </div>
           </div>
-          <button
-            onClick={() => setActiveTab('gaps')}
-            className="px-4 py-2 bg-amber-600 hover:bg-amber-500 text-white rounded-xl text-sm font-semibold whitespace-nowrap transition-colors flex items-center gap-1.5 cursor-pointer shrink-0"
-          >
-            <span>Review Gaps ({knowledgeGaps.length})</span>
-            <ChevronRight className="w-4 h-4" />
-          </button>
-        </div>
-      )}
+        ) : (
+          /* STANDARD KNOWLEDGE SOURCE CARDS GRID */
+          <div className="space-y-4 animate-in fade-in">
+            {filteredItems.length === 0 ? (
+              <div className="text-center py-16 px-4 bg-slate-50/50 rounded-2xl border border-dashed border-slate-200">
+                <BookOpen className="w-10 h-10 text-slate-300 mx-auto mb-3" />
+                <h3 className="text-base font-bold text-slate-800">No knowledge items match this filter</h3>
+                <p className="text-xs text-slate-500 mt-1 max-w-sm mx-auto">
+                  Try adjusting your search query or upload documents/FAQs to expand {currentCompany.agent.name}'s knowledge base.
+                </p>
+                <button
+                  onClick={() => handleOpenAddModal('document')}
+                  className="mt-4 px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-semibold inline-flex items-center gap-1.5 cursor-pointer transition-colors"
+                >
+                  <Plus className="w-4 h-4" />
+                  <span>Add First Source</span>
+                </button>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {filteredItems.map(item => {
+                  const isUrl = item.type === 'url';
+                  const isDoc = item.type === 'document';
+                  const isFaq = item.type === 'faq';
+                  const status = getItemStatus(item);
+
+                  return (
+                    <div 
+                      key={item.id}
+                      className="bg-white rounded-2xl p-5 border border-slate-200/90 shadow-xs hover:shadow-md hover:border-slate-300 transition-all flex flex-col justify-between"
+                    >
+                      <div>
+                        {/* Card Header: Type Badge & Status Tag */}
+                        <div className="flex items-center justify-between mb-3">
+                          <div className="flex items-center gap-2.5">
+                            <div className="p-2 rounded-xl bg-slate-100 text-slate-700 border border-slate-200/80">
+                              {isUrl ? <Globe className="w-4 h-4" /> : isDoc ? <FileText className="w-4 h-4" /> : isFaq ? <HelpCircle className="w-4 h-4" /> : <AlignLeft className="w-4 h-4" />}
+                            </div>
+                            <span className="text-xs font-bold font-mono uppercase tracking-wider text-slate-500">{item.type}</span>
+                          </div>
+
+                          <div className="flex items-center gap-1.5">
+                            <select
+                              value={status}
+                              onChange={(e) => handleToggleStatus(item.id, e.target.value as any)}
+                              className={`text-[11px] font-semibold px-2 py-0.5 rounded-md border cursor-pointer ${
+                                status === 'published'
+                                  ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                                  : status === 'draft'
+                                  ? 'bg-amber-50 text-amber-700 border-amber-200'
+                                  : 'bg-slate-100 text-slate-600 border-slate-200'
+                              }`}
+                            >
+                              <option value="published">Published</option>
+                              <option value="draft">Draft</option>
+                              <option value="archived">Archived</option>
+                            </select>
+                          </div>
+                        </div>
+
+                        {/* Title & Preview */}
+                        <h3 className="text-sm font-bold text-slate-900 line-clamp-1">{item.title}</h3>
+                        <p className="text-xs text-slate-600 mt-1.5 line-clamp-3 leading-relaxed">
+                          {item.faqAnswer || item.content}
+                        </p>
+                      </div>
+
+                      {/* Card Footer */}
+                      <div className="mt-5 pt-3.5 border-t border-slate-100 flex items-center justify-between text-xs">
+                        <span className="text-[11px] text-slate-500 font-semibold font-mono">
+                          {item.category || 'General'} {item.chunksCount ? `· ${item.chunksCount} chunks` : ''}
+                        </span>
+                        
+                        <div className="flex items-center gap-1">
+                          <button
+                            onClick={() => setPreviewItem(item)}
+                            className="p-1.5 text-slate-500 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
+                            title="Preview Content"
+                          >
+                            <Eye className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={() => {
+                              deleteKnowledgeItem(item.id);
+                              showToast('Knowledge Removed', `Removed "${item.title}".`, 'info');
+                            }}
+                            className="p-1.5 text-slate-500 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer"
+                            title="Delete Source"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
+      </main>
 
       {/* RAG Sandbox Modal */}
       {isTestSandboxOpen && (

@@ -75,6 +75,7 @@ export interface KnowledgeItem {
   chunksCount: number;
   tokenCount: number;
   lastUpdated: string;
+  articleStatus?: 'published' | 'draft' | 'archived';
   category?: string;
   faqAnswer?: string;
   collectionId?: string;
