@@ -24,7 +24,14 @@ import {
   Settings as SettingsIcon,
   Code2,
   FileText,
-  Send
+  Send,
+  Globe,
+  QrCode,
+  Share2,
+  ShoppingBag,
+  Link2,
+  Download,
+  Layers
 } from 'lucide-react';
 import { useApp } from '../../context';
 import { WidgetCustomization } from '../../types';
@@ -39,6 +46,8 @@ export const DeployView: React.FC = () => {
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [activeMainTab, setActiveMainTab] = useState<'general' | 'content' | 'appearance' | 'install'>('appearance');
+  const [installMode, setInstallMode] = useState<'nocode' | 'code'>('nocode');
+  const [showQrModal, setShowQrModal] = useState(false);
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
   const [activeSnippetTab, setActiveSnippetTab] = useState<'script' | 'react' | 'iframe' | 'api'>('script');
   const [localSettings, setLocalSettings] = useState<WidgetCustomization>({ 
@@ -742,60 +751,253 @@ export default function App() {
             {/* TAB: INSTALL */}
             {activeMainTab === 'install' && (
               <div className="space-y-4 animate-in fade-in duration-150">
-                <div className="bg-slate-950 text-slate-200 rounded-2xl p-5 border border-slate-800 shadow-md">
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-3">
-                    <div className="flex items-center gap-2">
-                      <Terminal className="w-4 h-4 text-slate-400" />
-                      <h4 className="text-sm font-bold text-white">Embed Installation Snippet</h4>
-                    </div>
+                {/* Mode Selector */}
+                <div className="flex items-center justify-between bg-slate-100 p-1.5 rounded-2xl">
+                  <button
+                    type="button"
+                    onClick={() => setInstallMode('nocode')}
+                    className={`flex-1 py-2 px-3 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-2 ${
+                      installMode === 'nocode'
+                        ? 'bg-white text-slate-900 shadow-xs border border-slate-200/80'
+                        : 'text-slate-600 hover:text-slate-900'
+                    }`}
+                  >
+                    <Sparkles className="w-3.5 h-3.5 text-indigo-600" />
+                    <span>No-Code & 1-Click (Zero Code)</span>
+                  </button>
 
-                    <div className="flex items-center gap-1 bg-slate-900 p-1 rounded-xl border border-slate-800">
-                      {[
-                        { id: 'script', label: 'HTML <script>' },
-                        { id: 'react', label: 'React SDK' },
-                        { id: 'iframe', label: 'Iframe' },
-                        { id: 'api', label: 'REST API' }
-                      ].map(tab => (
-                        <button
-                          key={tab.id}
-                          onClick={() => setActiveSnippetTab(tab.id as any)}
-                          className={`px-2.5 py-1 text-xs font-semibold rounded-lg transition-colors cursor-pointer ${
-                            activeSnippetTab === tab.id
-                              ? 'bg-slate-800 text-white shadow-xs'
-                              : 'text-slate-400 hover:text-slate-200'
-                          }`}
-                        >
-                          {tab.label}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div className="relative bg-slate-900/90 border border-slate-800 rounded-xl p-3.5 font-mono text-xs text-slate-200 overflow-x-auto">
-                    <button
-                      onClick={() => {
-                        const codeMap = {
-                          script: scriptSnippet,
-                          react: reactSnippet,
-                          iframe: iframeSnippet,
-                          api: curlSnippet
-                        };
-                        handleCopy(codeMap[activeSnippetTab], 'snippet');
-                      }}
-                      className="absolute top-2.5 right-2.5 px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-100 rounded-lg text-[11px] font-sans font-semibold flex items-center gap-1 transition-colors border border-slate-700 cursor-pointer"
-                    >
-                      {copiedKey === 'snippet' ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
-                      <span>{copiedKey === 'snippet' ? 'Copied' : 'Copy'}</span>
-                    </button>
-
-                    <pre className="pr-16 leading-relaxed font-mono">
-                      {activeSnippetTab === 'script' && scriptSnippet}
-                      {activeSnippetTab === 'react' && reactSnippet}
-                      {activeSnippetTab === 'iframe' && iframeSnippet}
-                      {activeSnippetTab === 'api' && curlSnippet}
-                    </pre>
-                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setInstallMode('code')}
+                    className={`flex-1 py-2 px-3 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-2 ${
+                      installMode === 'code'
+                        ? 'bg-white text-slate-900 shadow-xs border border-slate-200/80'
+                        : 'text-slate-600 hover:text-slate-900'
+                    }`}
+                  >
+                    <Terminal className="w-3.5 h-3.5 text-slate-700" />
+                    <span>Developer Code Snippets</span>
+                  </button>
                 </div>
+
+                {/* NO-CODE METHODS */}
+                {installMode === 'nocode' && (
+                  <div className="space-y-3.5 animate-in fade-in duration-150">
+                    {/* Method 1: Shareable Hosted Standalone Link (0 Install) */}
+                    <div className="p-4 bg-gradient-to-br from-indigo-50/70 via-white to-purple-50/50 border border-indigo-100 rounded-2xl space-y-3 shadow-2xs">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <div className="p-1.5 bg-indigo-600 text-white rounded-lg">
+                            <Globe className="w-4 h-4" />
+                          </div>
+                          <div>
+                            <h4 className="font-bold text-slate-900 text-xs sm:text-sm">Hosted Standalone Chat Web App</h4>
+                            <p className="text-[11px] text-slate-500">No installation needed. Share directly with customers.</p>
+                          </div>
+                        </div>
+                        <span className="text-[10px] font-bold font-mono px-2 py-0.5 rounded-md bg-indigo-100 text-indigo-700">
+                          ZERO CODE
+                        </span>
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="text"
+                          readOnly
+                          value={`${origin}/chat/${currentCompany.slug}`}
+                          className="flex-1 px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs text-slate-800 font-mono"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => handleCopy(`${origin}/chat/${currentCompany.slug}`, 'link')}
+                          className="px-3 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer shadow-2xs shrink-0"
+                        >
+                          {copiedKey === 'link' ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+                          <span>{copiedKey === 'link' ? 'Copied' : 'Copy Link'}</span>
+                        </button>
+
+                        <a
+                          href={`${origin}/chat/${currentCompany.slug}`}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="p-2 bg-white hover:bg-slate-100 border border-slate-200 rounded-xl text-slate-700 transition-colors cursor-pointer"
+                          title="Open in new tab"
+                        >
+                          <ExternalLink className="w-4 h-4" />
+                        </a>
+                      </div>
+
+                      <p className="text-[10px] text-slate-500">
+                        Use in <strong>WhatsApp Business</strong>, Instagram bio, email signatures, SMS campaigns, or print on in-store QR codes.
+                      </p>
+                    </div>
+
+                    {/* Method 2: CMS & No-Code Platforms Grid */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      {/* WordPress / WooCommerce */}
+                      <div className="p-3.5 bg-white border border-slate-200/90 rounded-2xl space-y-2 hover:border-slate-300 transition-colors shadow-2xs">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <div className="w-7 h-7 rounded-lg bg-blue-600 text-white flex items-center justify-center font-bold text-xs">
+                              W
+                            </div>
+                            <span className="font-bold text-xs text-slate-900">WordPress & WooCommerce</span>
+                          </div>
+                          <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-md">Plugin</span>
+                        </div>
+                        <p className="text-[11px] text-slate-500">
+                          Upload plugin ZIP into WordPress Admin and paste your API key without touching theme code.
+                        </p>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            alert('Downloading Chat-AaaS WordPress Plugin package (chat-aaas-wp.zip)...');
+                          }}
+                          className="w-full py-1.5 bg-slate-100 hover:bg-slate-200/80 text-slate-800 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+                        >
+                          <Download className="w-3.5 h-3.5" />
+                          <span>Download WP Plugin (.zip)</span>
+                        </button>
+                      </div>
+
+                      {/* Shopify 1-Click */}
+                      <div className="p-3.5 bg-white border border-slate-200/90 rounded-2xl space-y-2 hover:border-slate-300 transition-colors shadow-2xs">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <div className="w-7 h-7 rounded-lg bg-emerald-600 text-white flex items-center justify-center font-bold text-xs">
+                              <ShoppingBag className="w-3.5 h-3.5" />
+                            </div>
+                            <span className="font-bold text-xs text-slate-900">Shopify 1-Click Embed</span>
+                          </div>
+                          <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-md">App Embed</span>
+                        </div>
+                        <p className="text-[11px] text-slate-500">
+                          Enable via Shopify Theme Customizer &gt; App Embeds toggle with 1 click.
+                        </p>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            window.open('https://admin.shopify.com', '_blank');
+                          }}
+                          className="w-full py-1.5 bg-slate-100 hover:bg-slate-200/80 text-slate-800 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+                        >
+                          <ExternalLink className="w-3.5 h-3.5" />
+                          <span>Open Shopify Theme Editor</span>
+                        </button>
+                      </div>
+
+                      {/* Google Tag Manager */}
+                      <div className="p-3.5 bg-white border border-slate-200/90 rounded-2xl space-y-2 hover:border-slate-300 transition-colors shadow-2xs">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <div className="w-7 h-7 rounded-lg bg-amber-500 text-white flex items-center justify-center font-bold text-xs">
+                              <Layers className="w-3.5 h-3.5" />
+                            </div>
+                            <span className="font-bold text-xs text-slate-900">Google Tag Manager</span>
+                          </div>
+                          <span className="text-[10px] font-bold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-md">GTM Tag</span>
+                        </div>
+                        <p className="text-[11px] text-slate-500">
+                          Inject the assistant across your whole website via GTM container without code deploy.
+                        </p>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            handleCopy(scriptSnippet, 'gtm');
+                          }}
+                          className="w-full py-1.5 bg-slate-100 hover:bg-slate-200/80 text-slate-800 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+                        >
+                          {copiedKey === 'gtm' ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
+                          <span>{copiedKey === 'gtm' ? 'GTM Tag Copied' : 'Copy GTM Custom Tag'}</span>
+                        </button>
+                      </div>
+
+                      {/* Webflow & Wix */}
+                      <div className="p-3.5 bg-white border border-slate-200/90 rounded-2xl space-y-2 hover:border-slate-300 transition-colors shadow-2xs">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <div className="w-7 h-7 rounded-lg bg-indigo-600 text-white flex items-center justify-center font-bold text-xs">
+                              <Globe className="w-3.5 h-3.5" />
+                            </div>
+                            <span className="font-bold text-xs text-slate-900">Webflow, Wix & Framer</span>
+                          </div>
+                          <span className="text-[10px] font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-md">No-Code</span>
+                        </div>
+                        <p className="text-[11px] text-slate-500">
+                          Paste into Project Settings &gt; Custom Code Footer once to enable globally.
+                        </p>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            handleCopy(scriptSnippet, 'nocode_script');
+                          }}
+                          className="w-full py-1.5 bg-slate-100 hover:bg-slate-200/80 text-slate-800 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+                        >
+                          {copiedKey === 'nocode_script' ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
+                          <span>{copiedKey === 'nocode_script' ? 'Copied' : 'Copy Embed Code'}</span>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* DEVELOPER CODE SNIPPETS */}
+                {installMode === 'code' && (
+                  <div className="bg-slate-950 text-slate-200 rounded-2xl p-5 border border-slate-800 shadow-md space-y-3 animate-in fade-in duration-150">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-2">
+                      <div className="flex items-center gap-2">
+                        <Terminal className="w-4 h-4 text-slate-400" />
+                        <h4 className="text-sm font-bold text-white">Embed Installation Snippet</h4>
+                      </div>
+
+                      <div className="flex items-center gap-1 bg-slate-900 p-1 rounded-xl border border-slate-800">
+                        {[
+                          { id: 'script', label: 'HTML <script>' },
+                          { id: 'react', label: 'React SDK' },
+                          { id: 'iframe', label: 'Iframe' },
+                          { id: 'api', label: 'REST API' }
+                        ].map(tab => (
+                          <button
+                            key={tab.id}
+                            onClick={() => setActiveSnippetTab(tab.id as any)}
+                            className={`px-2.5 py-1 text-xs font-semibold rounded-lg transition-colors cursor-pointer ${
+                              activeSnippetTab === tab.id
+                                ? 'bg-slate-800 text-white shadow-xs'
+                                : 'text-slate-400 hover:text-slate-200'
+                            }`}
+                          >
+                            {tab.label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="relative bg-slate-900/90 border border-slate-800 rounded-xl p-3.5 font-mono text-xs text-slate-200 overflow-x-auto">
+                      <button
+                        onClick={() => {
+                          const codeMap = {
+                            script: scriptSnippet,
+                            react: reactSnippet,
+                            iframe: iframeSnippet,
+                            api: curlSnippet
+                          };
+                          handleCopy(codeMap[activeSnippetTab], 'snippet');
+                        }}
+                        className="absolute top-2.5 right-2.5 px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-100 rounded-lg text-[11px] font-sans font-semibold flex items-center gap-1 transition-colors border border-slate-700 cursor-pointer"
+                      >
+                        {copiedKey === 'snippet' ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
+                        <span>{copiedKey === 'snippet' ? 'Copied' : 'Copy'}</span>
+                      </button>
+
+                      <pre className="pr-16 leading-relaxed font-mono">
+                        {activeSnippetTab === 'script' && scriptSnippet}
+                        {activeSnippetTab === 'react' && reactSnippet}
+                        {activeSnippetTab === 'iframe' && iframeSnippet}
+                        {activeSnippetTab === 'api' && curlSnippet}
+                      </pre>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
           </div>
