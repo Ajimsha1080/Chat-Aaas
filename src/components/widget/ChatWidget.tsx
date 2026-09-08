@@ -3,6 +3,10 @@ import {
   X, 
   Send, 
   Bot, 
+  Sparkles,
+  Headphones,
+  HelpCircle,
+  MessageCircle,
   AlertTriangle 
 } from 'lucide-react';
 import { useApp } from '../../context';
@@ -305,7 +309,16 @@ export const ChatWidget: React.FC<ChatWidgetProps> = ({ isInlinePreview = false 
           style={{ backgroundColor: settings.primaryColor }}
           className="flex items-center gap-3 px-6 py-4 rounded-full text-white font-bold text-sm shadow-xl hover:shadow-2xl transition-all duration-200 transform hover:scale-105 active:scale-95 cursor-pointer"
         >
-          <Bot className="w-5 h-5 text-white" />
+          {(() => {
+            switch (settings.launcherIcon) {
+              case 'bot': return <Bot className="w-5 h-5 text-white" />;
+              case 'sparkles': return <Sparkles className="w-5 h-5 text-white" />;
+              case 'support': return <Headphones className="w-5 h-5 text-white" />;
+              case 'help': return <HelpCircle className="w-5 h-5 text-white" />;
+              case 'chat':
+              default: return <MessageCircle className="w-5 h-5 text-white" />;
+            }
+          })()}
           <span>{settings.launcherText}</span>
         </button>
       )}

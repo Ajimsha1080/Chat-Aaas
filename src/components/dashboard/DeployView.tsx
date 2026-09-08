@@ -11,7 +11,9 @@ import {
   Plus,
   Trash2,
   HelpCircle,
-  Clock
+  Clock,
+  Bot,
+  Headphones
 } from 'lucide-react';
 import { useApp } from '../../context';
 import { WidgetCustomization } from '../../types';
@@ -85,6 +87,17 @@ export const DeployView: React.FC = () => {
     setTimeout(() => setIsSaved(false), 2500);
   };
 
+  const renderLauncherIcon = (iconType: string = 'chat', className = "w-4 h-4") => {
+    switch (iconType) {
+      case 'bot': return <Bot className={className} />;
+      case 'sparkles': return <Sparkles className={className} />;
+      case 'support': return <Headphones className={className} />;
+      case 'help': return <HelpCircle className={className} />;
+      case 'chat':
+      default: return <MessageCircle className={className} />;
+    }
+  };
+
   const origin = typeof window !== 'undefined' ? window.location.origin : 'https://cdn.chat-aaas.com';
   const isLocal = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
   const widgetScriptSrc = isLocal ? `${origin}/widget.js` : 'https://cdn.chat-aaas.com/v1/widget.js';
@@ -97,6 +110,7 @@ export const DeployView: React.FC = () => {
   data-agent-key="${currentCompany.apiKey}"
   data-position="${localSettings.position}"
   data-primary-color="${localSettings.primaryColor}"
+  data-launcher-icon="${localSettings.launcherIcon || 'chat'}"
   defer>
 </script>`;
 
@@ -111,6 +125,7 @@ export default function App() {
         apiKey="${currentCompany.apiKey}"
         primaryColor="${localSettings.primaryColor}"
         position="${localSettings.position}"
+        launcherIcon="${localSettings.launcherIcon || 'chat'}"
         welcomeMessage="${currentCompany.agent.greetingMessage}"
       />
     </div>
@@ -356,6 +371,38 @@ export default function App() {
               </div>
             </div>
 
+            {/* 4. Launcher Icon Selection */}
+            <div className="space-y-2">
+              <label className="block font-semibold text-slate-800">Launcher Icon</label>
+              <div className="grid grid-cols-5 gap-2">
+                {[
+                  { id: 'chat', label: 'Chat', icon: MessageCircle },
+                  { id: 'bot', label: 'Bot', icon: Bot },
+                  { id: 'sparkles', label: 'Sparkles', icon: Sparkles },
+                  { id: 'support', label: 'Support', icon: Headphones },
+                  { id: 'help', label: 'Help', icon: HelpCircle }
+                ].map(item => {
+                  const IconComp = item.icon;
+                  const isSelected = (localSettings.launcherIcon || 'chat') === item.id;
+                  return (
+                    <button
+                      key={item.id}
+                      type="button"
+                      onClick={() => setLocalSettings({ ...localSettings, launcherIcon: item.id as any })}
+                      className={`py-2 px-2 rounded-xl border font-semibold flex flex-col items-center justify-center gap-1.5 transition-all cursor-pointer text-xs ${
+                        isSelected
+                          ? 'border-slate-900 bg-slate-900 text-white shadow-xs'
+                          : 'border-slate-200 text-slate-700 hover:bg-slate-50 hover:border-slate-300'
+                      }`}
+                    >
+                      <IconComp className={`w-4 h-4 ${isSelected ? 'text-white' : 'text-slate-600'}`} />
+                      <span className="text-[11px] leading-tight">{item.label}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
             {/* 4. Screen Position */}
             <div>
               <label className="block font-semibold text-slate-800 mb-1.5">Screen Position</label>
@@ -536,18 +583,18 @@ export default function App() {
               <span className="text-xs text-slate-500 font-semibold">Launcher Preview:</span>
               {launcherStyle === 'pill' ? (
                 <div 
-                  className="px-4 py-2 rounded-full text-white text-xs font-bold flex items-center gap-2 shadow-sm"
+                  className="px-4 py-2 rounded-full text-white text-xs font-bold flex items-center gap-2 shadow-sm transition-all"
                   style={{ backgroundColor: localSettings.primaryColor }}
                 >
-                  <MessageCircle className="w-3.5 h-3.5" />
+                  {renderLauncherIcon(localSettings.launcherIcon || 'chat', "w-3.5 h-3.5")}
                   <span>{localSettings.launcherText || 'Chat with Us'}</span>
                 </div>
               ) : (
                 <div 
-                  className="w-10 h-10 rounded-full text-white flex items-center justify-center shadow-sm"
+                  className="w-10 h-10 rounded-full text-white flex items-center justify-center shadow-sm transition-all"
                   style={{ backgroundColor: localSettings.primaryColor }}
                 >
-                  <MessageCircle className="w-5 h-5" />
+                  {renderLauncherIcon(localSettings.launcherIcon || 'chat', "w-5 h-5")}
                 </div>
               )}
             </div>
