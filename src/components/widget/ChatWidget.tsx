@@ -315,8 +315,13 @@ export const ChatWidget: React.FC<ChatWidgetProps> = ({ isInlinePreview = false 
       {!isInlinePreview && !isOpen && (
         <button
           onClick={() => setIsOpen(true)}
-          style={{ backgroundColor: settings.primaryColor }}
-          className="flex items-center gap-3 px-6 py-4 rounded-full text-white font-bold text-sm shadow-xl hover:shadow-2xl transition-all duration-200 transform hover:scale-105 active:scale-95 cursor-pointer"
+          style={{ 
+            backgroundColor: settings.primaryColor,
+            borderRadius: settings.launcherShape === 'teardrop'
+              ? (isBottomLeft ? '50% 50% 50% 4px' : '50% 50% 4px 50%')
+              : (settings.launcherShape === 'squircle' ? '18px' : (settings.launcherShape === 'circle' ? '9999px' : undefined))
+          }}
+          className={`flex items-center gap-3 ${settings.launcherShape === 'pill' ? 'px-6 py-4 rounded-full' : 'p-4 rounded-full'} text-white font-bold text-sm shadow-xl hover:shadow-2xl transition-all duration-200 transform hover:scale-105 active:scale-95 cursor-pointer`}
         >
           {(() => {
             switch (settings.launcherIcon) {
@@ -379,7 +384,9 @@ export const ChatWidget: React.FC<ChatWidgetProps> = ({ isInlinePreview = false 
                 );
             }
           })()}
-          <span>{settings.launcherText}</span>
+          {settings.launcherShape === 'pill' && (
+            <span>{settings.launcherText}</span>
+          )}
         </button>
       )}
     </div>

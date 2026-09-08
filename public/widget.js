@@ -16,9 +16,13 @@
   const launcherIcon = currentScript?.getAttribute('data-launcher-icon') || 'chat';
   const launcherLogoUrl = currentScript?.getAttribute('data-launcher-logo-url') || '';
   const launcherText = currentScript?.getAttribute('data-launcher-text') || 'Chat with Us';
+  const launcherShape = currentScript?.getAttribute('data-launcher-shape') || 'teardrop';
   const bottomPaddingNum = parseInt(currentScript?.getAttribute('data-bottom-padding') || '20', 10) || 20;
   const sidePaddingNum = parseInt(currentScript?.getAttribute('data-side-padding') || '20', 10) || 20;
   const isLeft = position === 'bottom_left';
+  const launcherRadius = launcherShape === 'teardrop' 
+    ? (isLeft ? '50% 50% 50% 4px' : '50% 50% 4px 50%') 
+    : (launcherShape === 'squircle' ? '18px' : '9999px');
 
   // Inject Styles
   const style = document.createElement('style');
@@ -33,8 +37,8 @@
       gap: 8px;
       background: ${primaryColor};
       color: #ffffff;
-      padding: 12px 20px;
-      border-radius: 9999px;
+      padding: ${launcherShape === 'pill' ? '12px 20px' : '16px'};
+      border-radius: ${launcherRadius};
       box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.25), 0 8px 10px -6px rgba(0, 0, 0, 0.2);
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
       font-size: 14px;

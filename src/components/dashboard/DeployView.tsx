@@ -88,7 +88,7 @@ export const DeployView: React.FC = () => {
     { name: 'Obsidian', hex: '#0f172a' }
   ];
 
-  const [launcherStyle, setLauncherStyle] = useState<'pill' | 'bubble'>('bubble');
+  const [launcherStyle, setLauncherStyle] = useState<'teardrop' | 'bubble' | 'squircle' | 'pill'>((currentCompany.widgetSettings?.launcherShape as any) || 'teardrop');
   const [starterQuestions, setStarterQuestions] = useState<string[]>([
     'What are your pricing plans?',
     'How do I get started?',
@@ -590,15 +590,20 @@ export default function App() {
                           type="button"
                           onClick={() => setIsIconPickerOpen(!isIconPickerOpen)}
                           title="Click to change launcher icon"
-                          className="w-11 h-11 rounded-2xl flex items-center justify-center text-white relative shadow-sm cursor-pointer hover:scale-105 active:scale-95 transition-all overflow-hidden p-1"
-                          style={{ backgroundColor: localSettings.primaryColor }}
+                          className="w-12 h-12 flex items-center justify-center text-white relative shadow-md cursor-pointer hover:scale-105 active:scale-95 transition-all overflow-hidden p-1.5"
+                          style={{ 
+                            backgroundColor: localSettings.primaryColor,
+                            borderRadius: launcherStyle === 'teardrop' 
+                              ? (localSettings.position === 'bottom_left' ? '50% 50% 50% 4px' : '50% 50% 4px 50%')
+                              : (launcherStyle === 'squircle' ? '14px' : '9999px')
+                          }}
                         >
-                          <div className="w-6 h-6 rounded-full flex items-center justify-center overflow-hidden">
-                            {renderLauncherIcon(localSettings.launcherIcon || 'chat', "w-5 h-5")}
+                          <div className="w-6 h-6 flex items-center justify-center overflow-hidden">
+                            {renderLauncherIcon(localSettings.launcherIcon || 'chat_dots', "w-5 h-5")}
                           </div>
 
                           {/* Pencil Edit Badge in corner */}
-                          <div className="absolute -bottom-1 -left-1 w-4.5 h-4.5 rounded-full bg-slate-700 hover:bg-slate-900 text-white flex items-center justify-center shadow-xs border border-white">
+                          <div className="absolute -top-1 -right-1 w-4.5 h-4.5 rounded-full bg-slate-800 hover:bg-slate-950 text-white flex items-center justify-center shadow-xs border border-white">
                             <Pencil className="w-2.5 h-2.5" />
                           </div>
                         </button>
@@ -696,27 +701,68 @@ export default function App() {
                     </div>
                   </div>
 
-                  {/* Launcher Style Toggle */}
-                  <div className="flex items-center justify-between pt-2">
-                    <span className="font-semibold text-slate-800 text-xs sm:text-sm">Launcher Style</span>
-                    <div className="grid grid-cols-2 gap-1.5 bg-slate-100 p-1 rounded-xl">
+                  {/* Launcher Style / Shape Toggle */}
+                  <div className="space-y-2 pt-2">
+                    <div className="flex items-center justify-between">
+                      <span className="font-semibold text-slate-800 text-xs sm:text-sm">Launcher Shape</span>
+                      <span className="text-[11px] text-slate-400 font-medium">Button geometry</span>
+                    </div>
+                    <div className="grid grid-cols-4 gap-1.5 bg-slate-100 p-1 rounded-xl">
                       <button
                         type="button"
-                        onClick={() => setLauncherStyle('bubble')}
-                        className={`px-3 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
-                          launcherStyle === 'bubble' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-600'
+                        onClick={() => {
+                          setLauncherStyle('teardrop');
+                          setLocalSettings(prev => ({ ...prev, launcherShape: 'teardrop' }));
+                        }}
+                        className={`px-2 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
+                          launcherStyle === 'teardrop' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-600'
                         }`}
+                        title="Teardrop Chat Droplet Shape"
                       >
-                        Bubble
+                        <span className="w-3 h-3 bg-current inline-block rounded-tl-full rounded-tr-full rounded-bl-full rounded-br-xs"></span>
+                        <span>Droplet</span>
                       </button>
                       <button
                         type="button"
-                        onClick={() => setLauncherStyle('pill')}
-                        className={`px-3 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                        onClick={() => {
+                          setLauncherStyle('bubble');
+                          setLocalSettings(prev => ({ ...prev, launcherShape: 'circle' }));
+                        }}
+                        className={`px-2 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
+                          launcherStyle === 'bubble' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-600'
+                        }`}
+                        title="Circular Round Bubble"
+                      >
+                        <span className="w-3 h-3 bg-current inline-block rounded-full"></span>
+                        <span>Circle</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setLauncherStyle('squircle');
+                          setLocalSettings(prev => ({ ...prev, launcherShape: 'squircle' }));
+                        }}
+                        className={`px-2 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
+                          launcherStyle === 'squircle' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-600'
+                        }`}
+                        title="Rounded Square"
+                      >
+                        <span className="w-3 h-3 bg-current inline-block rounded-sm"></span>
+                        <span>Square</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setLauncherStyle('pill');
+                          setLocalSettings(prev => ({ ...prev, launcherShape: 'pill' }));
+                        }}
+                        className={`px-2 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
                           launcherStyle === 'pill' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-600'
                         }`}
+                        title="Pill with Text"
                       >
-                        Pill with Text
+                        <span className="w-3.5 h-2 bg-current inline-block rounded-full"></span>
+                        <span>Pill</span>
                       </button>
                     </div>
                   </div>
@@ -1158,11 +1204,16 @@ export default function App() {
                   <button
                     type="button"
                     onClick={() => setIsPreviewOpen(prev => !prev)}
-                    className="w-13 h-13 rounded-full text-white flex items-center justify-center shadow-xl hover:shadow-2xl transition-all duration-200 transform hover:scale-105 active:scale-95 cursor-pointer overflow-hidden p-2.5"
-                    style={{ backgroundColor: localSettings.primaryColor }}
+                    className="w-14 h-14 text-white flex items-center justify-center shadow-xl hover:shadow-2xl transition-all duration-200 transform hover:scale-105 active:scale-95 cursor-pointer overflow-hidden p-3"
+                    style={{ 
+                      backgroundColor: localSettings.primaryColor,
+                      borderRadius: launcherStyle === 'teardrop'
+                        ? (localSettings.position === 'bottom_left' ? '50% 50% 50% 4px' : '50% 50% 4px 50%')
+                        : (launcherStyle === 'squircle' ? '18px' : '9999px')
+                    }}
                     title={isPreviewOpen ? "Click to minimize widget" : "Click to expand widget"}
                   >
-                    <div className="w-full h-full rounded-full overflow-hidden flex items-center justify-center">
+                    <div className="w-full h-full flex items-center justify-center">
                       {isPreviewOpen ? (
                         <ChevronDown className="w-6 h-6 text-white" />
                       ) : (
