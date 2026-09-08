@@ -29,7 +29,10 @@ import {
   FileText,
   Send,
   X,
-  ChevronDown
+  ChevronDown,
+  ChevronLeft,
+  Paperclip,
+  ArrowUp
 } from 'lucide-react';
 import { useApp } from '../../context';
 import { WidgetCustomization } from '../../types';
@@ -958,7 +961,7 @@ export default function App() {
 
             {/* Sleek Mockup Widget Container */}
             <div 
-              className={`rounded-3xl border shadow-xl overflow-hidden flex flex-col justify-between relative min-h-[460px] transition-all duration-300 ${
+              className={`rounded-3xl border shadow-xl overflow-hidden flex flex-col justify-between relative min-h-[480px] transition-all duration-300 ${
                 isDarkMode 
                   ? 'bg-[#090d16] text-white border-slate-800/80 shadow-slate-950/40' 
                   : 'bg-white text-slate-900 border-slate-200 shadow-slate-200/50'
@@ -972,55 +975,52 @@ export default function App() {
                 />
               )}
 
-              {/* Mockup Top Brand Header */}
-              <div className="p-5 pb-3 z-10">
-                {/* Brand Badge Pill */}
-                <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white/10 backdrop-blur-md border border-white/10 text-xs font-bold mb-4 shadow-2xs">
-                  <img 
-                    src={companyLogoUrl} 
-                    alt="Brand" 
-                    className="w-4 h-4 rounded-md object-cover"
-                    onError={(e) => {
-                      (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=150&auto=format&fit=crop&q=80';
-                    }}
-                  />
-                  <span className={isDarkMode ? 'text-white' : 'text-slate-900'}>{currentCompany.name}</span>
-                </div>
-
-                {/* Big Prominent Title & Subtitle */}
-                <div className="space-y-1">
-                  <h3 
-                    className="text-2xl font-extrabold tracking-tight"
-                    style={{ color: localSettings.primaryColor }}
-                  >
-                    {localSettings.headerTitle || currentCompany.name + ' Support'}
-                  </h3>
-                  <p className={`text-xs ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
-                    {localSettings.headerSubtitle || 'Ask us anything or share your feedback'}
-                  </p>
+              {/* Mockup Top Brand Header - Coarai Card Style */}
+              <div className={`p-4 border-b flex items-center justify-between z-10 ${isDarkMode ? 'border-slate-800/80 bg-slate-900/40' : 'border-slate-100 bg-white'}`}>
+                <div className="flex items-center gap-3">
+                  <button type="button" className={`p-1 rounded-full transition-colors cursor-pointer ${isDarkMode ? 'text-slate-400 hover:text-white' : 'text-slate-600 hover:text-slate-900'}`}>
+                    <ChevronLeft className="w-4.5 h-4.5" />
+                  </button>
+                  <div className="relative shrink-0">
+                    <img 
+                      src={companyLogoUrl} 
+                      alt="Brand" 
+                      className="w-8 h-8 rounded-full object-cover ring-1 ring-slate-200"
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=150&auto=format&fit=crop&q=80';
+                      }}
+                    />
+                  </div>
+                  <h4 className="font-bold text-sm tracking-tight text-slate-900 dark:text-white">
+                    {localSettings.headerTitle || currentCompany.name}
+                  </h4>
                 </div>
               </div>
 
-              {/* Chat Message Stream & Starter Prompts */}
-              <div className="px-5 py-2 flex-1 space-y-2.5 overflow-y-auto max-h-[220px] text-xs z-10">
+              {/* Chat Message Stream */}
+              <div className="px-5 py-4 flex-1 space-y-3.5 overflow-y-auto max-h-[220px] text-xs z-10">
                 {previewChat.map((msg, mIdx) => (
-                  <div 
-                    key={mIdx}
-                    style={{
-                      backgroundColor: msg.sender === 'user' ? localSettings.primaryColor : (isDarkMode ? '#1e293b' : '#f1f5f9'),
-                      color: msg.sender === 'user' ? '#ffffff' : (isDarkMode ? '#f8fafc' : '#0f172a')
-                    }}
-                    className={`p-2.5 rounded-2xl max-w-[88%] font-medium leading-relaxed shadow-xs ${
-                      msg.sender === 'user' ? 'ml-auto border-transparent' : 'border border-white/5 text-left'
-                    }`}
-                  >
-                    {msg.text}
+                  <div key={mIdx} className={`flex flex-col ${msg.sender === 'user' ? 'items-end' : 'items-start'}`}>
+                    <div 
+                      style={{
+                        backgroundColor: msg.sender === 'user' ? localSettings.primaryColor : (isDarkMode ? '#1e293b' : '#f1f5f9'),
+                        color: msg.sender === 'user' ? '#ffffff' : (isDarkMode ? '#f8fafc' : '#0f172a')
+                      }}
+                      className={`p-3 rounded-2xl max-w-[88%] font-medium leading-relaxed shadow-2xs ${
+                        msg.sender === 'user' ? 'ml-auto border-transparent rounded-br-xs' : 'border border-transparent rounded-tl-xs text-left'
+                      }`}
+                    >
+                      {msg.text}
+                    </div>
+                    <span className={`text-[10px] text-slate-400 mt-1 font-medium ${msg.sender === 'user' ? 'text-right pr-1' : 'pl-1'}`}>
+                      {msg.sender === 'user' ? 'You · Just now' : `${currentCompany.name} AI · Just now`}
+                    </span>
                   </div>
                 ))}
 
                 {/* Starter Questions Chips */}
                 {starterQuestions.length > 0 && (
-                  <div className="pt-2 space-y-1.5">
+                  <div className="pt-1 space-y-1.5">
                     <p className={`text-[10px] font-bold uppercase tracking-wider ${isDarkMode ? 'text-slate-500' : 'text-slate-400'}`}>
                       Suggested Questions:
                     </p>
@@ -1030,7 +1030,7 @@ export default function App() {
                           key={qIdx}
                           type="button"
                           onClick={() => handlePreviewStarterClick(q)}
-                          className={`text-left px-3 py-2 rounded-xl text-xs font-medium transition-colors cursor-pointer border ${
+                          className={`text-left px-3 py-1.5 rounded-xl text-xs font-medium transition-colors cursor-pointer border ${
                             isDarkMode 
                               ? 'bg-slate-900/90 hover:bg-slate-800/90 text-slate-200 border-slate-800' 
                               : 'bg-white hover:bg-slate-100 text-slate-700 border-slate-200'
@@ -1044,19 +1044,28 @@ export default function App() {
                 )}
               </div>
 
-              {/* Bottom "Send us a message" input pill */}
-              <div className="p-4 pt-2 z-10">
-                <div className={`p-1.5 rounded-2xl flex items-center justify-between border shadow-xs ${
-                  isDarkMode ? 'bg-white text-slate-900 border-white/20' : 'bg-slate-900 text-white border-slate-800'
+              {/* Bottom Notice & Input Container */}
+              <div className="p-4 pt-1 space-y-2 z-10">
+                {/* Availability Notice */}
+                <div className={`p-2.5 rounded-2xl text-center text-[11px] leading-relaxed ${
+                  isDarkMode ? 'bg-slate-900 text-slate-400 border border-slate-800' : 'bg-slate-100/90 text-slate-600'
                 }`}>
-                  <span className={`text-xs font-semibold px-3 ${isDarkMode ? 'text-slate-700' : 'text-slate-200'}`}>
-                    Send us a message
+                  Our agents are not available right now, but you can still send messages, we'll reach out once we are back.
+                </div>
+
+                {/* Modern Input Bar with Paperclip & Up Arrow Button */}
+                <div className={`flex items-center gap-2 px-3.5 py-2 rounded-2xl border transition-all shadow-2xs ${
+                  isDarkMode ? 'bg-slate-900 border-slate-800 text-white' : 'bg-white border-slate-300 text-slate-900'
+                }`}>
+                  <span className="text-xs font-normal text-slate-400 flex-1">
+                    Enter your message
                   </span>
+                  <Paperclip className="w-4 h-4 text-slate-400 shrink-0 cursor-pointer" />
                   <div 
-                    className="w-8 h-8 rounded-xl flex items-center justify-center text-white shrink-0 shadow-2xs"
+                    className="w-7 h-7 rounded-full flex items-center justify-center text-white shrink-0 shadow-2xs"
                     style={{ backgroundColor: localSettings.primaryColor }}
                   >
-                    <Send className="w-3.5 h-3.5" />
+                    <ArrowUp className="w-3.5 h-3.5" />
                   </div>
                 </div>
               </div>
@@ -1066,40 +1075,27 @@ export default function App() {
             <div className="mt-4 pt-3 border-t border-slate-200/80 flex items-center justify-between">
               <div>
                 <span className="text-xs text-slate-700 font-bold block">Launcher State:</span>
-                <span className="text-[10px] text-slate-400">Opens upwards with smooth transition</span>
+                <span className="text-[10px] text-slate-400">Teardrop shape with Chevron Down when open</span>
               </div>
-              <div className="flex items-center gap-2">
-                {/* Closed State preview */}
-                {launcherStyle === 'pill' ? (
-                  <div 
-                    title="Closed state (Pill)"
-                    className="px-3.5 py-1.5 rounded-full text-white text-xs font-bold flex items-center gap-2 shadow-xs transition-all"
-                    style={{ backgroundColor: localSettings.primaryColor }}
-                  >
-                    <div className="w-3.5 h-3.5 rounded-full overflow-hidden flex items-center justify-center shrink-0">
-                      {renderLauncherIcon(localSettings.launcherIcon || 'chat', "w-3.5 h-3.5")}
-                    </div>
-                    <span>{localSettings.launcherText || 'Chat with Us'}</span>
+              <div className="flex items-center gap-3">
+                {/* Closed Teardrop State preview */}
+                <div 
+                  title="Closed state (Teardrop shape)"
+                  className="w-10 h-10 rounded-[18px_18px_4px_18px] text-white flex items-center justify-center shadow-md transition-all overflow-hidden p-1.5"
+                  style={{ backgroundColor: localSettings.primaryColor }}
+                >
+                  <div className="w-full h-full rounded-full overflow-hidden flex items-center justify-center">
+                    {renderLauncherIcon(localSettings.launcherIcon || 'chat', "w-5 h-5")}
                   </div>
-                ) : (
-                  <div 
-                    title="Closed state (Bubble)"
-                    className="w-8 h-8 rounded-full text-white flex items-center justify-center shadow-xs transition-all overflow-hidden p-1"
-                    style={{ backgroundColor: localSettings.primaryColor }}
-                  >
-                    <div className="w-full h-full rounded-full overflow-hidden flex items-center justify-center">
-                      {renderLauncherIcon(localSettings.launcherIcon || 'chat', "w-4 h-4")}
-                    </div>
-                  </div>
-                )}
+                </div>
 
                 {/* Open State (Chevron Down) preview */}
                 <div 
                   title="Open state (Chevron Down - collapses chat)"
-                  className="w-8 h-8 rounded-full text-white flex items-center justify-center shadow-xs transition-all ring-2 ring-slate-900/10"
+                  className="w-10 h-10 rounded-[18px_18px_4px_18px] text-white flex items-center justify-center shadow-md transition-all ring-2 ring-slate-900/10"
                   style={{ backgroundColor: localSettings.primaryColor }}
                 >
-                  <ChevronDown className="w-4 h-4 text-white" />
+                  <ChevronDown className="w-5 h-5 text-white" />
                 </div>
               </div>
             </div>

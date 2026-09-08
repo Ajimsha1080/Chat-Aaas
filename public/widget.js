@@ -31,32 +31,28 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      gap: 8px;
       background: ${primaryColor};
       color: #ffffff;
-      padding: 12px 20px;
-      border-radius: 9999px;
+      width: 56px;
+      height: 56px;
+      padding: 0;
+      border-radius: ${isLeft ? '24px 24px 24px 4px' : '24px 24px 4px 24px'};
       box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.25), 0 8px 10px -6px rgba(0, 0, 0, 0.2);
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-      font-size: 14px;
-      font-weight: 600;
       cursor: pointer;
       border: none;
-      transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1), padding 0.25s ease, width 0.25s ease, height 0.25s ease;
+      transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1), border-radius 0.25s ease;
     }
     .aaas-widget-launcher:hover {
-      transform: scale(1.05);
+      transform: scale(1.06);
     }
     .aaas-widget-launcher.aaas-launcher-open {
-      width: 54px;
-      height: 54px;
-      padding: 0;
-      border-radius: 50%;
+      border-radius: ${isLeft ? '24px 24px 24px 4px' : '24px 24px 4px 24px'};
     }
     .aaas-widget-container {
       display: flex;
       position: fixed;
-      bottom: ${bottomPaddingNum + 64}px;
+      bottom: ${bottomPaddingNum + 68}px;
       ${isLeft ? `left: ${sidePaddingNum}px;` : `right: ${sidePaddingNum}px;`}
       width: 380px;
       height: 560px;
@@ -64,7 +60,7 @@
       max-height: calc(100vh - 120px);
       z-index: 999999;
       background: #ffffff;
-      border-radius: 20px;
+      border-radius: 24px;
       box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.15), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
       overflow: hidden;
       flex-direction: column;
@@ -83,95 +79,155 @@
       pointer-events: auto;
     }
     .aaas-widget-header {
-      background: ${primaryColor};
-      color: #ffffff;
-      padding: 16px;
+      background: #ffffff;
+      color: #0f172a;
+      padding: 14px 16px;
       display: flex;
       align-items: center;
       justify-content: space-between;
+      border-bottom: 1px solid #f1f5f9;
     }
-    .aaas-widget-header h4 {
+    .aaas-widget-header-brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .aaas-widget-header-brand h4 {
       margin: 0;
       font-size: 15px;
       font-weight: 700;
-    }
-    .aaas-widget-header p {
-      margin: 2px 0 0;
-      font-size: 11px;
-      opacity: 0.85;
+      color: #0f172a;
     }
     .aaas-widget-close {
       background: transparent;
       border: none;
-      color: #ffffff;
+      color: #64748b;
       cursor: pointer;
-      font-size: 18px;
-      padding: 4px 8px;
-      border-radius: 8px;
+      font-size: 16px;
+      padding: 4px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 50%;
+    }
+    .aaas-widget-close:hover {
+      color: #0f172a;
+      background: #f1f5f9;
     }
     .aaas-widget-messages {
       flex: 1;
       padding: 16px;
       overflow-y: auto;
-      background: #f8fafc;
+      background: #ffffff;
       display: flex;
       flex-direction: column;
-      gap: 12px;
+      gap: 14px;
+    }
+    .aaas-msg-wrapper {
+      display: flex;
+      flex-direction: column;
+      max-width: 85%;
+    }
+    .aaas-msg-wrapper.aaas-msg-bot-wrap {
+      align-self: flex-start;
+    }
+    .aaas-msg-wrapper.aaas-msg-user-wrap {
+      align-self: flex-end;
     }
     .aaas-msg {
-      max-width: 82%;
-      padding: 10px 14px;
-      border-radius: 14px;
+      padding: 12px 14px;
+      border-radius: 16px;
       font-size: 13px;
-      line-height: 1.45;
+      line-height: 1.5;
     }
     .aaas-msg-bot {
-      background: #ffffff;
-      color: #1e293b;
-      border: 1px solid #e2e8f0;
-      align-self: flex-start;
-      border-bottom-left-radius: 4px;
+      background: #f1f5f9;
+      color: #0f172a;
+      border-top-left-radius: 4px;
     }
     .aaas-msg-user {
       background: ${primaryColor};
       color: #ffffff;
-      align-self: flex-end;
       border-bottom-right-radius: 4px;
     }
+    .aaas-msg-meta {
+      font-size: 10px;
+      color: #94a3b8;
+      margin-top: 4px;
+      font-weight: 500;
+    }
+    .aaas-msg-bot-wrap .aaas-msg-meta {
+      padding-left: 2px;
+    }
+    .aaas-msg-user-wrap .aaas-msg-meta {
+      text-align: right;
+      padding-right: 2px;
+    }
+    .aaas-widget-notice {
+      margin: 0 16px 8px;
+      padding: 10px 12px;
+      background: #f1f5f9;
+      border-radius: 14px;
+      font-size: 11px;
+      line-height: 1.4;
+      color: #64748b;
+      text-align: center;
+    }
     .aaas-widget-input-row {
-      padding: 12px;
+      margin: 0 16px 14px;
+      padding: 6px 8px 6px 14px;
       background: #ffffff;
-      border-top: 1px solid #e2e8f0;
+      border: 1px solid #cbd5e1;
+      border-radius: 16px;
       display: flex;
+      align-items: center;
       gap: 8px;
+      box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+    }
+    .aaas-widget-input-row:focus-within {
+      border-color: #64748b;
     }
     .aaas-widget-input {
       flex: 1;
-      border: 1px solid #cbd5e1;
-      border-radius: 12px;
-      padding: 10px 14px;
+      border: none;
       font-size: 13px;
       outline: none;
+      background: transparent;
+      color: #0f172a;
     }
-    .aaas-widget-input:focus {
-      border-color: ${primaryColor};
+    .aaas-widget-paperclip {
+      background: transparent;
+      border: none;
+      color: #94a3b8;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      padding: 4px;
+    }
+    .aaas-widget-paperclip:hover {
+      color: #64748b;
     }
     .aaas-widget-send {
       background: ${primaryColor};
       color: #ffffff;
       border: none;
-      border-radius: 12px;
-      padding: 0 16px;
-      font-weight: 600;
+      border-radius: 50%;
+      width: 30px;
+      height: 30px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
       cursor: pointer;
-      font-size: 13px;
+      flex-shrink: 0;
+      transition: transform 0.15s ease;
+    }
+    .aaas-widget-send:active {
+      transform: scale(0.95);
     }
     @media (max-width: 480px) {
       .aaas-widget-launcher {
         bottom: 16px;
         right: 16px;
-        padding: 10px 16px;
-        font-size: 13px;
       }
       .aaas-widget-container {
         position: fixed;
@@ -187,9 +243,6 @@
         border: none;
         z-index: 1000000;
       }
-      .aaas-widget-input-row {
-        padding-bottom: max(12px, env(safe-area-inset-bottom));
-      }
     }
   `;
   document.head.appendChild(style);
@@ -199,20 +252,34 @@
   container.className = 'aaas-widget-container';
   container.innerHTML = `
     <div class="aaas-widget-header">
-      <div>
-        <h4>AI Assistant</h4>
-        <p>● Ready to answer questions</p>
+      <div class="aaas-widget-header-brand">
+        <button class="aaas-widget-close" title="Minimize">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+        </button>
+        ${launcherLogoUrl ? `<img src="${launcherLogoUrl}" alt="Logo" style="width: 28px; height: 28px; border-radius: 50%; object-fit: cover;" onerror="this.style.display='none'" />` : ''}
+        <h4>${launcherText || 'AI Assistant'}</h4>
       </div>
-      <button class="aaas-widget-close">✕</button>
+      <button class="aaas-widget-close" title="Close">✕</button>
     </div>
     <div class="aaas-widget-messages">
-      <div class="aaas-msg aaas-msg-bot">
-        Hi there! 👋 How can I help you with our products, pricing, or policies today?
+      <div class="aaas-msg-wrapper aaas-msg-bot-wrap">
+        <div class="aaas-msg aaas-msg-bot">
+          Welcome 👋 ,<br>Got any questions ? We are happy to help.
+        </div>
+        <div class="aaas-msg-meta">${launcherText || 'AI'} · Just now</div>
       </div>
     </div>
+    <div class="aaas-widget-notice">
+      Our agents are not available right now, but you can still send messages, we'll reach out once we are back.
+    </div>
     <form class="aaas-widget-input-row">
-      <input type="text" class="aaas-widget-input" placeholder="Ask a question..." />
-      <button type="submit" class="aaas-widget-send">Send</button>
+      <input type="text" class="aaas-widget-input" placeholder="Enter your message" />
+      <button type="button" class="aaas-widget-paperclip" title="Attach file">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l8.57-8.57A4 4 0 1 1 18 8.84l-8.59 8.57a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
+      </button>
+      <button type="submit" class="aaas-widget-send" title="Send message">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 7-7 7 7"/><path d="M12 19V5"/></svg>
+      </button>
     </form>
   `;
   document.body.appendChild(container);
