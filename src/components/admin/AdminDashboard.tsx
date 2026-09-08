@@ -24,7 +24,19 @@ import {
   ShieldCheck,
   Cpu,
   Menu,
-  X
+  X,
+  History,
+  User,
+  Key,
+  FileText,
+  Sparkles,
+  Filter,
+  Clock,
+  Download,
+  Copy,
+  Check,
+  ChevronLeft,
+  ChevronRight
 } from 'lucide-react';
 import { useApp } from '../../context';
 
@@ -47,6 +59,14 @@ export const AdminDashboard: React.FC = () => {
   const [supportDiagnosticOutput, setSupportDiagnosticOutput] = useState<any | null>(null);
   const [isEmergencyKillswitchActive, setIsEmergencyKillswitchActive] = useState(false);
   const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
+
+  // Audit Trail states & filters
+  const [auditSearch, setAuditSearch] = useState('');
+  const [auditSeverity, setAuditSeverity] = useState<'all' | 'critical' | 'warning' | 'info'>('all');
+  const [auditCategory, setAuditCategory] = useState<string>('all');
+  const [auditPage, setAuditPage] = useState(1);
+  const [expandedLogId, setExpandedLogId] = useState<string | null>(null);
+  const itemsPerPage = 8;
 
   const totalTenants = companies.length;
   const activeAgents = companies.filter(c => c.agent.status === 'active' && !c.isSuspended).length;
@@ -75,6 +95,208 @@ export const AdminDashboard: React.FC = () => {
       lastActive: 'Just now'
     });
     showToast('Diagnostic Complete', `Diagnostic inspection completed for ${targetComp.name}.`, 'info');
+  };
+
+  // Audit Log Filtering & Formatting
+  const filteredAuditLogs = auditLogs.filter(log => {
+    const matchesSearch = 
+      !auditSearch || 
+      log.action.toLowerCase().includes(auditSearch.toLowerCase()) ||
+      log.actor.toLowerCase().includes(auditSearch.toLowerCase()) ||
+      log.details.toLowerCase().includes(auditSearch.toLowerCase()) ||
+      log.timestamp.toLowerCase().includes(auditSearch.toLowerCase());
+    
+    const matchesSeverity = auditSeverity === 'all' || log.severity === auditSeverity;
+
+    const matchesCategory = 
+      auditCategory === 'all' ||
+      (auditCategory === 'CONFIG' && (log.action.includes('CONFIG') || log.action.includes('SETTING'))) ||
+      (auditCategory === 'VERSION' && log.action.includes('VERSION')) ||
+      (auditCategory === 'BRANDING' && (log.action.includes('BRANDING') || log.action.includes('WIDGET'))) ||
+      (auditCategory === 'SECURITY' && (log.action.includes('API_KEY') || log.action.includes('SECURITY') || log.action.includes('SSRF'))) ||
+      (auditCategory === 'TENANT' && (log.action.includes('TENANT') || log.action.includes('ORG') || log.action.includes('COMPANY'))) ||
+      (auditCategory === 'KNOWLEDGE' && log.action.includes('KNOWLEDGE'));
+
+    return matchesSearch && matchesSeverity && matchesCategory;
+  });
+
+  const totalAuditPages = Math.max(1, Math.ceil(filteredAuditLogs.length / itemsPerPage));
+  const paginatedAuditLogs = filteredAuditLogs.slice((auditPage - 1) * itemsPerPage, auditPage * itemsPerPage);
+
+  const formatAuditTimestamp = (ts: string) => {
+    if (!ts) return { time: '--:--', date: 'Today', isToday: true };
+    const d = new Date(ts);
+    if (isNaN(d.getTime())) return { time: ts, date: 'Recorded', isToday: true };
+
+    const timeStr = d.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    const dateStr = d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+    const isToday = d.toDateString() === new Date().toDateString();
+
+    return {
+      time: timeStr,
+      date: isToday ? 'Today' : dateStr,
+      fullDate: dateStr
+    };
+  };
+
+  const getActionBadge = (action: string) => {
+    if (action === 'AGENT_VERSION_PUBLISHED') {
+      return {
+        label: 'Version Published',
+        color: 'bg-emerald-50 text-emerald-700 border-emerald-200/80',
+        icon: '🚀'
+      };
+    }
+    if (action === 'AGENT_CONFIG_UPDATED') {
+      return {
+        label: 'Config Updated',
+        color: 'bg-sky-50 text-sky-700 border-sky-200/80',
+        icon: '⚙️'
+      };
+    }
+    if (action === 'WIDGET_BRANDING_UPDATED') {
+      return {
+        label: 'Branding Updated',
+        color: 'bg-indigo-50 text-indigo-700 border-indigo-200/80',
+        icon: '🎨'
+      };
+    }
+    if (action === 'API_KEY_ROTATED') {
+      return {
+        label: 'API Key Rotated',
+        color: 'bg-amber-50 text-amber-700 border-amber-200/80',
+        icon: '🔑'
+      };
+    }
+    if (action === 'KNOWLEDGE_DELETED' || action === 'KNOWLEDGE_INDEXED' || action === 'KNOWLEDGE_CREATED') {
+      return {
+        label: action === 'KNOWLEDGE_DELETED' ? 'Knowledge Deleted' : (action === 'KNOWLEDGE_INDEXED' ? 'Knowledge Indexed' : 'Knowledge Added'),
+        color: 'bg-purple-50 text-purple-700 border-purple-200/80',
+        icon: '📚'
+      };
+    }
+    if (action === 'TENANT_SWITCH') {
+      return {
+        label: 'Workspace Switched',
+        color: 'bg-slate-100 text-slate-700 border-slate-200',
+        icon: '🔀'
+      };
+    }
+    if (action === 'TOOL_EXECUTE') {
+      return {
+        label: 'Tool Execution',
+        color: 'bg-violet-50 text-violet-700 border-violet-200/80',
+        icon: '⚡'
+      };
+    }
+    return {
+      label: action.replace(/_/g, ' '),
+      color: 'bg-slate-100 text-slate-700 border-slate-200',
+      icon: '📝'
+    };
+  };
+
+  const renderAuditDetails = (details: string, logId: string) => {
+    if (details.includes('Updated AI assistant configuration fields:')) {
+      const rawFields = details.replace('Updated AI assistant configuration fields:', '').trim();
+      const fieldsList = rawFields.split(',').map(f => f.trim()).filter(Boolean);
+      const isExpanded = expandedLogId === logId;
+
+      return (
+        <div className="space-y-1.5">
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="text-slate-800 font-medium text-xs">Updated AI assistant configuration</span>
+            <span className="px-2 py-0.5 rounded-md bg-slate-100 text-slate-600 font-mono text-[11px] font-bold border border-slate-200/60">
+              {fieldsList.length} settings modified
+            </span>
+            {fieldsList.length > 3 && (
+              <button
+                type="button"
+                onClick={() => setExpandedLogId(isExpanded ? null : logId)}
+                className="text-[11px] text-indigo-600 hover:text-indigo-800 font-semibold underline cursor-pointer"
+              >
+                {isExpanded ? 'Hide fields' : 'Show fields'}
+              </button>
+            )}
+          </div>
+          {isExpanded ? (
+            <div className="flex flex-wrap gap-1 pt-1 animate-in fade-in duration-150">
+              {fieldsList.map((f, i) => (
+                <span key={i} className="px-2 py-0.5 bg-slate-100 text-slate-700 rounded text-[11px] font-mono border border-slate-200">
+                  {f}
+                </span>
+              ))}
+            </div>
+          ) : (
+            <div className="flex flex-wrap gap-1 items-center">
+              {fieldsList.slice(0, 3).map((f, i) => (
+                <span key={i} className="px-1.5 py-0.5 bg-slate-100 text-slate-600 rounded text-[10px] font-mono border border-slate-200/40">
+                  {f}
+                </span>
+              ))}
+              {fieldsList.length > 3 && (
+                <span className="text-[11px] text-slate-400">+{fieldsList.length - 3} more</span>
+              )}
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    if (details.includes('Published immutable AI Employee version')) {
+      const versionMatch = details.match(/version\s+([^\s:]+)/i);
+      const quoteMatch = details.match(/"([^"]+)"/);
+      return (
+        <div className="text-xs text-slate-800 font-medium flex items-center gap-1.5 flex-wrap">
+          <span>Published immutable AI Employee</span>
+          <span className="px-2 py-0.5 rounded-md bg-emerald-100 text-emerald-800 font-bold font-mono text-xs border border-emerald-200/60">
+            {versionMatch ? versionMatch[1] : 'v'}
+          </span>
+          {quoteMatch && (
+            <span className="text-slate-600 italic">
+              "{quoteMatch[1]}"
+            </span>
+          )}
+        </div>
+      );
+    }
+
+    if (details.includes('Removed knowledge item ID:')) {
+      const id = details.replace('Removed knowledge item ID:', '').trim();
+      return (
+        <div className="text-xs text-slate-800 font-medium flex items-center gap-1.5">
+          <span>Removed knowledge item</span>
+          <code className="px-2 py-0.5 bg-purple-50 text-purple-700 rounded-md font-mono font-bold text-xs border border-purple-200/60">
+            {id}
+          </code>
+        </div>
+      );
+    }
+
+    if (details.includes('Switched active tenant workspace to:')) {
+      const tenant = details.replace('Switched active tenant workspace to:', '').trim();
+      return (
+        <div className="text-xs text-slate-800 font-medium flex items-center gap-1.5">
+          <span>Switched workspace to</span>
+          <span className="px-2 py-0.5 bg-slate-100 text-slate-700 rounded-md font-mono font-bold text-xs border border-slate-200">
+            {tenant}
+          </span>
+        </div>
+      );
+    }
+
+    return <span className="text-xs text-slate-700 font-medium">{details}</span>;
+  };
+
+  const handleExportAuditLogs = () => {
+    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(auditLogs, null, 2));
+    const downloadAnchor = document.createElement('a');
+    downloadAnchor.setAttribute("href", dataStr);
+    downloadAnchor.setAttribute("download", `chat_aaas_audit_trail_${new Date().toISOString().slice(0,10)}.json`);
+    document.body.appendChild(downloadAnchor);
+    downloadAnchor.click();
+    downloadAnchor.remove();
+    showToast('Audit Trail Exported', 'Downloaded full JSON immutable audit trail.', 'success');
   };
 
   const adminNavs = [
@@ -620,24 +842,224 @@ export const AdminDashboard: React.FC = () => {
           </div>
 
           {/* Immutable Master Audit Logs */}
-          <div className="bg-white rounded-2xl border border-slate-200/80 p-6 sm:p-7 shadow-[0_1px_2px_rgba(0,0,0,0.02)] space-y-4">
-            <h3 className="text-base sm:text-lg font-bold text-slate-900">Platform-Wide Immutable Audit Trail</h3>
-            <div className="divide-y divide-slate-100 text-sm font-mono">
-              {auditLogs.map(log => (
-                <div key={log.id} className="py-3 flex items-center justify-between gap-2">
-                  <div className="text-xs sm:text-sm">
-                    <span className="text-slate-500 mr-2.5">{log.timestamp}</span>
-                    <strong className="text-slate-900 font-bold">{log.actor}: </strong>
-                    <span className="text-indigo-600 font-semibold">{log.action} — </span>
-                    <span className="text-slate-700">{log.details}</span>
+          <div className="bg-white rounded-2xl border border-slate-200/80 p-6 sm:p-7 shadow-[0_1px_2px_rgba(0,0,0,0.02)] space-y-5">
+            {/* Header & Meta */}
+            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-2 border-b border-slate-100">
+              <div className="space-y-1">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-lg bg-indigo-50 border border-indigo-200/60 flex items-center justify-center text-indigo-700">
+                    <History className="w-4 h-4" />
                   </div>
-                  <span className={`text-xs font-bold px-2 py-0.5 rounded-md uppercase shrink-0 ${
-                    log.severity === 'critical' ? 'bg-rose-50 text-rose-700 border border-rose-200/60' : 'bg-slate-100 text-slate-700'
-                  }`}>
-                    {log.severity}
+                  <h3 className="text-base sm:text-lg font-bold text-slate-900">Platform-Wide Immutable Audit Trail</h3>
+                  <span className="px-2.5 py-0.5 rounded-full text-xs font-mono font-bold bg-slate-100 text-slate-700 border border-slate-200">
+                    {auditLogs.length} Events
                   </span>
                 </div>
-              ))}
+                <p className="text-xs sm:text-sm text-slate-500">
+                  Cryptographically verified, tamper-evident log of all system configuration changes, tenant switches, and security events.
+                </p>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={handleExportAuditLogs}
+                  className="px-3.5 py-1.5 rounded-xl text-xs font-semibold bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 shadow-2xs flex items-center gap-1.5 cursor-pointer transition-colors"
+                >
+                  <Download className="w-3.5 h-3.5 text-slate-500" />
+                  <span>Export JSON</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Filter & Search Bar */}
+            <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3 pt-1">
+              {/* Search input */}
+              <div className="relative flex-1 max-w-md">
+                <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+                <input
+                  type="text"
+                  placeholder="Search events, actors, actions, or details..."
+                  value={auditSearch}
+                  onChange={(e) => {
+                    setAuditSearch(e.target.value);
+                    setAuditPage(1);
+                  }}
+                  className="w-full pl-9.5 pr-4 py-2 bg-slate-50/80 border border-slate-200 rounded-xl text-xs font-medium text-slate-900 placeholder:text-slate-400 focus:outline-hidden focus:bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all"
+                />
+              </div>
+
+              {/* Category & Severity Filter Pills */}
+              <div className="flex items-center gap-2 flex-wrap">
+                {/* Category Selector */}
+                <select
+                  value={auditCategory}
+                  onChange={(e) => {
+                    setAuditCategory(e.target.value);
+                    setAuditPage(1);
+                  }}
+                  className="px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 focus:outline-hidden cursor-pointer"
+                >
+                  <option value="all">All Categories</option>
+                  <option value="CONFIG">Agent Config</option>
+                  <option value="VERSION">Versions</option>
+                  <option value="BRANDING">Branding & Widget</option>
+                  <option value="SECURITY">Security & API Keys</option>
+                  <option value="TENANT">Tenants & Workspaces</option>
+                  <option value="KNOWLEDGE">Knowledge Base</option>
+                </select>
+
+                {/* Severity Pills */}
+                <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-xl">
+                  {(['all', 'critical', 'warning', 'info'] as const).map(sev => (
+                    <button
+                      key={sev}
+                      type="button"
+                      onClick={() => {
+                        setAuditSeverity(sev);
+                        setAuditPage(1);
+                      }}
+                      className={`px-2.5 py-1 rounded-lg text-xs font-semibold capitalize transition-all cursor-pointer ${
+                        auditSeverity === sev
+                          ? 'bg-white text-slate-900 shadow-2xs font-bold'
+                          : 'text-slate-500 hover:text-slate-900'
+                      }`}
+                    >
+                      {sev}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* Structured Table */}
+            <div className="overflow-x-auto border border-slate-200/90 rounded-2xl bg-white shadow-2xs">
+              <table className="w-full text-left text-xs border-collapse">
+                <thead>
+                  <tr className="border-b border-slate-200/80 bg-slate-50/80 text-[11px] font-bold text-slate-500 uppercase tracking-wider">
+                    <th className="py-3 px-4 w-44">Timestamp</th>
+                    <th className="py-3 px-4 w-48">Event / Action</th>
+                    <th className="py-3 px-4">Details & Metadata</th>
+                    <th className="py-3 px-4 w-36">Actor</th>
+                    <th className="py-3 px-4 w-28 text-right">Severity</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {paginatedAuditLogs.length > 0 ? (
+                    paginatedAuditLogs.map(log => {
+                      const ts = formatAuditTimestamp(log.timestamp);
+                      const actionBadge = getActionBadge(log.action);
+                      return (
+                        <tr key={log.id} className="hover:bg-slate-50/70 transition-colors group">
+                          {/* Timestamp */}
+                          <td className="py-3.5 px-4 align-top whitespace-nowrap">
+                            <div className="flex flex-col">
+                              <span className="font-bold text-slate-900 font-mono text-xs">{ts.time}</span>
+                              <span className="text-[11px] text-slate-400 font-medium flex items-center gap-1 mt-0.5">
+                                <Clock className="w-3 h-3 text-slate-400" />
+                                {ts.date}
+                              </span>
+                            </div>
+                          </td>
+
+                          {/* Event / Action */}
+                          <td className="py-3.5 px-4 align-top">
+                            <div className="flex items-center gap-1.5">
+                              <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold border ${actionBadge.color}`}>
+                                <span>{actionBadge.icon}</span>
+                                <span className="font-mono text-[11px] font-bold tracking-tight">{actionBadge.label}</span>
+                              </span>
+                            </div>
+                          </td>
+
+                          {/* Details */}
+                          <td className="py-3.5 px-4 align-top">
+                            {renderAuditDetails(log.details, log.id)}
+                          </td>
+
+                          {/* Actor */}
+                          <td className="py-3.5 px-4 align-top whitespace-nowrap">
+                            <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-slate-100/90 text-slate-700 font-medium text-xs border border-slate-200/60">
+                              <User className="w-3 h-3 text-slate-500" />
+                              <span className="font-semibold">{log.actor}</span>
+                            </div>
+                          </td>
+
+                          {/* Severity */}
+                          <td className="py-3.5 px-4 align-top text-right whitespace-nowrap">
+                            <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold uppercase ${
+                              log.severity === 'critical'
+                                ? 'bg-rose-50 text-rose-700 border border-rose-200'
+                                : (log.severity === 'warning'
+                                    ? 'bg-amber-50 text-amber-700 border border-amber-200'
+                                    : 'bg-slate-100 text-slate-700 border border-slate-200')
+                            }`}>
+                              {log.severity === 'critical' && <AlertTriangle className="w-3 h-3" />}
+                              {log.severity === 'warning' && <AlertTriangle className="w-3 h-3" />}
+                              {log.severity === 'info' && <CheckCircle2 className="w-3 h-3 text-slate-500" />}
+                              <span>{log.severity}</span>
+                            </span>
+                          </td>
+                        </tr>
+                      );
+                    })
+                  ) : (
+                    <tr>
+                      <td colSpan={5} className="py-12 px-4 text-center">
+                        <div className="max-w-xs mx-auto space-y-2">
+                          <History className="w-8 h-8 text-slate-300 mx-auto" />
+                          <p className="text-sm font-semibold text-slate-700">No matching audit events</p>
+                          <p className="text-xs text-slate-400">Try adjusting your search query or clearing filters.</p>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setAuditSearch('');
+                              setAuditSeverity('all');
+                              setAuditCategory('all');
+                            }}
+                            className="text-xs text-indigo-600 hover:text-indigo-800 font-semibold underline cursor-pointer"
+                          >
+                            Reset filters
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+
+              {/* Pagination footer */}
+              {totalAuditPages > 1 && (
+                <div className="p-3 bg-slate-50/80 border-t border-slate-200 flex items-center justify-between text-xs text-slate-500">
+                  <span>
+                    Showing {((auditPage - 1) * itemsPerPage) + 1} to {Math.min(auditPage * itemsPerPage, filteredAuditLogs.length)} of {filteredAuditLogs.length} events
+                  </span>
+                  <div className="flex items-center gap-1">
+                    <button
+                      type="button"
+                      disabled={auditPage === 1}
+                      onClick={() => setAuditPage(prev => Math.max(1, prev - 1))}
+                      className="px-2.5 py-1 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed font-medium flex items-center gap-1 cursor-pointer"
+                    >
+                      <ChevronLeft className="w-3.5 h-3.5" />
+                      <span>Previous</span>
+                    </button>
+                    <span className="px-2 font-mono font-bold text-slate-700">
+                      {auditPage} / {totalAuditPages}
+                    </span>
+                    <button
+                      type="button"
+                      disabled={auditPage === totalAuditPages}
+                      onClick={() => setAuditPage(prev => Math.min(totalAuditPages, prev + 1))}
+                      className="px-2.5 py-1 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed font-medium flex items-center gap-1 cursor-pointer"
+                    >
+                      <span>Next</span>
+                      <ChevronRight className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>
