@@ -88,11 +88,13 @@ export const DeployView: React.FC = () => {
   ];
 
   const [launcherStyle, setLauncherStyle] = useState<'teardrop' | 'bubble' | 'squircle' | 'pill'>((currentCompany.widgetSettings?.launcherShape as any) || 'teardrop');
-  const [starterQuestions, setStarterQuestions] = useState<string[]>([
-    'What are your pricing plans?',
-    'How do I get started?',
-    'Talk to human support'
-  ]);
+  const [starterQuestions, setStarterQuestions] = useState<string[]>(() => 
+    currentCompany.widgetSettings?.starterQuestions || [
+      'What are your pricing plans?',
+      'How do I get started?',
+      'Talk to human support'
+    ]
+  );
   const [newQuestionInput, setNewQuestionInput] = useState('');
   const [previewChat, setPreviewChat] = useState<{ sender: 'agent' | 'user'; text: string }[]>([
     { sender: 'agent', text: currentCompany.agent.greetingMessage || 'Hello! How can I assist you today?' }
@@ -143,12 +145,16 @@ export const DeployView: React.FC = () => {
 
   const handleAddStarterQuestion = () => {
     if (!newQuestionInput.trim() || starterQuestions.length >= 4) return;
-    setStarterQuestions(prev => [...prev, newQuestionInput.trim()]);
+    const updated = [...starterQuestions, newQuestionInput.trim()];
+    setStarterQuestions(updated);
+    setLocalSettings(prev => ({ ...prev, starterQuestions: updated }));
     setNewQuestionInput('');
   };
 
   const handleRemoveStarterQuestion = (idx: number) => {
-    setStarterQuestions(prev => prev.filter((_, i) => i !== idx));
+    const updated = starterQuestions.filter((_, i) => i !== idx);
+    setStarterQuestions(updated);
+    setLocalSettings(prev => ({ ...prev, starterQuestions: updated }));
   };
 
   const handlePreviewStarterClick = (question: string) => {
@@ -172,7 +178,7 @@ export const DeployView: React.FC = () => {
   };
 
   const handleSaveBranding = () => {
-    updateWidgetSettings(localSettings);
+    updateWidgetSettings({ ...localSettings, starterQuestions });
     setIsSaved(true);
     setTimeout(() => setIsSaved(false), 2500);
   };

@@ -187,7 +187,12 @@ export const INITIAL_COMPANIES: Company[] = [
       borderRadius: 'rounded-2xl',
       showPoweredBy: true,
       enableSound: true,
-      autoExpandSeconds: 5
+      autoExpandSeconds: 5,
+      starterQuestions: [
+        'What are your pricing plans?',
+        'How do I get started?',
+        'Talk to human support'
+      ]
     }
   },
   {

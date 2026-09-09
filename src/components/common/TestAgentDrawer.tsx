@@ -350,52 +350,26 @@ export const TestAgentDrawer: React.FC = () => {
           <div ref={messagesEndRef} />
         </div>
 
-        {/* Suggestion Prompts */}
-        <div className={`px-4 py-2.5 border-t flex items-center gap-2 overflow-x-auto text-xs ${
-          isDarkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'
-        }`}>
-          <span className={`font-semibold shrink-0 ${isDarkMode ? 'text-slate-500' : 'text-slate-400'}`}>Try:</span>
-          <button
-            onClick={() => { setInput('What is your SLA and uptime credit policy?'); }}
-            className={`px-3 py-1 font-medium rounded-full shrink-0 transition-colors cursor-pointer ${
-              isDarkMode ? 'bg-slate-800 hover:bg-slate-700 text-slate-300' : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
-            }`}
-          >
-            SLA policy
-          </button>
-          <button
-            onClick={() => { setInput('Check node count and spend for cls-prod-9941'); }}
-            className={`px-3 py-1 font-medium rounded-full shrink-0 transition-colors cursor-pointer ${
-              isDarkMode ? 'bg-slate-800 hover:bg-slate-700 text-slate-300' : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
-            }`}
-          >
-            Check Cluster Quota
-          </button>
-          <button
-            onClick={() => { setInput('Can we book a 30-min architecture demo?'); }}
-            className={`px-3 py-1 font-medium rounded-full shrink-0 transition-colors cursor-pointer ${
-              isDarkMode ? 'bg-slate-800 hover:bg-slate-700 text-slate-300' : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
-            }`}
-          >
-            Book Demo (Action)
-          </button>
-          <button
-            onClick={() => { setInput('Rotate sandbox API access token'); }}
-            className={`px-3 py-1 font-medium rounded-full shrink-0 border transition-colors cursor-pointer ${
-              isDarkMode ? 'bg-amber-950/40 hover:bg-amber-900/60 text-amber-300 border-amber-800/60' : 'bg-amber-50 hover:bg-amber-100 text-amber-800 border-amber-200'
-            }`}
-          >
-            Rotate Key (High Risk)
-          </button>
-          <button
-            onClick={() => { setInput('URGENT: Production outage 502 gateway error!'); }}
-            className={`px-3 py-1 font-medium rounded-full shrink-0 border transition-colors cursor-pointer ${
-              isDarkMode ? 'bg-rose-950/40 hover:bg-rose-900/60 text-rose-300 border-rose-800/60' : 'bg-rose-50 hover:bg-rose-100 text-rose-800 border-rose-200'
-            }`}
-          >
-            Trigger Human Handoff
-          </button>
-        </div>
+        {/* Suggestion Prompts synchronized with Deploy Settings */}
+        {currentCompany.widgetSettings?.starterQuestions && currentCompany.widgetSettings.starterQuestions.length > 0 && (
+          <div className={`px-4 py-2.5 border-t flex items-center gap-2 overflow-x-auto text-xs no-scrollbar ${
+            isDarkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'
+          }`}>
+            <span className={`font-semibold shrink-0 ${isDarkMode ? 'text-slate-500' : 'text-slate-400'}`}>Try:</span>
+            {currentCompany.widgetSettings.starterQuestions.map((q, qIdx) => (
+              <button
+                key={qIdx}
+                type="button"
+                onClick={() => { setInput(q); }}
+                className={`px-3 py-1 font-medium rounded-full shrink-0 transition-colors cursor-pointer whitespace-nowrap ${
+                  isDarkMode ? 'bg-slate-800 hover:bg-slate-700 text-slate-300' : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
+                }`}
+              >
+                {q}
+              </button>
+            ))}
+          </div>
+        )}
 
         {/* Input Bar */}
         <form onSubmit={handleSend} className={`p-3.5 border-t flex items-center gap-2.5 ${

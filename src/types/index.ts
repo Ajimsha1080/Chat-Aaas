@@ -245,6 +245,8 @@ export interface WidgetCustomization {
   bottomPadding?: number;
   sidePadding?: number;
   customCss?: string;
+  starterQuestions?: string[];
+  welcomeMessage?: string;
 }
 
 export interface Company {

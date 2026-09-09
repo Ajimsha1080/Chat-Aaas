@@ -265,27 +265,21 @@ export const ChatWidget: React.FC<ChatWidgetProps> = ({ isInlinePreview = false 
             <div ref={messagesEndRef} />
           </div>
 
-          {/* Quick Prompts */}
-          <div className="px-3.5 py-2 bg-white border-t border-slate-100 flex items-center gap-2 overflow-x-auto text-xs">
-            <button
-              onClick={() => { setInput('What is your SLA & refund policy?'); }}
-              className="px-3 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium rounded-full shrink-0 transition-colors cursor-pointer"
-            >
-              SLA Policy
-            </button>
-            <button
-              onClick={() => { setInput('Can I book a 30-min demo?'); }}
-              className="px-3 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium rounded-full shrink-0 transition-colors cursor-pointer"
-            >
-              Book Demo
-            </button>
-            <button
-              onClick={() => { setInput('Check status of cls-prod-9941'); }}
-              className="px-3 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium rounded-full shrink-0 transition-colors cursor-pointer"
-            >
-              Check Status
-            </button>
-          </div>
+          {/* Quick Starter Prompts from Widget Settings */}
+          {settings.starterQuestions && settings.starterQuestions.length > 0 && (
+            <div className="px-3.5 py-2 bg-white border-t border-slate-100 flex items-center gap-2 overflow-x-auto text-xs no-scrollbar">
+              {settings.starterQuestions.map((q, qIdx) => (
+                <button
+                  key={qIdx}
+                  type="button"
+                  onClick={() => { setInput(q); }}
+                  className="px-3 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium rounded-full shrink-0 transition-colors cursor-pointer whitespace-nowrap shadow-2xs"
+                >
+                  {q}
+                </button>
+              ))}
+            </div>
+          )}
 
           {/* Input Bar */}
           <form onSubmit={handleSendMessage} className="p-3.5 bg-white border-t border-slate-200 flex items-center gap-2.5 shrink-0">
