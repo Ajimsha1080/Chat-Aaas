@@ -166,8 +166,12 @@ export const ChatWidget: React.FC<ChatWidgetProps> = ({ isInlinePreview = false 
                 }`} />
               </div>
               <div className="min-w-0">
-                <h3 className="font-bold text-sm sm:text-base tracking-tight truncate">{settings.headerTitle}</h3>
-                <p className="text-xs text-white/90 truncate">{settings.headerSubtitle}</p>
+                {settings.headerTitle ? (
+                  <h3 className="font-bold text-sm sm:text-base tracking-tight truncate">{settings.headerTitle}</h3>
+                ) : null}
+                {settings.headerSubtitle ? (
+                  <p className="text-xs text-white/90 truncate">{settings.headerSubtitle}</p>
+                ) : null}
               </div>
             </div>
 

@@ -1074,15 +1074,19 @@ export default function App() {
 
                         {/* Big Prominent Title & Subtitle */}
                         <div className="space-y-1">
-                          <h3 
-                            className="text-2xl font-extrabold tracking-tight"
-                            style={{ color: localSettings.primaryColor }}
-                          >
-                            {localSettings.headerTitle || currentCompany.name + ' Support'}
-                          </h3>
-                          <p className={`text-xs ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
-                            {localSettings.headerSubtitle || 'Ask us anything or share your feedback'}
-                          </p>
+                          {localSettings.headerTitle ? (
+                            <h3 
+                              className="text-2xl font-extrabold tracking-tight"
+                              style={{ color: localSettings.primaryColor }}
+                            >
+                              {localSettings.headerTitle}
+                            </h3>
+                          ) : null}
+                          {localSettings.headerSubtitle ? (
+                            <p className={`text-xs ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
+                              {localSettings.headerSubtitle}
+                            </p>
+                          ) : null}
                         </div>
                       </div>
 
