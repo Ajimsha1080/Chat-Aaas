@@ -116,11 +116,6 @@ export const KnowledgeView: React.FC = () => {
     return 'published';
   };
 
-  const handleToggleStatus = (itemId: string, newStatus: 'published' | 'draft' | 'archived') => {
-    setArticleStatuses(prev => ({ ...prev, [itemId]: newStatus }));
-    showToast('Status Updated', `Knowledge source marked as ${newStatus}.`, 'success');
-  };
-
   // Sync health metrics
   const totalCount = knowledgeItems.length;
   const publishedCount = knowledgeItems.filter(i => getItemStatus(i) === 'published').length;
@@ -753,23 +748,10 @@ export const KnowledgeView: React.FC = () => {
                             <span className="text-xs font-bold font-mono uppercase tracking-wider text-slate-500">{item.type}</span>
                           </div>
 
-                          <div className="flex items-center gap-1.5">
-                            <select
-                              value={status}
-                              onChange={(e) => handleToggleStatus(item.id, e.target.value as any)}
-                              className={`text-[11px] font-semibold px-2 py-0.5 rounded-md border cursor-pointer ${
-                                status === 'published'
-                                  ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                                  : status === 'draft'
-                                  ? 'bg-amber-50 text-amber-700 border-amber-200'
-                                  : 'bg-slate-100 text-slate-600 border-slate-200'
-                              }`}
-                            >
-                              <option value="published">Published</option>
-                              <option value="draft">Draft</option>
-                              <option value="archived">Archived</option>
-                            </select>
-                          </div>
+                          <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200/80">
+                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                            <span>Active & Indexed</span>
+                          </span>
                         </div>
 
                         {/* Title & Preview */}
