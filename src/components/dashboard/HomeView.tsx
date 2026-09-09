@@ -1,4 +1,3 @@
-import React from 'react';
 import { 
   Play, 
   CheckCircle2, 
@@ -8,7 +7,6 @@ import {
   BookOpen, 
   ArrowRight, 
   AlertTriangle, 
-  SlidersHorizontal,
   ChevronRight,
   ArrowUpRight,
   ListTodo
@@ -49,8 +47,6 @@ export const HomeView: React.FC = () => {
   const activeConnectionsCount = integrations ? integrations.filter(i => i.connected).length : 2;
   const readyKnowledgeCount = knowledgeItems ? knowledgeItems.filter(k => k.status === 'indexed').length : 4;
 
-  const isLive = currentCompany.agent.status === 'active';
-
   const checklistItems = [
     { id: 1, title: 'Company profile and tone configured', completed: true, tab: 'assistant' },
     { id: 2, title: `Knowledge base loaded (${readyKnowledgeCount} sources)`, completed: readyKnowledgeCount > 0, tab: 'knowledge' },
@@ -62,64 +58,6 @@ export const HomeView: React.FC = () => {
 
   return (
     <div className="space-y-6 animate-in fade-in duration-150">
-      {/* 1. Header Command Center */}
-      <div className="bg-white rounded-2xl p-6 border border-slate-200/80 shadow-xs">
-        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-5">
-          <div className="flex items-start sm:items-center gap-4.5">
-            <div className="relative shrink-0">
-              <img 
-                src={currentCompany.agent.avatarUrl} 
-                alt={currentCompany.agent.name} 
-                className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl object-cover border border-slate-200/80 shadow-xs"
-              />
-              <span className={`absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full ring-2 ring-white ${
-                isLive ? 'bg-emerald-500' : 'bg-amber-500'
-              }`} />
-            </div>
-
-            <div>
-              <div className="flex items-center gap-2.5 flex-wrap">
-                <h1 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">
-                  {currentCompany.name}
-                </h1>
-                <span className={`inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-0.5 rounded-md ${
-                  isLive
-                    ? 'bg-emerald-50 text-emerald-700 border border-emerald-200/80'
-                    : 'bg-amber-50 text-amber-700 border border-amber-200/80'
-                }`}>
-                  <span className={`w-1.5 h-1.5 rounded-full ${isLive ? 'bg-emerald-500' : 'bg-amber-500'}`} />
-                  {isLive ? 'Active' : 'Paused'}
-                </span>
-                <span className="text-xs text-slate-500 bg-slate-50 px-2 py-0.5 rounded-md border border-slate-200/60 font-medium">
-                  {currentCompany.agent.name} · {currentCompany.agent.role || 'Customer Specialist'}
-                </span>
-              </div>
-
-              <p className="text-slate-500 text-xs sm:text-sm mt-1 max-w-2xl leading-relaxed">
-                Autonomous AI resolution engine for customer inquiries across website and integrated channels.
-              </p>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-2.5 shrink-0 flex-wrap">
-            <button
-              onClick={() => setIsQuickTestOpen(true)}
-              className="px-3.5 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-sm font-semibold flex items-center gap-2 transition-all cursor-pointer shadow-xs"
-            >
-              <Play className="w-3.5 h-3.5 fill-white" />
-              <span>Test Assistant</span>
-            </button>
-
-            <button
-              onClick={() => setCurrentTab('assistant')}
-              className="px-3.5 py-2 bg-white hover:bg-slate-50 text-slate-700 rounded-xl text-sm font-semibold flex items-center gap-2 transition-all border border-slate-200/80 cursor-pointer shadow-2xs"
-            >
-              <SlidersHorizontal className="w-3.5 h-3.5 text-slate-400" />
-              <span>Configure Persona</span>
-            </button>
-          </div>
-        </div>
-      </div>
 
       {/* 2. Getting Started Checklist */}
       {completedCount < 4 && (
