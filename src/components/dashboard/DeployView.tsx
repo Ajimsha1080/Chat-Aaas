@@ -440,32 +440,34 @@ export default function App() {
                   <h4 className="font-bold text-slate-900 text-sm">Branding</h4>
 
                   {/* Brand Logo Row */}
-                  <div className="flex items-center justify-between py-1">
+                  <div className="flex items-center justify-between py-2 border-b border-slate-100 pb-3">
                     <div>
                       <div className="flex items-center gap-1.5">
-                        <span className="font-semibold text-slate-800 text-xs sm:text-sm">Brand Logo</span>
+                        <span className="font-semibold text-slate-800 text-xs sm:text-sm">Brand Logo & Avatar</span>
                       </div>
-                      <p className="text-xs text-slate-400">Will be used to send first message</p>
+                      <p className="text-xs text-slate-400 mt-0.5">Displayed in widget header and assistant messages</p>
                     </div>
 
-                    <div className="flex items-center gap-2">
-                      <button
-                        type="button"
-                        onClick={() => brandLogoInputRef.current?.click()}
-                        className="inline-flex items-center gap-2 px-3 py-1.5 bg-indigo-50 hover:bg-indigo-100/80 border border-indigo-200/80 text-slate-800 rounded-xl text-xs font-semibold transition-all cursor-pointer shadow-2xs group"
-                      >
+                    <div className="flex items-center gap-2.5">
+                      <div className="flex items-center gap-2 p-1.5 pr-3 bg-slate-50 border border-slate-200 rounded-xl shadow-2xs">
                         <img 
                           src={companyLogoUrl} 
-                          alt="Logo" 
-                          className="w-4 h-4 rounded-md object-cover"
+                          alt="Brand Logo" 
+                          className="w-6 h-6 rounded-lg object-cover border border-slate-200"
                           onError={(e) => {
                             (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=150&auto=format&fit=crop&q=80';
                           }}
                         />
-                        <span className="font-bold text-slate-800">{currentCompany.name}</span>
-                        <div className="w-5 h-5 rounded-full bg-slate-700 text-white flex items-center justify-center group-hover:bg-slate-900 transition-colors ml-1">
-                          <Pencil className="w-2.5 h-2.5" />
-                        </div>
+                        <span className="text-xs font-bold text-slate-800 max-w-[140px] truncate">{currentCompany.name}</span>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => brandLogoInputRef.current?.click()}
+                        className="inline-flex items-center gap-1.5 px-3 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-semibold transition-all cursor-pointer shadow-xs"
+                      >
+                        <Upload className="w-3.5 h-3.5 text-pink-400" />
+                        <span>Change Logo</span>
                       </button>
                     </div>
                   </div>
