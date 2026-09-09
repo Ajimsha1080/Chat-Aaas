@@ -1112,203 +1112,211 @@ export const KnowledgeView: React.FC = () => {
             </div>
 
             <form onSubmit={handleCreateKnowledge} className="space-y-4 text-sm">
-              <div>
-                <label className="font-semibold text-slate-800 block mb-1.5">
-                  {modalType === 'faq' ? 'Question' : 'Title / Source Name'}
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={formTitle}
-                  onChange={(e) => setFormTitle(e.target.value)}
-                  placeholder={
-                    modalType === 'faq' 
-                      ? 'e.g. What is your return policy?' 
-                      : modalType === 'document'
-                      ? 'e.g. Product Guide & Service Policies'
-                      : 'e.g. Enterprise SLA Terms'
-                  }
-                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-1 focus:ring-slate-900 focus:border-slate-900 focus:outline-hidden text-sm"
-                />
-              </div>
-
-              {/* Target Collection Selector */}
-              <div>
-                <label className="font-semibold text-slate-800 block mb-1.5">Assign to Collection</label>
-                <select
-                  value={formCollectionId}
-                  onChange={(e) => setFormCollectionId(e.target.value)}
-                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-1 focus:ring-slate-900 focus:border-slate-900 focus:outline-hidden text-sm"
-                >
-                  {collections.map(col => (
-                    <option key={col.id} value={col.id}>{col.name}</option>
-                  ))}
-                </select>
-              </div>
-
-              {/* WEBSITE URL INPUT */}
-              {modalType === 'url' && (
-                <div>
-                  <label className="font-semibold text-slate-800 block mb-1.5">Website URL (SSRF Protected)</label>
-                  <input
-                    type="url"
-                    required
-                    value={formUrl}
-                    onChange={(e) => setFormUrl(e.target.value)}
-                    placeholder="https://yourcompany.com/docs"
-                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-1 focus:ring-slate-900 focus:border-slate-900 focus:outline-hidden text-sm"
-                  />
-                  <p className="text-xs text-slate-500 mt-1">
-                    Crawler validates target URL and strips private subnets, loopback, and metadata endpoints.
-                  </p>
-                </div>
-              )}
-
-              {/* DOCUMENT FILE UPLOAD ZONE */}
-              {modalType === 'document' && (
+                {/* Title field - contextually labeled */}
                 <div>
                   <label className="font-semibold text-slate-800 block mb-1.5">
-                    Upload Document File
+                    {modalType === 'faq' 
+                      ? 'Question' 
+                      : modalType === 'document' 
+                      ? 'Document Title (Auto-filled from file)' 
+                      : modalType === 'url' 
+                      ? 'Source / Page Title' 
+                      : 'Document Title'}
                   </label>
-
                   <input
-                    ref={fileInputRef}
-                    type="file"
-                    accept=".pdf,.docx,.doc,.txt,.md,.json,.csv"
-                    onChange={handleFileSelect}
-                    className="hidden"
+                    type="text"
+                    required
+                    value={formTitle}
+                    onChange={(e) => setFormTitle(e.target.value)}
+                    placeholder={
+                      modalType === 'faq' 
+                        ? 'e.g. What is your return policy?' 
+                        : modalType === 'document'
+                        ? 'e.g. Product Guide & Service Policies'
+                        : modalType === 'url'
+                        ? 'e.g. Developer API Documentation'
+                        : 'e.g. Enterprise SLA Terms'
+                    }
+                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-1 focus:ring-slate-900 focus:border-slate-900 focus:outline-hidden text-sm"
                   />
+                </div>
 
-                  {selectedFile ? (
-                    <div className="p-3.5 bg-slate-50 border border-slate-200 rounded-xl flex items-center justify-between gap-3">
-                      <div className="flex items-center gap-3 overflow-hidden">
-                        <div className="w-9 h-9 rounded-lg bg-slate-900 text-white flex items-center justify-center shrink-0">
-                          <FileCheck className="w-5 h-5" />
-                        </div>
-                        <div className="overflow-hidden">
-                          <p className="text-sm font-bold text-slate-900 truncate">{selectedFile.name}</p>
-                          <div className="flex items-center gap-2 mt-0.5 text-xs text-slate-600 font-mono">
-                            <span>{fileSizeStr}</span>
-                            <span>·</span>
-                            <span className="uppercase">{selectedFile.name.split('.').pop()}</span>
-                            <span>·</span>
-                            <span className="text-emerald-600 font-semibold">Ready</span>
+                {/* WEBSITE URL INPUT */}
+                {modalType === 'url' && (
+                  <div>
+                    <label className="font-semibold text-slate-800 block mb-1.5">Website URL (SSRF Protected)</label>
+                    <input
+                      type="url"
+                      required
+                      value={formUrl}
+                      onChange={(e) => setFormUrl(e.target.value)}
+                      placeholder="https://yourcompany.com/docs"
+                      className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-1 focus:ring-slate-900 focus:border-slate-900 focus:outline-hidden text-sm"
+                    />
+                    <p className="text-xs text-slate-500 mt-1">
+                      Crawler validates target URL and strips private subnets, loopback, and metadata endpoints.
+                    </p>
+                  </div>
+                )}
+
+                {/* DOCUMENT FILE UPLOAD ZONE */}
+                {modalType === 'document' && (
+                  <div>
+                    <label className="font-semibold text-slate-800 block mb-1.5">
+                      Document File
+                    </label>
+
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept=".pdf,.docx,.doc,.txt,.md,.json,.csv"
+                      onChange={handleFileSelect}
+                      className="hidden"
+                    />
+
+                    {selectedFile ? (
+                      <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl flex items-center justify-between gap-3">
+                        <div className="flex items-center gap-3 overflow-hidden">
+                          <div className="w-10 h-10 rounded-xl bg-slate-900 text-white flex items-center justify-center shrink-0 shadow-xs">
+                            <FileCheck className="w-5 h-5 text-emerald-400" />
+                          </div>
+                          <div className="overflow-hidden">
+                            <p className="text-sm font-bold text-slate-900 truncate">{selectedFile.name}</p>
+                            <div className="flex items-center gap-2 mt-0.5 text-xs text-slate-600 font-mono">
+                              <span>{fileSizeStr}</span>
+                              <span>·</span>
+                              <span className="uppercase">{selectedFile.name.split('.').pop()}</span>
+                              <span>·</span>
+                              <span className="text-emerald-600 font-semibold flex items-center gap-1">
+                                <Check className="w-3 h-3" /> Ready to Index
+                              </span>
+                            </div>
                           </div>
                         </div>
+
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setSelectedFile(null);
+                            setFormFileName('');
+                            setFileSizeStr('');
+                            setFormContent('');
+                          }}
+                          className="px-3 py-1.5 text-xs font-semibold text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer"
+                        >
+                          Remove
+                        </button>
                       </div>
-
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setSelectedFile(null);
-                          setFormFileName('');
-                          setFileSizeStr('');
-                          setFormContent('');
-                        }}
-                        className="px-2.5 py-1 text-xs font-semibold text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer"
+                    ) : (
+                      <div
+                        onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
+                        onDragLeave={() => setIsDragging(false)}
+                        onDrop={handleFileDrop}
+                        onClick={() => fileInputRef.current?.click()}
+                        className={`p-7 border-2 border-dashed rounded-xl text-center transition-all cursor-pointer ${
+                          isDragging 
+                            ? 'border-slate-900 bg-slate-100 scale-[0.99]' 
+                            : 'border-slate-200 hover:border-slate-400 bg-slate-50/60 hover:bg-slate-50'
+                        }`}
                       >
-                        Remove
-                      </button>
-                    </div>
-                  ) : (
-                    <div
-                      onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
-                      onDragLeave={() => setIsDragging(false)}
-                      onDrop={handleFileDrop}
-                      onClick={() => fileInputRef.current?.click()}
-                      className={`p-6 border-2 border-dashed rounded-xl text-center transition-all cursor-pointer ${
-                        isDragging 
-                          ? 'border-slate-900 bg-slate-100' 
-                          : 'border-slate-200 hover:border-slate-400 bg-slate-50/60 hover:bg-slate-50'
-                      }`}
-                    >
-                      <UploadCloud className={`w-7 h-7 mx-auto mb-2 transition-colors ${
-                        isDragging ? 'text-slate-900' : 'text-slate-500'
-                      }`} />
-                      <p className="text-sm font-bold text-slate-800">
-                        Click to upload or drag & drop files here
-                      </p>
-                      <p className="text-xs text-slate-500 mt-1">
-                        PDF, DOCX, TXT, MD, CSV, JSON (up to 25MB)
-                      </p>
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {/* FAQ ANSWER */}
-              {modalType === 'faq' ? (
-                <div>
-                  <label className="font-semibold text-slate-800 block mb-1.5">Official Answer</label>
-                  <textarea
-                    rows={4}
-                    required
-                    value={formFaqAnswer}
-                    onChange={(e) => setFormFaqAnswer(e.target.value)}
-                    placeholder="Provide the exact verified answer for this FAQ..."
-                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-1 focus:ring-slate-900 focus:border-slate-900 focus:outline-hidden text-sm"
-                  />
-                </div>
-              ) : (
-                <div>
-                  <label className="font-semibold text-slate-800 block mb-1.5">
-                    {modalType === 'document' ? 'Extracted Content' : 'Document Content'}
-                  </label>
-                  <textarea
-                    rows={3}
-                    required
-                    value={formContent}
-                    onChange={(e) => setFormContent(e.target.value)}
-                    placeholder="Paste or review the company text here..."
-                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-1 focus:ring-slate-900 focus:border-slate-900 focus:outline-hidden font-mono text-xs"
-                  />
-                </div>
-              )}
-
-              {/* INGESTION PROGRESS INDICATOR */}
-              {isIngesting && (
-                <div className="p-3.5 bg-slate-100 border border-slate-200 rounded-xl space-y-2 animate-in fade-in">
-                  <div className="flex items-center justify-between text-xs font-semibold text-slate-900">
-                    <span className="flex items-center gap-2">
-                      <RefreshCw className="w-4 h-4 text-slate-700 animate-spin" />
-                      <span>{ingestStep || 'Processing document...'}</span>
-                    </span>
-                    <Sparkles className="w-4 h-4 text-slate-600" />
+                        <UploadCloud className={`w-8 h-8 mx-auto mb-2 transition-colors ${
+                          isDragging ? 'text-slate-900' : 'text-slate-500'
+                        }`} />
+                        <p className="text-sm font-bold text-slate-800">
+                          Click to upload or drag & drop files here
+                        </p>
+                        <p className="text-xs text-slate-500 mt-1">
+                          PDF, DOCX, TXT, MD, CSV, JSON (up to 25MB)
+                        </p>
+                      </div>
+                    )}
                   </div>
-                  <div className="w-full bg-slate-200 h-2 rounded-full overflow-hidden">
-                    <div className="bg-slate-900 h-full rounded-full animate-pulse w-3/4" />
-                  </div>
-                </div>
-              )}
+                )}
 
-              <div className="flex items-center justify-end gap-2.5 pt-3.5 border-t border-slate-100">
-                <button
-                  type="button"
-                  onClick={() => setIsAddModalOpen(false)}
-                  disabled={isIngesting}
-                  className="px-4 py-2 text-slate-700 hover:bg-slate-100 rounded-xl font-semibold transition-colors cursor-pointer text-sm"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={isIngesting || (!formTitle.trim())}
-                  className="px-4 py-2 bg-slate-900 hover:bg-slate-800 disabled:opacity-50 text-white rounded-xl font-semibold flex items-center gap-2 transition-colors shadow-sm cursor-pointer text-sm"
-                >
-                  {isIngesting ? (
-                    <>
-                      <RefreshCw className="w-4 h-4 animate-spin" />
-                      <span>Indexing...</span>
-                    </>
-                  ) : (
-                    <>
-                      <UploadCloud className="w-4 h-4" />
-                      <span>Save & Index</span>
-                    </>
-                  )}
-                </button>
-              </div>
-            </form>
+                {/* FAQ ANSWER */}
+                {modalType === 'faq' && (
+                  <div>
+                    <label className="font-semibold text-slate-800 block mb-1.5">Official Answer</label>
+                    <textarea
+                      rows={4}
+                      required
+                      value={formFaqAnswer}
+                      onChange={(e) => setFormFaqAnswer(e.target.value)}
+                      placeholder="Provide the exact verified answer for this FAQ..."
+                      className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-1 focus:ring-slate-900 focus:border-slate-900 focus:outline-hidden text-sm"
+                    />
+                  </div>
+                )}
+
+                {/* TEXT TAB CONTENT */}
+                {modalType === 'text' && (
+                  <div>
+                    <label className="font-semibold text-slate-800 block mb-1.5">
+                      Text / Markdown Content
+                    </label>
+                    <textarea
+                      rows={5}
+                      required
+                      value={formContent}
+                      onChange={(e) => setFormContent(e.target.value)}
+                      placeholder="Paste or write your company knowledge, policies, or guide here..."
+                      className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-1 focus:ring-slate-900 focus:border-slate-900 focus:outline-hidden font-mono text-xs"
+                    />
+                  </div>
+                )}
+
+                {/* INGESTION PROGRESS INDICATOR */}
+                {isIngesting && (
+                  <div className="p-3.5 bg-slate-100 border border-slate-200 rounded-xl space-y-2 animate-in fade-in">
+                    <div className="flex items-center justify-between text-xs font-semibold text-slate-900">
+                      <span className="flex items-center gap-2">
+                        <RefreshCw className="w-4 h-4 text-slate-700 animate-spin" />
+                        <span>{ingestStep || 'Processing document...'}</span>
+                      </span>
+                      <Sparkles className="w-4 h-4 text-slate-600" />
+                    </div>
+                    <div className="w-full bg-slate-200 h-2 rounded-full overflow-hidden">
+                      <div className="bg-slate-900 h-full rounded-full animate-pulse w-3/4" />
+                    </div>
+                  </div>
+                )}
+
+                <div className="flex items-center justify-end gap-2.5 pt-3.5 border-t border-slate-100">
+                  <button
+                    type="button"
+                    onClick={() => setIsAddModalOpen(false)}
+                    disabled={isIngesting}
+                    className="px-4 py-2 text-slate-700 hover:bg-slate-100 rounded-xl font-semibold transition-colors cursor-pointer text-sm"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={isIngesting || (!formTitle.trim()) || (modalType === 'document' && !selectedFile && !formContent.trim())}
+                    className="px-4 py-2 bg-slate-900 hover:bg-slate-800 disabled:opacity-50 text-white rounded-xl font-semibold flex items-center gap-2 transition-colors shadow-sm cursor-pointer text-sm"
+                  >
+                    {isIngesting ? (
+                      <>
+                        <RefreshCw className="w-4 h-4 animate-spin" />
+                        <span>Ingesting Knowledge...</span>
+                      </>
+                    ) : (
+                      <>
+                        <UploadCloud className="w-4 h-4" />
+                        <span>
+                          {modalType === 'document' 
+                            ? 'Save & Index Document' 
+                            : modalType === 'url' 
+                            ? 'Crawl & Index URL' 
+                            : modalType === 'faq' 
+                            ? 'Save FAQ' 
+                            : 'Save & Index Knowledge'}
+                        </span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              </form>
           </div>
         </div>
       )}
