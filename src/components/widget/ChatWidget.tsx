@@ -5,8 +5,6 @@ import {
   Bot, 
   Sparkles,
   Headphones,
-  HelpCircle,
-  MessageCircle,
   Zap,
   AlertTriangle 
 } from 'lucide-react';

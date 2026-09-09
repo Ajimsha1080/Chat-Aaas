@@ -13,14 +13,11 @@ import {
   Upload, 
   HelpCircle, 
   ArrowRight,
-  Code2,
   ExternalLink,
   ShieldCheck,
-  Building2,
-  X
+  Building2
 } from 'lucide-react';
 import { useApp } from '../../context';
-import { NavigationTab } from '../../types';
 
 interface CommandPaletteProps {
   isOpen: boolean;
