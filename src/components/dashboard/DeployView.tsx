@@ -3,7 +3,6 @@ import {
   Copy, 
   Check, 
   Sparkles, 
-  ExternalLink, 
   Paintbrush, 
   Terminal, 
   CheckCircle2,
@@ -328,18 +327,10 @@ export default function App() {
         <div className="flex items-center gap-3">
           <button
             onClick={() => setIsQuickTestOpen(true)}
-            className="px-4 py-2.5 bg-slate-100 hover:bg-slate-200/80 text-slate-800 rounded-xl text-sm font-semibold flex items-center gap-2 transition-colors border border-slate-200 cursor-pointer"
-          >
-            <Sparkles className="w-4 h-4 text-slate-700" />
-            <span>Test Assistant</span>
-          </button>
-
-          <button
-            onClick={() => setIsLiveSandboxOpen(true)}
             className="px-4 py-2.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-sm font-semibold flex items-center gap-2 transition-colors shadow-sm cursor-pointer"
           >
-            <ExternalLink className="w-4 h-4" />
-            <span>Live Web Preview</span>
+            <Sparkles className="w-4 h-4 text-pink-400" />
+            <span>Test Assistant</span>
           </button>
         </div>
       </div>
