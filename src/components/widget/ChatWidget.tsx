@@ -16,6 +16,8 @@ interface ChatWidgetProps {
   isInlinePreview?: boolean;
 }
 
+const genId = (prefix: string) => `${prefix}-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
+
 export const ChatWidget: React.FC<ChatWidgetProps> = ({ isInlinePreview = false }) => {
   const { 
     currentCompany, 
@@ -28,7 +30,7 @@ export const ChatWidget: React.FC<ChatWidgetProps> = ({ isInlinePreview = false 
   const [input, setInput] = useState('');
   const [messages, setMessages] = useState<Message[]>(() => [
     {
-      id: 'w-greeting',
+      id: genId('w-greeting'),
       sender: 'agent',
       senderName: currentCompany.agent.name,
       text: currentCompany.agent.greetingMessage,
@@ -54,7 +56,7 @@ export const ChatWidget: React.FC<ChatWidgetProps> = ({ isInlinePreview = false 
     setInput('');
 
     const userMsg: Message = {
-      id: `w-u-${Date.now()}`,
+      id: genId('w-u'),
       sender: 'user',
       text: userText,
       timestamp: new Date().toISOString()
@@ -74,7 +76,7 @@ export const ChatWidget: React.FC<ChatWidgetProps> = ({ isInlinePreview = false 
       );
 
       const agentMsg: Message = {
-        id: `w-a-${Date.now()}`,
+        id: genId('w-a'),
         sender: 'agent',
         senderName: currentCompany.agent.name,
         text: result.message,

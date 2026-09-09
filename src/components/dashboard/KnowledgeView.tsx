@@ -30,6 +30,8 @@ import { KnowledgeItem, KnowledgeType, KnowledgeCollection, KnowledgeGap, RagTes
 
 type SidebarTab = 'all' | 'published' | 'draft' | 'archived' | 'document' | 'faq' | 'url' | 'gaps';
 
+const genId = (prefix: string) => `${prefix}-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
+
 export const KnowledgeView: React.FC = () => {
   const { 
     knowledgeItems, 
@@ -256,7 +258,7 @@ export const KnowledgeView: React.FC = () => {
     if (!newColName.trim()) return;
 
     const newCol: KnowledgeCollection = {
-      id: `col-${Date.now()}`,
+      id: genId('col'),
       name: newColName.trim(),
       description: newColDesc.trim() || 'Custom Knowledge Domain',
       icon: 'Folder',
@@ -343,7 +345,7 @@ export const KnowledgeView: React.FC = () => {
 
         // Add to gaps
         const newGap: KnowledgeGap = {
-          id: `gap-${Date.now()}`,
+          id: genId('gap'),
           query: testQuery,
           occurrences: 1,
           lastAskedAt: 'Just now',

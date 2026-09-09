@@ -14,6 +14,8 @@ import { useApp } from '../../context';
 import { Message, ToolExecutionTrace } from '../../types';
 import { AIAgentEngine } from '../../services/aiEngine';
 
+const genId = (prefix: string) => `${prefix}-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
+
 export const TestAgentDrawer: React.FC = () => {
   const { 
     isQuickTestOpen, 
@@ -27,7 +29,7 @@ export const TestAgentDrawer: React.FC = () => {
   const [input, setInput] = useState('');
   const [messages, setMessages] = useState<Message[]>(() => [
     {
-      id: 'test-greeting',
+      id: genId('test-greeting'),
       sender: 'agent',
       senderName: currentCompany.agent.name,
       text: currentCompany.agent.greetingMessage,
@@ -52,7 +54,7 @@ export const TestAgentDrawer: React.FC = () => {
     setInput('');
 
     const userMsg: Message = {
-      id: `test-u-${Date.now()}`,
+      id: genId('test-u'),
       sender: 'user',
       text: userText,
       timestamp: new Date().toISOString()
@@ -73,7 +75,7 @@ export const TestAgentDrawer: React.FC = () => {
       );
 
       const agentMsg: Message = {
-        id: `test-a-${Date.now()}`,
+        id: genId('test-a'),
         sender: 'agent',
         senderName: currentCompany.agent.name,
         text: result.message,
@@ -135,7 +137,7 @@ export const TestAgentDrawer: React.FC = () => {
   const resetChat = () => {
     setMessages([
       {
-        id: `test-init-${Date.now()}`,
+        id: genId('test-init'),
         sender: 'agent',
         senderName: currentCompany.agent.name,
         text: currentCompany.agent.greetingMessage,

@@ -49,6 +49,8 @@ import { AppContext } from './AppContextDefinition';
 
 const LOCAL_STORAGE_KEY = 'aaas_platform_state_v2';
 
+const genId = (prefix: string) => `${prefix}-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
+
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   // Experiences & Navigation
   const [currentExperience, setCurrentExperienceState] = useState<ProductExperience>('customer');
@@ -424,7 +426,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // Webhook Actions
   const createWebhook = (url: string, description: string, events: string[]) => {
     const newWh: WebhookEndpoint = {
-      id: `wh-${Date.now()}`,
+      id: genId('wh'),
       url,
       description,
       events,
@@ -462,7 +464,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       )
     }));
     const newLog: ApiLogEntry = {
-      id: `log-${Date.now()}`,
+      id: genId('log'),
       timestamp: 'Just now',
       method: 'POST',
       path: '/api/v1/webhooks/dispatch',
@@ -481,7 +483,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // Knowledge Management
   const addKnowledgeItem = (item: Partial<KnowledgeItem> & { title: string; content: string; type: KnowledgeItem['type'] }) => {
     const newItem: KnowledgeItem = {
-      id: `kb-${Date.now()}`,
+      id: genId('kb'),
       type: item.type,
       title: item.title,
       sourceUrl: item.sourceUrl,
@@ -597,7 +599,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // Conversations & Messaging
   const sendMessageToAgent = async (conversationId: string, text: string) => {
     const userMsg: Message = {
-      id: `msg-u-${Date.now()}`,
+      id: genId('msg-u'),
       sender: 'user',
       text,
       timestamp: new Date().toISOString()
@@ -642,7 +644,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     );
 
     const agentMessage: Message = {
-      id: `msg-a-${Date.now()}`,
+      id: genId('msg-a'),
       sender: 'agent',
       senderName: currentCompany.agent.name,
       text: aiResult.message,
@@ -728,7 +730,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
 
     const resolutionMessage: Message = {
-      id: `msg-conf-${Date.now()}`,
+      id: genId('msg-conf'),
       sender: 'agent',
       senderName: currentCompany.agent.name,
       text: resultMsg,
@@ -764,7 +766,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             const extraMessages: Message[] = [];
             if (internalNote) {
               extraMessages.push({
-                id: `msg-note-${Date.now()}`,
+                id: genId('msg-note'),
                 sender: 'system',
                 senderName: 'Internal Operator Note',
                 text: `📝 **Internal Note**: ${internalNote}`,
@@ -789,7 +791,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const sendOperatorMessage = (conversationId: string, text: string) => {
     const operatorMessage: Message = {
-      id: `msg-op-${Date.now()}`,
+      id: genId('msg-op'),
       sender: 'human_agent',
       senderName: 'Live Support Operator (You)',
       text,
@@ -850,7 +852,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const startNewCustomerChatSession = (initialGreeting = true): string => {
-    const newId = `conv-${Date.now()}-${Math.floor(100 + Math.random() * 900)}`;
+    const newId = genId('conv');
     const newConv: Conversation = {
       id: newId,
       companyId: currentCompanyId,
@@ -865,7 +867,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       totalTokensUsed: 120,
       messages: initialGreeting ? [
         {
-          id: `msg-g-${Date.now()}`,
+          id: genId('msg-g'),
           sender: 'agent',
           senderName: currentCompany.agent.name,
           text: currentCompany.agent.greetingMessage || 'Hello! How can I help you today?',
@@ -885,7 +887,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const addTeamMember = (name: string, email: string, role: TeamMember['role']) => {
     const newMember: TeamMember = {
-      id: `usr-${Date.now()}`,
+      id: genId('usr'),
       name,
       email,
       role,
