@@ -47,7 +47,7 @@ import {
 import { AIAgentEngine } from '../services/aiEngine';
 import { AppContext } from './AppContextDefinition';
 
-const LOCAL_STORAGE_KEY = 'coarai_platform_state_v6';
+const LOCAL_STORAGE_KEY = 'coarai_platform_state_v7';
 
 const genId = (prefix: string) => `${prefix}-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
 
@@ -270,7 +270,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         botAvatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
         userAvatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80',
         borderRadius: 'rounded-2xl',
-        showPoweredBy: false,
+        showPoweredBy: true,
         enableSound: true,
         autoExpandSeconds: 0
       },

@@ -301,11 +301,9 @@ export const ChatWidget: React.FC<ChatWidgetProps> = ({ isInlinePreview = false 
           </form>
 
           {/* Powered by footer */}
-          {settings.showPoweredBy && (
-            <div className="py-1.5 bg-slate-100/80 text-center text-xs text-slate-500 font-medium">
-              Powered by <strong>CoarAI</strong>
-            </div>
-          )}
+          <div className="py-1.5 bg-slate-100/80 text-center text-xs text-slate-500 font-medium">
+            Powered by <strong>CoarAI</strong>
+          </div>
         </div>
       )}
 

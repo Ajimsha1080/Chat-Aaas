@@ -319,7 +319,7 @@ export const INITIAL_COMPANIES: Company[] = [
       botAvatar: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=150&auto=format&fit=crop&q=80',
       userAvatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&auto=format&fit=crop&q=80',
       borderRadius: 'rounded-2xl',
-      showPoweredBy: false,
+      showPoweredBy: true,
       enableSound: true,
       autoExpandSeconds: 8
     }

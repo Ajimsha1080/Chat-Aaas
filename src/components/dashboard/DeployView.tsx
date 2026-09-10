@@ -980,16 +980,6 @@ export default function App() {
                       />
                       <span className="font-semibold text-slate-800 text-sm">Play subtle notification audio on message</span>
                     </label>
-
-                    <label className="flex items-center gap-3 cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={localSettings.showPoweredBy}
-                        onChange={(e) => setLocalSettings({ ...localSettings, showPoweredBy: e.target.checked })}
-                        className="rounded text-slate-900 w-4 h-4 cursor-pointer"
-                      />
-                      <span className="font-semibold text-slate-800 text-sm">Display "Powered by CoarAI" badge</span>
-                    </label>
                   </div>
                 </div>
               </div>
@@ -1221,11 +1211,9 @@ export default function App() {
                       </div>
 
                       {/* Powered By Footer */}
-                      {localSettings.showPoweredBy !== false && (
-                        <p className="text-center text-[10px] text-slate-400 font-medium">
-                          Powered by <strong className="font-semibold text-slate-500">CoarAI</strong>
-                        </p>
-                      )}
+                      <p className="text-center text-[10px] text-slate-400 font-medium">
+                        Powered by <strong className="font-semibold text-slate-500">CoarAI</strong>
+                      </p>
                     </div>
                   </div>
                 ) : (
