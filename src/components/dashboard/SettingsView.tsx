@@ -43,7 +43,6 @@ export const SettingsView: React.FC = () => {
   const [showApiKey, setShowApiKey] = useState(false);
 
   // Assistant Form State
-  const [agentName, setAgentName] = useState(currentCompany.agent.name);
   const [agentRole, setAgentRole] = useState(currentCompany.agent.role || 'Customer Support Specialist');
   const [agentTone, setAgentTone] = useState(currentCompany.agent.tone);
   const [agentGreeting, setAgentGreeting] = useState(currentCompany.agent.greetingMessage);
@@ -58,7 +57,7 @@ export const SettingsView: React.FC = () => {
   const handleSaveAssistant = (e: React.FormEvent) => {
     e.preventDefault();
     updateAgentConfig({
-      name: agentName,
+      name: 'Coar AI',
       role: agentRole,
       tone: agentTone,
       greetingMessage: agentGreeting,
@@ -134,14 +133,20 @@ export const SettingsView: React.FC = () => {
           <form onSubmit={handleSaveAssistant} className="space-y-5 text-sm">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label className="font-semibold text-slate-800 block mb-1.5">Assistant Name</label>
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="font-semibold text-slate-800 block">Assistant Name</label>
+                  <span className="text-[11px] font-semibold text-indigo-700 bg-indigo-50 border border-indigo-200 px-2 py-0.5 rounded-md">
+                    Predefined
+                  </span>
+                </div>
                 <input
                   type="text"
-                  required
-                  value={agentName}
-                  onChange={(e) => setAgentName(e.target.value)}
-                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-1 focus:ring-slate-900 focus:border-slate-900 text-slate-900 font-medium focus:outline-hidden"
+                  readOnly
+                  disabled
+                  value="Coar AI"
+                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 font-bold cursor-not-allowed shadow-xs select-none"
                 />
+                <p className="text-xs text-slate-500 mt-1">Predefined platform AI Assistant name.</p>
               </div>
 
               <div>

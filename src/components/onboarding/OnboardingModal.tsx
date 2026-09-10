@@ -28,7 +28,6 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({ isOpen, onClos
   const [industry, setIndustry] = useState('SaaS & Software');
   const [preferredLanguage, setPreferredLanguage] = useState('English');
   const [tone, setTone] = useState<AgentTone>('professional');
-  const [assistantName, setAssistantName] = useState('');
   const [greetingMessage, setGreetingMessage] = useState('Hi there! 👋 How can I help you with our products and services today?');
   const [testQuestion, setTestQuestion] = useState('What are your pricing options and SLA?');
   const [testAnswer, setTestAnswer] = useState<string | null>(null);
@@ -52,7 +51,7 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({ isOpen, onClos
   };
 
   const handleComplete = () => {
-    const finalName = assistantName.trim() || `${businessName ? businessName.split(' ')[0] : 'Nova'} AI`;
+    const finalName = 'Coar AI';
     const finalDomain = websiteUrl.trim() || `${(businessName || 'acme').toLowerCase().replace(/[^a-z0-9]/g, '')}.com`;
 
     createCompanyWorkspace(
@@ -223,14 +222,20 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({ isOpen, onClos
               </div>
 
               <div>
-                <label className="block font-bold text-slate-900 mb-1.5 text-sm">Assistant Name</label>
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="block font-bold text-slate-900 text-sm">Assistant Name</label>
+                  <span className="text-[11px] font-semibold text-indigo-700 bg-indigo-50 border border-indigo-200 px-2 py-0.5 rounded-md">
+                    Predefined
+                  </span>
+                </div>
                 <input
                   type="text"
-                  placeholder="e.g. Nova Support AI"
-                  value={assistantName}
-                  onChange={e => setAssistantName(e.target.value)}
-                  className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 shadow-xs"
+                  readOnly
+                  disabled
+                  value="Coar AI"
+                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-800 cursor-not-allowed shadow-xs select-none"
                 />
+                <p className="text-xs text-slate-500 mt-1">Predefined platform AI Assistant name.</p>
               </div>
 
               <div>
@@ -305,7 +310,7 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({ isOpen, onClos
                       <div className="w-6 h-6 rounded-lg bg-indigo-600 flex items-center justify-center font-bold text-xs">
                         AI
                       </div>
-                      <span className="font-bold text-sm">{assistantName || 'Nova AI'}</span>
+                      <span className="font-bold text-sm">Coar AI</span>
                     </div>
                     <span className="text-xs text-emerald-400 font-bold bg-emerald-950/60 px-2.5 py-1 rounded-full border border-emerald-800/60">
                       ● Grounded Answer
@@ -340,7 +345,7 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({ isOpen, onClos
                 </div>
                 <div className="flex items-center gap-2.5">
                   <Check className="w-4 h-4 text-indigo-600 shrink-0" />
-                  <span>Assistant: <strong>{assistantName || 'Nova AI'}</strong> ({tone} tone)</span>
+                  <span>Assistant: <strong>Coar AI</strong> ({tone} tone)</span>
                 </div>
                 <div className="flex items-center gap-2.5">
                   <Check className="w-4 h-4 text-indigo-600 shrink-0" />
