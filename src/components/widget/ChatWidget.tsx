@@ -40,6 +40,7 @@ export const ChatWidget: React.FC<ChatWidgetProps> = ({ isInlinePreview = false 
   const [isProcessing, setIsProcessing] = useState(false);
 
   const settings = currentCompany.widgetSettings;
+  const isDarkMode = (settings?.themeMode || 'dark') === 'dark';
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -147,7 +148,9 @@ export const ChatWidget: React.FC<ChatWidgetProps> = ({ isInlinePreview = false 
       {/* Floating Chat Container */}
       {(isOpen || isInlinePreview) && (
         <div 
-          className={`w-96 max-w-[calc(100vw-1.5rem)] h-[520px] sm:h-[580px] max-h-[calc(100vh-5rem)] bg-white rounded-2xl shadow-2xl border border-slate-200/90 flex flex-col overflow-hidden mb-2.5 sm:mb-3.5 animate-in slide-in-from-bottom-5 duration-200`}
+          className={`w-96 max-w-[calc(100vw-1.5rem)] h-[520px] sm:h-[580px] max-h-[calc(100vh-5rem)] ${
+            isDarkMode ? 'bg-[#090d16] text-white border-slate-800' : 'bg-white text-slate-900 border-slate-200/90'
+          } rounded-2xl shadow-2xl border flex flex-col overflow-hidden mb-2.5 sm:mb-3.5 animate-in slide-in-from-bottom-5 duration-200`}
         >
           {/* Widget Header */}
           <div 
@@ -188,7 +191,9 @@ export const ChatWidget: React.FC<ChatWidgetProps> = ({ isInlinePreview = false 
           </div>
 
           {/* Messages Area */}
-          <div className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-4 bg-slate-50/50 text-sm">
+          <div className={`flex-1 overflow-y-auto p-4 sm:p-5 space-y-4 text-sm ${
+            isDarkMode ? 'bg-[#090d16]' : 'bg-slate-50/50'
+          }`}>
             {messages.map(msg => {
               const isUser = msg.sender === 'user';
 
@@ -205,11 +210,11 @@ export const ChatWidget: React.FC<ChatWidgetProps> = ({ isInlinePreview = false 
                     <div>
                       <div
                         style={{
-                          backgroundColor: isUser ? settings.primaryColor : '#ffffff',
-                          color: isUser ? '#ffffff' : '#0f172a'
+                          backgroundColor: isUser ? settings.primaryColor : (isDarkMode ? '#1e293b' : '#ffffff'),
+                          color: isUser ? '#ffffff' : (isDarkMode ? '#f8fafc' : '#0f172a')
                         }}
                         className={`p-3.5 rounded-2xl leading-relaxed text-sm ${
-                          isUser ? 'rounded-br-xs shadow-xs' : 'border border-slate-200/80 shadow-xs rounded-bl-xs'
+                          isUser ? 'rounded-br-xs shadow-xs' : (isDarkMode ? 'border border-slate-800 shadow-xs rounded-bl-xs' : 'border border-slate-200/80 shadow-xs rounded-bl-xs')
                         }`}
                       >
                         <div className="whitespace-pre-wrap">{msg.text}</div>
@@ -217,12 +222,16 @@ export const ChatWidget: React.FC<ChatWidgetProps> = ({ isInlinePreview = false 
 
                       {/* Pending Confirmation Box */}
                       {msg.isPendingConfirmation && msg.pendingActionData && (
-                        <div className="mt-2.5 bg-amber-50 border border-amber-300 rounded-2xl p-4 text-sm text-amber-950 shadow-sm animate-in fade-in">
-                          <div className="flex items-center gap-2 font-bold mb-1.5 text-amber-800">
-                            <AlertTriangle className="w-4 h-4 text-amber-600" />
+                        <div className={`mt-2.5 rounded-2xl p-4 text-sm shadow-sm animate-in fade-in border ${
+                          isDarkMode 
+                            ? 'bg-amber-950/40 border-amber-500/40 text-amber-200' 
+                            : 'bg-amber-50 border-amber-300 text-amber-950'
+                        }`}>
+                          <div className={`flex items-center gap-2 font-bold mb-1.5 ${isDarkMode ? 'text-amber-400' : 'text-amber-800'}`}>
+                            <AlertTriangle className="w-4 h-4 text-amber-500" />
                             <span>Confirmation Required</span>
                           </div>
-                          <p className="mb-2.5 text-slate-700 text-sm">{msg.pendingActionData.prompt}</p>
+                          <p className={`mb-2.5 text-sm ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>{msg.pendingActionData.prompt}</p>
                           <div className="flex items-center gap-2">
                             <button
                               onClick={() => handleConfirmAction(msg.id, true)}
@@ -232,7 +241,9 @@ export const ChatWidget: React.FC<ChatWidgetProps> = ({ isInlinePreview = false 
                             </button>
                             <button
                               onClick={() => handleConfirmAction(msg.id, false)}
-                              className="px-3.5 py-1.5 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-xl font-semibold text-xs sm:text-sm transition-colors cursor-pointer"
+                              className={`px-3.5 py-1.5 rounded-xl font-semibold text-xs sm:text-sm transition-colors cursor-pointer ${
+                                isDarkMode ? 'bg-slate-800 hover:bg-slate-700 text-slate-300' : 'bg-slate-200 hover:bg-slate-300 text-slate-700'
+                              }`}
                             >
                               Cancel
                             </button>
@@ -244,7 +255,7 @@ export const ChatWidget: React.FC<ChatWidgetProps> = ({ isInlinePreview = false 
                       {msg.toolTraces && msg.toolTraces.length > 0 && (
                         <div className="mt-2 space-y-1">
                           {msg.toolTraces.map((trace, tIdx) => (
-                            <div key={tIdx} className="bg-slate-900 text-indigo-300 p-2.5 rounded-xl font-mono text-xs">
+                            <div key={tIdx} className="bg-slate-900 text-indigo-300 p-2.5 rounded-xl font-mono text-xs border border-slate-800">
                               <span className="text-amber-400 font-bold">⚡ {trace.toolName}()</span>: {trace.status}
                             </div>
                           ))}
@@ -257,8 +268,10 @@ export const ChatWidget: React.FC<ChatWidgetProps> = ({ isInlinePreview = false 
             })}
 
             {isProcessing && (
-              <div className="flex items-center gap-2.5 text-xs sm:text-sm text-slate-600 bg-white border border-slate-200 px-3.5 py-2.5 rounded-2xl w-fit">
-                <div className="w-2 h-2 rounded-full bg-indigo-600 animate-ping" />
+              <div className={`flex items-center gap-2.5 text-xs sm:text-sm px-3.5 py-2.5 rounded-2xl w-fit ${
+                isDarkMode ? 'bg-slate-800 text-slate-300 border border-slate-700' : 'bg-white text-slate-600 border border-slate-200 shadow-xs'
+              }`}>
+                <div className="w-2 h-2 rounded-full bg-indigo-500 animate-ping" />
                 <span>Thinking...</span>
               </div>
             )}
@@ -267,13 +280,17 @@ export const ChatWidget: React.FC<ChatWidgetProps> = ({ isInlinePreview = false 
 
           {/* Quick Starter Prompts from Widget Settings */}
           {settings.starterQuestions && settings.starterQuestions.length > 0 && (
-            <div className="px-3.5 py-2 bg-white border-t border-slate-100 flex items-center gap-2 overflow-x-auto text-xs no-scrollbar">
+            <div className={`px-3.5 py-2 border-t flex items-center gap-2 overflow-x-auto text-xs no-scrollbar ${
+              isDarkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-100'
+            }`}>
               {settings.starterQuestions.map((q, qIdx) => (
                 <button
                   key={qIdx}
                   type="button"
                   onClick={() => { setInput(q); }}
-                  className="px-3 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium rounded-full shrink-0 transition-colors cursor-pointer whitespace-nowrap shadow-2xs"
+                  className={`px-3 py-1 font-medium rounded-full shrink-0 transition-colors cursor-pointer whitespace-nowrap shadow-2xs ${
+                    isDarkMode ? 'bg-slate-800 hover:bg-slate-700 text-slate-300' : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
+                  }`}
                 >
                   {q}
                 </button>
@@ -282,13 +299,19 @@ export const ChatWidget: React.FC<ChatWidgetProps> = ({ isInlinePreview = false 
           )}
 
           {/* Input Bar */}
-          <form onSubmit={handleSendMessage} className="p-3.5 bg-white border-t border-slate-200 flex items-center gap-2.5 shrink-0">
+          <form onSubmit={handleSendMessage} className={`p-3.5 border-t flex items-center gap-2.5 shrink-0 ${
+            isDarkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'
+          }`}>
             <input
               type="text"
               value={input}
               onChange={(e) => setInput(e.target.value)}
               placeholder="Ask anything..."
-              className="flex-1 px-4 py-2.5 text-sm font-medium bg-slate-50 border border-slate-200 rounded-xl focus:outline-hidden focus:ring-2 focus:ring-indigo-500 focus:bg-white"
+              className={`flex-1 px-4 py-2.5 text-sm font-medium rounded-xl focus:outline-hidden focus:ring-2 focus:ring-indigo-500 ${
+                isDarkMode 
+                  ? 'bg-slate-800 border border-slate-700 text-white placeholder-slate-500 focus:bg-slate-800' 
+                  : 'bg-slate-50 border border-slate-200 text-slate-900 placeholder-slate-400 focus:bg-white'
+              }`}
             />
             <button
               type="submit"
@@ -302,7 +325,9 @@ export const ChatWidget: React.FC<ChatWidgetProps> = ({ isInlinePreview = false 
 
           {/* Powered by footer */}
           {settings.showPoweredBy && (
-            <div className="py-1.5 bg-slate-100/80 text-center text-xs text-slate-500 font-medium">
+            <div className={`py-1.5 text-center text-xs font-medium ${
+              isDarkMode ? 'bg-slate-950 text-slate-500 border-t border-slate-900' : 'bg-slate-100/80 text-slate-500'
+            }`}>
               Powered by <strong>CoarAI</strong>
             </div>
           )}

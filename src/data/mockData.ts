@@ -178,6 +178,7 @@ export const INITIAL_COMPANIES: Company[] = [
     widgetSettings: {
       primaryColor: '#4f46e5',
       secondaryColor: '#0f172a',
+      themeMode: 'dark',
       headerTitle: 'TechFlow Support & Ops',
       headerSubtitle: 'Instant answers & server actions',
       launcherText: 'Chat with Support',
@@ -249,6 +250,7 @@ export const INITIAL_COMPANIES: Company[] = [
     widgetSettings: {
       primaryColor: '#059669',
       secondaryColor: '#064e3b',
+      themeMode: 'dark',
       headerTitle: 'Apex Health Care Desk',
       headerSubtitle: 'Verified diagnostics assistance',
       launcherText: 'Book Lab Test',
@@ -312,6 +314,7 @@ export const INITIAL_COMPANIES: Company[] = [
     widgetSettings: {
       primaryColor: '#d97706',
       secondaryColor: '#78350f',
+      themeMode: 'dark',
       headerTitle: 'UrbanCraft Assistant',
       headerSubtitle: 'Handmade living advice',
       launcherText: 'Ask Furniture Expert',

@@ -263,6 +263,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       widgetSettings: {
         primaryColor: '#4f46e5',
         secondaryColor: '#0f172a',
+        themeMode: 'dark',
         headerTitle: name,
         headerSubtitle: 'Customer Assistant',
         launcherText: 'Chat with us',

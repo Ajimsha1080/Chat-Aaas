@@ -403,7 +403,10 @@ export default function App() {
                   {/* Dark Mode Card */}
                   <button
                     type="button"
-                    onClick={() => setLocalSettings(prev => ({ ...prev, themeMode: 'dark' }))}
+                    onClick={() => {
+                      setLocalSettings(prev => ({ ...prev, themeMode: 'dark' }));
+                      updateWidgetSettings({ themeMode: 'dark' });
+                    }}
                     className={`p-4 rounded-2xl border text-center transition-all cursor-pointer flex flex-col items-center gap-3 ${
                       isDarkMode
                         ? 'border-indigo-600 bg-indigo-50/20 ring-2 ring-indigo-600 ring-offset-1 shadow-sm'
@@ -426,7 +429,10 @@ export default function App() {
                   {/* Light Mode Card */}
                   <button
                     type="button"
-                    onClick={() => setLocalSettings(prev => ({ ...prev, themeMode: 'light' }))}
+                    onClick={() => {
+                      setLocalSettings(prev => ({ ...prev, themeMode: 'light' }));
+                      updateWidgetSettings({ themeMode: 'light' });
+                    }}
                     className={`p-4 rounded-2xl border text-center transition-all cursor-pointer flex flex-col items-center gap-3 ${
                       !isDarkMode
                         ? 'border-indigo-600 bg-indigo-50/20 ring-2 ring-indigo-600 ring-offset-1 shadow-sm'
@@ -1118,7 +1124,9 @@ export default function App() {
                     <div className="p-5 pb-3 z-10 flex items-start justify-between">
                       <div>
                         {/* Brand Badge Pill */}
-                        <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white/10 backdrop-blur-md border border-white/10 text-xs font-bold mb-3 shadow-2xs">
+                        <div className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-xl border text-xs font-bold mb-3 shadow-2xs ${
+                          isDarkMode ? 'bg-white/10 backdrop-blur-md border-white/10 text-white' : 'bg-slate-100 border-slate-200 text-slate-900'
+                        }`}>
                           <img 
                             src={companyLogoUrl} 
                             alt="Brand" 
@@ -1207,10 +1215,10 @@ export default function App() {
                     {/* Bottom "Send us a message" input pill */}
                     <div className="p-4 pt-2 z-10 space-y-2">
                       <div className={`p-1.5 rounded-2xl flex items-center justify-between border shadow-xs ${
-                        isDarkMode ? 'bg-white text-slate-900 border-white/20' : 'bg-slate-900 text-white border-slate-800'
+                        isDarkMode ? 'bg-slate-900 text-slate-300 border-slate-800' : 'bg-slate-100 text-slate-700 border-slate-200'
                       }`}>
-                        <span className={`text-xs font-semibold px-3 ${isDarkMode ? 'text-slate-700' : 'text-slate-200'}`}>
-                          Send us a message
+                        <span className={`text-xs font-medium px-3 ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
+                          Send us a message...
                         </span>
                         <div 
                           className="w-8 h-8 rounded-xl flex items-center justify-center text-white shrink-0 shadow-2xs"

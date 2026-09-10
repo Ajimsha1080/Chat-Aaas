@@ -147,7 +147,7 @@ export const TestAgentDrawer: React.FC = () => {
   };
 
   const primaryColor = currentCompany.widgetSettings?.primaryColor || '#4f46e5';
-  const isDarkMode = currentCompany.widgetSettings?.themeMode === 'dark';
+  const isDarkMode = (currentCompany.widgetSettings?.themeMode || 'dark') === 'dark';
   const companyLogo = currentCompany.widgetSettings?.launcherLogoUrl || currentCompany.agent.avatarUrl;
   const headerTitle = currentCompany.widgetSettings?.headerTitle || currentCompany.name + ' Support';
   const headerSubtitle = currentCompany.widgetSettings?.headerSubtitle || 'Instant answers & server actions';
@@ -160,8 +160,8 @@ export const TestAgentDrawer: React.FC = () => {
         onClick={() => setIsQuickTestOpen(false)} 
       />
       <div 
-        className={`relative w-full max-w-lg h-full shadow-2xl flex flex-col border-l border-slate-200 animate-in slide-in-from-right duration-300 z-10 ${
-          isDarkMode ? 'bg-[#090d16] text-white border-slate-800' : 'bg-white text-slate-900'
+        className={`relative w-full max-w-lg h-full shadow-2xl flex flex-col border-l animate-in slide-in-from-right duration-300 z-10 ${
+          isDarkMode ? 'bg-[#090d16] text-white border-slate-800' : 'bg-white text-slate-900 border-slate-200'
         }`}
       >
         {/* Background ambient gradient glow */}
@@ -176,7 +176,9 @@ export const TestAgentDrawer: React.FC = () => {
         }`}>
           <div className="flex items-center justify-between">
             {/* Brand Badge Pill */}
-            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white/10 backdrop-blur-md border border-white/10 text-xs font-bold shadow-2xs">
+            <div className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-xl border text-xs font-bold shadow-2xs ${
+              isDarkMode ? 'bg-white/10 backdrop-blur-md border-white/10 text-white' : 'bg-slate-100 border-slate-200 text-slate-900'
+            }`}>
               <img 
                 src={companyLogo} 
                 alt="Brand" 
@@ -253,7 +255,7 @@ export const TestAgentDrawer: React.FC = () => {
                       className={`px-4 py-3 rounded-2xl text-sm leading-relaxed ${
                         isUser
                           ? 'rounded-br-xs shadow-xs'
-                          : 'border border-slate-200/80 shadow-xs rounded-bl-xs'
+                          : (isDarkMode ? 'border border-slate-800 shadow-xs rounded-bl-xs' : 'border border-slate-200/80 shadow-xs rounded-bl-xs')
                       }`}
                     >
                       <div className="whitespace-pre-wrap">{msg.text}</div>
@@ -261,12 +263,16 @@ export const TestAgentDrawer: React.FC = () => {
 
                     {/* Pending Confirmation UI for High Risk Actions */}
                     {msg.isPendingConfirmation && msg.pendingActionData && (
-                      <div className="mt-2.5 bg-amber-50 border border-amber-300 rounded-2xl p-4 text-sm text-amber-900 shadow-sm animate-in fade-in">
-                        <div className="flex items-center gap-2 font-bold mb-1.5 text-amber-800">
-                          <AlertTriangle className="w-4.5 h-4.5 text-amber-600" />
+                      <div className={`mt-2.5 rounded-2xl p-4 text-sm shadow-sm animate-in fade-in border ${
+                        isDarkMode 
+                          ? 'bg-amber-950/40 border-amber-500/40 text-amber-200' 
+                          : 'bg-amber-50 border-amber-300 text-amber-900'
+                      }`}>
+                        <div className={`flex items-center gap-2 font-bold mb-1.5 ${isDarkMode ? 'text-amber-400' : 'text-amber-800'}`}>
+                          <AlertTriangle className="w-4.5 h-4.5 text-amber-500" />
                           <span>Confirmation Required</span>
                         </div>
-                        <p className="mb-3 text-slate-700 text-sm">{msg.pendingActionData.prompt}</p>
+                        <p className={`mb-3 text-sm ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>{msg.pendingActionData.prompt}</p>
                         <div className="flex items-center gap-2.5">
                           <button
                             onClick={() => handleConfirmation(msg.id, true)}
@@ -277,7 +283,9 @@ export const TestAgentDrawer: React.FC = () => {
                           </button>
                           <button
                             onClick={() => handleConfirmation(msg.id, false)}
-                            className="px-3.5 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-xl font-semibold text-xs sm:text-sm transition-colors cursor-pointer"
+                            className={`px-3.5 py-2 rounded-xl font-semibold text-xs sm:text-sm transition-colors cursor-pointer ${
+                              isDarkMode ? 'bg-slate-800 hover:bg-slate-700 text-slate-300' : 'bg-slate-200 hover:bg-slate-300 text-slate-700'
+                            }`}
                           >
                             Cancel
                           </button>
@@ -310,7 +318,9 @@ export const TestAgentDrawer: React.FC = () => {
                       <div className="mt-2">
                         <button
                           onClick={() => setShowReasoningMap(prev => ({ ...prev, [msg.id]: !prev[msg.id] }))}
-                          className="flex items-center gap-1.5 text-xs font-semibold text-indigo-600 hover:text-indigo-800 transition-colors cursor-pointer"
+                          className={`flex items-center gap-1.5 text-xs font-semibold transition-colors cursor-pointer ${
+                            isDarkMode ? 'text-indigo-400 hover:text-indigo-300' : 'text-indigo-600 hover:text-indigo-800'
+                          }`}
                         >
                           <Cpu className="w-3.5 h-3.5" />
                           <span>{showReasoning ? 'Hide' : 'Inspect'} AI Reasoning Hierarchy ({msg.reasoningSteps.length} steps)</span>
