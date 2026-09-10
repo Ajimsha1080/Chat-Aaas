@@ -177,48 +177,48 @@ export const MyAssistantView: React.FC = () => {
 
       {/* TAB 1: IDENTITY & PERSONALITY */}
       {activeTab === 'identity' && (
-        <div className="bg-white rounded-2xl p-6 sm:p-7 border border-slate-200/90 shadow-sm space-y-7">
+        <div className="bg-white rounded-2xl p-6 sm:p-8 border border-slate-200/90 shadow-sm space-y-6">
           <div>
-            <h3 className="text-base font-bold text-slate-900">Communication Tone</h3>
-            <p className="text-sm text-slate-500 mt-1">Select how your AI assistant communicates with customers.</p>
+            <h3 className="text-base font-bold text-slate-900 tracking-tight">Communication Tone</h3>
+            <p className="text-xs sm:text-sm text-slate-500 mt-1">Select how your AI assistant communicates with customers.</p>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mt-4">
-              {tones.map(t => (
-                <button
-                  key={t.id}
-                  onClick={() => setFormState(prev => ({ ...prev, tone: t.id }))}
-                  className={`p-4 rounded-xl border text-left transition-all cursor-pointer relative flex flex-col justify-between ${
-                    formState.tone === t.id
-                      ? 'bg-slate-50 border-slate-900 ring-1 ring-slate-900 shadow-xs'
-                      : 'bg-white border-slate-200 hover:border-slate-300'
-                  }`}
-                >
-                  <div>
-                    <div className="flex items-center justify-between mb-1.5">
-                      <span className="font-bold text-sm text-slate-900">{t.label}</span>
-                      {formState.tone === t.id && (
-                        <Check className="w-4 h-4 text-slate-900" />
-                      )}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-5">
+              {tones.map(t => {
+                const isSelected = formState.tone === t.id;
+                return (
+                  <button
+                    key={t.id}
+                    type="button"
+                    onClick={() => setFormState(prev => ({ ...prev, tone: t.id }))}
+                    className={`p-5 rounded-2xl text-left transition-all cursor-pointer relative flex flex-col justify-between min-h-[170px] ${
+                      isSelected
+                        ? 'border-2 border-slate-900 bg-white shadow-xs'
+                        : 'border border-slate-200 hover:border-slate-300 bg-white'
+                    }`}
+                  >
+                    <div>
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="font-bold text-sm text-slate-900">{t.label}</span>
+                        {isSelected && (
+                          <Check className="w-4 h-4 text-slate-900 stroke-[2.5]" />
+                        )}
+                      </div>
+                      <p className="text-xs text-slate-500 mb-4 leading-relaxed">{t.desc}</p>
                     </div>
-                    <p className="text-xs sm:text-sm text-slate-600 mb-3 leading-relaxed">{t.desc}</p>
-                  </div>
-                  <div className="p-2.5 bg-white rounded-lg border border-slate-200 text-xs text-slate-700 font-mono">
-                    {t.sample}
-                  </div>
-                </button>
-              ))}
+                    <div className="p-3 bg-white rounded-xl border border-slate-200/90 text-xs text-slate-700 font-mono leading-relaxed">
+                      {t.sample}
+                    </div>
+                  </button>
+                );
+              })}
             </div>
           </div>
 
-
-
-
-
-          <div className="flex justify-end pt-2">
+          <div className="flex justify-end pt-3">
             <button
               onClick={handleSave}
               disabled={isSaving}
-              className="px-4.5 py-2.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-sm font-semibold flex items-center gap-2 transition-colors cursor-pointer disabled:opacity-50 shadow-sm"
+              className="px-5 py-2.5 bg-slate-900 hover:bg-slate-800 disabled:opacity-50 text-white rounded-xl text-sm font-semibold flex items-center gap-2 shadow-sm transition-all active:scale-95 cursor-pointer"
             >
               <Save className="w-4 h-4" />
               <span>{isSaving ? 'Saving...' : 'Save Changes'}</span>
