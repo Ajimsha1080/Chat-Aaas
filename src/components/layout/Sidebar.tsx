@@ -76,7 +76,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isMobileOpen = false, onCloseM
             <Sparkles className="w-4.5 h-4.5 text-white" />
           </div>
           <div className="min-w-0 flex-1">
-            <span className="font-bold text-white text-sm tracking-tight block truncate">Chat-AaaS</span>
+            <span className="font-bold text-white text-sm tracking-tight block truncate">CoarAI</span>
             <span className="text-[11px] font-medium text-slate-400 block truncate">AI Assistant Platform</span>
           </div>
         </div>

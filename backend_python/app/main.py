@@ -61,7 +61,7 @@ APP_START_TIME = time.time()
 app = FastAPI(
     title=settings.PROJECT_NAME,
     version="2.0.0",
-    description="Chat-AaaS Enterprise Agent-as-a-Service Platform & AI Specialized Runtime",
+    description="CoarAI Enterprise AI Assistant Platform & AI Specialized Runtime",
     docs_url="/docs",
     openapi_url="/api/v1/openapi.json"
 )
@@ -74,16 +74,17 @@ app.add_middleware(
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
     allow_headers=["*"],
-    expose_headers=["x-request-id", "x-ai-service"]
+    expose_headers=["*"],
 )
 
-# Telemetry and Request Tracing Middleware
 @app.middleware("http")
-async def add_telemetry_headers(request: Request, call_next):
-    req_id = request.headers.get("x-request-id") or f"req_{uuid.uuid4().hex[:8]}"
+async def add_security_and_timing_headers(request: Request, call_next):
+    start_time = time.time()
     response = await call_next(request)
-    response.headers["x-request-id"] = req_id
-    response.headers["x-ai-service"] = "Chat-AaaS-Enterprise-FastAPI-v2"
+    duration_ms = int((time.time() - start_time) * 1000)
+    
+    response.headers["x-response-time-ms"] = str(duration_ms)
+    response.headers["x-ai-service"] = "CoarAI-Enterprise-FastAPI-v2"
     return response
 
 # ----------------- Mount Modular Enterprise Routers -----------------

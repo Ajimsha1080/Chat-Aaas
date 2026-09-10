@@ -149,7 +149,7 @@ export const HelpModal: React.FC<HelpModalProps> = ({ isOpen, onClose, onOpenTes
                 </div>
                 <div>
                   <h4 className="text-xs font-bold text-emerald-950">Contact 24/7 Support</h4>
-                  <p className="text-[11px] text-emerald-700">support@chat-aaas.com</p>
+                  <p className="text-[11px] text-emerald-700">support@coarai.com</p>
                 </div>
               </div>
               <ChevronRight className="w-4 h-4 text-emerald-400" />

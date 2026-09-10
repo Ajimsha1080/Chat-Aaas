@@ -3,7 +3,7 @@ from typing import List, Optional
 from pydantic_settings import BaseSettings
 
 class Settings(BaseSettings):
-    PROJECT_NAME: str = "Chat-AaaS Enterprise Agent-as-a-Service Platform"
+    PROJECT_NAME: str = "CoarAI Enterprise AI Assistant Platform"
     VERSION: str = "2.0.0"
     API_V1_STR: str = "/api/v1"
     

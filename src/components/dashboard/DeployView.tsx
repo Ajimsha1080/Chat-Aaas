@@ -246,13 +246,13 @@ const SwirlIcon: React.FC<{ className?: string }> = ({ className = "w-4.5 h-4.5"
     }
   };
 
-  const origin = typeof window !== 'undefined' ? window.location.origin : 'https://cdn.chat-aaas.com';
+  const origin = typeof window !== 'undefined' ? window.location.origin : 'https://cdn.coarai.com';
   const isLocal = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
-  const widgetScriptSrc = isLocal ? `${origin}/widget.js` : 'https://cdn.chat-aaas.com/v1/widget.js';
-  const apiEndpointUrl = isLocal ? 'http://127.0.0.1:8001/api/v1/chat' : 'https://api.chat-aaas.com/api/v1/chat';
+  const widgetScriptSrc = isLocal ? `${origin}/widget.js` : 'https://cdn.coarai.com/v1/widget.js';
+  const apiEndpointUrl = isLocal ? 'http://127.0.0.1:8001/api/v1/chat' : 'https://api.coarai.com/api/v1/chat';
 
   const isLogoSelected = localSettings.launcherIcon === 'logo' || localSettings.launcherIcon === 'custom';
-  const scriptSnippet = `<!-- Chat-AaaS AI Assistant Widget for ${currentCompany.name} -->
+  const scriptSnippet = `<!-- CoarAI AI Assistant Widget for ${currentCompany.name} -->
 <script
   src="${widgetScriptSrc}"
   data-agent-key="${currentCompany.apiKey}"
@@ -264,7 +264,7 @@ const SwirlIcon: React.FC<{ className?: string }> = ({ className = "w-4.5 h-4.5"
   defer>
 </script>`;
 
-  const reactSnippet = `import { AssistantChatWidget } from '@chat-aaas/react-sdk';
+  const reactSnippet = `import { AssistantChatWidget } from '@coarai/react-sdk';
 
 export default function App() {
   return (
@@ -284,7 +284,7 @@ export default function App() {
 }`;
 
   const iframeSnippet = `<iframe
-  src="https://embed.chat-aaas.com/chat/${currentCompany.slug}?key=${currentCompany.apiKey}"
+  src="https://embed.coarai.com/chat/${currentCompany.slug}?key=${currentCompany.apiKey}"
   width="400"
   height="620"
   frameborder="0"
@@ -876,6 +876,17 @@ export default function App() {
               <div className="space-y-5 animate-in fade-in duration-150">
                 <div className="space-y-4">
                   <div>
+                    <label className="block font-semibold text-slate-800 mb-1.5">Assistant Name</label>
+                    <input
+                      type="text"
+                      disabled
+                      value={currentCompany.agent.name}
+                      className="w-full px-3.5 py-2.5 bg-slate-100 border border-slate-200 rounded-xl text-sm font-medium text-slate-600 cursor-not-allowed"
+                    />
+                    <p className="text-[11px] text-slate-500 mt-1">Managed in Assistant Config tab.</p>
+                  </div>
+
+                  <div>
                     <label className="block font-semibold text-slate-800 mb-1.5">Screen Position</label>
                     <div className="grid grid-cols-2 gap-2.5 max-w-xs">
                       {[
@@ -916,7 +927,7 @@ export default function App() {
                         onChange={(e) => setLocalSettings({ ...localSettings, showPoweredBy: e.target.checked })}
                         className="rounded text-slate-900 w-4 h-4 cursor-pointer"
                       />
-                      <span className="font-semibold text-slate-800 text-sm">Display "Powered by Chat-AaaS" badge</span>
+                      <span className="font-semibold text-slate-800 text-sm">Display "Powered by CoarAI" badge</span>
                     </label>
                   </div>
                 </div>
@@ -1151,7 +1162,7 @@ export default function App() {
                       {/* Powered By Footer */}
                       {localSettings.showPoweredBy !== false && (
                         <p className="text-center text-[10px] text-slate-400 font-medium">
-                          Powered by <strong className="font-semibold text-slate-500">Agent-as-a-Service</strong>
+                          Powered by <strong className="font-semibold text-slate-500">CoarAI</strong>
                         </p>
                       )}
                     </div>

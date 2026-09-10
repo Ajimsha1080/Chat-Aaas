@@ -249,7 +249,7 @@ export const DeveloperConsole: React.FC = () => {
             <div className="flex items-center justify-between">
               <div>
                 <h3 className="text-base sm:text-lg font-bold text-slate-900">Live Production API Key</h3>
-                <p className="text-xs sm:text-sm text-slate-500">Authenticate requests to the Chat-AaaS REST API & Client Widget.</p>
+                <p className="text-xs sm:text-sm text-slate-500">Authenticate requests to the CoarAI REST API & Client Widget.</p>
               </div>
               <button
                 onClick={regenerateApiKey}
