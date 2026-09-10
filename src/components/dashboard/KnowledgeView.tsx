@@ -17,6 +17,8 @@ import {
   Sparkles, 
   AlertTriangle, 
   FolderPlus, 
+  Folder,
+  Edit2,
   Play, 
   ThumbsUp, 
   ThumbsDown, 
@@ -86,6 +88,51 @@ export const KnowledgeView: React.FC = () => {
 
   const [newColName, setNewColName] = useState('');
   const [newColDesc, setNewColDesc] = useState('');
+  const [isEditCollectionModalOpen, setIsEditCollectionModalOpen] = useState(false);
+  const [editingCollection, setEditingCollection] = useState<KnowledgeCollection | null>(null);
+  const [editColName, setEditColName] = useState('');
+  const [editColDesc, setEditColDesc] = useState('');
+
+  const handleCreateCollection = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newColName.trim()) return;
+    const newCol: KnowledgeCollection = {
+      id: genId('col'),
+      name: newColName.trim(),
+      description: newColDesc.trim() || 'Custom knowledge collection',
+      icon: 'Folder',
+      color: 'indigo',
+      sourceCount: 0
+    };
+    setCollections(prev => [...prev, newCol]);
+    setNewColName('');
+    setNewColDesc('');
+    setIsNewCollectionModalOpen(false);
+    showToast('Collection Created', `Collection "${newCol.name}" added successfully.`, 'success');
+  };
+
+  const handleUpdateCollection = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingCollection || !editColName.trim()) return;
+    setCollections(prev => prev.map(c => c.id === editingCollection.id ? {
+      ...c,
+      name: editColName.trim(),
+      description: editColDesc.trim()
+    } : c));
+    setIsEditCollectionModalOpen(false);
+    setEditingCollection(null);
+    showToast('Collection Updated', 'Collection details updated successfully.', 'success');
+  };
+
+  const handleDeleteCollection = (id: string, name: string) => {
+    setCollections(prev => prev.filter(c => c.id !== id));
+    if (selectedCollection === id) {
+      setSelectedCollection('all');
+    }
+    setIsEditCollectionModalOpen(false);
+    setEditingCollection(null);
+    showToast('Collection Removed', `Collection "${name}" deleted.`, 'info');
+  };
 
   // New item form state
   const [formTitle, setFormTitle] = useState('');
@@ -248,25 +295,7 @@ export const KnowledgeView: React.FC = () => {
     }, 1100);
   };
 
-  const handleCreateCollection = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newColName.trim()) return;
 
-    const newCol: KnowledgeCollection = {
-      id: genId('col'),
-      name: newColName.trim(),
-      description: newColDesc.trim() || 'Custom Knowledge Domain',
-      icon: 'Folder',
-      color: 'indigo',
-      sourceCount: 0
-    };
-
-    setCollections(prev => [...prev, newCol]);
-    setNewColName('');
-    setNewColDesc('');
-    setIsNewCollectionModalOpen(false);
-    showToast('Collection Created', `Created collection "${newCol.name}".`, 'success');
-  };
 
   const handleConvertGap = (e: React.FormEvent) => {
     e.preventDefault();
@@ -622,19 +651,59 @@ export const KnowledgeView: React.FC = () => {
               All
             </button>
 
-            {collections.map(col => (
-              <button
-                key={col.id}
-                onClick={() => setSelectedCollection(col.id)}
-                className={`px-3 py-1.5 rounded-lg font-semibold transition-colors cursor-pointer whitespace-nowrap ${
-                  selectedCollection === col.id
-                    ? 'bg-slate-900 text-white shadow-2xs'
-                    : 'bg-white text-slate-700 border border-slate-200 hover:bg-slate-100'
-                }`}
-              >
-                {col.name}
-              </button>
-            ))}
+            {collections.map(col => {
+              const isSelected = selectedCollection === col.id;
+              return (
+                <div
+                  key={col.id}
+                  className={`group relative flex items-center gap-1 px-2.5 py-1.5 rounded-lg font-semibold transition-all whitespace-nowrap text-xs ${
+                    isSelected
+                      ? 'bg-slate-900 text-white shadow-2xs'
+                      : 'bg-white text-slate-700 border border-slate-200 hover:bg-slate-50'
+                  }`}
+                >
+                  <button
+                    type="button"
+                    onClick={() => setSelectedCollection(col.id)}
+                    className="cursor-pointer"
+                  >
+                    {col.name}
+                  </button>
+
+                  <div className="flex items-center gap-0.5 ml-1 opacity-50 group-hover:opacity-100 transition-opacity">
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setEditingCollection(col);
+                        setEditColName(col.name);
+                        setEditColDesc(col.description || '');
+                        setIsEditCollectionModalOpen(true);
+                      }}
+                      title="Edit Collection"
+                      className={`p-0.5 rounded hover:scale-110 transition-transform cursor-pointer ${
+                        isSelected ? 'hover:bg-slate-700 text-slate-300' : 'hover:bg-slate-200 text-slate-500'
+                      }`}
+                    >
+                      <Edit2 className="w-3 h-3" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDeleteCollection(col.id, col.name);
+                      }}
+                      title="Remove Collection"
+                      className={`p-0.5 rounded hover:scale-110 transition-transform cursor-pointer ${
+                        isSelected ? 'hover:bg-red-600 text-rose-300' : 'hover:bg-red-50 text-rose-500'
+                      }`}
+                    >
+                      <Trash2 className="w-3 h-3" />
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
 
             <button
               onClick={() => setIsNewCollectionModalOpen(true)}
@@ -1348,6 +1417,149 @@ export const KnowledgeView: React.FC = () => {
                 Close
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* New Collection Modal */}
+      {isNewCollectionModalOpen && (
+        <div className="fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in">
+          <div className="bg-white rounded-2xl max-w-md w-full p-6 sm:p-7 shadow-2xl border border-slate-200 space-y-5 animate-in zoom-in-95 duration-150">
+            <div className="flex items-center justify-between pb-3.5 border-b border-slate-100">
+              <div className="flex items-center gap-2.5">
+                <div className="p-2 bg-indigo-50 text-indigo-700 rounded-xl border border-indigo-200">
+                  <FolderPlus className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-slate-900">Create New Collection</h3>
+                  <p className="text-xs text-slate-500">Group related knowledge documents and FAQs.</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setIsNewCollectionModalOpen(false)}
+                className="text-slate-400 hover:text-slate-700 p-1.5 rounded-lg hover:bg-slate-100 cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleCreateCollection} className="space-y-4 text-sm">
+              <div>
+                <label className="block text-sm font-semibold text-slate-900 mb-1.5">Collection Name</label>
+                <input
+                  type="text"
+                  required
+                  value={newColName}
+                  onChange={(e) => setNewColName(e.target.value)}
+                  placeholder="e.g. Developer APIs & SDKs"
+                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-1 focus:ring-slate-900 focus:border-slate-900 text-slate-900 font-medium focus:outline-hidden"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-slate-900 mb-1.5">Description (Optional)</label>
+                <textarea
+                  rows={2}
+                  value={newColDesc}
+                  onChange={(e) => setNewColDesc(e.target.value)}
+                  placeholder="Brief description of what documents belong here..."
+                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-1 focus:ring-slate-900 focus:border-slate-900 text-slate-900 text-sm focus:outline-hidden"
+                />
+              </div>
+
+              <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={() => setIsNewCollectionModalOpen(false)}
+                  className="px-4 py-2 text-slate-700 hover:bg-slate-100 rounded-xl font-semibold transition-colors cursor-pointer text-sm"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={!newColName.trim()}
+                  className="px-4 py-2 bg-slate-900 hover:bg-slate-800 disabled:opacity-50 text-white rounded-xl font-semibold transition-colors shadow-sm cursor-pointer text-sm"
+                >
+                  Create Collection
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Edit / Remove Collection Modal */}
+      {isEditCollectionModalOpen && editingCollection && (
+        <div className="fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in">
+          <div className="bg-white rounded-2xl max-w-md w-full p-6 sm:p-7 shadow-2xl border border-slate-200 space-y-5 animate-in zoom-in-95 duration-150">
+            <div className="flex items-center justify-between pb-3.5 border-b border-slate-100">
+              <div className="flex items-center gap-2.5">
+                <div className="p-2 bg-slate-100 text-slate-800 rounded-xl border border-slate-200">
+                  <Folder className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-slate-900">Edit Collection</h3>
+                  <p className="text-xs text-slate-500">Update name or remove collection.</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setIsEditCollectionModalOpen(false)}
+                className="text-slate-400 hover:text-slate-700 p-1.5 rounded-lg hover:bg-slate-100 cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleUpdateCollection} className="space-y-4 text-sm">
+              <div>
+                <label className="block text-sm font-semibold text-slate-900 mb-1.5">Collection Name</label>
+                <input
+                  type="text"
+                  required
+                  value={editColName}
+                  onChange={(e) => setEditColName(e.target.value)}
+                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-1 focus:ring-slate-900 focus:border-slate-900 text-slate-900 font-medium focus:outline-hidden"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-slate-900 mb-1.5">Description</label>
+                <textarea
+                  rows={2}
+                  value={editColDesc}
+                  onChange={(e) => setEditColDesc(e.target.value)}
+                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-1 focus:ring-slate-900 focus:border-slate-900 text-slate-900 text-sm focus:outline-hidden"
+                />
+              </div>
+
+              <div className="flex items-center justify-between pt-3 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={() => handleDeleteCollection(editingCollection.id, editingCollection.name)}
+                  className="px-3 py-2 text-rose-600 hover:bg-rose-50 border border-rose-200 rounded-xl font-semibold flex items-center gap-1.5 transition-colors cursor-pointer text-xs sm:text-sm"
+                >
+                  <Trash2 className="w-4 h-4" />
+                  <span>Delete Collection</span>
+                </button>
+
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setIsEditCollectionModalOpen(false)}
+                    className="px-3.5 py-2 text-slate-700 hover:bg-slate-100 rounded-xl font-semibold transition-colors cursor-pointer text-sm"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={!editColName.trim()}
+                    className="px-4 py-2 bg-slate-900 hover:bg-slate-800 disabled:opacity-50 text-white rounded-xl font-semibold transition-colors shadow-sm cursor-pointer text-sm"
+                  >
+                    Save Changes
+                  </button>
+                </div>
+              </div>
+            </form>
           </div>
         </div>
       )}
