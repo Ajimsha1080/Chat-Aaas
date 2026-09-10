@@ -212,25 +212,7 @@ export const MyAssistantView: React.FC = () => {
             </div>
           </div>
 
-          <div className="border-t border-slate-100 pt-6 grid grid-cols-1 md:grid-cols-2 gap-5">
-            <div>
-              <div className="flex items-center justify-between mb-1.5">
-                <label className="block text-sm font-semibold text-slate-900">
-                  Assistant Display Name
-                </label>
-                <span className="text-[11px] font-semibold text-indigo-700 bg-indigo-50 border border-indigo-200 px-2 py-0.5 rounded-md">
-                  Predefined
-                </span>
-              </div>
-              <input
-                type="text"
-                readOnly
-                value="Coar AI"
-                className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-800 cursor-not-allowed shadow-xs select-none"
-              />
-              <p className="text-xs text-slate-500 mt-1">Predefined platform AI Assistant name.</p>
-            </div>
-
+          <div className="border-t border-slate-100 pt-6">
             <div>
               <label className="block text-sm font-semibold text-slate-900 mb-1.5">
                 Role / Title
@@ -242,7 +224,7 @@ export const MyAssistantView: React.FC = () => {
                 className="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-1 focus:ring-slate-900 focus:border-slate-900 shadow-xs font-medium"
                 placeholder="e.g. Customer Support Specialist"
               />
-              <p className="text-xs text-slate-500 mt-1">Displayed below the assistant's name.</p>
+              <p className="text-xs text-slate-500 mt-1">Displayed below the assistant's name (Coar AI).</p>
             </div>
           </div>
 

@@ -218,24 +218,7 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({ isOpen, onClos
             <div className="space-y-4 animate-in fade-in duration-150">
               <div>
                 <h4 className="text-base font-bold text-slate-900 mb-1">Customize Assistant Personality & Tone</h4>
-                <p className="text-sm text-slate-500">Choose how your assistant speaks with visitors and what greeting it uses.</p>
-              </div>
-
-              <div>
-                <div className="flex items-center justify-between mb-1.5">
-                  <label className="block font-bold text-slate-900 text-sm">Assistant Name</label>
-                  <span className="text-[11px] font-semibold text-indigo-700 bg-indigo-50 border border-indigo-200 px-2 py-0.5 rounded-md">
-                    Predefined
-                  </span>
-                </div>
-                <input
-                  type="text"
-                  readOnly
-                  disabled
-                  value="Coar AI"
-                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-800 cursor-not-allowed shadow-xs select-none"
-                />
-                <p className="text-xs text-slate-500 mt-1">Predefined platform AI Assistant name.</p>
+                <p className="text-sm text-slate-500">Choose how Coar AI speaks with visitors and what greeting it uses.</p>
               </div>
 
               <div>
