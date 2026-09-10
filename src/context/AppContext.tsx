@@ -47,7 +47,7 @@ import {
 import { AIAgentEngine } from '../services/aiEngine';
 import { AppContext } from './AppContextDefinition';
 
-const LOCAL_STORAGE_KEY = 'coarai_platform_state_v4';
+const LOCAL_STORAGE_KEY = 'coarai_platform_state_v5';
 
 const genId = (prefix: string) => `${prefix}-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
 

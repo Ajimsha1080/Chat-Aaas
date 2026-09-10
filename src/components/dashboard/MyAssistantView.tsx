@@ -225,7 +225,7 @@ export const MyAssistantView: React.FC = () => {
               <input
                 type="text"
                 readOnly
-                value="Coar"
+                value="Coar AI"
                 className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-800 cursor-not-allowed shadow-xs select-none"
               />
               <p className="text-xs text-slate-500 mt-1">Predefined platform AI Assistant name.</p>

@@ -31,7 +31,7 @@ async def process_chat_message(
     RateLimiter.check_rate_limit(client_key, max_requests=20)
 
     stored_chunks = [c for c in db.document_chunks.values() if c.get("companyId") == company_id]
-    agent = db.get_agent_for_company(company_id) or {"name": "Coar", "model": "gpt-4o-mini"}
+    agent = db.get_agent_for_company(company_id) or {"name": "Coar AI", "model": "gpt-4o-mini"}
 
 
     response = await AgentRuntime.process_message(
@@ -62,7 +62,7 @@ async def stream_chat_tokens(
     RateLimiter.check_rate_limit(client_key, max_requests=20)
 
     stored_chunks = [c for c in db.document_chunks.values() if c.get("companyId") == company_id]
-    agent = db.get_agent_for_company(company_id) or {"name": "Coar", "model": "gpt-4o-mini"}
+    agent = db.get_agent_for_company(company_id) or {"name": "Coar AI", "model": "gpt-4o-mini"}
 
 
     response = await AgentRuntime.process_message(
