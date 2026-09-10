@@ -190,6 +190,73 @@ export class APIClient {
     });
   }
 
+  public static async streamChatMessage(
+    message: string,
+    options: {
+      conversationId?: string;
+      sessionId?: string;
+      onToken?: (token: string) => void;
+      onDone?: (fullResult: any) => void;
+      onError?: (err: any) => void;
+    }
+  ) {
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+      'x-company-id': this.currentCompanyId,
+      'x-correlation-id': `cli-stream-${Date.now()}`
+    };
+    if (this.token) headers['Authorization'] = `Bearer ${this.token}`;
+
+    try {
+      const response = await fetch(`${this.baseUrl}/api/v1/chat/stream`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+          message,
+          conversation_id: options.conversationId,
+          session_id: options.sessionId
+        })
+      });
+
+      if (!response.ok || !response.body) {
+        throw new Error(`Stream request failed with HTTP ${response.status}`);
+      }
+
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n\n');
+        buffer = lines.pop() || '';
+
+        for (const line of lines) {
+          if (line.startsWith('data: ')) {
+            const dataStr = line.replace(/^data:\s*/, '').trim();
+            if (!dataStr) continue;
+            try {
+              const data = JSON.parse(dataStr);
+              if (data.type === 'done') {
+                if (options.onDone) options.onDone(data);
+              } else if (data.token) {
+                if (options.onToken) options.onToken(data.token);
+              }
+            } catch {
+              if (options.onToken) options.onToken(dataStr);
+            }
+          }
+        }
+      }
+    } catch (err) {
+      if (options.onError) options.onError(err);
+      throw err;
+    }
+  }
+
   // ================= CONVERSATIONS ================= //
   public static async getConversations() {
     return this.request('/api/v1/conversations', 'GET');
