@@ -110,7 +110,7 @@ app.include_router(developer_router, prefix="/api/v1")
 async def health_check():
     return HealthResponse(
         status="healthy",
-        service="Chat-AaaS Python Enterprise & AI Specialized Runtime",
+        service="CoarAI Python Enterprise & AI Specialized Runtime",
         version="2.0.0",
         framework="FastAPI + Pydantic v2 (Async)",
         uptime_seconds=round(time.time() - APP_START_TIME, 2)
