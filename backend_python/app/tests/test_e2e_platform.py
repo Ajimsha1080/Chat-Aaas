@@ -99,7 +99,7 @@ def test_rbac_permission_enforcement():
     # Owner can edit draft -> Success
     edit_ok = client.put(
         "/api/v1/agent/draft",
-        json={"name": "Aura Senior Specialist"},
+        json={"name": "CoarAI Senior Specialist"},
         headers={"Authorization": f"Bearer {owner_token}"}
     )
     assert edit_ok.status_code == 200
@@ -122,7 +122,7 @@ def test_agent_draft_publish_and_rollback():
     # 1. Update draft
     client.put(
         "/api/v1/agent/draft",
-        json={"greetingMessage": "Greetings! I am Aura v2.1 Enterprise."},
+        json={"greetingMessage": "Greetings! I am CoarAI v2.1 Enterprise."},
         headers=headers
     )
 

@@ -1,7 +1,7 @@
 # CoarAI Platform Architecture Overview
 
 ## 1. Executive Summary
-CoarAI is a production-grade, enterprise-ready **AI Agent Platform** designed with a high-performance **TypeScript + Python Hybrid Architecture**.
+CoarAI is a production-grade, enterprise-ready **Agent-as-a-Service (AaaS)** platform designed with a high-performance **TypeScript + Python Hybrid Architecture**.
 
 The product is organized around a simple mental model for business users:
 \text{Company} \longrightarrow \text{AI Agent} \longrightarrow \text{Teach It} \longrightarrow \text{Give It Tools} \longrightarrow \text{Deploy Everywhere}

@@ -269,7 +269,7 @@ class DatabaseStore:
         self.agents["agent-apex-1"] = {
             "id": "agent-apex-1",
             "companyId": "comp-apex-health",
-            "name": "Aura Clinical Assistant",
+            "name": "CoarAI Clinical Assistant",
             "description": "HIPAA-compliant Patient Support Agent",
             "avatarUrl": "https://images.unsplash.com/photo-1594824813593-35f12e9b8979",
             "status": "active",
@@ -284,7 +284,7 @@ class DatabaseStore:
             "companyId": "comp-apex-health",
             "versionNumber": 1,
             "status": "published",
-            "systemInstructions": "You are Aura Clinical Assistant, patient triaging assistant for Apex Health.",
+            "systemInstructions": "You are CoarAI Clinical Assistant, patient triaging assistant for Apex Health.",
             "greetingMessage": "Hello, welcome to Apex Health Telemedicine.",
             "fallbackMessage": "Connecting you to an on-call clinical nurse.",
             "tone": "empathetic",
