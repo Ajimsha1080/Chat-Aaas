@@ -21,14 +21,14 @@ def get_widget_configuration(ctx: TenantContext = Depends(get_tenant_context)):
     ver = db.agent_versions.get(agent.get("activeVersionId", ""), {})
 
     script_snippet = f"""<script 
-  src="https://chat-aaas.com/widget/embed.js" 
+  src="https://coarai.com/widget/embed.js" 
   data-company-id="{ctx.company_id}" 
   data-position="bottom-right" 
   async>
 </script>"""
 
     iframe_snippet = f"""<iframe 
-  src="https://chat-aaas.com/widget/{ctx.company_id}" 
+  src="https://coarai.com/widget/{ctx.company_id}" 
   width="400" 
   height="600" 
   frameborder="0">

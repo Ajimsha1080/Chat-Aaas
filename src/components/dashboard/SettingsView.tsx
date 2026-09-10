@@ -428,7 +428,7 @@ export const SettingsView: React.FC = () => {
                 <input
                   type="text"
                   readOnly
-                  value={`https://api.chat-aaas.com/api/v1/webhook/${currentCompany.id}`}
+                  value={`https://api.coarai.com/api/v1/webhook/${currentCompany.id}`}
                   className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl font-mono text-sm text-slate-800 font-medium"
                 />
               </div>

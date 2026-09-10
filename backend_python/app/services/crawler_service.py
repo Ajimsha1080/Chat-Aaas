@@ -86,7 +86,7 @@ class CrawlerService:
         import httpx
         try:
             async with httpx.AsyncClient(timeout=10.0, follow_redirects=True) as client:
-                headers = {"User-Agent": "ChatAaaS-WebCrawler/2.0 (+https://github.com/Ajimsha1080/Chat-Aaas)"}
+                headers = {"User-Agent": "CoarAI-WebCrawler/2.0 (+https://github.com/Ajimsha1080/Chat-Aaas)"}
                 resp = await client.get(url, headers=headers)
                 if resp.status_code >= 400:
                     return {"success": False, "error": f"HTTP {resp.status_code} returned by web server."}

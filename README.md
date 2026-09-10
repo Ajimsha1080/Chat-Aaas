@@ -1,4 +1,4 @@
-# 🤖 Chat-AaaS — AI Q&A Assistant SaaS Platform
+# 🤖 CoarAI — Enterprise AI Assistant Platform
 
 [![CI/CD Pipeline](https://github.com/Ajimsha1080/Chat-Aaas/actions/workflows/ci.yml/badge.svg)](https://github.com/Ajimsha1080/Chat-Aaas/actions/workflows/ci.yml)
 [![FastAPI](https://img.shields.io/badge/Backend-FastAPI%20(Python%203.11+)-009688.svg?logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com)
@@ -6,7 +6,7 @@
 [![PostgreSQL](https://img.shields.io/badge/Database-PostgreSQL%20+%20pgvector-336791.svg?logo=postgresql&logoColor=white)](https://github.com/pgvector/pgvector)
 [![Redis](https://img.shields.io/badge/Cache%20&%20Workers-Redis%207-DC382D.svg?logo=redis&logoColor=white)](https://redis.io)
 
-**Chat-AaaS** is a production-grade, enterprise AI Q&A Assistant SaaS platform built around a single core promise:
+**CoarAI** is a production-grade, enterprise AI Q&A Assistant SaaS platform built around a single core promise:
 
 > **"Create one AI assistant for your business. Add your knowledge. Deploy it anywhere."**
 
