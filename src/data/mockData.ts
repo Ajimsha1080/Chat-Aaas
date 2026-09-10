@@ -156,7 +156,7 @@ export const INITIAL_COMPANIES: Company[] = [
       tone: 'technical',
       creativityLevel: 0.2,
       systemInstructions: 'You are CoarAI Assistant, representing TechFlow Cloud Infrastructure. Adhere strictly to the TechFlow knowledge base and connected systems. Always verify order and server IDs before executing queries. Never fabricate specifications or pricing.',
-      businessInstructions: 'Provide concise, code-friendly explanations for devops engineers. If a developer reports production downtime (5xx server crash), immediately offer priority human on-call escalation.',
+      businessInstructions: '',
       greetingMessage: 'Hello! I am CoarAI Assistant from TechFlow. How can I assist with your Kubernetes deployments, API quotas, or cloud billing today?',
       fallbackMessage: 'I do not have specific verified information regarding that in our official documentation. Would you like me to transfer this session to our 24/7 cloud support engineer?',
       allowedActions: ['act-check-quota', 'act-book-demo', 'act-create-ticket', 'act-reset-key', 'act-collect-lead', 'act-escalate-human'],
