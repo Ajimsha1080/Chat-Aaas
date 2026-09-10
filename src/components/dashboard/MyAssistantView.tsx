@@ -6,8 +6,6 @@ import {
   BookOpen, 
   Save, 
   Check, 
-  UserCheck, 
-  Mail, 
   MessageSquare
 } from 'lucide-react';
 import { useApp } from '../../context';
@@ -267,94 +265,7 @@ export const MyAssistantView: React.FC = () => {
             </div>
           </div>
 
-          {/* Human Escalation Settings */}
-          <div className="border-t border-slate-100 pt-6 space-y-4">
-            <div className="flex items-center justify-between flex-wrap gap-3">
-              <div className="flex items-center gap-2.5">
-                <UserCheck className="w-5 h-5 text-slate-800" />
-                <div>
-                  <h4 className="text-base font-bold text-slate-900">Human Escalation Routing</h4>
-                  <p className="text-xs text-slate-500">Automatically transfer chats to human operators upon request.</p>
-                </div>
-              </div>
 
-              {/* Enable / Disable Toggle Switch */}
-              <div className="flex items-center gap-3">
-                <span className={`text-xs font-semibold px-2.5 py-1 rounded-full border ${
-                  formState.escalationSettings?.enabled !== false
-                    ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                    : 'bg-slate-100 text-slate-500 border-slate-200'
-                }`}>
-                  {formState.escalationSettings?.enabled !== false ? '● Enabled' : '○ Disabled'}
-                </span>
-
-                <label className="relative inline-flex items-center cursor-pointer" title="Enable or disable human escalation routing">
-                  <input
-                    type="checkbox"
-                    checked={formState.escalationSettings?.enabled !== false}
-                    onChange={(e) => setFormState(prev => ({
-                      ...prev,
-                      escalationSettings: {
-                        ...prev.escalationSettings,
-                        enabled: e.target.checked
-                      }
-                    }))}
-                    className="sr-only peer"
-                  />
-                  <div className="w-11 h-6 bg-slate-200 peer-focus:outline-hidden rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-600"></div>
-                </label>
-              </div>
-            </div>
-
-            <div className={`grid grid-cols-1 md:grid-cols-2 gap-5 transition-opacity duration-150 ${
-              formState.escalationSettings?.enabled !== false ? 'opacity-100' : 'opacity-40 pointer-events-none'
-            }`}>
-              <div>
-                <label className="block text-sm font-semibold text-slate-900 mb-1.5">
-                  Notification Email for Escalations
-                </label>
-                <div className="relative">
-                  <Mail className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
-                  <input
-                    type="email"
-                    disabled={formState.escalationSettings?.enabled === false}
-                    value={formState.escalationSettings?.notifyEmail || ''}
-                    onChange={e => setFormState(prev => ({
-                      ...prev,
-                      escalationSettings: {
-                        ...prev.escalationSettings,
-                        notifyEmail: e.target.value
-                      }
-                    }))}
-                    className="w-full pl-9.5 pr-3.5 py-2.5 bg-white border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-1 focus:ring-slate-900 focus:border-slate-900 shadow-xs font-medium"
-                    placeholder="support@yourcompany.com"
-                  />
-                </div>
-                <p className="text-xs text-slate-500 mt-1">Alerts are sent here when customer requests live staff.</p>
-              </div>
-
-              <div>
-                <label className="block text-sm font-semibold text-slate-900 mb-1.5">
-                  Escalation Trigger Keywords
-                </label>
-                <input
-                  type="text"
-                  disabled={formState.escalationSettings?.enabled === false}
-                  value={formState.escalationSettings?.triggerKeywords?.join(', ') || ''}
-                  onChange={e => setFormState(prev => ({
-                    ...prev,
-                    escalationSettings: {
-                      ...prev.escalationSettings,
-                      triggerKeywords: e.target.value.split(',').map(k => k.trim()).filter(Boolean)
-                    }
-                  }))}
-                  className="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-1 focus:ring-slate-900 focus:border-slate-900 shadow-xs font-medium"
-                  placeholder="agent, human, support, representative"
-                />
-                <p className="text-xs text-slate-500 mt-1">Comma-separated triggers for live handoff.</p>
-              </div>
-            </div>
-          </div>
 
           <div className="flex justify-end pt-2">
             <button
