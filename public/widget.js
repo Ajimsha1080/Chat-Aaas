@@ -306,7 +306,7 @@
       botMsg.textContent = data.message || "Thank you for reaching out! How else can I assist you?";
       messagesEl.appendChild(botMsg);
       messagesEl.scrollTop = messagesEl.scrollHeight;
-    } catch (err) {
+    } catch {
       typingIndicator.remove();
       const botMsg = document.createElement('div');
       botMsg.className = 'aaas-msg aaas-msg-bot';

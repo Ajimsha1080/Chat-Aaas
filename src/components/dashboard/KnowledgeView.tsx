@@ -46,7 +46,7 @@ export const KnowledgeView: React.FC = () => {
   const [sidebarTab, setSidebarTab] = useState<SidebarTab>('all');
   const [selectedCollection, setSelectedCollection] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
-  const [articleStatuses, setArticleStatuses] = useState<Record<string, 'published' | 'draft' | 'archived'>>({});
+  const [articleStatuses] = useState<Record<string, 'published' | 'draft' | 'archived'>>({});
   
   // Modals & Panels
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -91,9 +91,9 @@ export const KnowledgeView: React.FC = () => {
   const [formTitle, setFormTitle] = useState('');
   const [formContent, setFormContent] = useState('');
   const [formUrl, setFormUrl] = useState('');
-  const [formCategory, setFormCategory] = useState('General');
+  const [formCategory] = useState('General');
   const [formFaqAnswer, setFormFaqAnswer] = useState('');
-  const [formCollectionId, setFormCollectionId] = useState('col-tf-1');
+  const [formCollectionId] = useState('col-tf-1');
   const [formFileName, setFormFileName] = useState('');
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [fileSizeStr, setFileSizeStr] = useState('');
@@ -731,7 +731,7 @@ export const KnowledgeView: React.FC = () => {
                   const isUrl = item.type === 'url';
                   const isDoc = item.type === 'document';
                   const isFaq = item.type === 'faq';
-                  const status = getItemStatus(item);
+                  const _status = getItemStatus(item);
 
                   return (
                     <div 

@@ -1,9 +1,5 @@
 import React, { useState } from 'react';
 import { 
-  BarChart3, 
-  CheckCircle2, 
-  Clock, 
-  UserX, 
   Star, 
   Cpu, 
   ChevronDown, 
@@ -29,9 +25,6 @@ export const InsightsView: React.FC = () => {
   const resolutionRate = stats.totalConversations > 0 
     ? Math.round((stats.resolvedConversations / stats.totalConversations) * 100) 
     : 94;
-  const escalationRate = stats.totalConversations > 0 
-    ? Math.round((stats.escalatedConversations / stats.totalConversations) * 100) 
-    : 6;
 
   const weeklyData = [
     { day: 'Mon', conversations: 142, resolved: 134, handoffs: 8 },

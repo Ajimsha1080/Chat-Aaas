@@ -9,7 +9,6 @@ import {
   UserPlus, 
   Download, 
   RefreshCw,
-  Sparkles,
   Terminal,
   Lock,
   Eye,

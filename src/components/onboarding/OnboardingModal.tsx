@@ -7,13 +7,8 @@ import {
   ArrowLeft, 
   Globe, 
   Upload, 
-  MessageSquare, 
-  CheckCircle2, 
   Play, 
-  Rocket, 
-  Sliders, 
-  BookOpen, 
-  Building2 
+  Rocket 
 } from 'lucide-react';
 import { useApp } from '../../context';
 import { AgentTone } from '../../types';

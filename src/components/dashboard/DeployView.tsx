@@ -3,29 +3,17 @@ import {
   Copy, 
   Check, 
   Sparkles, 
-  Paintbrush, 
   Terminal, 
   CheckCircle2,
-  MessageCircle,
-  MessageSquare,
-  MessagesSquare,
-  MessageSquareQuote,
   Plus,
   Trash2,
   HelpCircle,
-  Clock,
   Bot,
   Headphones,
   Zap,
   Upload,
-  Image as ImageIcon,
   Info,
   Pencil,
-  Moon,
-  Sun,
-  Settings as SettingsIcon,
-  Code2,
-  FileText,
   Send,
   X,
   ChevronDown
@@ -37,7 +25,6 @@ export const DeployView: React.FC = () => {
   const { 
     currentCompany, 
     updateWidgetSettings, 
-    setIsLiveSandboxOpen,
     setIsQuickTestOpen
   } = useApp();
 
@@ -58,7 +45,6 @@ export const DeployView: React.FC = () => {
   });
   const [isSaved, setIsSaved] = useState(false);
   const [isIconPickerOpen, setIsIconPickerOpen] = useState(false);
-  const [showLogoEditModal, setShowLogoEditModal] = useState(false);
   const [isPreviewOpen, setIsPreviewOpen] = useState(true);
 
   // Close popover when clicking outside
