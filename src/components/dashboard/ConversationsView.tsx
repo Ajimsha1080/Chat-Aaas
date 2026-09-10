@@ -4,7 +4,6 @@ import {
   UserCheck, 
   Send, 
   ShieldAlert, 
-  Zap, 
   User, 
   Mail, 
   Globe, 
@@ -26,8 +25,6 @@ export const ConversationsView: React.FC = () => {
     takeoverConversation,
     sendOperatorMessage,
     resolveConversation,
-    sendMessageToAgent,
-    startNewCustomerChatSession,
     showToast
   } = useApp();
 
@@ -156,26 +153,6 @@ export const ConversationsView: React.FC = () => {
               <span className="w-2.5 h-2.5 rounded-full bg-emerald-500" />
               <h2 className="text-base font-bold text-slate-900">Conversations Inbox</h2>
             </div>
-            <button
-              onClick={() => {
-                const convId = startNewCustomerChatSession(true);
-                const sampleQuestions = [
-                  "What is your pricing options and refund policy?",
-                  "How do I set up custom domain integration?",
-                  "Can I request a live demo for my enterprise team?",
-                  "I would like to speak with a human support agent please."
-                ];
-                const q = sampleQuestions[Math.floor(Math.random() * sampleQuestions.length)];
-                setTimeout(() => {
-                  sendMessageToAgent(convId, q);
-                }, 600);
-              }}
-              className="px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200/80 text-slate-800 text-xs font-semibold rounded-lg transition-colors flex items-center gap-1.5 cursor-pointer border border-slate-200"
-              title="Simulate incoming customer chat"
-            >
-              <Zap className="w-3.5 h-3.5 text-amber-600" />
-              <span>+ Simulate Chat</span>
-            </button>
           </div>
 
           {/* Search */}
