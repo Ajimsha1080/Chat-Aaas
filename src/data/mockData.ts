@@ -149,15 +149,15 @@ export const INITIAL_COMPANIES: Company[] = [
       knowledgeChunksUsed: 148
     },
     agent: {
-      name: 'CoarAI Cloud Assistant',
+      name: 'Coar',
       status: 'active',
       avatarUrl: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=150&auto=format&fit=crop&q=80',
       description: 'Official AI Assistant for TechFlow Cloud Infrastructure. Assists developers with Kubernetes clusters, billing, API limits, and support tickets.',
       tone: 'technical',
       creativityLevel: 0.2,
-      systemInstructions: 'You are CoarAI Assistant, representing TechFlow Cloud Infrastructure. Adhere strictly to the TechFlow knowledge base and connected systems. Always verify order and server IDs before executing queries. Never fabricate specifications or pricing.',
+      systemInstructions: 'You are Coar, the verified AI agent representing TechFlow Cloud Infrastructure. Adhere strictly to the TechFlow knowledge base and connected systems. Always verify order and server IDs before executing queries. Never fabricate specifications or pricing.',
       businessInstructions: '',
-      greetingMessage: 'Hello! I am CoarAI Assistant from TechFlow. How can I assist with your Kubernetes deployments, API quotas, or cloud billing today?',
+      greetingMessage: 'Hello! I am Coar from TechFlow. How can I assist with your Kubernetes deployments, API quotas, or cloud billing today?',
       fallbackMessage: 'I do not have specific verified information regarding that in our official documentation. Would you like me to transfer this session to our 24/7 cloud support engineer?',
       allowedActions: ['act-check-quota', 'act-book-demo', 'act-create-ticket', 'act-reset-key', 'act-collect-lead', 'act-escalate-human'],
       escalationSettings: {
@@ -180,7 +180,7 @@ export const INITIAL_COMPANIES: Company[] = [
       secondaryColor: '#0f172a',
       headerTitle: 'TechFlow Support & Ops',
       headerSubtitle: 'Instant answers & server actions',
-      launcherText: 'Chat with CoarAI',
+      launcherText: 'Chat with Coar',
       position: 'bottom_right',
       botAvatar: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=150&auto=format&fit=crop&q=80',
       userAvatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
@@ -673,8 +673,8 @@ export const INITIAL_CONVERSATIONS: Record<string, Conversation[]> = {
         {
           id: 'msg-1',
           sender: 'agent',
-          senderName: 'CoarAI Cloud Assistant',
-          text: 'Hello! I am CoarAI Assistant from TechFlow. How can I assist with your Kubernetes deployments, API quotas, or cloud billing today?',
+          senderName: 'Coar',
+          text: 'Hello! I am Coar from TechFlow. How can I assist with your Kubernetes deployments, API quotas, or cloud billing today?',
           timestamp: '2026-09-04T17:40:00Z'
         },
         {
@@ -686,7 +686,7 @@ export const INITIAL_CONVERSATIONS: Record<string, Conversation[]> = {
         {
           id: 'msg-3',
           sender: 'agent',
-          senderName: 'CoarAI Cloud Assistant',
+          senderName: 'Coar',
           text: 'I checked your cluster telemetry via TechFlow Cluster Analytics DB. Cluster cls-prod-9941 is currently operating with 18 nodes (68% CPU, 54% RAM utilization). Your estimated month-to-date compute cost is $428.50.',
           timestamp: '2026-09-04T17:41:13Z',
           reasoningSteps: [
@@ -714,7 +714,7 @@ export const INITIAL_CONVERSATIONS: Record<string, Conversation[]> = {
         {
           id: 'msg-5',
           sender: 'agent',
-          senderName: 'CoarAI Cloud Assistant',
+          senderName: 'Coar',
           text: 'According to our official SLA policy, if monthly cluster uptime falls below 99.95%, your account receives a 10% service credit. If uptime drops below 99.0%, a 30% credit is applied to that billing cycle.',
           timestamp: '2026-09-04T17:43:03Z',
           reasoningSteps: [
@@ -742,8 +742,8 @@ export const INITIAL_CONVERSATIONS: Record<string, Conversation[]> = {
         {
           id: 'msg-10',
           sender: 'agent',
-          senderName: 'CoarAI Cloud Assistant',
-          text: 'Hello! I am CoarAI Assistant from TechFlow. How can I assist with your Kubernetes deployments, API quotas, or cloud billing today?',
+          senderName: 'Coar',
+          text: 'Hello! I am Coar from TechFlow. How can I assist with your Kubernetes deployments, API quotas, or cloud billing today?',
           timestamp: '2026-09-04T16:15:00Z'
         },
         {
@@ -755,7 +755,7 @@ export const INITIAL_CONVERSATIONS: Record<string, Conversation[]> = {
         {
           id: 'msg-12',
           sender: 'agent',
-          senderName: 'CoarAI Cloud Assistant',
+          senderName: 'Coar',
           text: 'I detect a critical production outage trigger. I have paused automated AI handling and alerted our Senior On-Call Cloud Support Engineer. Vikram Mehta is joining this session now.',
           timestamp: '2026-09-04T16:16:05Z',
           reasoningSteps: [
@@ -805,8 +805,8 @@ export const INITIAL_CONVERSATIONS: Record<string, Conversation[]> = {
         {
           id: 'msg-20',
           sender: 'agent',
-          senderName: 'CoarAI Cloud Assistant',
-          text: 'Hello! I am CoarAI Assistant from TechFlow. How can I assist with your Kubernetes deployments, API quotas, or cloud billing today?',
+          senderName: 'Coar',
+          text: 'Hello! I am Coar from TechFlow. How can I assist with your Kubernetes deployments, API quotas, or cloud billing today?',
           timestamp: '2026-09-04T14:10:00Z'
         },
         {
@@ -818,7 +818,7 @@ export const INITIAL_CONVERSATIONS: Record<string, Conversation[]> = {
         {
           id: 'msg-22',
           sender: 'agent',
-          senderName: 'CoarAI Cloud Assistant',
+          senderName: 'Coar',
           text: 'We would love to help you plan your migration. Would you like me to book a 30-minute Cloud Architecture Review for marcus@hypergrowth.ai on Monday, Sep 8 at 3:00 PM IST?',
           timestamp: '2026-09-04T14:11:05Z',
           isPendingConfirmation: false,
@@ -837,7 +837,7 @@ export const INITIAL_CONVERSATIONS: Record<string, Conversation[]> = {
         {
           id: 'msg-24',
           sender: 'agent',
-          senderName: 'CoarAI Cloud Assistant',
+          senderName: 'Coar',
           text: 'Demo confirmed! A calendar invite for Monday, Sep 8 at 3:00 PM IST has been dispatched to marcus@hypergrowth.ai. Our Senior Architect will have your migration roadmap ready.',
           timestamp: '2026-09-04T14:12:03Z',
           toolTraces: [
@@ -859,7 +859,7 @@ export const INITIAL_AUDIT_LOGS: AuditLogItem[] = [
   {
     id: 'log-1',
     timestamp: '2026-09-04T17:41:12Z',
-    actor: 'CoarAI AI Agent (Automated)',
+    actor: 'Coar (Automated)',
     actorRole: 'system_agent',
     action: 'TOOL_EXECUTE',
     details: 'Executed check_cluster_quota on cluster cls-prod-9941 for customer Alex Mercer',
@@ -869,7 +869,7 @@ export const INITIAL_AUDIT_LOGS: AuditLogItem[] = [
   {
     id: 'log-2',
     timestamp: '2026-09-04T16:16:04Z',
-    actor: 'CoarAI AI Agent (Automated)',
+    actor: 'Coar (Automated)',
     actorRole: 'system_agent',
     action: 'HUMAN_ESCALATION_TRIGGERED',
     details: 'Triggered Sev-1 human handoff for conversation conv-102. Reason: Mumbai ingress 502 outage',
@@ -889,7 +889,7 @@ export const INITIAL_AUDIT_LOGS: AuditLogItem[] = [
   {
     id: 'log-4',
     timestamp: '2026-09-04T14:12:02Z',
-    actor: 'CoarAI AI Agent (Automated)',
+    actor: 'Coar (Automated)',
     actorRole: 'system_agent',
     action: 'TOOL_EXECUTE',
     details: 'Executed book_tech_demo via HubSpot CRM integration for marcus@hypergrowth.ai',
