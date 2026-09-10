@@ -39,10 +39,6 @@ export const DeployView: React.FC = () => {
   const brandLogoInputRef = useRef<HTMLInputElement>(null);
   const iconPickerRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    setBrandName(currentCompany.name || '');
-  }, [currentCompany.name]);
-
   const [activeMainTab, setActiveMainTab] = useState<'general' | 'content' | 'appearance' | 'install'>('appearance');
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
   const [activeSnippetTab, setActiveSnippetTab] = useState<'script' | 'react' | 'iframe' | 'api'>('script');
@@ -100,6 +96,7 @@ export const DeployView: React.FC = () => {
   const [prevCompanyId, setPrevCompanyId] = useState(currentCompany.id);
   if (prevCompanyId !== currentCompany.id) {
     setPrevCompanyId(currentCompany.id);
+    setBrandName(currentCompany.name || '');
     setLocalSettings({
       themeMode: 'dark',
       headerTextColor: 'white',
