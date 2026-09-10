@@ -600,12 +600,12 @@ export default function App() {
                       </div>
 
                       {/* Clickable Badge Trigger */}
-                      <div className="relative">
+                      <div className="relative inline-flex items-center">
                         <button
                           type="button"
                           onClick={() => setIsIconPickerOpen(!isIconPickerOpen)}
                           title="Click to change launcher icon"
-                          className="w-12 h-12 flex items-center justify-center text-white relative shadow-md cursor-pointer hover:scale-105 active:scale-95 transition-all overflow-hidden p-1.5"
+                          className="w-12 h-12 flex items-center justify-center text-white relative shadow-md cursor-pointer hover:scale-105 active:scale-95 transition-all p-1.5 group"
                           style={{ 
                             backgroundColor: localSettings.primaryColor,
                             borderRadius: launcherStyle === 'teardrop' 
@@ -613,12 +613,12 @@ export default function App() {
                               : (launcherStyle === 'squircle' ? '14px' : '9999px')
                           }}
                         >
-                          <div className="w-6 h-6 flex items-center justify-center overflow-hidden">
+                          <div className="w-6 h-6 flex items-center justify-center pointer-events-none">
                             {renderLauncherIcon(localSettings.launcherIcon || 'chat_dots', "w-5 h-5")}
                           </div>
 
-                          {/* Pencil Edit Badge in corner */}
-                          <div className="absolute -top-1 -right-1 w-4.5 h-4.5 rounded-full bg-slate-800 hover:bg-slate-950 text-white flex items-center justify-center shadow-xs border border-white">
+                          {/* Pencil Edit Badge in corner - fully visible and unclipped */}
+                          <div className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-slate-900 group-hover:bg-slate-950 text-white flex items-center justify-center shadow-md border-2 border-white transition-colors">
                             <Pencil className="w-2.5 h-2.5" />
                           </div>
                         </button>
@@ -661,6 +661,7 @@ export default function App() {
                                     title={item.title}
                                     onClick={() => {
                                       setLocalSettings(prev => ({ ...prev, launcherIcon: item.id as any }));
+                                      updateWidgetSettings({ launcherIcon: item.id as any });
                                       setIsIconPickerOpen(false);
                                     }}
                                     className={`w-9 h-9 rounded-xl flex items-center justify-center transition-all cursor-pointer border ${
