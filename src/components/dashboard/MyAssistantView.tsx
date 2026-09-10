@@ -311,12 +311,46 @@ export const MyAssistantView: React.FC = () => {
 
           {/* Human Escalation Settings */}
           <div className="border-t border-slate-100 pt-6 space-y-4">
-            <div className="flex items-center gap-2.5">
-              <UserCheck className="w-5 h-5 text-slate-800" />
-              <h4 className="text-base font-bold text-slate-900">Human Escalation Routing</h4>
+            <div className="flex items-center justify-between flex-wrap gap-3">
+              <div className="flex items-center gap-2.5">
+                <UserCheck className="w-5 h-5 text-slate-800" />
+                <div>
+                  <h4 className="text-base font-bold text-slate-900">Human Escalation Routing</h4>
+                  <p className="text-xs text-slate-500">Automatically transfer chats to human operators upon request.</p>
+                </div>
+              </div>
+
+              {/* Enable / Disable Toggle Switch */}
+              <div className="flex items-center gap-3">
+                <span className={`text-xs font-semibold px-2.5 py-1 rounded-full border ${
+                  formState.escalationSettings?.enabled !== false
+                    ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                    : 'bg-slate-100 text-slate-500 border-slate-200'
+                }`}>
+                  {formState.escalationSettings?.enabled !== false ? '● Enabled' : '○ Disabled'}
+                </span>
+
+                <label className="relative inline-flex items-center cursor-pointer" title="Enable or disable human escalation routing">
+                  <input
+                    type="checkbox"
+                    checked={formState.escalationSettings?.enabled !== false}
+                    onChange={(e) => setFormState(prev => ({
+                      ...prev,
+                      escalationSettings: {
+                        ...prev.escalationSettings,
+                        enabled: e.target.checked
+                      }
+                    }))}
+                    className="sr-only peer"
+                  />
+                  <div className="w-11 h-6 bg-slate-200 peer-focus:outline-hidden rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-600"></div>
+                </label>
+              </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+            <div className={`grid grid-cols-1 md:grid-cols-2 gap-5 transition-opacity duration-150 ${
+              formState.escalationSettings?.enabled !== false ? 'opacity-100' : 'opacity-40 pointer-events-none'
+            }`}>
               <div>
                 <label className="block text-sm font-semibold text-slate-900 mb-1.5">
                   Notification Email for Escalations
@@ -325,7 +359,8 @@ export const MyAssistantView: React.FC = () => {
                   <Mail className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
                   <input
                     type="email"
-                    value={formState.escalationSettings?.notifyEmail || 'support@enterprise.com'}
+                    disabled={formState.escalationSettings?.enabled === false}
+                    value={formState.escalationSettings?.notifyEmail || ''}
                     onChange={e => setFormState(prev => ({
                       ...prev,
                       escalationSettings: {
@@ -346,7 +381,8 @@ export const MyAssistantView: React.FC = () => {
                 </label>
                 <input
                   type="text"
-                  value={formState.escalationSettings?.triggerKeywords?.join(', ') || 'human, agent, representative, speak with someone'}
+                  disabled={formState.escalationSettings?.enabled === false}
+                  value={formState.escalationSettings?.triggerKeywords?.join(', ') || ''}
                   onChange={e => setFormState(prev => ({
                     ...prev,
                     escalationSettings: {
