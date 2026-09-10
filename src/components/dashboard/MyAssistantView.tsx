@@ -29,6 +29,11 @@ export const MyAssistantView: React.FC = () => {
 
   // Local form state for draft edits
   const [formState, setFormState] = useState<AgentConfig>({ ...currentCompany.agent });
+  const [prevAgentState, setPrevAgentState] = useState(currentCompany.agent);
+  if (prevAgentState !== currentCompany.agent) {
+    setPrevAgentState(currentCompany.agent);
+    setFormState({ ...currentCompany.agent });
+  }
   const [isSaving, setIsSaving] = useState(false);
   const isLive = currentCompany.agent.status === 'active';
 
