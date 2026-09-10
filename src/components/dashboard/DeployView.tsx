@@ -24,17 +24,23 @@ import { WidgetCustomization } from '../../types';
 export const DeployView: React.FC = () => {
   const { 
     currentCompany, 
+    updateCompany,
     updateWidgetSettings, 
     updateAgentConfig,
     setIsQuickTestOpen
   } = useApp();
 
+  const [brandName, setBrandName] = useState(currentCompany.name || '');
   const [greetingMessage, setGreetingMessage] = useState(currentCompany.agent.greetingMessage || 'Hello! How can I assist you today?');
   const [fallbackMessage, setFallbackMessage] = useState(currentCompany.agent.fallbackMessage || 'I do not have specific verified information regarding that in our official documentation. Would you like me to transfer this session to our 24/7 support team?');
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const brandLogoInputRef = useRef<HTMLInputElement>(null);
   const iconPickerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    setBrandName(currentCompany.name || '');
+  }, [currentCompany.name]);
 
   const [activeMainTab, setActiveMainTab] = useState<'general' | 'content' | 'appearance' | 'install'>('appearance');
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
@@ -129,6 +135,7 @@ export const DeployView: React.FC = () => {
           launcherIcon: 'logo',
           launcherLogoUrl: result 
         }));
+        updateWidgetSettings({ launcherIcon: 'logo', launcherLogoUrl: result });
         setIsIconPickerOpen(false);
       }
     };
@@ -140,14 +147,21 @@ export const DeployView: React.FC = () => {
     const file = e.target.files?.[0];
     if (!file) return;
 
+    if (file.size > 5 * 1024 * 1024) {
+      alert('Logo file size must be less than 5MB');
+      return;
+    }
+
     const reader = new FileReader();
     reader.onload = (event) => {
       const result = event.target?.result as string;
       if (result) {
         setLocalSettings(prev => ({ 
           ...prev, 
-          botAvatar: result 
+          botAvatar: result,
+          launcherLogoUrl: result
         }));
+        updateWidgetSettings({ botAvatar: result, launcherLogoUrl: result });
       }
     };
     reader.readAsDataURL(file);
@@ -172,7 +186,7 @@ export const DeployView: React.FC = () => {
     setPreviewChat(prev => [
       ...prev,
       { sender: 'user', text: question },
-      { sender: 'agent', text: `Here is information regarding "${question}" based on ${currentCompany.name}'s verified knowledge base.` }
+      { sender: 'agent', text: `Here is information regarding "${question}" based on ${brandName || currentCompany.name}'s verified knowledge base.` }
     ]);
   };
 
@@ -189,13 +203,16 @@ export const DeployView: React.FC = () => {
   };
 
   const handleSaveBranding = () => {
+    if (brandName.trim()) {
+      updateCompany({ name: brandName.trim() });
+    }
     updateWidgetSettings({ ...localSettings, starterQuestions });
     updateAgentConfig({ greetingMessage, fallbackMessage });
     setIsSaved(true);
     setTimeout(() => setIsSaved(false), 2500);
   };
 
-  const companyLogoUrl = localSettings.launcherLogoUrl || localSettings.botAvatar || currentCompany.agent.avatarUrl || 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=150&auto=format&fit=crop&q=80';
+  const companyLogoUrl = localSettings.launcherLogoUrl || localSettings.botAvatar || currentCompany.widgetSettings?.launcherLogoUrl || currentCompany.agent.avatarUrl || 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=150&auto=format&fit=crop&q=80';
 
 // Custom Solid Icons matching exact UI design
 const ChatDotsIcon: React.FC<{ className?: string }> = ({ className = "w-4.5 h-4.5" }) => (
@@ -457,6 +474,24 @@ export default function App() {
                 <div className="space-y-4 pt-2">
                   <h4 className="font-bold text-slate-900 text-sm">Branding</h4>
 
+                  {/* Brand Name Input */}
+                  <div className="space-y-1.5">
+                    <div className="flex items-center justify-between">
+                      <label className="font-semibold text-slate-800 text-xs sm:text-sm">Brand Name</label>
+                      <span className="text-[11px] text-slate-400">Used across widget header & messages</span>
+                    </div>
+                    <input
+                      type="text"
+                      value={brandName}
+                      onChange={(e) => {
+                        setBrandName(e.target.value);
+                        updateCompany({ name: e.target.value });
+                      }}
+                      placeholder="e.g. TechFlow Cloud Infrastructure"
+                      className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm font-semibold text-slate-900 focus:bg-white focus:ring-1 focus:ring-slate-900 focus:outline-hidden"
+                    />
+                  </div>
+
                   {/* Brand Logo Row */}
                   <div className="flex items-center justify-between py-1">
                     <div>
@@ -471,19 +506,29 @@ export default function App() {
                         type="button"
                         onClick={() => brandLogoInputRef.current?.click()}
                         className="inline-flex items-center gap-2 px-3 py-1.5 bg-indigo-50 hover:bg-indigo-100/80 border border-indigo-200/80 text-slate-800 rounded-xl text-xs font-semibold transition-all cursor-pointer shadow-2xs group"
+                        title="Click to upload logo image"
                       >
                         <img 
                           src={companyLogoUrl} 
                           alt="Logo" 
-                          className="w-4 h-4 rounded-md object-cover"
+                          className="w-4 h-4 rounded-md object-cover ring-1 ring-slate-200"
                           onError={(e) => {
                             (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=150&auto=format&fit=crop&q=80';
                           }}
                         />
-                        <span className="font-bold text-slate-800">{currentCompany.name}</span>
-                        <div className="w-5 h-5 rounded-full bg-slate-700 text-white flex items-center justify-center group-hover:bg-slate-900 transition-colors ml-1">
+                        <span className="font-bold text-slate-800">{brandName || currentCompany.name}</span>
+                        <div className="w-5 h-5 rounded-full bg-slate-700 text-white flex items-center justify-center group-hover:bg-slate-900 transition-colors ml-1 shadow-2xs">
                           <Pencil className="w-2.5 h-2.5" />
                         </div>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => brandLogoInputRef.current?.click()}
+                        className="px-3 py-1.5 bg-white hover:bg-slate-100 border border-slate-200 text-slate-700 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer shadow-2xs"
+                      >
+                        <Upload className="w-3.5 h-3.5 text-slate-500" />
+                        <span>Upload Logo</span>
                       </button>
                     </div>
                   </div>
@@ -1298,6 +1343,22 @@ export default function App() {
           </div>
         </div>
       </div>
+
+      {/* Hidden File Inputs for Logo & Custom Icon Uploads */}
+      <input 
+        type="file" 
+        ref={brandLogoInputRef} 
+        onChange={handleBrandLogoUpload} 
+        accept="image/*" 
+        className="hidden" 
+      />
+      <input 
+        type="file" 
+        ref={fileInputRef} 
+        onChange={handleLogoFileUpload} 
+        accept="image/*" 
+        className="hidden" 
+      />
     </div>
   );
 };

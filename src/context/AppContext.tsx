@@ -576,6 +576,21 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     });
   };
 
+  const updateCompany = (updates: Partial<Company>) => {
+    setCompanies(prev => prev.map(c => {
+      if (c.id === currentCompanyId) {
+        return {
+          ...c,
+          ...updates
+        };
+      }
+      return c;
+    }));
+    if (updates.name) {
+      addAuditLog('COMPANY_BRAND_UPDATED', `Updated company brand name: "${updates.name}"`);
+    }
+  };
+
   const updateWidgetSettings = (updates: Partial<WidgetCustomization>) => {
     setCompanies(prev => prev.map(c => {
       if (c.id === currentCompanyId) {
@@ -958,6 +973,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         currentCompanyId,
         currentCompany,
         switchCompany,
+        updateCompany,
         createCompanyWorkspace,
 
         allPlans,

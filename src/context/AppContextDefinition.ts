@@ -52,6 +52,7 @@ export interface AppContextType {
   currentCompanyId: string;
   currentCompany: Company;
   switchCompany: (companyId: string) => void;
+  updateCompany: (updates: Partial<Company>) => void;
   createCompanyWorkspace: (
     name: string, 
     domain: string, 
