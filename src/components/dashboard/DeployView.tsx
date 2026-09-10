@@ -440,34 +440,32 @@ export default function App() {
                   <h4 className="font-bold text-slate-900 text-sm">Branding</h4>
 
                   {/* Brand Logo Row */}
-                  <div className="flex items-center justify-between py-2 border-b border-slate-100 pb-3">
+                  <div className="flex items-center justify-between py-1">
                     <div>
                       <div className="flex items-center gap-1.5">
-                        <span className="font-semibold text-slate-800 text-xs sm:text-sm">Brand Logo & Avatar</span>
+                        <span className="font-semibold text-slate-800 text-xs sm:text-sm">Brand Logo</span>
                       </div>
-                      <p className="text-xs text-slate-400 mt-0.5">Displayed in widget header and assistant messages</p>
+                      <p className="text-xs text-slate-400">Will be used to send first message</p>
                     </div>
 
-                    <div className="flex items-center gap-2.5">
-                      <div className="flex items-center gap-2 p-1.5 pr-3 bg-slate-50 border border-slate-200 rounded-xl shadow-2xs">
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => brandLogoInputRef.current?.click()}
+                        className="inline-flex items-center gap-2 px-3 py-1.5 bg-indigo-50 hover:bg-indigo-100/80 border border-indigo-200/80 text-slate-800 rounded-xl text-xs font-semibold transition-all cursor-pointer shadow-2xs group"
+                      >
                         <img 
                           src={companyLogoUrl} 
-                          alt="Brand Logo" 
-                          className="w-6 h-6 rounded-lg object-cover border border-slate-200"
+                          alt="Logo" 
+                          className="w-4 h-4 rounded-md object-cover"
                           onError={(e) => {
                             (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=150&auto=format&fit=crop&q=80';
                           }}
                         />
-                        <span className="text-xs font-bold text-slate-800 max-w-[140px] truncate">{currentCompany.name}</span>
-                      </div>
-
-                      <button
-                        type="button"
-                        onClick={() => brandLogoInputRef.current?.click()}
-                        className="inline-flex items-center gap-1.5 px-3 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-semibold transition-all cursor-pointer shadow-xs"
-                      >
-                        <Upload className="w-3.5 h-3.5 text-pink-400" />
-                        <span>Change Logo</span>
+                        <span className="font-bold text-slate-800">{currentCompany.name}</span>
+                        <div className="w-5 h-5 rounded-full bg-slate-700 text-white flex items-center justify-center group-hover:bg-slate-900 transition-colors ml-1">
+                          <Pencil className="w-2.5 h-2.5" />
+                        </div>
                       </button>
                     </div>
                   </div>
@@ -877,17 +875,6 @@ export default function App() {
             {activeMainTab === 'general' && (
               <div className="space-y-5 animate-in fade-in duration-150">
                 <div className="space-y-4">
-                  <div>
-                    <label className="block font-semibold text-slate-800 mb-1.5">Assistant Name</label>
-                    <input
-                      type="text"
-                      disabled
-                      value={currentCompany.agent.name}
-                      className="w-full px-3.5 py-2.5 bg-slate-100 border border-slate-200 rounded-xl text-sm font-medium text-slate-600 cursor-not-allowed"
-                    />
-                    <p className="text-[11px] text-slate-500 mt-1">Managed in Assistant Config tab.</p>
-                  </div>
-
                   <div>
                     <label className="block font-semibold text-slate-800 mb-1.5">Screen Position</label>
                     <div className="grid grid-cols-2 gap-2.5 max-w-xs">
