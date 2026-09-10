@@ -212,21 +212,7 @@ export const MyAssistantView: React.FC = () => {
             </div>
           </div>
 
-          <div className="border-t border-slate-100 pt-6">
-            <div>
-              <label className="block text-sm font-semibold text-slate-900 mb-1.5">
-                Role / Title
-              </label>
-              <input
-                type="text"
-                value={formState.role || ''}
-                onChange={e => setFormState(prev => ({ ...prev, role: e.target.value }))}
-                className="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-1 focus:ring-slate-900 focus:border-slate-900 shadow-xs font-medium"
-                placeholder="e.g. Customer Support Specialist"
-              />
-              <p className="text-xs text-slate-500 mt-1">Displayed below the assistant's name (Coar AI).</p>
-            </div>
-          </div>
+
 
 
 

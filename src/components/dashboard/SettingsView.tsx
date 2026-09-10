@@ -43,7 +43,6 @@ export const SettingsView: React.FC = () => {
   const [showApiKey, setShowApiKey] = useState(false);
 
   // Assistant Form State
-  const [agentRole, setAgentRole] = useState(currentCompany.agent.role || 'Customer Support Specialist');
   const [agentTone, setAgentTone] = useState(currentCompany.agent.tone);
   const [agentGreeting, setAgentGreeting] = useState(currentCompany.agent.greetingMessage);
   const [modelTier, setModelTier] = useState(currentCompany.agent.modelTier || 'automatic');
@@ -58,12 +57,11 @@ export const SettingsView: React.FC = () => {
     e.preventDefault();
     updateAgentConfig({
       name: 'Coar AI',
-      role: agentRole,
       tone: agentTone,
       greetingMessage: agentGreeting,
       modelTier: modelTier as any
     });
-    showToast('Assistant Updated', 'AI Assistant persona, role, model, and tone saved.', 'success');
+    showToast('Assistant Updated', 'AI Assistant tone, model, and greeting saved.', 'success');
   };
 
   const handleInvite = (e: React.FormEvent) => {
@@ -131,19 +129,6 @@ export const SettingsView: React.FC = () => {
           </div>
 
           <form onSubmit={handleSaveAssistant} className="space-y-5 text-sm">
-            <div>
-              <label className="font-semibold text-slate-800 block mb-1.5">Assigned Role</label>
-              <input
-                type="text"
-                required
-                value={agentRole}
-                onChange={(e) => setAgentRole(e.target.value)}
-                placeholder="e.g. Customer Support Specialist"
-                className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-1 focus:ring-slate-900 focus:border-slate-900 text-slate-900 font-medium focus:outline-hidden"
-              />
-              <p className="text-xs text-slate-500 mt-1">Role or title displayed for Coar AI.</p>
-            </div>
-
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label className="font-semibold text-slate-800 block mb-1.5">Conversation Tone</label>
