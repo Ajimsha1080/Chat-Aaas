@@ -948,14 +948,20 @@ export default function App() {
               <div className="space-y-5 animate-in fade-in duration-150">
                 <div className="space-y-4">
                   <div>
-                    <label className="block font-semibold text-slate-800 mb-1.5">Assistant Name</label>
+                    <div className="flex items-center justify-between mb-1.5">
+                      <label className="block font-semibold text-slate-800">Assistant Name</label>
+                      <span className="text-[11px] font-semibold text-indigo-700 bg-indigo-50 border border-indigo-200 px-2 py-0.5 rounded-md">
+                        Predefined
+                      </span>
+                    </div>
                     <input
                       type="text"
+                      readOnly
                       disabled
-                      value={currentCompany.agent.name}
-                      className="w-full px-3.5 py-2.5 bg-slate-100 border border-slate-200 rounded-xl text-sm font-medium text-slate-600 cursor-not-allowed"
+                      value="Coar"
+                      className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-800 cursor-not-allowed shadow-xs"
                     />
-                    <p className="text-[11px] text-slate-500 mt-1">Managed in Assistant Config tab.</p>
+                    <p className="text-[11px] text-slate-500 mt-1">Predefined platform AI Assistant name.</p>
                   </div>
 
                   <div>
