@@ -16,8 +16,7 @@ import {
   Pencil,
   Send,
   X,
-  ChevronDown,
-  Volume2
+  ChevronDown
 } from 'lucide-react';
 import { useApp } from '../../context';
 import { WidgetCustomization } from '../../types';
@@ -1030,34 +1029,22 @@ export default function App() {
                   </div>
 
                   <div className="pt-2 border-t border-slate-100 space-y-3">
-                    <div className="flex items-center justify-between">
-                      <label className="flex items-center gap-3 cursor-pointer select-none">
-                        <input
-                          type="checkbox"
-                          checked={localSettings.enableSound}
-                          onChange={(e) => {
-                            const isChecked = e.target.checked;
-                            setLocalSettings(prev => ({ ...prev, enableSound: isChecked }));
-                            updateWidgetSettings({ enableSound: isChecked });
-                            if (isChecked) {
-                              soundService.playMessageSound();
-                            }
-                          }}
-                          className="rounded text-slate-900 w-4 h-4 cursor-pointer"
-                        />
-                        <span className="font-semibold text-slate-800 text-sm">Play subtle notification audio on message</span>
-                      </label>
-
-                      <button
-                        type="button"
-                        onClick={() => soundService.playMessageSound()}
-                        className="px-2.5 py-1 text-xs font-semibold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 rounded-lg transition-colors cursor-pointer flex items-center gap-1 shadow-2xs"
-                        title="Test notification chime sound"
-                      >
-                        <Volume2 className="w-3.5 h-3.5 text-indigo-600" />
-                        <span>Test Audio</span>
-                      </button>
-                    </div>
+                    <label className="flex items-center gap-3 cursor-pointer select-none">
+                      <input
+                        type="checkbox"
+                        checked={localSettings.enableSound}
+                        onChange={(e) => {
+                          const isChecked = e.target.checked;
+                          setLocalSettings(prev => ({ ...prev, enableSound: isChecked }));
+                          updateWidgetSettings({ enableSound: isChecked });
+                          if (isChecked) {
+                            soundService.playMessageSound();
+                          }
+                        }}
+                        className="rounded text-slate-900 w-4 h-4 cursor-pointer"
+                      />
+                      <span className="font-semibold text-slate-800 text-sm">Play subtle notification audio on message</span>
+                    </label>
 
                     <label className="flex items-center gap-3 cursor-pointer select-none">
                       <input
