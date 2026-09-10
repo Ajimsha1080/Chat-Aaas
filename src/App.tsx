@@ -92,7 +92,6 @@ const DashboardContent: React.FC = () => {
         <Header 
           onOpenOnboarding={() => setIsOnboardingOpen(true)} 
           onOpenHelp={() => setIsHelpOpen(true)}
-          onOpenCommandPalette={() => setIsCommandPaletteOpen(true)}
           onToggleMobileNav={() => setIsMobileSidebarOpen(prev => !prev)}
         />
 

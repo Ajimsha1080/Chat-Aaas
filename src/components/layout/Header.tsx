@@ -8,22 +8,19 @@ import {
   HelpCircle, 
   ShieldAlert, 
   ArrowLeft, 
-  Menu,
-  Search
+  Menu
 } from 'lucide-react';
 import { useApp } from '../../context';
 
 interface HeaderProps {
   onOpenOnboarding: () => void;
   onOpenHelp?: () => void;
-  onOpenCommandPalette?: () => void;
   onToggleMobileNav?: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({ 
   onOpenOnboarding, 
   onOpenHelp, 
-  onOpenCommandPalette,
   onToggleMobileNav
 }) => {
   const { 
@@ -112,18 +109,6 @@ export const Header: React.FC<HeaderProps> = ({
 
       {/* Right: Quick actions, Quota meter, Test & Preview */}
       <div className="flex items-center gap-2 sm:gap-3">
-        {/* Global Search / Command Palette (⌘K) */}
-        {onOpenCommandPalette && (
-          <button
-            onClick={onOpenCommandPalette}
-            className="hidden lg:flex items-center gap-2 px-3 py-1.5 bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-500 hover:text-slate-800 rounded-xl text-xs font-medium transition-colors cursor-pointer"
-            title="Global Command Palette (Ctrl+K)"
-          >
-            <Search className="w-3.5 h-3.5" />
-            <span>Search...</span>
-            <kbd className="px-1.5 py-0.5 bg-white border border-slate-200 rounded text-[10px] font-mono text-slate-400 font-bold">⌘K</kbd>
-          </button>
-        )}
 
         {/* Usage Meter */}
         <div className="hidden xl:flex items-center gap-2.5 bg-slate-50 border border-slate-200 px-3.5 py-1.5 rounded-xl text-sm">
