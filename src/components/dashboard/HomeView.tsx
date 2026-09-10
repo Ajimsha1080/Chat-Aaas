@@ -24,7 +24,15 @@ export const HomeView: React.FC = () => {
     setActiveConversationId
   } = useApp();
 
-  const stats = currentCompany.stats;
+  const stats = currentCompany?.stats || {
+    totalConversations: conversations?.length || 0,
+    totalMessages: 0,
+    resolvedConversations: 0,
+    escalatedConversations: 0,
+    messagesThisMonth: 0,
+    tokensThisMonth: 0,
+    knowledgeChunksUsed: 0
+  };
   const resolutionRate = stats.totalConversations > 0 
     ? Math.round((stats.resolvedConversations / stats.totalConversations) * 100) 
     : 94;

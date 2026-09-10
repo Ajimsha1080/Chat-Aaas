@@ -27,16 +27,73 @@ class UpdateCompanyRequest(BaseModel):
     widgetSettings: Optional[Dict[str, Any]] = None
     settings: Optional[Dict[str, Any]] = None
 
+def _format_company_response(comp: Dict[str, Any]) -> Dict[str, Any]:
+    c = dict(comp)
+    cid = c.get("id", "comp-default")
+    agent = db.get_agent_for_company(cid)
+    if agent:
+        c["agent"] = agent
+    elif "agent" not in c:
+        c["agent"] = {
+            "name": f"{c.get('name', 'Company')} Assistant",
+            "role": "Customer Support Specialist",
+            "status": "active",
+            "avatarUrl": "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80",
+            "description": f"Dedicated AI assistant for {c.get('name', 'Company')}",
+            "tone": "professional",
+            "creativityLevel": 0.3,
+            "systemInstructions": "You are a helpful customer assistant.",
+            "businessInstructions": "Answer accurately based on knowledge.",
+            "greetingMessage": f"Hello! How can I assist you today at {c.get('name', 'our company')}?",
+            "fallbackMessage": "I don't have that information in my guides. Let me connect you with our team.",
+            "allowedActions": [],
+            "escalationSettings": {
+                "enabled": True,
+                "triggerKeywords": ["human", "agent", "support", "refund"],
+                "maxUnansweredQueriesBeforeEscalation": 2,
+                "notifyEmail": f"support@{c.get('domain', 'example.com')}",
+                "escalationMessage": "Transferring you to a live support team member now.",
+                "requireHumanApprovalForRefund": True
+            },
+            "customSafetyRules": ["Never fabricate prices"]
+        }
+
+    if "widgetSettings" not in c:
+        c["widgetSettings"] = {
+            "primaryColor": "#4f46e5",
+            "secondaryColor": "#0f172a",
+            "themeMode": "dark",
+            "headerTitle": c.get("name", "Support"),
+            "headerSubtitle": "Customer Assistant",
+            "launcherText": "Chat with us",
+            "position": "bottom_right",
+            "botAvatar": "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80",
+            "userAvatar": "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80",
+            "borderRadius": "rounded-2xl",
+            "showPoweredBy": False,
+            "enableSound": True,
+            "autoExpandSeconds": 0
+        }
+
+    if "stats" not in c:
+        tenant_convs = [cv for cv in db.conversations.values() if cv.get("companyId") == cid]
+        tenant_events = [e for e in db.usage_events if e.get("companyId") == cid]
+        c["stats"] = {
+            "totalConversations": len(tenant_convs),
+            "totalMessages": sum(e.get("quantity", 1) for e in tenant_events if e.get("eventType") == "message"),
+            "resolvedConversations": len([cv for cv in tenant_convs if cv.get("status") == "resolved"]),
+            "escalatedConversations": len([cv for cv in tenant_convs if cv.get("status") == "escalated_to_human"]),
+            "messagesThisMonth": sum(e.get("quantity", 1) for e in tenant_events if e.get("eventType") == "message"),
+            "tokensThisMonth": sum(e.get("quantity", 1) for e in tenant_events if e.get("unit") == "tokens"),
+            "knowledgeChunksUsed": len([chk for chk in db.document_chunks.values() if chk.get("companyId") == cid])
+        }
+
+    return c
+
 @router.get("")
 def list_companies():
     """Lists all registered company workspaces."""
-    comp_list = []
-    for comp in db.companies.values():
-        c = dict(comp)
-        agent = db.get_agent_for_company(c["id"])
-        if agent:
-            c["agent"] = agent
-        comp_list.append(c)
+    comp_list = [_format_company_response(comp) for comp in db.companies.values()]
     return {"status": 200, "data": {"companies": comp_list}}
 
 @router.post("")

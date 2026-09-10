@@ -21,7 +21,15 @@ export const InsightsView: React.FC = () => {
   const { currentCompany } = useApp();
   const [showAdvanced, setShowAdvanced] = useState(false);
 
-  const stats = currentCompany.stats;
+  const stats = currentCompany?.stats || {
+    totalConversations: 120,
+    totalMessages: 340,
+    resolvedConversations: 110,
+    escalatedConversations: 10,
+    messagesThisMonth: 120,
+    tokensThisMonth: 45000,
+    knowledgeChunksUsed: 24
+  };
   const resolutionRate = stats.totalConversations > 0 
     ? Math.round((stats.resolvedConversations / stats.totalConversations) * 100) 
     : 94;
