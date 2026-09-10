@@ -158,20 +158,25 @@ export const ChatWidget: React.FC<ChatWidgetProps> = ({ isInlinePreview = false 
               <div className="relative shrink-0">
                 <img 
                   src={settings.botAvatar || currentCompany.agent.avatarUrl} 
-                  alt="" 
-                  className="w-10 h-10 rounded-full object-cover ring-2 ring-white/30"
+                  alt={currentCompany.agent.name || "Coar AI"} 
+                  className="w-10 h-10 rounded-full object-cover ring-2 ring-white/30 shadow-xs"
                 />
                 <span className={`absolute bottom-0 right-0 w-3 h-3 rounded-full ring-2 ring-white ${
                   currentCompany.agent.status === 'active' ? 'bg-emerald-400' : 'bg-amber-400'
                 }`} />
               </div>
               <div className="min-w-0">
-                {settings.headerTitle ? (
-                  <h3 className="font-bold text-sm sm:text-base tracking-tight truncate">{settings.headerTitle}</h3>
-                ) : null}
-                {settings.headerSubtitle ? (
-                  <p className="text-xs text-white/90 truncate">{settings.headerSubtitle}</p>
-                ) : null}
+                <div className="flex items-center gap-2">
+                  <h3 className="font-bold text-sm sm:text-base tracking-tight truncate">
+                    {currentCompany.agent.name || 'Coar AI'}
+                  </h3>
+                  <span className="text-[10px] font-bold bg-white/20 text-white px-2 py-0.5 rounded-full uppercase tracking-wider">
+                    AI
+                  </span>
+                </div>
+                <p className="text-xs text-white/90 truncate">
+                  {settings.headerTitle || settings.headerSubtitle || currentCompany.agent.role || `${currentCompany.name} Assistant`}
+                </p>
               </div>
             </div>
 
@@ -203,6 +208,16 @@ export const ChatWidget: React.FC<ChatWidgetProps> = ({ isInlinePreview = false 
                       />
                     )}
                     <div>
+                      {!isUser && (
+                        <div className="flex items-center gap-1.5 mb-1">
+                          <span className="text-xs font-bold text-slate-800">
+                            {msg.senderName || currentCompany.agent.name || 'Coar AI'}
+                          </span>
+                          <span className="text-[10px] font-semibold text-indigo-700 bg-indigo-50 border border-indigo-200 px-1.5 py-0.2 rounded">
+                            Assistant
+                          </span>
+                        </div>
+                      )}
                       <div
                         style={{
                           backgroundColor: isUser ? settings.primaryColor : '#ffffff',
