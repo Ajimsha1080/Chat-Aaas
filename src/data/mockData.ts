@@ -155,9 +155,9 @@ export const INITIAL_COMPANIES: Company[] = [
       description: 'Official AI Assistant for TechFlow Cloud Infrastructure. Assists developers with Kubernetes clusters, billing, API limits, and support tickets.',
       tone: 'technical',
       creativityLevel: 0.2,
-      systemInstructions: 'You are Coar AI, the verified AI agent representing TechFlow Cloud Infrastructure. Adhere strictly to the TechFlow knowledge base and connected systems. Always verify order and server IDs before executing queries. Never fabricate specifications or pricing.',
+      systemInstructions: 'You are the verified AI support agent representing TechFlow Cloud Infrastructure. Adhere strictly to the TechFlow knowledge base and connected systems. Always verify order and server IDs before executing queries. Never fabricate specifications or pricing.',
       businessInstructions: '',
-      greetingMessage: 'Hello! I am Coar AI from TechFlow. How can I assist with your Kubernetes deployments, API quotas, or cloud billing today?',
+      greetingMessage: 'Hello! How can I assist with your Kubernetes deployments, API quotas, or cloud billing today?',
       fallbackMessage: 'I do not have specific verified information regarding that in our official documentation. Would you like me to transfer this session to our 24/7 cloud support engineer?',
       allowedActions: ['act-check-quota', 'act-book-demo', 'act-create-ticket', 'act-reset-key', 'act-collect-lead', 'act-escalate-human'],
       escalationSettings: {
@@ -180,7 +180,7 @@ export const INITIAL_COMPANIES: Company[] = [
       secondaryColor: '#0f172a',
       headerTitle: 'TechFlow Support & Ops',
       headerSubtitle: 'Instant answers & server actions',
-      launcherText: 'Chat with Coar AI',
+      launcherText: 'Chat with Support',
       position: 'bottom_right',
       botAvatar: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=150&auto=format&fit=crop&q=80',
       userAvatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
@@ -673,8 +673,8 @@ export const INITIAL_CONVERSATIONS: Record<string, Conversation[]> = {
         {
           id: 'msg-1',
           sender: 'agent',
-          senderName: 'Coar AI',
-          text: 'Hello! I am Coar AI from TechFlow. How can I assist with your Kubernetes deployments, API quotas, or cloud billing today?',
+          senderName: 'TechFlow Support',
+          text: 'Hello! How can I assist with your Kubernetes deployments, API quotas, or cloud billing today?',
           timestamp: '2026-09-04T17:40:00Z'
         },
         {
@@ -742,8 +742,8 @@ export const INITIAL_CONVERSATIONS: Record<string, Conversation[]> = {
         {
           id: 'msg-10',
           sender: 'agent',
-          senderName: 'Coar AI',
-          text: 'Hello! I am Coar AI from TechFlow. How can I assist with your Kubernetes deployments, API quotas, or cloud billing today?',
+          senderName: 'TechFlow Support',
+          text: 'Hello! How can I assist with your Kubernetes deployments, API quotas, or cloud billing today?',
           timestamp: '2026-09-04T16:15:00Z'
         },
         {
@@ -755,7 +755,7 @@ export const INITIAL_CONVERSATIONS: Record<string, Conversation[]> = {
         {
           id: 'msg-12',
           sender: 'agent',
-          senderName: 'Coar AI',
+          senderName: 'TechFlow Support',
           text: 'I detect a critical production outage trigger. I have paused automated AI handling and alerted our Senior On-Call Cloud Support Engineer. Vikram Mehta is joining this session now.',
           timestamp: '2026-09-04T16:16:05Z',
           reasoningSteps: [
@@ -805,8 +805,8 @@ export const INITIAL_CONVERSATIONS: Record<string, Conversation[]> = {
         {
           id: 'msg-20',
           sender: 'agent',
-          senderName: 'Coar AI',
-          text: 'Hello! I am Coar AI from TechFlow. How can I assist with your Kubernetes deployments, API quotas, or cloud billing today?',
+          senderName: 'TechFlow Support',
+          text: 'Hello! How can I assist with your Kubernetes deployments, API quotas, or cloud billing today?',
           timestamp: '2026-09-04T14:10:00Z'
         },
         {

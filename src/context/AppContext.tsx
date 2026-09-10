@@ -47,7 +47,7 @@ import {
 import { AIAgentEngine } from '../services/aiEngine';
 import { AppContext } from './AppContextDefinition';
 
-const LOCAL_STORAGE_KEY = 'coarai_platform_state_v5';
+const LOCAL_STORAGE_KEY = 'coarai_platform_state_v6';
 
 const genId = (prefix: string) => `${prefix}-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
 
@@ -264,8 +264,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         primaryColor: '#4f46e5',
         secondaryColor: '#0f172a',
         headerTitle: name,
-        headerSubtitle: 'AI Customer Assistant',
-        launcherText: 'Chat with AI Assistant',
+        headerSubtitle: 'Customer Assistant',
+        launcherText: 'Chat with us',
         position: 'bottom_right',
         botAvatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
         userAvatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80',

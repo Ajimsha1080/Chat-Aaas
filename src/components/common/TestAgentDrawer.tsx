@@ -245,16 +245,6 @@ export const TestAgentDrawer: React.FC = () => {
                     />
                   )}
                   <div className="flex flex-col">
-                    {!isUser && (
-                      <div className="flex items-center gap-1.5 mb-1">
-                        <span className={`text-xs font-bold ${isDarkMode ? 'text-slate-200' : 'text-slate-900'}`}>
-                          {msg.senderName || currentCompany.agent.name || 'Coar AI'}
-                        </span>
-                        <span className="text-[10px] font-semibold text-indigo-500 bg-indigo-500/10 border border-indigo-500/20 px-1.5 py-0.2 rounded">
-                          AI Assistant
-                        </span>
-                      </div>
-                    )}
                     <div
                       style={{
                         backgroundColor: isUser ? primaryColor : (isDarkMode ? '#1e293b' : '#ffffff'),

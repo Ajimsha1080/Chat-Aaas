@@ -1117,22 +1117,17 @@ export default function App() {
                     {/* Mockup Top Brand Header */}
                     <div className="p-5 pb-3 z-10 flex items-start justify-between">
                       <div>
-                        {/* Brand Badge Pill & Assistant Badge */}
-                        <div className="flex items-center gap-2 mb-3 flex-wrap">
-                          <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white/10 backdrop-blur-md border border-white/10 text-xs font-bold shadow-2xs">
-                            <img 
-                              src={companyLogoUrl} 
-                              alt="Brand" 
-                              className="w-4 h-4 rounded-md object-cover"
-                              onError={(e) => {
-                                (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=150&auto=format&fit=crop&q=80';
-                              }}
-                            />
-                            <span className={isDarkMode ? 'text-white' : 'text-slate-900'}>{currentCompany.name}</span>
-                          </div>
-                          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl text-[11px] font-bold bg-indigo-500/15 text-indigo-400 border border-indigo-500/20">
-                            🤖 Coar AI
-                          </span>
+                        {/* Brand Badge Pill */}
+                        <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white/10 backdrop-blur-md border border-white/10 text-xs font-bold mb-3 shadow-2xs">
+                          <img 
+                            src={companyLogoUrl} 
+                            alt="Brand" 
+                            className="w-4 h-4 rounded-md object-cover"
+                            onError={(e) => {
+                              (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=150&auto=format&fit=crop&q=80';
+                            }}
+                          />
+                          <span className={isDarkMode ? 'text-white' : 'text-slate-900'}>{currentCompany.name}</span>
                         </div>
 
                         {/* Big Prominent Title & Subtitle */}
@@ -1169,23 +1164,17 @@ export default function App() {
                     {/* Chat Message Stream & Starter Prompts */}
                     <div className="px-5 py-2 flex-1 space-y-2.5 overflow-y-auto max-h-[290px] text-xs z-10 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
                       {previewChat.map((msg, mIdx) => (
-                        <div key={mIdx} className={`flex flex-col ${msg.sender === 'user' ? 'items-end' : 'items-start'}`}>
-                          {msg.sender !== 'user' && (
-                            <span className={`text-[10px] font-bold mb-1 ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>
-                              Coar AI
-                            </span>
-                          )}
-                          <div 
-                            style={{
-                              backgroundColor: msg.sender === 'user' ? localSettings.primaryColor : (isDarkMode ? '#1e293b' : '#f1f5f9'),
-                              color: msg.sender === 'user' ? '#ffffff' : (isDarkMode ? '#f8fafc' : '#0f172a')
-                            }}
-                            className={`p-2.5 rounded-2xl max-w-[88%] font-medium leading-relaxed shadow-xs ${
-                              msg.sender === 'user' ? 'ml-auto border-transparent' : 'border border-white/5 text-left'
-                            }`}
-                          >
-                            {msg.text}
-                          </div>
+                        <div 
+                          key={mIdx}
+                          style={{
+                            backgroundColor: msg.sender === 'user' ? localSettings.primaryColor : (isDarkMode ? '#1e293b' : '#f1f5f9'),
+                            color: msg.sender === 'user' ? '#ffffff' : (isDarkMode ? '#f8fafc' : '#0f172a')
+                          }}
+                          className={`p-2.5 rounded-2xl max-w-[88%] font-medium leading-relaxed shadow-xs ${
+                            msg.sender === 'user' ? 'ml-auto border-transparent' : 'border border-white/5 text-left'
+                          }`}
+                        >
+                          {msg.text}
                         </div>
                       ))}
 
