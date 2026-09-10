@@ -61,9 +61,26 @@ export class APIClient {
     }
   }
 
+  // ================= COMPANIES & WORKSPACES ================= //
+  public static async getCompanies() {
+    return this.request('/api/v1/companies', 'GET');
+  }
+
+  public static async createCompany(data: { name: string; domain?: string; industry?: string; planId?: string; agentName?: string; tone?: string }) {
+    return this.request('/api/v1/companies', 'POST', data);
+  }
+
+  public static async updateCompany(companyId: string, updates: any) {
+    return this.request(`/api/v1/companies/${companyId}`, 'PUT', updates);
+  }
+
   // ================= AGENT CONFIG & VERSIONING ================= //
   public static async getAgentConfig() {
     return this.request('/api/v1/agent', 'GET');
+  }
+
+  public static async getAgentVersions() {
+    return this.request('/api/v1/agent/versions', 'GET');
   }
 
   public static async updateDraft(updates: any) {
@@ -90,6 +107,22 @@ export class APIClient {
       if (str) q = `?${str}`;
     }
     return this.request(`/api/v1/knowledge${q}`, 'GET');
+  }
+
+  public static async ingestFile(data: { title: string; content: string; fileName?: string; docType?: string; collectionId?: string; category?: string }) {
+    return this.request('/api/v1/knowledge/files', 'POST', data);
+  }
+
+  public static async ingestFaq(data: { question: string; answer: string; collectionId?: string; category?: string }) {
+    return this.request('/api/v1/knowledge/faq', 'POST', data);
+  }
+
+  public static async ingestWebsite(data: { url: string; collectionId?: string; category?: string; maxPages?: number }) {
+    return this.request('/api/v1/knowledge/websites', 'POST', data);
+  }
+
+  public static async deleteKnowledgeSource(sourceId: string) {
+    return this.request(`/api/v1/knowledge/sources/${sourceId}`, 'DELETE');
   }
 
   public static async getKnowledgeHealth() {
@@ -162,8 +195,20 @@ export class APIClient {
     return this.request('/api/v1/conversations', 'GET');
   }
 
+  public static async getConversationDetails(conversationId: string) {
+    return this.request(`/api/v1/conversations/${conversationId}`, 'GET');
+  }
+
   public static async sendMessage(conversationId: string, text: string, customerName?: string, customerEmail?: string) {
     return this.request('/api/v1/conversations/message', 'POST', { conversationId, text, customerName, customerEmail });
+  }
+
+  public static async resolveConversation(conversationId: string) {
+    return this.request(`/api/v1/conversations/${conversationId}/resolve`, 'POST');
+  }
+
+  public static async takeoverConversation(conversationId: string, operatorName?: string) {
+    return this.request(`/api/v1/conversations/${conversationId}/takeover`, 'POST', { operatorName });
   }
 
   // ================= BILLING & USAGE ================= //

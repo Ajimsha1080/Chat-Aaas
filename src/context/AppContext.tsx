@@ -83,10 +83,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return companies[0]?.id || 'comp-techflow';
   });
 
-  useEffect(() => {
-    APIClient.setAuth(null, currentCompanyId);
-  }, [currentCompanyId]);
-
   const [allPlans, setAllPlans] = useState<SubscriptionPlan[]>(() => {
     const saved = localStorage.getItem(`${LOCAL_STORAGE_KEY}_plans`);
     return saved ? JSON.parse(saved) : SUBSCRIPTION_PLANS;
@@ -166,6 +162,114 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const removeToast = (id: string) => {
     setToasts(prev => prev.filter(t => t.id !== id));
   };
+
+  // 1. Initial Load: Fetch Live Registered Workspaces
+  useEffect(() => {
+    const loadLiveCompanies = async () => {
+      try {
+        const compRes = await APIClient.getCompanies();
+        if (compRes && compRes.companies && Array.isArray(compRes.companies) && compRes.companies.length > 0) {
+          setCompanies(compRes.companies);
+        }
+      } catch (err) {
+        console.info('[Live Sync] Using local cache until backend reconnects:', err);
+      }
+    };
+    loadLiveCompanies();
+  }, []);
+
+  // 2. Real-time Tenant Sync: Load live Knowledge, Tools, Versions, Audit Logs & Conversations
+  useEffect(() => {
+    APIClient.setAuth(null, currentCompanyId);
+
+    const syncTenantLiveData = async () => {
+      try {
+        // Fetch Live Knowledge Sources
+        const kRes = await APIClient.getKnowledge();
+        if (kRes && kRes.sources) {
+          const mappedKnowledge: KnowledgeItem[] = kRes.sources.map((s: any) => ({
+            id: s.id,
+            type: s.sourceType || 'doc',
+            title: s.title,
+            sourceUrl: s.sourceUrl,
+            fileName: s.fileName || s.title,
+            fileSize: s.fileSizeBytes ? `${(s.fileSizeBytes / 1024).toFixed(1)} KB` : '120 KB',
+            content: s.content || '',
+            status: s.status === 'ready' ? 'indexed' : (s.status || 'indexed'),
+            chunksCount: s.chunkCount || 1,
+            tokenCount: s.totalTokens || 150,
+            lastUpdated: s.lastSyncedAt || 'Just now',
+            category: s.category || 'General',
+            collectionId: s.collectionId
+          }));
+          if (mappedKnowledge.length > 0) {
+            setKnowledgeMap(prev => ({ ...prev, [currentCompanyId]: mappedKnowledge }));
+          }
+        }
+
+        // Fetch Live Tools
+        const tRes = await APIClient.getTools();
+        if (tRes && tRes.tools && tRes.tools.length > 0) {
+          const mappedActions: ActionDefinition[] = tRes.tools.map((t: any) => ({
+            id: t.tool_id || t.id,
+            name: t.name,
+            code: t.code,
+            description: t.description,
+            riskLevel: t.risk_level || 'read_only',
+            requiresUserConfirmation: t.requires_user_confirmation || false,
+            enabled: t.enabled !== false,
+            parameters: t.parameters || {},
+            executionCount: 0
+          }));
+          setActionsMap(prev => ({ ...prev, [currentCompanyId]: mappedActions }));
+        }
+
+        // Fetch Live Versions
+        const vRes = await APIClient.getAgentVersions();
+        if (vRes && vRes.versions && vRes.versions.length > 0) {
+          setVersionsMap(prev => ({ ...prev, [currentCompanyId]: vRes.versions }));
+        }
+
+        // Fetch Live Conversations
+        const cRes = await APIClient.getConversations();
+        if (cRes && cRes.conversations && cRes.conversations.length > 0) {
+          setConversationsMap(prev => ({ ...prev, [currentCompanyId]: cRes.conversations }));
+        }
+
+        // Fetch Live Audit Logs
+        const aRes = await APIClient.getAuditLogs();
+        if (aRes && aRes.logs && aRes.logs.length > 0) {
+          setAuditLogs(aRes.logs);
+        }
+      } catch (err) {
+        console.info('[Live Sync] Tenant state synchronized with local fallback:', err);
+      }
+    };
+
+    syncTenantLiveData();
+  }, [currentCompanyId]);
+
+  // 3. Background Real-time Polling for Live Conversations
+  useEffect(() => {
+    const pollInterval = setInterval(async () => {
+      try {
+        const cRes = await APIClient.getConversations();
+        if (cRes && cRes.conversations && Array.isArray(cRes.conversations)) {
+          setConversationsMap(prev => {
+            const current = prev[currentCompanyId] || [];
+            if (JSON.stringify(current) !== JSON.stringify(cRes.conversations)) {
+              return { ...prev, [currentCompanyId]: cRes.conversations };
+            }
+            return prev;
+          });
+        }
+      } catch {
+        // Polling catch
+      }
+    }, 4000);
+
+    return () => clearInterval(pollInterval);
+  }, [currentCompanyId]);
 
   // Sync to local storage
   useEffect(() => {
@@ -355,6 +459,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       }
       return c;
     }));
+    // Sync live to FastAPI backend
+    APIClient.updateCompany(currentCompanyId, { agent: updates }).catch(e => console.info('Backend agent sync error:', e));
+    APIClient.updateDraft(updates).catch(e => console.info('Backend draft sync error:', e));
     addAuditLog('AGENT_CONFIG_UPDATED', `Updated AI assistant configuration fields: ${Object.keys(updates).join(', ')}`);
   };
 
@@ -406,6 +513,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       };
     });
 
+    // Real-time backend publish
+    APIClient.publishDraft(description).catch(e => console.info('Backend publish error:', e));
+
     addAuditLog('AGENT_VERSION_PUBLISHED', `Published immutable AI Employee version v${nextVerNum}: "${description}"`);
     showToast('Version Published', `v${nextVerNum} is now live in production.`, 'success');
   };
@@ -423,6 +533,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       creativityLevel: target.snapshot.creativityLevel,
       systemInstructions: target.snapshot.systemInstructions
     });
+
+    // Real-time backend rollback
+    APIClient.rollbackVersion(versionId).catch(e => console.info('Backend rollback error:', e));
 
     publishAgentVersion(`Rollback to v${target.version} (${target.description})`);
     addAuditLog('AGENT_VERSION_ROLLBACK', `Rolled back AI Assistant to version v${target.version}`, 'warning');
@@ -509,6 +622,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       [currentCompanyId]: [newItem, ...(prev[currentCompanyId] || [])]
     }));
 
+    // Real-time backend ingestion
+    if (item.type === 'faq' && item.faqAnswer) {
+      APIClient.ingestFaq({ question: item.title, answer: item.faqAnswer, category: item.category }).catch(e => console.info('Backend FAQ ingest error:', e));
+    } else if (item.type === 'url' && item.sourceUrl) {
+      APIClient.ingestWebsite({ url: item.sourceUrl, category: item.category }).catch(e => console.info('Backend website ingest error:', e));
+    } else {
+      APIClient.ingestFile({ title: item.title, content: item.content, fileName: item.fileName, category: item.category }).catch(e => console.info('Backend file ingest error:', e));
+    }
+
     addAuditLog('KNOWLEDGE_INGESTED', `Ingested knowledge item: "${newItem.title}" (${newItem.type})`);
     showToast('Knowledge Indexed', `"${newItem.title}" has been indexed and is ready for AI grounding.`, 'success');
   };
@@ -518,6 +640,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       ...prev,
       [currentCompanyId]: (prev[currentCompanyId] || []).filter(k => k.id !== id)
     }));
+    // Real-time backend delete
+    APIClient.deleteKnowledgeSource(id).catch(e => console.info('Backend knowledge delete error:', e));
     addAuditLog('KNOWLEDGE_DELETED', `Removed knowledge item ID: ${id}`);
     showToast('Knowledge Removed', 'Item deleted from index.', 'info');
   };
@@ -591,6 +715,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       }
       return c;
     }));
+    // Real-time backend company update
+    APIClient.updateCompany(currentCompanyId, updates).catch(e => console.info('Backend company update error:', e));
     if (updates.name) {
       addAuditLog('COMPANY_BRAND_UPDATED', `Updated company brand name: "${updates.name}"`);
     }
@@ -606,6 +732,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       }
       return c;
     }));
+    // Real-time backend widget customization update
+    APIClient.updateCompany(currentCompanyId, { widgetSettings: updates }).catch(e => console.info('Backend widget settings error:', e));
     addAuditLog('WIDGET_BRANDING_UPDATED', 'Updated customer chat widget branding');
     showToast('Branding Saved', 'Widget theme customization saved successfully.', 'success');
   };
@@ -806,6 +934,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       };
     });
 
+    // Real-time backend takeover
+    APIClient.takeoverConversation(conversationId, operatorName).catch(e => console.info('Backend takeover error:', e));
+
     addAuditLog('HUMAN_TAKEOVER_INITIATED', `Human operator (${operatorName}) took over conversation ID: ${conversationId}`, 'warning');
     showToast('Live Takeover Active', `Human operator (${operatorName}) took over session.`, 'warning');
   };
@@ -854,6 +985,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         })
       };
     });
+
+    // Real-time backend resolve
+    APIClient.resolveConversation(conversationId).catch(e => console.info('Backend resolve error:', e));
 
     setCompanies(prev => prev.map(c => {
       if (c.id === currentCompanyId) {

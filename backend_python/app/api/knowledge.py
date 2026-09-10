@@ -309,6 +309,7 @@ async def crawl_and_ingest_website(req: IngestWebsiteRequest, ctx: TenantContext
 
 # ================= 4. FAQ / Q&A INGESTION ================= #
 
+@router.post("/faq", status_code=status.HTTP_201_CREATED)
 @router.post("/faqs", status_code=status.HTTP_201_CREATED)
 def create_faq_knowledge(req: IngestFaqRequest, ctx: TenantContext = Depends(get_tenant_context)):
     """Creates a structured FAQ knowledge entry and indexes it immediately."""
