@@ -171,9 +171,10 @@ export const ConversationsView: React.FC = () => {
                 }, 600);
               }}
               className="px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200/80 text-slate-800 text-xs font-semibold rounded-lg transition-colors flex items-center gap-1.5 cursor-pointer border border-slate-200"
+              title="Simulate incoming customer chat"
             >
               <Zap className="w-3.5 h-3.5 text-amber-600" />
-              <span>+ Inquiry</span>
+              <span>+ Simulate Chat</span>
             </button>
           </div>
 
