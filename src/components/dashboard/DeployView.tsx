@@ -1032,23 +1032,6 @@ export default function App() {
                     <label className="flex items-center gap-3 cursor-pointer select-none">
                       <input
                         type="checkbox"
-                        checked={localSettings.enableSound}
-                        onChange={(e) => {
-                          const isChecked = e.target.checked;
-                          setLocalSettings(prev => ({ ...prev, enableSound: isChecked }));
-                          updateWidgetSettings({ enableSound: isChecked });
-                          if (isChecked) {
-                            soundService.playMessageSound();
-                          }
-                        }}
-                        className="rounded text-slate-900 w-4 h-4 cursor-pointer"
-                      />
-                      <span className="font-semibold text-slate-800 text-sm">Play subtle notification audio on message</span>
-                    </label>
-
-                    <label className="flex items-center gap-3 cursor-pointer select-none">
-                      <input
-                        type="checkbox"
                         checked={localSettings.showPoweredBy}
                         onChange={(e) => {
                           const isChecked = e.target.checked;
