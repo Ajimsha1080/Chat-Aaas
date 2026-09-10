@@ -1,4 +1,4 @@
-# Chat-AaaS API Specification
+# CoarAI API Specification
 
 ## 1. Node.js API Gateway Endpoints (/api/v1)
 

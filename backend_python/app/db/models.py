@@ -1,6 +1,6 @@
 """
 SQLAlchemy 2.0 Declarative Models for PostgreSQL + pgvector
-Complete multi-tenant entity schema for Chat-AaaS Enterprise Platform
+Complete multi-tenant entity schema for CoarAI Enterprise Platform
 """
 
 import time
