@@ -966,6 +966,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         })
       };
     });
+
+    // Real-time backend operator message sync
+    APIClient.sendMessage(conversationId, text, 'Live Support Operator (Staff)', 'staff@internal.io').catch(e => console.info('Backend operator message sync:', e));
   };
 
   const resolveConversation = (conversationId: string) => {
