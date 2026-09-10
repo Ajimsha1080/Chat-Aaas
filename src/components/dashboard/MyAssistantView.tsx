@@ -146,15 +146,6 @@ export const MyAssistantView: React.FC = () => {
             {isLive ? <PauseCircle className="w-4 h-4" /> : <Play className="w-4 h-4" />}
             <span>{isLive ? 'Pause Assistant' : 'Activate Live'}</span>
           </button>
-
-          <button
-            onClick={handleSave}
-            disabled={isSaving}
-            className="px-4.5 py-2.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-sm font-semibold flex items-center gap-2 transition-all cursor-pointer disabled:opacity-50 shadow-sm"
-          >
-            <Save className="w-4 h-4" />
-            <span>{isSaving ? 'Saving...' : 'Save Changes'}</span>
-          </button>
         </div>
       </div>
 
