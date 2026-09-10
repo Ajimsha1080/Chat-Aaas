@@ -50,9 +50,9 @@ export const HomeView: React.FC = () => {
     { name: 'Sun', conversations: 190, resolutions: 179 }
   ];
 
-  const pendingAttentionConversations = conversations.filter(c => c.status === 'escalated_to_human' || c.status === 'flagged');
-  const activeConnectionsCount = integrations ? integrations.filter(i => i.connected).length : 2;
-  const readyKnowledgeCount = knowledgeItems ? knowledgeItems.filter(k => k.status === 'indexed').length : 4;
+  const pendingAttentionConversations = (conversations || []).filter(c => c && (c.status === 'escalated_to_human' || c.status === 'flagged'));
+  const activeConnectionsCount = (integrations || []).filter(i => i && i.connected).length;
+  const readyKnowledgeCount = (knowledgeItems || []).filter(k => k && k.status === 'indexed').length;
 
   const checklistItems = [
     { id: 1, title: 'Company profile and tone configured', completed: true, tab: 'assistant' },

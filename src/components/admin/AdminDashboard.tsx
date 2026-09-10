@@ -56,7 +56,7 @@ export const AdminDashboard: React.FC = () => {
   const itemsPerPage = 8;
 
   const totalTenants = companies.length;
-  const activeAgents = companies.filter(c => c.agent.status === 'active' && !c.isSuspended).length;
+  const activeAgents = companies.filter(c => c && c.agent && c.agent.status === 'active' && !c.isSuspended).length;
   const totalMRR = companies.reduce((acc, c) => {
     const plan = allPlans.find(p => p.id === c.planId);
     return acc + (plan ? plan.priceMonthlyINR : 4999);

@@ -289,15 +289,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   }, [companies, allPlans, knowledgeMap, integrationsMap, actionsMap, conversationsMap, auditLogs, versionsMap, webhooksMap]);
 
   // Derived current tenant data
-  const currentCompany = companies.find(c => c.id === currentCompanyId) || companies[0];
-  const currentPlan = allPlans.find(p => p.id === currentCompany.planId) || allPlans[1];
-  const knowledgeItems = knowledgeMap[currentCompanyId] || [];
-  const integrations = integrationsMap[currentCompanyId] || [];
-  const actions = actionsMap[currentCompanyId] || [];
-  const conversations = conversationsMap[currentCompanyId] || [];
-  const agentVersions = versionsMap[currentCompanyId] || [];
-  const webhooks = webhooksMap[currentCompanyId] || [];
-  const currentActiveConversation = conversations.find(c => c.id === activeConversationId) || null;
+  const currentCompany = companies.find(c => c.id === currentCompanyId) || companies[0] || INITIAL_COMPANIES[0];
+  const currentPlan = (currentCompany && allPlans.find(p => p.id === currentCompany.planId)) || allPlans[1] || SUBSCRIPTION_PLANS[1];
+  const knowledgeItems = (currentCompanyId && knowledgeMap[currentCompanyId]) || [];
+  const integrations = (currentCompanyId && integrationsMap[currentCompanyId]) || [];
+  const actions = (currentCompanyId && actionsMap[currentCompanyId]) || [];
+  const conversations = (currentCompanyId && conversationsMap[currentCompanyId]) || [];
+  const agentVersions = (currentCompanyId && versionsMap[currentCompanyId]) || [];
+  const webhooks = (currentCompanyId && webhooksMap[currentCompanyId]) || [];
+  const currentActiveConversation = (conversations && conversations.find(c => c.id === activeConversationId)) || null;
 
   const addAuditLog = (action: string, details: string, severity: 'info' | 'warning' | 'critical' = 'info') => {
     const newLog: AuditLogItem = {
