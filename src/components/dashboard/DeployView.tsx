@@ -25,8 +25,12 @@ export const DeployView: React.FC = () => {
   const { 
     currentCompany, 
     updateWidgetSettings, 
+    updateAgentConfig,
     setIsQuickTestOpen
   } = useApp();
+
+  const [greetingMessage, setGreetingMessage] = useState(currentCompany.agent.greetingMessage || 'Hello! How can I assist you today?');
+  const [fallbackMessage, setFallbackMessage] = useState(currentCompany.agent.fallbackMessage || 'I do not have specific verified information regarding that in our official documentation. Would you like me to transfer this session to our 24/7 support team?');
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const brandLogoInputRef = useRef<HTMLInputElement>(null);
@@ -85,6 +89,27 @@ export const DeployView: React.FC = () => {
   const [previewChat, setPreviewChat] = useState<{ sender: 'agent' | 'user'; text: string }[]>([
     { sender: 'agent', text: currentCompany.agent.greetingMessage || 'Hello! How can I assist you today?' }
   ]);
+
+  const [prevCompanyId, setPrevCompanyId] = useState(currentCompany.id);
+  if (prevCompanyId !== currentCompany.id) {
+    setPrevCompanyId(currentCompany.id);
+    setLocalSettings({
+      themeMode: 'dark',
+      headerTextColor: 'white',
+      backgroundAnimation: true,
+      bottomPadding: 20,
+      sidePadding: 20,
+      ...currentCompany.widgetSettings
+    });
+    setGreetingMessage(currentCompany.agent.greetingMessage || 'Hello! How can I assist you today?');
+    setFallbackMessage(currentCompany.agent.fallbackMessage || 'I do not have specific verified information regarding that in our official documentation. Would you like me to transfer this session to our 24/7 support team?');
+    if (currentCompany.widgetSettings?.starterQuestions) {
+      setStarterQuestions(currentCompany.widgetSettings.starterQuestions);
+    }
+    setPreviewChat([
+      { sender: 'agent', text: currentCompany.agent.greetingMessage || 'Hello! How can I assist you today?' }
+    ]);
+  }
 
   const handleLogoFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -165,6 +190,7 @@ export const DeployView: React.FC = () => {
 
   const handleSaveBranding = () => {
     updateWidgetSettings({ ...localSettings, starterQuestions });
+    updateAgentConfig({ greetingMessage, fallbackMessage });
     setIsSaved(true);
     setTimeout(() => setIsSaved(false), 2500);
   };
@@ -780,34 +806,82 @@ export default function App() {
 
             {/* TAB: CONTENT */}
             {activeMainTab === 'content' && (
-              <div className="space-y-5 animate-in fade-in duration-150">
-                <div className="space-y-4">
-                  <div>
-                    <label className="block font-semibold text-slate-800 mb-1.5">Header Title</label>
-                    <input
-                      type="text"
-                      value={localSettings.headerTitle}
-                      onChange={(e) => setLocalSettings({ ...localSettings, headerTitle: e.target.value })}
-                      placeholder="e.g. ACME Support"
-                      className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium"
-                    />
+              <div className="space-y-6 animate-in fade-in duration-150">
+                <div className="space-y-5">
+                  {/* 1. Header Title & Subtitle */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block font-semibold text-slate-800 text-xs sm:text-sm mb-1.5">Header Title</label>
+                      <input
+                        type="text"
+                        value={localSettings.headerTitle}
+                        onChange={(e) => setLocalSettings({ ...localSettings, headerTitle: e.target.value })}
+                        placeholder="e.g. ACME Support"
+                        className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm font-medium focus:bg-white focus:ring-1 focus:ring-slate-900 focus:outline-hidden"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block font-semibold text-slate-800 text-xs sm:text-sm mb-1.5">Header Subtitle</label>
+                      <input
+                        type="text"
+                        value={localSettings.headerSubtitle || ''}
+                        onChange={(e) => setLocalSettings({ ...localSettings, headerSubtitle: e.target.value })}
+                        placeholder="e.g. Ask us anything or share your feedback"
+                        className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm font-medium focus:bg-white focus:ring-1 focus:ring-slate-900 focus:outline-hidden"
+                      />
+                    </div>
                   </div>
 
-                  <div>
-                    <label className="block font-semibold text-slate-800 mb-1.5">Header Subtitle</label>
-                    <input
-                      type="text"
-                      value={localSettings.headerSubtitle || ''}
-                      onChange={(e) => setLocalSettings({ ...localSettings, headerSubtitle: e.target.value })}
-                      placeholder="e.g. Ask us anything or share your feedback"
-                      className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium"
-                    />
+                  {/* 2. Welcome Greeting & Fallback Responses (Exact Match to Requirement) */}
+                  <div className="pt-4 border-t border-slate-100 space-y-4">
+                    <div>
+                      <h4 className="font-bold text-slate-900 text-sm sm:text-base">Welcome Greeting & Fallback Responses</h4>
+                      <p className="text-xs sm:text-sm text-slate-500 mt-0.5">Control initial messages and grounding safeguards.</p>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {/* Welcome Greeting Message */}
+                      <div className="space-y-1.5">
+                        <label className="block font-semibold text-slate-800 text-xs sm:text-sm">Welcome Greeting Message</label>
+                        <textarea
+                          rows={3}
+                          value={greetingMessage}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            setGreetingMessage(val);
+                            setPreviewChat(prev => {
+                              if (prev.length === 1 && prev[0].sender === 'agent') {
+                                return [{ sender: 'agent', text: val }];
+                              }
+                              return prev;
+                            });
+                          }}
+                          placeholder="Hello! How can I assist you today?"
+                          className="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm font-medium leading-relaxed focus:bg-white focus:ring-1 focus:ring-slate-900 focus:outline-hidden resize-none shadow-2xs"
+                        />
+                        <p className="text-[11px] text-slate-400">Sent automatically when a visitor opens the chat widget.</p>
+                      </div>
+
+                      {/* Fallback Refusal Message */}
+                      <div className="space-y-1.5">
+                        <label className="block font-semibold text-slate-800 text-xs sm:text-sm">Fallback Refusal Message (Anti-Hallucination)</label>
+                        <textarea
+                          rows={3}
+                          value={fallbackMessage}
+                          onChange={(e) => setFallbackMessage(e.target.value)}
+                          placeholder="I do not have specific verified information regarding that in our official documentation. Would you like me to transfer this session to our 24/7 support team?"
+                          className="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm font-medium leading-relaxed focus:bg-white focus:ring-1 focus:ring-slate-900 focus:outline-hidden resize-none shadow-2xs"
+                        />
+                        <p className="text-[11px] text-slate-400">Used whenever facts are not present in the indexed knowledge base.</p>
+                      </div>
+                    </div>
                   </div>
 
-                  {/* Starter Question Chips */}
-                  <div className="pt-3 border-t border-slate-100 space-y-2.5">
+                  {/* 3. Starter Question Chips */}
+                  <div className="pt-4 border-t border-slate-100 space-y-2.5">
                     <div className="flex items-center justify-between">
-                      <label className="block font-semibold text-slate-800">
+                      <label className="block font-semibold text-slate-800 text-xs sm:text-sm">
                         Starter Prompt Chips <span className="text-xs font-normal text-slate-500">(1-click prompt chips)</span>
                       </label>
                       <span className="text-xs text-slate-400 font-mono">{starterQuestions.length}/4</span>
@@ -853,6 +927,18 @@ export default function App() {
                       </div>
                     )}
                   </div>
+                </div>
+
+                {/* Save Changes Bottom Button */}
+                <div className="pt-4 border-t border-slate-100 flex justify-start">
+                  <button
+                    type="button"
+                    onClick={handleSaveBranding}
+                    className="px-6 py-2.5 bg-[#007074] hover:bg-[#005a5d] text-white rounded-xl text-sm font-bold flex items-center gap-2 shadow-sm transition-colors cursor-pointer"
+                  >
+                    {isSaved ? <Check className="w-4 h-4 text-emerald-300 stroke-[3]" /> : <CheckCircle2 className="w-4 h-4" />}
+                    <span>{isSaved ? 'Saved' : 'Save Changes'}</span>
+                  </button>
                 </div>
               </div>
             )}
