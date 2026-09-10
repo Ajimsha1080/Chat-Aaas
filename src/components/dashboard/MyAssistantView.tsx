@@ -228,21 +228,7 @@ export const MyAssistantView: React.FC = () => {
             </div>
           </div>
 
-          <div className="border-t border-slate-100 pt-6">
-            <label className="block text-sm font-semibold text-slate-900 mb-1.5">
-              Business Context & Directives
-            </label>
-            <p className="text-xs sm:text-sm text-slate-500 mb-2.5">
-              Specific instructions for your assistant regarding policies, hours, or guidance.
-            </p>
-            <textarea
-              rows={4}
-              value={formState.businessInstructions || ''}
-              onChange={e => setFormState(prev => ({ ...prev, businessInstructions: e.target.value }))}
-              placeholder="e.g. You represent Acme Cloud. Always answer questions based on the uploaded knowledge base. If asked about custom enterprise pricing, guide visitors to schedule a demo."
-              className="w-full p-3.5 bg-white border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-1 focus:ring-slate-900 focus:border-slate-900 font-sans leading-relaxed shadow-xs"
-            />
-          </div>
+
 
           <div className="flex justify-end pt-2">
             <button
