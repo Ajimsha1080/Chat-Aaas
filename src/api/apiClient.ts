@@ -141,6 +141,22 @@ export class APIClient {
     return this.request('/api/v1/tools/execute', 'POST', { toolCode, args, userConfirmed });
   }
 
+  // ================= CHAT & REALTIME AI ================= //
+  public static async sendChatMessage(message: string, options?: {
+    conversationId?: string;
+    sessionId?: string;
+    isTestMode?: boolean;
+    history?: Array<{ role: 'user' | 'assistant' | 'system'; content: string }>;
+  }) {
+    return this.request('/api/v1/chat', 'POST', {
+      message,
+      conversation_id: options?.conversationId,
+      session_id: options?.sessionId,
+      is_test_mode: options?.isTestMode ?? false,
+      history: options?.history ?? []
+    });
+  }
+
   // ================= CONVERSATIONS ================= //
   public static async getConversations() {
     return this.request('/api/v1/conversations', 'GET');

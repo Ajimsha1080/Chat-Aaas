@@ -45,6 +45,7 @@ import {
   INITIAL_SECURITY_EVENTS
 } from '../data/mockData';
 import { AIAgentEngine } from '../services/aiEngine';
+import { APIClient } from '../api/apiClient';
 import { AppContext } from './AppContextDefinition';
 
 const LOCAL_STORAGE_KEY = 'coarai_platform_state_v6';
@@ -81,6 +82,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [currentCompanyId, setCurrentCompanyId] = useState<string>(() => {
     return companies[0]?.id || 'comp-techflow';
   });
+
+  useEffect(() => {
+    APIClient.setAuth(null, currentCompanyId);
+  }, [currentCompanyId]);
 
   const [allPlans, setAllPlans] = useState<SubscriptionPlan[]>(() => {
     const saved = localStorage.getItem(`${LOCAL_STORAGE_KEY}_plans`);

@@ -39,6 +39,14 @@ class UsageService:
         }
 
     @staticmethod
+    def get_tenant_usage_summary(company_id: str) -> Dict[str, Any]:
+        return UsageService.get_tenant_summary(company_id)
+
+    @staticmethod
+    def get_events_for_company(company_id: str) -> List[Dict[str, Any]]:
+        return [e for e in db.usage_events if e.get("companyId") == company_id]
+
+    @staticmethod
     def check_monthly_quota(company_id: str) -> Dict[str, Any]:
         """
         Validates monthly conversation usage against the active subscription tier.

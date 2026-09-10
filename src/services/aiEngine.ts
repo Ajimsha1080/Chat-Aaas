@@ -6,6 +6,7 @@ import {
   Message, 
   ToolExecutionTrace 
 } from '../types';
+import { APIClient } from '../api/apiClient';
 
 export interface AIResponseResult {
   message: string;
@@ -34,7 +35,7 @@ export class AIAgentEngine {
     knowledgeItems: KnowledgeItem[],
     _integrations: Integration[],
     actions: ActionDefinition[],
-    _conversationHistory: Message[] = []
+    conversationHistory: Message[] = []
   ): Promise<AIResponseResult> {
     const qLower = userQuery.toLowerCase();
     const reasoning: string[] = [];
@@ -46,6 +47,57 @@ export class AIAgentEngine {
         reasoningSteps: ['Agent status is currently PAUSED. Suppressing automated responses.'],
         shouldEscalateToHuman: false
       };
+    }
+
+    // Attempt Live FastAPI Backend Chat
+    try {
+      const historyPayload = conversationHistory.slice(-6).map(m => ({
+        role: (m.sender === 'user' ? 'user' : 'assistant') as 'user' | 'assistant',
+        content: m.text
+      }));
+
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Backend timeout')), 2500)
+      );
+
+      const backendCall = APIClient.sendChatMessage(userQuery, {
+        conversationId: `conv-${company.id}`,
+        isTestMode: false,
+        history: historyPayload
+      });
+
+      const res: any = await Promise.race([backendCall, timeoutPromise]);
+      if (res && (res.message || res.answer)) {
+        const reasoningSteps = (res.reasoning_steps || []).map((r: any) => 
+          typeof r === 'string' ? r : `[${r.stage || 'AI Runtime'}] ${r.detail || ''}`
+        );
+
+        let toolTraces: ToolExecutionTrace[] | undefined = undefined;
+        if (res.tool_executed || res.tool_execution) {
+          toolTraces = [{
+            toolName: res.tool_executed || res.tool_execution?.name || 'action',
+            arguments: res.tool_execution?.parameters || {},
+            result: res.tool_result || res.tool_execution?.result || { status: 'success' },
+            status: 'executed',
+            executedAt: new Date().toISOString()
+          }];
+        }
+
+        return {
+          message: res.message || res.answer,
+          reasoningSteps: reasoningSteps.length > 0 ? reasoningSteps : [
+            `[FastAPI Backend v2.0.0] Response generated with ${res.tokens_used || 85} tokens`,
+            `[Multi-Tenant Guard] Company: ${company.name} (${company.id})`
+          ],
+          toolTraces,
+          isPendingConfirmation: res.is_pending_confirmation || res.requires_confirmation,
+          pendingActionData: res.pending_action_data,
+          shouldEscalateToHuman: res.should_escalate_to_human || res.handoff_required,
+          matchedKnowledgeSources: res.citations
+        };
+      }
+    } catch {
+      // Gracefully fall through to deterministic client hierarchy engine
     }
 
     reasoning.push(`[Hierarchy 1: System Rules] Safety boundary enforced: Never hallucinate company data.`);
