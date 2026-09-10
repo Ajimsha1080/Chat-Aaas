@@ -11,6 +11,7 @@ import {
 import { useApp } from '../../context';
 import { Message, ToolExecutionTrace } from '../../types';
 import { AIAgentEngine } from '../../services/aiEngine';
+import { soundService } from '../../services/soundService';
 
 interface ChatWidgetProps {
   isInlinePreview?: boolean;
@@ -89,6 +90,9 @@ export const ChatWidget: React.FC<ChatWidgetProps> = ({ isInlinePreview = false 
       };
 
       setMessages(prev => [...prev, agentMsg]);
+      if (settings.enableSound !== false) {
+        soundService.playMessageSound();
+      }
     } catch (err) {
       console.error(err);
     } finally {

@@ -13,6 +13,7 @@ import {
 import { useApp } from '../../context';
 import { Message, ToolExecutionTrace } from '../../types';
 import { AIAgentEngine } from '../../services/aiEngine';
+import { soundService } from '../../services/soundService';
 
 const genId = (prefix: string) => `${prefix}-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
 
@@ -87,6 +88,9 @@ export const TestAgentDrawer: React.FC = () => {
       };
 
       setMessages(prev => [...prev, agentMsg]);
+      if (currentCompany.widgetSettings?.enableSound !== false) {
+        soundService.playMessageSound();
+      }
       if (result.reasoningSteps && result.reasoningSteps.length > 0) {
         setShowReasoningMap(prev => ({ ...prev, [agentMsg.id]: true }));
       }
