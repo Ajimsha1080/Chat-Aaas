@@ -8,7 +8,14 @@ from app.main import app
 from app.services.crawler_service import CrawlerService
 from app.services.rag_engine import RAGEngine
 
+from app.core.security import create_jwt_token
+
 client = TestClient(app)
+
+AUTH_HEADER = {
+    "Authorization": f"Bearer {create_jwt_token('usr-alex', 'comp-techflow', 'owner')}",
+    "X-Company-ID": "comp-techflow"
+}
 
 def test_ssrf_crawler_defense():
     # Localhost
@@ -53,7 +60,8 @@ def test_knowledge_document_upload():
             "fileName": "security_policy_2026.pdf",
             "docType": "pdf",
             "category": "security"
-        }
+        },
+        headers=AUTH_HEADER
     )
     assert response.status_code == 201
     body = response.json()
@@ -69,7 +77,8 @@ def test_knowledge_faq_creation_and_list():
             "question": "What is the standard SLA response time for Critical incidents?",
             "answer": "Critical severity tickets are guaranteed an initial engineer response within 15 minutes, 24/7/365.",
             "category": "SLA & Support"
-        }
+        },
+        headers=AUTH_HEADER
     )
     assert response.status_code == 201
     data = response.json()["data"]
@@ -77,7 +86,7 @@ def test_knowledge_faq_creation_and_list():
     assert data["source"]["sourceType"] == "faq"
 
     # List sources
-    list_res = client.get("/api/v1/knowledge?source_type=faq")
+    list_res = client.get("/api/v1/knowledge?source_type=faq", headers=AUTH_HEADER)
     assert list_res.status_code == 200
     sources = list_res.json()["data"]["sources"]
     assert any(s["title"] == "What is the standard SLA response time for Critical incidents?" for s in sources)
@@ -91,7 +100,8 @@ def test_knowledge_collections_lifecycle():
             "description": "SOC2, ISO27001, and HIPAA policies",
             "icon": "Shield",
             "color": "emerald"
-        }
+        },
+        headers=AUTH_HEADER
     )
     assert create_res.status_code == 201
     col = create_res.json()["data"]
@@ -99,18 +109,18 @@ def test_knowledge_collections_lifecycle():
     assert col["name"] == "Security & Compliance 2026"
 
     # List Collections
-    list_res = client.get("/api/v1/knowledge/collections")
+    list_res = client.get("/api/v1/knowledge/collections", headers=AUTH_HEADER)
     assert list_res.status_code == 200
     cols = list_res.json()["data"]["collections"]
     assert any(c["id"] == col_id for c in cols)
 
     # Delete Collection
-    del_res = client.delete(f"/api/v1/knowledge/collections/{col_id}")
+    del_res = client.delete(f"/api/v1/knowledge/collections/{col_id}", headers=AUTH_HEADER)
     assert del_res.status_code == 200
 
 def test_knowledge_gaps_and_faq_conversion():
     # Get Gaps
-    gaps_res = client.get("/api/v1/knowledge/gaps")
+    gaps_res = client.get("/api/v1/knowledge/gaps", headers=AUTH_HEADER)
     assert gaps_res.status_code == 200
     gaps = gaps_res.json()["data"]["gaps"]
     assert len(gaps) > 0
@@ -121,7 +131,8 @@ def test_knowledge_gaps_and_faq_conversion():
         f"/api/v1/knowledge/gaps/{target_gap['id']}/convert-faq",
         json={
             "answer": "We support on-premise deployments via our enterprise Kubernetes Helm charts."
-        }
+        },
+        headers=AUTH_HEADER
     )
     assert convert_res.status_code == 201
     assert convert_res.json()["data"]["faq"]["source"]["title"] == target_gap["query"]
@@ -130,7 +141,8 @@ def test_rag_test_endpoint():
     # Grounded Query
     grounded_res = client.post(
         "/api/v1/knowledge/test-rag",
-        json={"query": "What is the return policy timeframe?", "top_k": 3}
+        json={"query": "What is the return policy timeframe?", "top_k": 3},
+        headers=AUTH_HEADER
     )
     assert grounded_res.status_code == 200
     data = grounded_res.json()["data"]
@@ -140,7 +152,8 @@ def test_rag_test_endpoint():
     # Ungrounded Query (triggers refusal + gap creation)
     ungrounded_res = client.post(
         "/api/v1/knowledge/test-rag",
-        json={"query": "What is the quantum teleportation frequency of the enterprise rocket?", "top_k": 3}
+        json={"query": "What is the quantum teleportation frequency of the enterprise rocket?", "top_k": 3},
+        headers=AUTH_HEADER
     )
     assert ungrounded_res.status_code == 200
     ug_data = ungrounded_res.json()["data"]
@@ -149,7 +162,7 @@ def test_rag_test_endpoint():
     assert "couldn't find enough information" in ug_data["answer"].lower()
 
 def test_knowledge_health_metrics():
-    res = client.get("/api/v1/knowledge/health")
+    res = client.get("/api/v1/knowledge/health", headers=AUTH_HEADER)
     assert res.status_code == 200
     data = res.json()["data"]
     assert "healthScore" in data

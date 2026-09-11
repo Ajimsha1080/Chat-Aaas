@@ -1,9 +1,10 @@
 import time
 from dataclasses import dataclass
 from typing import Optional
-from fastapi import Header
+from fastapi import Header, HTTPException, status
 from app.core.security import decode_jwt_token
 from app.core.config import settings
+from app.db.database import db
 
 @dataclass
 class TenantContext:
@@ -14,36 +15,134 @@ class TenantContext:
 
 def get_tenant_context(
     authorization: Optional[str] = Header(None),
+    x_api_key: Optional[str] = Header(None, alias="x-api-key"),
     x_company_id: Optional[str] = Header(None, alias="x-company-id"),
     x_tenant_id: Optional[str] = Header(None, alias="x-tenant-id"),
     x_internal_token: Optional[str] = Header(None, alias="x-internal-token"),
-    x_request_id: Optional[str] = Header(None, alias="x-request-id")
+    x_request_id: Optional[str] = Header(None, alias="x-request-id"),
+    x_deployment_id: Optional[str] = Header(None, alias="x-deployment-id")
 ) -> TenantContext:
     correlation_id = x_request_id or f"req_{int(time.time() * 1000)}"
-    resolved_comp = x_company_id or x_tenant_id or "comp-techflow"
-    
+    header_comp = x_company_id or x_tenant_id
+
+    # 1. Internal Service Worker
     if x_internal_token and x_internal_token == settings.INTERNAL_SERVICE_SECRET:
+        comp = header_comp or "comp-internal"
         return TenantContext(
-            company_id=resolved_comp,
+            company_id=comp,
             user_id="service_worker",
             role="super_admin",
             correlation_id=correlation_id
         )
 
+    # 2. JWT Bearer Token (Dashboard & Admin Users)
     if authorization and authorization.startswith("Bearer "):
-        token = authorization[7:]
+        token = authorization[7:].strip()
         payload = decode_jwt_token(token)
-        if payload:
+        if not payload:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid or expired authentication token."
+            )
+        
+        token_comp = payload.get("company_id")
+        if not token_comp:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Authentication token missing tenant workspace identifier."
+            )
+
+        user_role = payload.get("role", "member")
+
+        # Multi-Tenant Boundary: forbid accessing other company workspaces unless platform_super_admin
+        if header_comp and header_comp != token_comp and user_role not in ["super_admin", "platform_super_admin"]:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=f"Forbidden: Token is scoped to tenant '{token_comp}', cannot access '{header_comp}'."
+            )
+
+        return TenantContext(
+            company_id=token_comp,
+            user_id=payload.get("sub", "usr-auth"),
+            role=user_role,
+            correlation_id=correlation_id
+        )
+
+    # 3. Verified API Key (REST API & Server Integrations)
+    if x_api_key:
+        matched_key = next((k for k in db.api_keys.values() if k.get("key") == x_api_key or k.get("id") == x_api_key), None)
+        if matched_key:
+            if matched_key.get("status") == "revoked":
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail="API key has been revoked."
+                )
+            comp_id = matched_key.get("companyId")
+            if header_comp and header_comp != comp_id:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="Forbidden: API key does not match requested company."
+                )
             return TenantContext(
-                company_id=payload.get("company_id", resolved_comp),
-                user_id=payload.get("sub", "usr-auth"),
-                role=payload.get("role", "owner"),
+                company_id=comp_id,
+                user_id=f"key_{matched_key.get('id')}",
+                role="api_client",
                 correlation_id=correlation_id
             )
-            
-    return TenantContext(
-        company_id=resolved_comp,
-        user_id="usr-default-owner",
-        role="owner",
-        correlation_id=correlation_id
+
+        matched_comp = next((c for c in db.companies.values() if c.get("apiKey") == x_api_key), None)
+        if matched_comp:
+            if matched_comp.get("isSuspended"):
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="Company workspace is suspended."
+                )
+            return TenantContext(
+                company_id=matched_comp["id"],
+                user_id=f"api_{matched_comp['id']}",
+                role="owner",
+                correlation_id=correlation_id
+            )
+
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid or unrecognized API key."
+        )
+
+    # 4. Verified Deployment ID (Public Chat Widget Channel)
+    if x_deployment_id:
+        dep = db.deployments.get(x_deployment_id)
+        if not dep:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Deployment channel not found."
+            )
+        if dep.get("status") == "disabled":
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="The AI assistant is currently unavailable on this deployment channel."
+            )
+        return TenantContext(
+            company_id=dep["companyId"],
+            user_id=f"visitor_{int(time.time())}",
+            role="visitor",
+            correlation_id=correlation_id
+        )
+
+    # 5. Direct Company Header (Only if registered company exists)
+    if header_comp:
+        comp = db.companies.get(header_comp)
+        if comp:
+            return TenantContext(
+                company_id=header_comp,
+                user_id=f"usr-{header_comp}-owner",
+                role="owner",
+                correlation_id=correlation_id
+            )
+
+    # No valid authentication or tenant could be resolved
+    raise HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Authentication required. Provide a valid Bearer token or API key."
     )
+

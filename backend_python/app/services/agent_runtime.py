@@ -42,6 +42,18 @@ class AgentRuntime:
             timestamp=now_str
         ))
 
+        # 1. Agent Disabled / Paused Check
+        if agent_config.get("status") == "paused" or agent_config.get("lifecycleStatus") in ["disabled", "paused"]:
+            return ChatResponse(
+                message="This AI assistant is currently unavailable or disabled by the administrator.",
+                reasoning_steps=[ReasoningStep(
+                    stage="Lifecycle Status Check",
+                    detail="Assistant is disabled or paused. Halting automated responses.",
+                    timestamp=now_str
+                )],
+                session_id=request.session_id or "sess_live"
+            )
+
         # 2. Human Escalation Trigger Check
         escalation_keywords = ["human", "agent", "representative", "manager", "support person", "call me", "talk to human"]
         if any(kw in user_msg.lower() for kw in escalation_keywords):
@@ -59,32 +71,55 @@ class AgentRuntime:
             )
 
         # 3. Tool Intent Recognition & Execution
+        import re
         if "order" in user_msg.lower() and ("track" in user_msg.lower() or "status" in user_msg.lower() or "where" in user_msg.lower()):
-            reasoning_steps.append(ReasoningStep(
-                stage="Tool Intent Detected",
-                detail="Identified intent for 'check_order_status'. Dispatching to server-side tool executor.",
-                timestamp=now_str
-            ))
-            tool_res = ToolRegistry.execute_tool("check_order_status", {"order_id": "ORD-8821"}, company_id)
-            if tool_res.success and tool_res.result:
+            ord_match = re.search(r'\b(ORD-[0-9A-Za-z]+)\b', user_msg, re.IGNORECASE) or re.search(r'(?:order|id)[:\s#]*([0-9A-Za-z_-]{4,})', user_msg, re.IGNORECASE)
+            if ord_match:
+                extracted_order_id = ord_match.group(1).upper()
+                reasoning_steps.append(ReasoningStep(
+                    stage="Tool Intent Detected",
+                    detail=f"Identified intent for 'check_order_status' with parameter order_id='{extracted_order_id}'. Dispatching to tool executor.",
+                    timestamp=now_str
+                ))
+                tool_res = ToolRegistry.execute_tool("check_order_status", {"order_id": extracted_order_id}, company_id)
+                if tool_res.success and tool_res.result:
+                    return ChatResponse(
+                        message=f"Your order **{tool_res.result['order_id']}** is currently **{tool_res.result['status']}** with tracking ID `{tool_res.result['tracking_number']}`. Estimated delivery is **{tool_res.result['estimated_delivery']}**.",
+                        reasoning_steps=reasoning_steps,
+                        tool_executed="check_order_status",
+                        tool_result=tool_res.result,
+                        session_id=request.session_id or "sess_live"
+                    )
+            else:
+                reasoning_steps.append(ReasoningStep(
+                    stage="Tool Intent Detected",
+                    detail="Identified order tracking intent, but no order ID provided. Prompting customer for identifier.",
+                    timestamp=now_str
+                ))
                 return ChatResponse(
-                    message=f"Your order **{tool_res.result['order_id']}** is currently **{tool_res.result['status']}** with tracking ID `{tool_res.result['tracking_number']}`. Estimated delivery is **{tool_res.result['estimated_delivery']}**.",
+                    message="Please provide your order number (for example, ORD-8821) so I can check the live tracking status for you.",
                     reasoning_steps=reasoning_steps,
-                    tool_executed="check_order_status",
-                    tool_result=tool_res.result,
                     session_id=request.session_id or "sess_live"
                 )
 
         if "refund" in user_msg.lower():
+            ord_match = re.search(r'\b(ORD-[0-9A-Za-z]+)\b', user_msg, re.IGNORECASE) or re.search(r'(?:order|id)[:\s#]*([0-9A-Za-z_-]{4,})', user_msg, re.IGNORECASE)
+            target_order = ord_match.group(1).upper() if ord_match else None
             reasoning_steps.append(ReasoningStep(
                 stage="High-Risk Action Gate",
                 detail="Identified intent for 'execute_refund'. Validating required confirmation gates.",
                 timestamp=now_str
             ))
-            tool_res = ToolRegistry.execute_tool("execute_refund", {"order_id": "ORD-1029"}, company_id, user_confirmed=False)
+            if not target_order:
+                return ChatResponse(
+                    message="Please provide the order number or transaction ID for the purchase you would like to refund.",
+                    reasoning_steps=reasoning_steps,
+                    session_id=request.session_id or "sess_live"
+                )
+            tool_res = ToolRegistry.execute_tool("execute_refund", {"order_id": target_order}, company_id, user_confirmed=False)
             if tool_res.requires_confirmation:
                 return ChatResponse(
-                    message=tool_res.confirmation_prompt or "Confirmation required before proceeding with refund.",
+                    message=tool_res.confirmation_prompt or f"Confirmation required before processing refund for order {target_order}.",
                     reasoning_steps=reasoning_steps,
                     requires_confirmation=True,
                     confirmation_action="execute_refund",

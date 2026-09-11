@@ -25,8 +25,8 @@ class LLMProvider:
         target_model = model or settings.DEFAULT_LLM_MODEL
         custom_url = settings.CUSTOM_LLM_API_URL
 
-        # 1. Dispatch to Custom In-House Product API if configured
-        if custom_url:
+        # 1. Dispatch to Custom In-House Product API if configured with API key
+        if custom_url and settings.CUSTOM_LLM_API_KEY:
             try:
                 headers = {"Content-Type": "application/json"}
                 if settings.CUSTOM_LLM_API_KEY:
@@ -58,8 +58,21 @@ class LLMProvider:
                 # Log error and fallback gracefully to deterministic generation
                 print(f"[Custom LLM API Error] {e}")
 
-        # 2. Local fallback / Deterministic generation
-        return f"Response to '{prompt}' using {target_model} with temperature {temperature}"
+        # 2. Local Grounded Extraction (when external API is not configured or offline)
+        if system_instruction and "Verified Knowledge Context:" in system_instruction:
+            context_body = system_instruction.split("Verified Knowledge Context:")[1].strip()
+            cleaned_snippets = []
+            for line in context_body.split("\n"):
+                line = line.strip()
+                if not line:
+                    continue
+                if line.startswith("Source (") and "): " in line:
+                    line = line.split("): ", 1)[1].strip()
+                cleaned_snippets.append(line)
+            if cleaned_snippets:
+                return f"Based on verified documentation: {' '.join(cleaned_snippets[:3])}"
+
+        return f"Regarding your inquiry about '{prompt}', our team is available to assist."
 
     @classmethod
     async def stream_chat_completion(

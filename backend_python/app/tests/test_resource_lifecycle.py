@@ -6,8 +6,16 @@ from app.db.database import db
 
 client = TestClient(app)
 
-AUTH_HEADER_TENANT_A = {"X-Company-ID": "comp-techflow", "X-User-Role": "owner"}
-AUTH_HEADER_TENANT_B = {"X-Company-ID": "comp-apex-health", "X-User-Role": "owner"}
+from app.core.security import create_jwt_token
+
+AUTH_HEADER_TENANT_A = {
+    "Authorization": f"Bearer {create_jwt_token('usr-alex', 'comp-techflow', 'owner')}",
+    "X-Company-ID": "comp-techflow"
+}
+AUTH_HEADER_TENANT_B = {
+    "Authorization": f"Bearer {create_jwt_token('usr-sarah', 'comp-apex-health', 'owner')}",
+    "X-Company-ID": "comp-apex-health"
+}
 
 
 def test_assistant_lifecycle():

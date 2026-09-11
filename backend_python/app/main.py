@@ -105,9 +105,11 @@ app.include_router(admin_router, prefix="/api/v1")
 app.include_router(developer_router, prefix="/api/v1")
 
 # ----------------- Core Health and Readiness Probes -----------------
+# ----------------- Core Health and Readiness Probes -----------------
 @app.get("/health", response_model=HealthResponse)
 @app.get("/api/v1/health")
 async def health_check():
+    from app.db.database import db
     return HealthResponse(
         status="healthy",
         service="CoarAI Python Enterprise & AI Specialized Runtime",
@@ -117,17 +119,52 @@ async def health_check():
     )
 
 @app.get("/ready", response_model=ReadinessResponse)
+@app.get("/api/v1/ready")
 async def readiness_check():
+    from app.db.database import db
+    checks = {}
+    
+    # 1. Database Store check
+    try:
+        checks["database_connected"] = isinstance(db.companies, dict) and isinstance(db.document_chunks, dict)
+    except Exception:
+        checks["database_connected"] = False
+
+    # 2. Embedding Pipeline check
+    try:
+        emb_res = EmbeddingService.generate_embeddings(EmbeddingRequest(texts=["ready_probe"]))
+        checks["embedding_pipeline"] = bool(emb_res.success and emb_res.embeddings)
+    except Exception:
+        checks["embedding_pipeline"] = False
+
+    # 3. Reranker Engine check
+    try:
+        checks["reranker_engine"] = hasattr(RerankingService, "rerank_candidates")
+    except Exception:
+        checks["reranker_engine"] = False
+
+    # 4. Document AI Processor check
+    try:
+        checks["document_ai"] = hasattr(DocumentAIService, "process_document")
+    except Exception:
+        checks["document_ai"] = False
+
+    # 5. RAG Evaluator check
+    try:
+        checks["rag_evaluator"] = hasattr(EvaluationService, "evaluate_rag_response")
+    except Exception:
+        checks["rag_evaluator"] = False
+
+    # 6. NLP Intent Classifier check
+    try:
+        checks["nlp_classifier"] = hasattr(ClassificationService, "classify_text")
+    except Exception:
+        checks["nlp_classifier"] = False
+
+    all_ready = all(checks.values())
     return ReadinessResponse(
-        ready=True,
-        checks={
-            "database_connected": True,
-            "embedding_pipeline": True,
-            "reranker_engine": True,
-            "document_ai": True,
-            "rag_evaluator": True,
-            "nlp_classifier": True
-        }
+        ready=all_ready,
+        checks=checks
     )
 
 # ----------------- Specialized AI Endpoints -----------------

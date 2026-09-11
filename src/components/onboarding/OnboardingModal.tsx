@@ -14,6 +14,8 @@ import { useApp } from '../../context';
 import { AgentTone } from '../../types';
 import confetti from 'canvas-confetti';
 
+import { APIClient } from '../../api/apiClient';
+
 interface OnboardingModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -42,16 +44,25 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({ isOpen, onClos
     { id: 'direct', label: 'Direct', desc: 'Short, precise answers with zero fluff.' }
   ];
 
-  const handleSimulateTest = () => {
+  const handleSimulateTest = async () => {
+    if (!testQuestion.trim()) return;
     setIsTesting(true);
-    setTimeout(() => {
+    try {
+      const res: any = await APIClient.sendChatMessage(testQuestion, { isTestMode: true });
+      if (res && (res.message || res.answer)) {
+        setTestAnswer(res.message || res.answer);
+      } else {
+        setTestAnswer(`Hello! We are ready to assist you. Ask any question about ${businessName || 'our services'}.`);
+      }
+    } catch {
+      setTestAnswer(`Hello! Welcome to ${businessName || 'our company'}. How can we assist you today?`);
+    } finally {
       setIsTesting(false);
-      setTestAnswer(`Hello! We offer Starter, Growth, Business, and Enterprise plans tailored to your team size. All plans include 24/7 AI Q&A assistance, custom branding, and 99.9% uptime SLA.`);
-    }, 600);
+    }
   };
 
   const handleComplete = () => {
-    const finalName = 'Coar AI';
+    const finalName = `${businessName || 'Coar AI'} Assistant`;
     const finalDomain = websiteUrl.trim() || `${(businessName || 'acme').toLowerCase().replace(/[^a-z0-9]/g, '')}.com`;
 
     createCompanyWorkspace(

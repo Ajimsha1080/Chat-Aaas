@@ -462,6 +462,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }));
 
     setCurrentCompanyId(newId);
+    
+    // Real backend workspace persistence
+    APIClient.createCompany({ name, domain, industry, planId, agentName: newCompany.agent.name, tone })
+      .then((res: any) => {
+        if (res && res.company) {
+          const syncedComp = normalizeCompany(res.company);
+          setCompanies(prev => prev.map(c => c.id === newId ? syncedComp : c));
+        }
+      })
+      .catch(err => console.info('[Workspace Sync] Backend workspace creation notice:', err.message));
+
     addAuditLog('WORKSPACE_CREATED', `Created new company workspace: "${name}" with 1 AI assistant`);
     showToast('Company Workspace Ready', `Tenant "${name}" successfully deployed.`, 'success');
     return newId;

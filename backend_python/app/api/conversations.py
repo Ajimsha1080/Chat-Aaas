@@ -76,7 +76,7 @@ async def send_message(req: SendMessageRequest, ctx: TenantContext = Depends(get
     db.messages[user_msg_id] = user_msg
 
     # 2. Process through Agent Runtime
-    chunks = db.get_document_chunks_for_tenant(company_id)
+    chunks = db.get_document_chunks_for_tenant(company_id, only_active=True)
     agent = db.get_agent_for_company(company_id) or {}
     chat_req = ChatRequest(message=req.text, session_id=conv_id)
     runtime_res = await AgentRuntime.process_message(chat_req, company_id, agent, chunks)

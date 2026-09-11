@@ -30,9 +30,8 @@ async def process_chat_message(
     client_key = f"{company_id}_{req.conversation_id or req.session_id or 'anon'}"
     RateLimiter.check_rate_limit(client_key, max_requests=20)
 
-    stored_chunks = [c for c in db.document_chunks.values() if c.get("companyId") == company_id]
+    stored_chunks = db.get_document_chunks_for_tenant(company_id, only_active=True)
     agent = db.get_agent_for_company(company_id) or {"name": "Coar AI", "model": "gpt-4o-mini"}
-
 
     response = await AgentRuntime.process_message(
         request=req,
@@ -61,9 +60,8 @@ async def stream_chat_tokens(
     client_key = f"{company_id}_{req.conversation_id or req.session_id or 'anon'}"
     RateLimiter.check_rate_limit(client_key, max_requests=20)
 
-    stored_chunks = [c for c in db.document_chunks.values() if c.get("companyId") == company_id]
+    stored_chunks = db.get_document_chunks_for_tenant(company_id, only_active=True)
     agent = db.get_agent_for_company(company_id) or {"name": "Coar AI", "model": "gpt-4o-mini"}
-
 
     response = await AgentRuntime.process_message(
         request=req,

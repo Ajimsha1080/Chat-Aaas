@@ -288,7 +288,7 @@ def ingest_file_document(req: IngestFileRequest, ctx: TenantContext = Depends(ge
     new_source = {
         "id": src_id,
         "companyId": ctx.company_id,
-        "collectionId": req.collectionId or "col-tf-1",
+        "collectionId": req.collectionId or f"col-{ctx.company_id}-default",
         "title": req.title,
         "sourceType": "file",
         "fileName": req.fileName or req.title,
@@ -336,9 +336,12 @@ def ingest_file_document(req: IngestFileRequest, ctx: TenantContext = Depends(ge
         "data": {
             "success": True,
             "sourceId": src_id,
+            "source": new_source,
             "documentTitle": req.title,
             "fileName": req.fileName,
             "chunksCreated": len(created_chunk_ids),
+            "chunkCount": len(created_chunk_ids),
+            "chunksCount": len(created_chunk_ids),
             "totalTokens": res.total_tokens,
             "status": "indexed",
             "message": f"Successfully parsed and indexed {len(created_chunk_ids)} semantic chunks for '{req.title}'."
@@ -390,7 +393,7 @@ async def upload_real_file_document(
     new_source = {
         "id": src_id,
         "companyId": ctx.company_id,
-        "collectionId": collectionId or "col-tf-1",
+        "collectionId": collectionId or f"col-{ctx.company_id}-default",
         "title": clean_title,
         "sourceType": "file",
         "fileName": filename,
@@ -485,7 +488,7 @@ async def crawl_and_ingest_website(req: IngestWebsiteRequest, ctx: TenantContext
     new_source = {
         "id": src_id,
         "companyId": ctx.company_id,
-        "collectionId": req.collectionId or "col-tf-1",
+        "collectionId": req.collectionId or f"col-{ctx.company_id}-default",
         "title": title,
         "sourceType": "website",
         "sourceUrl": req.url,
@@ -561,7 +564,7 @@ def create_faq_knowledge(req: IngestFaqRequest, ctx: TenantContext = Depends(get
     new_source = {
         "id": src_id,
         "companyId": ctx.company_id,
-        "collectionId": req.collectionId or "col-tf-1",
+        "collectionId": req.collectionId or f"col-{ctx.company_id}-default",
         "title": req.question,
         "sourceType": "faq",
         "category": req.category or "FAQ",

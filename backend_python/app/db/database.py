@@ -1,6 +1,7 @@
 import time
 from typing import Dict, Any, List, Optional
 from app.core.security import hash_password
+from app.core.config import settings
 
 class DatabaseStore:
     def __init__(self):
@@ -26,9 +27,36 @@ class DatabaseStore:
         self.api_keys: Dict[str, Dict[str, Any]] = {}
         self.webhooks: Dict[str, Dict[str, Any]] = {}
         self.deployments: Dict[str, Dict[str, Any]] = {}
-        self._seed_initial_data()
+        
+        if settings.SEED_DEMO_DATA:
+            self.seed_demo_data()
 
-    def _seed_initial_data(self):
+    def clear(self):
+        """Clears all in-memory database records for fresh tenant and testing initialization."""
+        self.users.clear()
+        self.companies.clear()
+        self.memberships.clear()
+        self.agents.clear()
+        self.agent_versions.clear()
+        self.knowledge_collections.clear()
+        self.knowledge_sources.clear()
+        self.document_chunks.clear()
+        self.knowledge_gaps.clear()
+        self.knowledge_feedback.clear()
+        self.knowledge_jobs.clear()
+        self.integrations.clear()
+        self.agent_tools.clear()
+        self.conversations.clear()
+        self.messages.clear()
+        self.usage_events.clear()
+        self.subscriptions.clear()
+        self.invoices.clear()
+        self.audit_logs.clear()
+        self.api_keys.clear()
+        self.webhooks.clear()
+        self.deployments.clear()
+
+    def seed_demo_data(self):
         # 1. TechFlow Cloud Tenant (Tenant A)
         self.companies["comp-techflow"] = {
             "id": "comp-techflow",
@@ -492,5 +520,22 @@ class DatabaseStore:
                 return a
         return None
 
+    def get_published_version_for_company(self, company_id: str) -> Optional[Dict[str, Any]]:
+        agent = self.get_agent_for_company(company_id)
+        if not agent:
+            return None
+        active_ver_id = agent.get("activeVersionId")
+        if active_ver_id and active_ver_id in self.agent_versions:
+            return self.agent_versions[active_ver_id]
+        pub_vers = [v for v in self.agent_versions.values() if v.get("companyId") == company_id and v.get("status") == "published"]
+        if pub_vers:
+            pub_vers.sort(key=lambda v: v.get("versionNumber", 1), reverse=True)
+            return pub_vers[0]
+        return None
+
+    def get_deployment_by_id(self, deployment_id: str) -> Optional[Dict[str, Any]]:
+        return self.deployments.get(deployment_id)
+
 db = DatabaseStore()
+
 

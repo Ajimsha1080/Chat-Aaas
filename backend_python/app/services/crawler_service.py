@@ -105,15 +105,9 @@ class CrawlerService:
                     "textLength": len(cleaned_text)
                 }
         except Exception as e:
-            # Fallback for offline or local simulated URLs
-            parsed = urlparse(url)
-            domain_name = parsed.netloc or url
             return {
-                "success": True,
-                "title": f"Synced Content from {domain_name}",
-                "content": f"Verified online documentation, business terms, and product policies extracted from {url}.",
-                "url": url,
-                "rawLength": 500,
-                "textLength": 200
+                "success": False,
+                "error": f"Failed to fetch content from {url}: {str(e)}",
+                "url": url
             }
 

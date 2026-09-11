@@ -135,7 +135,9 @@ def update_current_company(req: UpdateCompanyRequest, ctx: TenantContext = Depen
     return update_company_by_id(ctx.company_id, req)
 
 @router.get("/{company_id}")
-def get_company_by_id(company_id: str):
+def get_company_by_id(company_id: str, ctx: TenantContext = Depends(get_tenant_context)):
+    if ctx.role not in ["super_admin", "platform_super_admin"] and ctx.company_id != company_id:
+        raise HTTPException(status_code=403, detail="Forbidden: You do not have permission to access another company workspace.")
     comp = db.companies.get(company_id)
     if not comp:
         raise HTTPException(status_code=404, detail="Company not found")
@@ -146,7 +148,9 @@ def get_company_by_id(company_id: str):
     return {"status": 200, "data": {"company": c}}
 
 @router.put("/{company_id}")
-def update_company_by_id(company_id: str, req: UpdateCompanyRequest):
+def update_company_by_id(company_id: str, req: UpdateCompanyRequest, ctx: TenantContext = Depends(get_tenant_context)):
+    if ctx.role not in ["super_admin", "platform_super_admin"] and ctx.company_id != company_id:
+        raise HTTPException(status_code=403, detail="Forbidden: You do not have permission to modify another company workspace.")
     comp = db.companies.get(company_id)
     if not comp:
         raise HTTPException(status_code=404, detail="Company not found")
