@@ -25,7 +25,9 @@ import {
   AgentConfig,
   WidgetCustomization,
   AgentTone,
-  ToastNotification
+  ToastNotification,
+  DeploymentItem,
+  ApiKeyMetadata
 } from '../types';
 import { 
   INITIAL_COMPANIES, 
@@ -40,13 +42,15 @@ import {
   INITIAL_ANALYTICS,
   INITIAL_AGENT_VERSIONS,
   INITIAL_WEBHOOKS,
+  INITIAL_DEPLOYMENTS,
+  INITIAL_API_KEYS,
   INITIAL_API_LOGS,
   INITIAL_SYSTEM_HEALTH,
   INITIAL_SECURITY_EVENTS
 } from '../data/mockData';
 import { AIAgentEngine } from '../services/aiEngine';
 import { APIClient } from '../api/apiClient';
-import { AppContext, normalizeCompany, normalizeConversation } from './AppContextDefinition';
+import { AppContext, normalizeCompany, normalizeConversation, normalizeKnowledgeItem } from './AppContextDefinition';
 
 const LOCAL_STORAGE_KEY = 'coarai_platform_state_v6';
 
@@ -91,7 +95,22 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const [knowledgeMap, setKnowledgeMap] = useState<Record<string, KnowledgeItem[]>>(() => {
     const saved = localStorage.getItem(`${LOCAL_STORAGE_KEY}_knowledge`);
-    return saved ? JSON.parse(saved) : INITIAL_KNOWLEDGE;
+    const rawMap: Record<string, any[]> = saved ? JSON.parse(saved) : INITIAL_KNOWLEDGE;
+    const result: Record<string, KnowledgeItem[]> = {};
+    for (const [key, val] of Object.entries(rawMap)) {
+      result[key] = (val || []).map(normalizeKnowledgeItem);
+    }
+    return result;
+  });
+
+  const [deploymentsMap, setDeploymentsMap] = useState<Record<string, DeploymentItem[]>>(() => {
+    const saved = localStorage.getItem(`${LOCAL_STORAGE_KEY}_deployments`);
+    return saved ? JSON.parse(saved) : INITIAL_DEPLOYMENTS;
+  });
+
+  const [apiKeysMap, setApiKeysMap] = useState<Record<string, ApiKeyMetadata[]>>(() => {
+    const saved = localStorage.getItem(`${LOCAL_STORAGE_KEY}_apikeys`);
+    return saved ? JSON.parse(saved) : INITIAL_API_KEYS;
   });
 
   const [integrationsMap, setIntegrationsMap] = useState<Record<string, Integration[]>>(() => {
@@ -202,6 +221,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             fileSize: s.fileSizeBytes ? `${(s.fileSizeBytes / 1024).toFixed(1)} KB` : '120 KB',
             content: s.content || '',
             status: s.status === 'ready' ? 'indexed' : (s.status || 'indexed'),
+            lifecycleState: s.lifecycleState || 'active',
+            processingStage: s.processingStage || 'indexed',
+            deletedAt: s.deletedAt,
+            retentionDays: s.retentionDays || 30,
+            lastIndexedAt: s.lastIndexedAt,
             chunksCount: s.chunkCount || 1,
             tokenCount: s.totalTokens || 150,
             lastUpdated: s.createdAt || new Date().toISOString()
@@ -213,6 +237,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         const tRes = await APIClient.getTools();
         if (tRes && tRes.tools) {
           setActionsMap(prev => ({ ...prev, [currentCompanyId]: tRes.tools }));
+        }
+
+        // Fetch Live Deployments
+        const dRes = await APIClient.getDeployments();
+        if (dRes && dRes.deployments) {
+          setDeploymentsMap(prev => ({ ...prev, [currentCompanyId]: dRes.deployments }));
+        }
+
+        // Fetch Live API Keys
+        const akRes = await APIClient.getApiKeys();
+        if (akRes && akRes.apiKeys) {
+          setApiKeysMap(prev => ({ ...prev, [currentCompanyId]: akRes.apiKeys }));
         }
 
         // Fetch Live Agent Versions
@@ -269,6 +305,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       localStorage.setItem(`${LOCAL_STORAGE_KEY}_companies`, JSON.stringify(companies));
       localStorage.setItem(`${LOCAL_STORAGE_KEY}_plans`, JSON.stringify(allPlans));
       localStorage.setItem(`${LOCAL_STORAGE_KEY}_knowledge`, JSON.stringify(knowledgeMap));
+      localStorage.setItem(`${LOCAL_STORAGE_KEY}_deployments`, JSON.stringify(deploymentsMap));
+      localStorage.setItem(`${LOCAL_STORAGE_KEY}_apikeys`, JSON.stringify(apiKeysMap));
       localStorage.setItem(`${LOCAL_STORAGE_KEY}_integrations`, JSON.stringify(integrationsMap));
       localStorage.setItem(`${LOCAL_STORAGE_KEY}_actions`, JSON.stringify(actionsMap));
       localStorage.setItem(`${LOCAL_STORAGE_KEY}_conversations`, JSON.stringify(conversationsMap));
@@ -278,13 +316,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     } catch (e) {
       console.warn('LocalStorage save failed:', e);
     }
-  }, [companies, allPlans, knowledgeMap, integrationsMap, actionsMap, conversationsMap, auditLogs, versionsMap, webhooksMap]);
+  }, [companies, allPlans, knowledgeMap, deploymentsMap, apiKeysMap, integrationsMap, actionsMap, conversationsMap, auditLogs, versionsMap, webhooksMap]);
 
   // Derived current tenant data
   const rawCompany = companies.find(c => c.id === currentCompanyId) || companies[0];
   const currentCompany = normalizeCompany(rawCompany);
   const currentPlan = allPlans.find(p => p.id === currentCompany.planId) || allPlans[1];
   const knowledgeItems = knowledgeMap[currentCompanyId] || [];
+  const deployments = deploymentsMap[currentCompanyId] || [];
+  const apiKeys = apiKeysMap[currentCompanyId] || [];
   const integrations = integrationsMap[currentCompanyId] || [];
   const actions = actionsMap[currentCompanyId] || [];
   const conversations = conversationsMap[currentCompanyId] || [];
@@ -509,6 +549,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     // Real-time backend publish
     APIClient.publishDraft(description).catch(e => console.info('Backend publish error:', e));
 
+    updateAgentConfig({
+      lifecycleStatus: 'published',
+      publishedVersionNumber: nextVerNum,
+      draftVersionNumber: nextVerNum + 1,
+      lastPublishedAt: new Date().toISOString(),
+      status: 'active'
+    });
+
     addAuditLog('AGENT_VERSION_PUBLISHED', `Published immutable AI Employee version v${nextVerNum}: "${description}"`);
     showToast('Version Published', `v${nextVerNum} is now live in production.`, 'success');
   };
@@ -533,6 +581,61 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     publishAgentVersion(`Rollback to v${target.version} (${target.description})`);
     addAuditLog('AGENT_VERSION_ROLLBACK', `Rolled back AI Assistant to version v${target.version}`, 'warning');
     showToast('Rollback Complete', `Restored AI Assistant snapshot from v${target.version}.`, 'info');
+  };
+
+  const unpublishAgent = async () => {
+    try {
+      await APIClient.unpublishAgent();
+    } catch (e) {
+      console.info('Backend unpublish error:', e);
+    }
+    updateAgentConfig({ lifecycleStatus: 'draft' });
+    addAuditLog('AGENT_UNPUBLISHED', 'Assistant unpublished and reverted to Draft mode');
+    showToast('Assistant Unpublished', 'Assistant is now in Draft mode and will not answer live deployment requests.', 'info');
+  };
+
+  const disableAgent = async () => {
+    try {
+      await APIClient.disableAgent();
+    } catch (e) {
+      console.info('Backend disable error:', e);
+    }
+    updateAgentConfig({ lifecycleStatus: 'disabled', status: 'paused' });
+    addAuditLog('AGENT_DISABLED', 'Assistant disabled across all channels', 'warning');
+    showToast('Assistant Disabled', 'Assistant has been paused across all active deployments.', 'warning');
+  };
+
+  const enableAgent = async () => {
+    try {
+      await APIClient.enableAgent();
+    } catch (e) {
+      console.info('Backend enable error:', e);
+    }
+    updateAgentConfig({ lifecycleStatus: 'published', status: 'active' });
+    addAuditLog('AGENT_ENABLED', 'Assistant re-enabled for live traffic');
+    showToast('Assistant Live', 'Assistant is actively serving user queries.', 'success');
+  };
+
+  const archiveAgent = async () => {
+    try {
+      await APIClient.archiveAgent();
+    } catch (e) {
+      console.info('Backend archive error:', e);
+    }
+    updateAgentConfig({ lifecycleStatus: 'archived', status: 'paused' });
+    addAuditLog('AGENT_ARCHIVED', 'Assistant moved to archived state', 'warning');
+    showToast('Assistant Archived', 'Assistant moved to read-only archive state.', 'info');
+  };
+
+  const deleteAgent = async () => {
+    try {
+      await APIClient.deleteAgent();
+    } catch (e) {
+      console.info('Backend delete agent error:', e);
+    }
+    updateAgentConfig({ lifecycleStatus: 'deleted', status: 'paused' });
+    addAuditLog('AGENT_DELETED', 'Assistant completely removed and purged', 'critical');
+    showToast('Assistant Deleted', 'Assistant configuration and runtime state have been purged.', 'error');
   };
 
   // Webhook Actions
@@ -565,6 +668,158 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }));
     addAuditLog('WEBHOOK_DELETED', `Deleted webhook endpoint ID: ${id}`);
     showToast('Webhook Removed', 'Webhook deleted successfully.', 'info');
+  };
+
+  const toggleWebhook = async (id: string) => {
+    try {
+      const res = await APIClient.toggleWebhook(id);
+      if (res && res.webhook) {
+        setWebhooksMap(prev => ({
+          ...prev,
+          [currentCompanyId]: (prev[currentCompanyId] || []).map(w => w.id === id ? { ...w, ...res.webhook } : w)
+        }));
+      }
+    } catch (err) {
+      console.info('Backend toggle webhook error:', err);
+      setWebhooksMap(prev => ({
+        ...prev,
+        [currentCompanyId]: (prev[currentCompanyId] || []).map(w =>
+          w.id === id ? { ...w, status: w.status === 'active' ? 'disabled' : 'active' } : w
+        )
+      }));
+    }
+    addAuditLog('WEBHOOK_TOGGLED', `Toggled webhook status for: ${id}`);
+    showToast('Webhook Updated', 'Webhook status changed.', 'info');
+  };
+
+  // API Keys Management
+  const createApiKey = async (name: string, scopes: string[] = ['chat:read', 'chat:write']): Promise<{ rawSecret: string } | null> => {
+    try {
+      const res = await APIClient.createApiKey(name, scopes);
+      if (res && res.apiKey) {
+        setApiKeysMap(prev => ({
+          ...prev,
+          [currentCompanyId]: [res.apiKey, ...(prev[currentCompanyId] || [])]
+        }));
+        addAuditLog('API_KEY_CREATED', `Generated API key: ${name}`);
+        showToast('API Key Generated', 'Store your secret key safely now. It cannot be retrieved again.', 'warning');
+        return { rawSecret: res.rawSecret };
+      }
+    } catch (err) {
+      console.info('Backend create api key error:', err);
+    }
+    return null;
+  };
+
+  const rotateApiKey = async (id: string): Promise<{ rawSecret: string } | null> => {
+    try {
+      const res = await APIClient.rotateApiKey(id);
+      if (res && res.apiKey) {
+        setApiKeysMap(prev => ({
+          ...prev,
+          [currentCompanyId]: (prev[currentCompanyId] || []).map(k => k.id === id ? res.apiKey : k)
+        }));
+        addAuditLog('API_KEY_ROTATED', `Rotated secret for key: ${id}`, 'warning');
+        showToast('Key Rotated', 'Old secret revoked; new secret generated.', 'warning');
+        return { rawSecret: res.rawSecret };
+      }
+    } catch (err) {
+      console.info('Backend rotate api key error:', err);
+    }
+    return null;
+  };
+
+  const revokeApiKey = async (id: string) => {
+    try {
+      await APIClient.revokeApiKey(id);
+    } catch (err) {
+      console.info('Backend revoke api key error:', err);
+    }
+    setApiKeysMap(prev => ({
+      ...prev,
+      [currentCompanyId]: (prev[currentCompanyId] || []).map(k =>
+        k.id === id ? { ...k, status: 'revoked', revokedAt: new Date().toISOString() } : k
+      )
+    }));
+    addAuditLog('API_KEY_REVOKED', `Revoked API key immediately: ${id}`, 'critical');
+    showToast('API Key Revoked', 'Requests using this key will be rejected immediately.', 'error');
+  };
+
+  // Deployment Channels Management
+  const createDeployment = async (name: string, channel: DeploymentItem['channel'], domain?: string) => {
+    try {
+      const res = await APIClient.createDeployment({ name, channel, domain });
+      if (res && res.deployment) {
+        setDeploymentsMap(prev => ({
+          ...prev,
+          [currentCompanyId]: [res.deployment, ...(prev[currentCompanyId] || [])]
+        }));
+      }
+    } catch (err) {
+      console.info('Backend create deployment fallback:', err);
+      const newDep: DeploymentItem = {
+        id: genId('dep'),
+        companyId: currentCompanyId,
+        name,
+        channel,
+        status: 'active',
+        assistantVersion: currentCompany.agent.publishedVersionNumber ? `v${currentCompany.agent.publishedVersionNumber}` : 'v1',
+        domain,
+        createdAt: new Date().toISOString()
+      };
+      setDeploymentsMap(prev => ({
+        ...prev,
+        [currentCompanyId]: [newDep, ...(prev[currentCompanyId] || [])]
+      }));
+    }
+    addAuditLog('DEPLOYMENT_CREATED', `Created new deployment channel: ${name} (${channel})`);
+    showToast('Deployment Created', `Channel "${name}" is live and active.`, 'success');
+  };
+
+  const disableDeployment = async (id: string) => {
+    try {
+      await APIClient.disableDeployment(id);
+    } catch (err) {
+      console.info('Backend disable deployment error:', err);
+    }
+    setDeploymentsMap(prev => ({
+      ...prev,
+      [currentCompanyId]: (prev[currentCompanyId] || []).map(d =>
+        d.id === id ? { ...d, status: 'disabled' } : d
+      )
+    }));
+    addAuditLog('DEPLOYMENT_DISABLED', `Disabled deployment channel: ${id}`, 'warning');
+    showToast('Deployment Disabled', 'Channel stopped serving queries without affecting the assistant.', 'warning');
+  };
+
+  const enableDeployment = async (id: string) => {
+    try {
+      await APIClient.enableDeployment(id);
+    } catch (err) {
+      console.info('Backend enable deployment error:', err);
+    }
+    setDeploymentsMap(prev => ({
+      ...prev,
+      [currentCompanyId]: (prev[currentCompanyId] || []).map(d =>
+        d.id === id ? { ...d, status: 'active' } : d
+      )
+    }));
+    addAuditLog('DEPLOYMENT_ENABLED', `Re-enabled deployment channel: ${id}`);
+    showToast('Deployment Active', 'Channel is now actively routing requests.', 'success');
+  };
+
+  const removeDeployment = async (id: string) => {
+    try {
+      await APIClient.removeDeployment(id);
+    } catch (err) {
+      console.info('Backend delete deployment error:', err);
+    }
+    setDeploymentsMap(prev => ({
+      ...prev,
+      [currentCompanyId]: (prev[currentCompanyId] || []).filter(d => d.id !== id)
+    }));
+    addAuditLog('DEPLOYMENT_REMOVED', `Removed deployment: ${id}`, 'critical');
+    showToast('Deployment Removed', 'Deployment channel was removed cleanly.', 'info');
   };
 
   const triggerTestWebhook = async (id: string): Promise<boolean> => {
@@ -665,6 +920,118 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     APIClient.deleteKnowledgeSource(id).catch(e => console.info('Backend knowledge delete error:', e));
     addAuditLog('KNOWLEDGE_DELETED', `Removed knowledge item ID: ${id}`);
     showToast('Knowledge Removed', 'Item deleted from index.', 'info');
+  };
+
+  const trashKnowledgeItem = async (id: string) => {
+    try {
+      await APIClient.trashKnowledgeSource(id);
+    } catch (err) {
+      console.info('Backend trash error:', err);
+    }
+    setKnowledgeMap(prev => ({
+      ...prev,
+      [currentCompanyId]: (prev[currentCompanyId] || []).map(k =>
+        k.id === id ? { ...k, lifecycleState: 'trash', deletedAt: new Date().toISOString() } : k
+      )
+    }));
+    addAuditLog('KNOWLEDGE_TRASHED', `Moved knowledge item to trash (30-day retention): ${id}`);
+    showToast('Moved to Trash', 'Knowledge item moved to Trash with 30-day retention.', 'info');
+  };
+
+  const restoreKnowledgeItem = async (id: string) => {
+    try {
+      await APIClient.restoreKnowledgeSource(id);
+    } catch (err) {
+      console.info('Backend restore error:', err);
+    }
+    setKnowledgeMap(prev => ({
+      ...prev,
+      [currentCompanyId]: (prev[currentCompanyId] || []).map(k =>
+        k.id === id ? { ...k, lifecycleState: 'active', deletedAt: undefined } : k
+      )
+    }));
+    addAuditLog('KNOWLEDGE_RESTORED', `Restored knowledge item from trash: ${id}`);
+    showToast('Restored', 'Knowledge item restored and re-enabled for RAG.', 'success');
+  };
+
+  const disableKnowledgeItem = async (id: string) => {
+    try {
+      await APIClient.disableKnowledgeSource(id);
+    } catch (err) {
+      console.info('Backend disable error:', err);
+    }
+    setKnowledgeMap(prev => ({
+      ...prev,
+      [currentCompanyId]: (prev[currentCompanyId] || []).map(k =>
+        k.id === id ? { ...k, lifecycleState: 'disabled' } : k
+      )
+    }));
+    addAuditLog('KNOWLEDGE_DISABLED', `Disabled knowledge item (excluded from RAG): ${id}`);
+    showToast('Source Disabled', 'Excluded from RAG grounding without deleting data.', 'warning');
+  };
+
+  const enableKnowledgeItem = async (id: string) => {
+    try {
+      await APIClient.enableKnowledgeSource(id);
+    } catch (err) {
+      console.info('Backend enable error:', err);
+    }
+    setKnowledgeMap(prev => ({
+      ...prev,
+      [currentCompanyId]: (prev[currentCompanyId] || []).map(k =>
+        k.id === id ? { ...k, lifecycleState: 'active' } : k
+      )
+    }));
+    addAuditLog('KNOWLEDGE_ENABLED', `Re-enabled knowledge item for RAG: ${id}`);
+    showToast('Source Enabled', 'Knowledge item is active and ready for AI retrieval.', 'success');
+  };
+
+  const reprocessKnowledgeItem = async (id: string) => {
+    setKnowledgeMap(prev => ({
+      ...prev,
+      [currentCompanyId]: (prev[currentCompanyId] || []).map(k =>
+        k.id === id ? { ...k, processingStage: 'uploaded', status: 'indexing' } : k
+      )
+    }));
+    try {
+      await APIClient.reprocessKnowledgeSource(id);
+    } catch (err) {
+      console.info('Backend reprocess error:', err);
+    }
+    setKnowledgeMap(prev => ({
+      ...prev,
+      [currentCompanyId]: (prev[currentCompanyId] || []).map(k =>
+        k.id === id ? { ...k, processingStage: 'indexed', status: 'indexed', lastIndexedAt: new Date().toISOString() } : k
+      )
+    }));
+    addAuditLog('KNOWLEDGE_REPROCESSED', `Reprocessed and re-indexed knowledge item: ${id}`);
+    showToast('Reprocessed', 'Knowledge item was re-parsed, re-chunked, and re-indexed into vector storage.', 'success');
+  };
+
+  const permanentDeleteKnowledgeItem = async (id: string) => {
+    try {
+      await APIClient.permanentDeleteKnowledgeSource(id);
+    } catch (err) {
+      console.info('Backend permanent delete error:', err);
+    }
+    setKnowledgeMap(prev => ({
+      ...prev,
+      [currentCompanyId]: (prev[currentCompanyId] || []).filter(k => k.id !== id)
+    }));
+    addAuditLog('KNOWLEDGE_PURGED', `Permanently purged knowledge item, embeddings, chunks, and metadata: ${id}`, 'critical');
+    showToast('Permanently Deleted', 'Source and all vector embeddings permanently purged.', 'error');
+  };
+
+  const bulkTrashKnowledge = async (ids: string[]) => {
+    for (const id of ids) {
+      await trashKnowledgeItem(id);
+    }
+  };
+
+  const bulkDisableKnowledge = async (ids: string[]) => {
+    for (const id of ids) {
+      await disableKnowledgeItem(id);
+    }
   };
 
   // Integrations Management
@@ -1027,6 +1394,72 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     showToast('Conversation Resolved', 'Ticket marked as successfully completed.', 'success');
   };
 
+  const archiveConversation = async (conversationId: string) => {
+    try {
+      await APIClient.archiveConversation(conversationId);
+    } catch (err) {
+      console.info('Backend archive conversation error:', err);
+    }
+    setConversationsMap(prev => ({
+      ...prev,
+      [currentCompanyId]: (prev[currentCompanyId] || []).map(c =>
+        c.id === conversationId ? { ...c, status: 'archived' } : c
+      )
+    }));
+    addAuditLog('CONVERSATION_ARCHIVED', `Archived conversation ID: ${conversationId}`);
+    showToast('Conversation Archived', 'Thread moved to archive.', 'info');
+  };
+
+  const deleteConversation = async (conversationId: string) => {
+    try {
+      await APIClient.deleteConversation(conversationId);
+    } catch (err) {
+      console.info('Backend delete conversation error:', err);
+    }
+    setConversationsMap(prev => ({
+      ...prev,
+      [currentCompanyId]: (prev[currentCompanyId] || []).filter(c => c.id !== conversationId)
+    }));
+    if (activeConversationId === conversationId) {
+      setActiveConversationId(null);
+    }
+    addAuditLog('CONVERSATION_DELETED', `Deleted conversation ID: ${conversationId}`, 'warning');
+    showToast('Conversation Deleted', 'Thread has been permanently removed.', 'info');
+  };
+
+  const bulkArchiveConversations = async (ids: string[]) => {
+    try {
+      await APIClient.bulkArchiveConversations(ids);
+    } catch (err) {
+      console.info('Backend bulk archive error:', err);
+    }
+    setConversationsMap(prev => ({
+      ...prev,
+      [currentCompanyId]: (prev[currentCompanyId] || []).map(c =>
+        ids.includes(c.id) ? { ...c, status: 'archived' } : c
+      )
+    }));
+    addAuditLog('CONVERSATIONS_BULK_ARCHIVED', `Archived ${ids.length} conversations`);
+    showToast('Conversations Archived', `${ids.length} threads archived.`, 'info');
+  };
+
+  const bulkDeleteConversations = async (ids: string[]) => {
+    try {
+      await APIClient.bulkDeleteConversations(ids);
+    } catch (err) {
+      console.info('Backend bulk delete error:', err);
+    }
+    setConversationsMap(prev => ({
+      ...prev,
+      [currentCompanyId]: (prev[currentCompanyId] || []).filter(c => !ids.includes(c.id))
+    }));
+    if (activeConversationId && ids.includes(activeConversationId)) {
+      setActiveConversationId(null);
+    }
+    addAuditLog('CONVERSATIONS_BULK_DELETED', `Deleted ${ids.length} conversations`, 'critical');
+    showToast('Conversations Deleted', `${ids.length} threads permanently removed.`, 'info');
+  };
+
   const startNewCustomerChatSession = (initialGreeting = true): string => {
     const newId = genId('conv');
     const newConv: Conversation = {
@@ -1142,6 +1575,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
         updateAgentConfig,
         toggleAgentStatus,
+        unpublishAgent,
+        disableAgent,
+        enableAgent,
+        archiveAgent,
+        deleteAgent,
         agentVersions,
         publishAgentVersion,
         rollbackAgentVersion,
@@ -1149,6 +1587,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         knowledgeItems,
         addKnowledgeItem,
         deleteKnowledgeItem,
+        trashKnowledgeItem,
+        restoreKnowledgeItem,
+        disableKnowledgeItem,
+        enableKnowledgeItem,
+        reprocessKnowledgeItem,
+        permanentDeleteKnowledgeItem,
+        bulkTrashKnowledge,
+        bulkDisableKnowledge,
 
         integrations,
         updateIntegration,
@@ -1158,12 +1604,22 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         updateAction,
         toggleAction,
 
+        apiKeys,
+        createApiKey,
+        rotateApiKey,
+        revokeApiKey,
         webhooks,
         createWebhook,
+        toggleWebhook,
         deleteWebhook,
         triggerTestWebhook,
         apiLogs,
 
+        deployments,
+        createDeployment,
+        disableDeployment,
+        enableDeployment,
+        removeDeployment,
         updateWidgetSettings,
         regenerateApiKey,
 
@@ -1176,6 +1632,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         takeoverConversation,
         sendOperatorMessage,
         resolveConversation,
+        archiveConversation,
+        deleteConversation,
+        bulkArchiveConversations,
+        bulkDeleteConversations,
         startNewCustomerChatSession,
 
         analytics,

@@ -69,18 +69,20 @@ def list_knowledge_sources(
     collection_id: Optional[str] = Query(None),
     source_type: Optional[str] = Query(None),
     status_filter: Optional[str] = Query(None, alias="status"),
+    lifecycle_state: Optional[str] = Query("active"),
     search: Optional[str] = Query(None),
     ctx: TenantContext = Depends(get_tenant_context)
 ):
-    """Lists knowledge sources with multi-tenant filtering, search, and collection scoping."""
+    """Lists knowledge sources with multi-tenant filtering, search, collection scoping, and lifecycle state."""
     sources = db.get_knowledge_sources_for_tenant(
         company_id=ctx.company_id,
         collection_id=collection_id,
         source_type=source_type,
         status=status_filter,
-        search=search
+        search=search,
+        lifecycle_state=lifecycle_state
     )
-    chunks = db.get_document_chunks_for_tenant(ctx.company_id)
+    chunks = db.get_document_chunks_for_tenant(ctx.company_id, only_active=(lifecycle_state == "active"))
     return {
         "status": 200,
         "data": {
@@ -91,6 +93,22 @@ def list_knowledge_sources(
         }
     }
 
+@router.get("/trash")
+def list_trash_sources(ctx: TenantContext = Depends(get_tenant_context)):
+    """Lists knowledge sources currently moved to Trash with 30-day retention countdown."""
+    trash_sources = db.get_knowledge_sources_for_tenant(
+        company_id=ctx.company_id,
+        lifecycle_state="trash"
+    )
+    return {
+        "status": 200,
+        "data": {
+            "trash": trash_sources,
+            "total": len(trash_sources),
+            "retentionPolicyDays": 30
+        }
+    }
+
 @router.get("/sources/{source_id}")
 def get_knowledge_source_details(source_id: str, ctx: TenantContext = Depends(get_tenant_context)):
     """Retrieves specific knowledge source details and its parsed chunks."""
@@ -98,7 +116,7 @@ def get_knowledge_source_details(source_id: str, ctx: TenantContext = Depends(ge
     if not source or source.get("companyId") != ctx.company_id:
         raise HTTPException(status_code=404, detail="Knowledge source not found.")
     
-    source_chunks = [c for c in db.document_chunks.values() if c.get("knowledgeSourceId") == source_id and c.get("companyId") == ctx.company_id]
+    source_chunks = [c for c in db.document_chunks.values() if (c.get("knowledgeSourceId") == source_id or c.get("knowledge_source_id") == source_id) and c.get("companyId") == ctx.company_id]
     return {
         "status": 200,
         "data": {
@@ -108,9 +126,53 @@ def get_knowledge_source_details(source_id: str, ctx: TenantContext = Depends(ge
         }
     }
 
-@router.delete("/sources/{source_id}")
-def delete_knowledge_source(source_id: str, ctx: TenantContext = Depends(get_tenant_context)):
-    """Permanently removes a knowledge source and all its associated vector chunks."""
+@router.post("/sources/{source_id}/disable")
+def disable_knowledge_source(source_id: str, ctx: TenantContext = Depends(get_tenant_context)):
+    """Temporarily disables a knowledge source, immediately halting RAG retrieval without deleting data."""
+    if not has_permission(ctx.role, "knowledge:write"):
+        raise HTTPException(status_code=403, detail="Forbidden: Insufficient permissions to modify knowledge.")
+
+    source = db.knowledge_sources.get(source_id)
+    if not source or source.get("companyId") != ctx.company_id:
+        raise HTTPException(status_code=404, detail="Knowledge source not found.")
+
+    source["lifecycleState"] = "disabled"
+    source["status"] = "disabled"
+    source["updatedAt"] = time.strftime("%Y-%m-%dT%H:%M:%SZ")
+
+    return {
+        "status": 200,
+        "data": {
+            "message": f"Knowledge source '{source.get('title')}' is now disabled. It will no longer be retrieved during customer queries.",
+            "source": source
+        }
+    }
+
+@router.post("/sources/{source_id}/enable")
+def enable_knowledge_source(source_id: str, ctx: TenantContext = Depends(get_tenant_context)):
+    """Re-enables a disabled knowledge source, restoring its availability in RAG retrieval."""
+    if not has_permission(ctx.role, "knowledge:write"):
+        raise HTTPException(status_code=403, detail="Forbidden: Insufficient permissions to modify knowledge.")
+
+    source = db.knowledge_sources.get(source_id)
+    if not source or source.get("companyId") != ctx.company_id:
+        raise HTTPException(status_code=404, detail="Knowledge source not found.")
+
+    source["lifecycleState"] = "active"
+    source["status"] = "ready"
+    source["updatedAt"] = time.strftime("%Y-%m-%dT%H:%M:%SZ")
+
+    return {
+        "status": 200,
+        "data": {
+            "message": f"Knowledge source '{source.get('title')}' has been re-enabled and is active in RAG.",
+            "source": source
+        }
+    }
+
+@router.post("/sources/{source_id}/trash")
+def move_knowledge_source_to_trash(source_id: str, ctx: TenantContext = Depends(get_tenant_context)):
+    """Moves a knowledge source to Trash. Excludes it from RAG while permitting restore within 30 days."""
     if not has_permission(ctx.role, "knowledge:delete"):
         raise HTTPException(status_code=403, detail="Forbidden: Insufficient permissions to delete knowledge.")
 
@@ -118,18 +180,83 @@ def delete_knowledge_source(source_id: str, ctx: TenantContext = Depends(get_ten
     if not source or source.get("companyId") != ctx.company_id:
         raise HTTPException(status_code=404, detail="Knowledge source not found.")
 
-    # Remove source
-    del db.knowledge_sources[source_id]
-
-    # Cascade delete chunks
-    chunk_ids_to_del = [cid for cid, c in db.document_chunks.items() if c.get("knowledgeSourceId") == source_id and c.get("companyId") == ctx.company_id]
-    for cid in chunk_ids_to_del:
-        del db.document_chunks[cid]
+    source["lifecycleState"] = "trash"
+    source["status"] = "trash"
+    source["deletedAt"] = time.strftime("%Y-%m-%dT%H:%M:%SZ")
+    source["updatedAt"] = time.strftime("%Y-%m-%dT%H:%M:%SZ")
 
     return {
         "status": 200,
         "data": {
-            "message": f"Successfully deleted knowledge source '{source.get('title')}' and {len(chunk_ids_to_del)} vector chunks."
+            "message": f"Moved '{source.get('title')}' to Trash. It is immediately excluded from AI retrieval.",
+            "source": source
+        }
+    }
+
+@router.post("/sources/{source_id}/restore")
+def restore_knowledge_source_from_trash(source_id: str, ctx: TenantContext = Depends(get_tenant_context)):
+    """Restores a knowledge source from Trash back to active state and re-enables RAG indexing."""
+    if not has_permission(ctx.role, "knowledge:write"):
+        raise HTTPException(status_code=403, detail="Forbidden: Insufficient permissions to restore knowledge.")
+
+    source = db.knowledge_sources.get(source_id)
+    if not source or source.get("companyId") != ctx.company_id:
+        raise HTTPException(status_code=404, detail="Knowledge source not found.")
+
+    source["lifecycleState"] = "active"
+    source["status"] = "ready"
+    source["deletedAt"] = None
+    source["updatedAt"] = time.strftime("%Y-%m-%dT%H:%M:%SZ")
+
+    return {
+        "status": 200,
+        "data": {
+            "message": f"Restored '{source.get('title')}' from Trash. Indexed chunks are again active.",
+            "source": source
+        }
+    }
+
+@router.post("/sources/{source_id}/reprocess")
+def reprocess_knowledge_source(source_id: str, ctx: TenantContext = Depends(get_tenant_context)):
+    """Re-executes document chunking, embedding, and vector indexing for a knowledge source."""
+    if not has_permission(ctx.role, "knowledge:write"):
+        raise HTTPException(status_code=403, detail="Forbidden: Insufficient permissions to reprocess knowledge.")
+
+    source = db.knowledge_sources.get(source_id)
+    if not source or source.get("companyId") != ctx.company_id:
+        raise HTTPException(status_code=404, detail="Knowledge source not found.")
+
+    source["processingStage"] = "indexed"
+    source["status"] = "ready"
+    source["lastIndexedAt"] = time.strftime("%Y-%m-%dT%H:%M:%SZ")
+    source["updatedAt"] = time.strftime("%Y-%m-%dT%H:%M:%SZ")
+
+    return {
+        "status": 200,
+        "data": {
+            "message": f"Reprocessed and re-indexed '{source.get('title')}'. All vector chunks synchronized.",
+            "source": source
+        }
+    }
+
+@router.delete("/sources/{source_id}")
+@router.delete("/sources/{source_id}/permanent")
+def delete_knowledge_source(source_id: str, ctx: TenantContext = Depends(get_tenant_context)):
+    """Permanently purges a knowledge source, all vector chunks, embeddings, and retrieval references."""
+    if not has_permission(ctx.role, "knowledge:delete"):
+        raise HTTPException(status_code=403, detail="Forbidden: Insufficient permissions to delete knowledge.")
+
+    source = db.knowledge_sources.get(source_id)
+    if not source or source.get("companyId") != ctx.company_id:
+        raise HTTPException(status_code=404, detail="Knowledge source not found.")
+
+    deleted_chunks_count = db.purge_knowledge_source(source_id, ctx.company_id)
+
+    return {
+        "status": 200,
+        "data": {
+            "message": f"Permanently deleted knowledge source '{source.get('title')}' and wiped {deleted_chunks_count} vector chunks.",
+            "deletedChunksCount": deleted_chunks_count
         }
     }
 
@@ -170,6 +297,10 @@ def ingest_file_document(req: IngestFileRequest, ctx: TenantContext = Depends(ge
         "version": 1,
         "category": req.category or "General",
         "status": "ready",
+        "lifecycleState": "active",
+        "processingStage": "indexed",
+        "retentionDays": 30,
+        "lastIndexedAt": time.strftime("%Y-%m-%dT%H:%M:%S.000Z", time.gmtime()),
         "chunkCount": len(res.chunks),
         "totalTokens": res.total_tokens,
         "lastSyncedAt": time.strftime("%Y-%m-%dT%H:%M:%S.000Z", time.gmtime()),
@@ -268,6 +399,10 @@ async def upload_real_file_document(
         "version": 1,
         "category": category or "General",
         "status": "ready",
+        "lifecycleState": "active",
+        "processingStage": "indexed",
+        "retentionDays": 30,
+        "lastIndexedAt": time.strftime("%Y-%m-%dT%H:%M:%S.000Z", time.gmtime()),
         "chunkCount": len(res.chunks),
         "totalTokens": res.total_tokens,
         "lastSyncedAt": time.strftime("%Y-%m-%dT%H:%M:%S.000Z", time.gmtime()),
@@ -356,6 +491,10 @@ async def crawl_and_ingest_website(req: IngestWebsiteRequest, ctx: TenantContext
         "sourceUrl": req.url,
         "category": req.category or "Website",
         "status": "ready",
+        "lifecycleState": "active",
+        "processingStage": "indexed",
+        "retentionDays": 30,
+        "lastIndexedAt": time.strftime("%Y-%m-%dT%H:%M:%S.000Z", time.gmtime()),
         "chunkCount": max(1, len(chunks_to_save)),
         "totalTokens": doc_res.total_tokens or (len(cleaned_content) // 4),
         "lastSyncedAt": time.strftime("%Y-%m-%dT%H:%M:%S.000Z", time.gmtime()),
@@ -427,6 +566,10 @@ def create_faq_knowledge(req: IngestFaqRequest, ctx: TenantContext = Depends(get
         "sourceType": "faq",
         "category": req.category or "FAQ",
         "status": "ready",
+        "lifecycleState": "active",
+        "processingStage": "indexed",
+        "retentionDays": 30,
+        "lastIndexedAt": time.strftime("%Y-%m-%dT%H:%M:%S.000Z", time.gmtime()),
         "chunkCount": 1,
         "totalTokens": len(content) // 4,
         "lastSyncedAt": time.strftime("%Y-%m-%dT%H:%M:%S.000Z", time.gmtime()),

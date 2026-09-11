@@ -18,10 +18,15 @@ import {
   RotateCcw,
   X,
   ArrowLeft,
-  Menu
+  Menu,
+  Power,
+  Clock,
+  Activity,
+  CheckCircle2
 } from 'lucide-react';
 import { useApp } from '../../context';
-import { DeveloperNavigationTab } from '../../types';
+import { DeveloperNavigationTab, ApiKeyMetadata, WebhookEndpoint } from '../../types';
+import { DeleteConfirmationModal } from '../common/DeleteConfirmationModal';
 
 export const DeveloperConsole: React.FC = () => {
   const { 
@@ -29,8 +34,13 @@ export const DeveloperConsole: React.FC = () => {
     setCurrentDevTab, 
     currentCompany, 
     regenerateApiKey, 
+    apiKeys,
+    createApiKey,
+    rotateApiKey,
+    revokeApiKey,
     webhooks, 
     createWebhook, 
+    toggleWebhook,
     deleteWebhook, 
     triggerTestWebhook, 
     apiLogs, 
@@ -42,6 +52,14 @@ export const DeveloperConsole: React.FC = () => {
   } = useApp();
 
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
+  const [isCreateKeyOpen, setIsCreateKeyOpen] = useState(false);
+  const [newKeyName, setNewKeyName] = useState('');
+  const [newKeyScopes, setNewKeyScopes] = useState<string[]>(['read:knowledge', 'write:conversations']);
+  const [revealedSecretModal, setRevealedSecretModal] = useState<{ keyName: string; secret: string } | null>(null);
+  const [keyToRevoke, setKeyToRevoke] = useState<ApiKeyMetadata | null>(null);
+  const [webhookToDelete, setWebhookToDelete] = useState<WebhookEndpoint | null>(null);
+  const [isRotatingKeyId, setIsRotatingKeyId] = useState<string | null>(null);
+
   const [isCreateWebhookOpen, setIsCreateWebhookOpen] = useState(false);
   const [newWebhookUrl, setNewWebhookUrl] = useState('');
   const [newWebhookDesc, setNewWebhookDesc] = useState('');
@@ -243,177 +261,302 @@ export const DeveloperConsole: React.FC = () => {
         <main className="flex-1 overflow-y-auto p-4 sm:p-6 md:p-8">
           <div className="max-w-6xl mx-auto space-y-6">
             {/* 1. API Keys Tab */}
-      {currentDevTab === 'api-keys' && (
-        <div className="space-y-6 animate-in fade-in duration-150">
-          <div className="bg-white rounded-2xl border border-slate-200 p-6 sm:p-7 shadow-xs space-y-5">
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="text-base sm:text-lg font-bold text-slate-900">Live Production API Key</h3>
-                <p className="text-xs sm:text-sm text-slate-500">Authenticate requests to the CoarAI REST API & Client Widget.</p>
-              </div>
-              <button
-                onClick={regenerateApiKey}
-                className="px-3.5 py-2 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-xl text-xs sm:text-sm font-semibold flex items-center gap-2 transition-colors cursor-pointer"
-              >
-                <RefreshCw className="w-4 h-4" />
-                <span>Rotate Secret Key</span>
-              </button>
-            </div>
-
-            <div className="bg-slate-50 p-5 rounded-2xl border border-slate-200 font-mono text-xs sm:text-sm space-y-4">
-              <div>
-                <span className="text-slate-500 text-xs font-bold block mb-1.5 uppercase tracking-wider">PUBLISHABLE CLIENT KEY</span>
-                <div className="flex items-center justify-between bg-white p-3 rounded-xl border border-slate-200">
-                  <span className="text-slate-800 font-medium">{currentCompany.apiKey}</span>
-                  <button
-                    onClick={() => handleCopy(currentCompany.apiKey, 'prod-pub-key')}
-                    className="p-1.5 hover:bg-slate-100 rounded-lg text-slate-500 cursor-pointer"
-                  >
-                    {copiedKey === 'prod-pub-key' ? <Check className="w-4 h-4 text-emerald-600" /> : <Copy className="w-4 h-4" />}
-                  </button>
-                </div>
-              </div>
-
-              <div>
-                <span className="text-slate-500 text-xs font-bold block mb-1.5 uppercase tracking-wider">SECRET API TOKEN (KMS AES-256-GCM ENCRYPTED)</span>
-                <div className="flex items-center justify-between bg-white p-3 rounded-xl border border-slate-200">
-                  <span className="text-slate-500 font-medium">{currentCompany.apiSecretMasked}</span>
-                  <span className="text-xs px-2.5 py-1 bg-emerald-100 text-emerald-800 rounded-md font-bold uppercase">
-                    Encrypted
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            {/* Scopes Table */}
-            <div>
-              <h4 className="text-sm font-bold text-slate-900 mb-2.5">Granted API Scopes</h4>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                {[
-                  { name: 'read:knowledge', desc: 'Query vector chunks & grounding docs', status: 'Allowed' },
-                  { name: 'write:conversations', desc: 'Create sessions & send messages', status: 'Allowed' },
-                  { name: 'execute:actions', desc: 'Trigger authorized business tools', status: 'Confirmation Gated' }
-                ].map((s, idx) => (
-                  <div key={idx} className="p-4 bg-slate-50 rounded-2xl border border-slate-200 text-xs sm:text-sm">
-                    <div className="flex items-center justify-between font-mono font-bold text-indigo-600">
-                      <span>{s.name}</span>
-                      <ShieldCheck className="w-4 h-4 text-emerald-600" />
+            {currentDevTab === 'api-keys' && (
+              <div className="space-y-6 animate-in fade-in duration-150">
+                {/* Publishable Client Key Banner */}
+                <div className="bg-slate-800/80 rounded-2xl border border-slate-700/80 p-5 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-bold uppercase tracking-wider text-indigo-400">Client Publishable Key</span>
+                      <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-indigo-950 text-indigo-300 border border-indigo-800">Public</span>
                     </div>
-                    <p className="text-xs text-slate-600 mt-1.5 leading-relaxed">{s.desc}</p>
+                    <p className="text-xs text-slate-400">Safe for use in browser scripts and client widgets. Read-only permissions.</p>
                   </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
 
-      {/* 2. Webhooks Tab */}
-      {currentDevTab === 'webhooks' && (
-        <div className="space-y-6 animate-in fade-in duration-150">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div>
-              <h3 className="text-base sm:text-lg font-bold text-slate-900">Webhook Endpoints</h3>
-              <p className="text-xs sm:text-sm text-slate-500">Receive real-time HTTPS POST callbacks when events occur in your tenant.</p>
-            </div>
-            <button
-              onClick={() => setIsCreateWebhookOpen(true)}
-              className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs sm:text-sm font-semibold flex items-center gap-2 shadow-xs transition-colors cursor-pointer shrink-0"
-            >
-              <Plus className="w-4 h-4" />
-              <span>Add Webhook Endpoint</span>
-            </button>
-          </div>
-
-          <div className="space-y-3.5">
-            {webhooks.map(wh => (
-              <div key={wh.id} className="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-                <div className="space-y-2 min-w-0">
-                  <div className="flex items-center gap-2.5">
-                    <span className="font-mono font-bold text-sm text-slate-900">{wh.url}</span>
-                    <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800">
-                      {wh.status}
-                    </span>
-                  </div>
-                  <p className="text-xs sm:text-sm text-slate-600">{wh.description}</p>
-                  <div className="flex flex-wrap items-center gap-2 pt-1">
-                    {wh.events.map(ev => (
-                      <span key={ev} className="px-2.5 py-1 bg-slate-100 text-slate-700 rounded-md text-xs font-mono font-medium">
-                        {ev}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-2.5 shrink-0">
-                  <button
-                    onClick={() => handleTestWebhook(wh.id)}
-                    disabled={testingWebhookId === wh.id}
-                    className="px-3.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs sm:text-sm font-semibold flex items-center gap-2 transition-colors cursor-pointer"
-                  >
-                    <Play className={`w-4 h-4 text-indigo-600 ${testingWebhookId === wh.id ? 'animate-spin' : ''}`} />
-                    <span>{testingWebhookId === wh.id ? 'Sending...' : 'Test Ping'}</span>
-                  </button>
-                  <button
-                    onClick={() => deleteWebhook(wh.id)}
-                    className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-colors cursor-pointer"
-                  >
-                    <Trash2 className="w-4.5 h-4.5" />
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
-
-          {/* Create Webhook Modal */}
-          {isCreateWebhookOpen && (
-            <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
-              <div className="bg-white rounded-2xl max-w-lg w-full p-6 sm:p-7 shadow-2xl border border-slate-200 animate-in fade-in">
-                <h3 className="text-lg font-bold text-slate-900 mb-1">Add Webhook Endpoint</h3>
-                <p className="text-sm text-slate-500 mb-5">Enter the HTTPS URL on your server where events should be sent.</p>
-                <form onSubmit={handleCreateWebhookSubmit} className="space-y-4 text-sm">
-                  <div>
-                    <label className="block font-bold text-slate-700 mb-1.5">Endpoint URL (HTTPS Required)</label>
-                    <input
-                      type="url"
-                      required
-                      value={newWebhookUrl}
-                      onChange={e => setNewWebhookUrl(e.target.value)}
-                      placeholder="https://api.yourdomain.com/webhooks/ai"
-                      className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:bg-white focus:ring-2 focus:ring-indigo-600 focus:outline-hidden"
-                    />
-                  </div>
-                  <div>
-                    <label className="block font-bold text-slate-700 mb-1.5">Description</label>
-                    <input
-                      type="text"
-                      value={newWebhookDesc}
-                      onChange={e => setNewWebhookDesc(e.target.value)}
-                      placeholder="e.g. Sync live escalations with internal Slack"
-                      className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:bg-white focus:ring-2 focus:ring-indigo-600 focus:outline-hidden"
-                    />
-                  </div>
-                  <div className="flex items-center justify-end gap-3 pt-3">
+                  <div className="flex items-center gap-2 bg-slate-900 px-3.5 py-2 rounded-xl border border-slate-700 font-mono text-xs text-slate-200">
+                    <span className="truncate max-w-[200px] sm:max-w-xs">{currentCompany.apiKey}</span>
                     <button
                       type="button"
-                      onClick={() => setIsCreateWebhookOpen(false)}
-                      className="px-4 py-2.5 text-slate-600 hover:bg-slate-100 rounded-xl font-semibold cursor-pointer text-sm"
+                      onClick={() => handleCopy(currentCompany.apiKey, 'prod-pub-key')}
+                      className="p-1 hover:bg-slate-800 rounded-md text-slate-400 hover:text-white transition-colors cursor-pointer"
+                      title="Copy publishable key"
                     >
-                      Cancel
-                    </button>
-                    <button
-                      type="submit"
-                      className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold cursor-pointer text-sm shadow-xs"
-                    >
-                      Save Webhook
+                      {copiedKey === 'prod-pub-key' ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
                     </button>
                   </div>
-                </form>
+                </div>
+
+                {/* API Keys Table & Management */}
+                <div className="bg-white rounded-2xl border border-slate-200 p-6 sm:p-7 shadow-xs space-y-5">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b border-slate-100">
+                    <div>
+                      <h3 className="text-base sm:text-lg font-bold text-slate-900">Secret API Keys</h3>
+                      <p className="text-xs sm:text-sm text-slate-500">
+                        Authenticate server-to-server calls to the CoarAI REST API. Full secrets are only shown once upon creation.
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setIsCreateKeyOpen(true)}
+                      className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs sm:text-sm font-semibold flex items-center gap-2 shadow-xs transition-colors cursor-pointer shrink-0"
+                    >
+                      <Plus className="w-4 h-4" />
+                      <span>Create New Secret Key</span>
+                    </button>
+                  </div>
+
+                  {/* API Keys List */}
+                  <div className="space-y-3.5">
+                    {(apiKeys || []).map(k => {
+                      const isActive = k.status === 'active';
+
+                      return (
+                        <div 
+                          key={k.id}
+                          className={`p-5 rounded-2xl border transition-all ${
+                            isActive 
+                              ? 'bg-slate-50/70 border-slate-200 hover:border-slate-300' 
+                              : 'bg-rose-50/20 border-rose-200/60 opacity-80'
+                          }`}
+                        >
+                          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                            <div className="space-y-2 min-w-0">
+                              <div className="flex items-center gap-2.5 flex-wrap">
+                                <span className="font-bold text-slate-900 text-sm">{k.name}</span>
+                                <span className={`px-2 py-0.5 rounded-full text-[11px] font-bold ${
+                                  isActive ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800'
+                                }`}>
+                                  {isActive ? 'Active' : 'Revoked'}
+                                </span>
+                                <span className="text-xs text-slate-400 font-mono bg-white px-2 py-0.5 rounded-md border border-slate-200">
+                                  {k.keyPrefix}••••
+                                </span>
+                              </div>
+
+                              {/* Masked Secret Display */}
+                              <div className="flex items-center gap-3">
+                                <span className="font-mono text-xs text-slate-600 bg-white px-3 py-1.5 rounded-xl border border-slate-200">
+                                  {k.secretMasked}
+                                </span>
+                                <span className="text-[11px] text-slate-400 font-medium italic">
+                                  (Secret hidden for security)
+                                </span>
+                              </div>
+
+                              {/* Metadata & Scopes */}
+                              <div className="flex items-center gap-4 text-xs text-slate-500 flex-wrap pt-1">
+                                <span className="flex items-center gap-1">
+                                  <Clock className="w-3.5 h-3.5 text-slate-400" />
+                                  Created: <strong className="text-slate-700">{new Date(k.createdAt).toLocaleDateString()}</strong>
+                                </span>
+                                <span>•</span>
+                                <span>
+                                  Last used: <strong className="text-slate-700">{k.lastUsedAt ? new Date(k.lastUsedAt).toLocaleDateString() : 'Never'}</strong>
+                                </span>
+                                <span>•</span>
+                                <div className="flex items-center gap-1.5">
+                                  {(k.scopes || []).map(sc => (
+                                    <span key={sc} className="px-2 py-0.5 bg-indigo-50 text-indigo-700 rounded-md text-[11px] font-mono font-medium">
+                                      {sc}
+                                    </span>
+                                  ))}
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Key Actions */}
+                            <div className="flex items-center gap-2 self-end md:self-center shrink-0">
+                              {isActive ? (
+                                <>
+                                  <button
+                                    type="button"
+                                    disabled={isRotatingKeyId === k.id}
+                                    onClick={async () => {
+                                      setIsRotatingKeyId(k.id);
+                                      try {
+                                        const res = await rotateApiKey(k.id);
+                                        if (res && res.rawSecret) {
+                                          setRevealedSecretModal({
+                                            keyName: k.name,
+                                            secret: res.rawSecret
+                                          });
+                                        }
+                                      } finally {
+                                        setIsRotatingKeyId(null);
+                                      }
+                                    }}
+                                    className="px-3 py-2 bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer shadow-2xs"
+                                    title="Generate new secret token"
+                                  >
+                                    <RefreshCw className={`w-3.5 h-3.5 text-indigo-600 ${isRotatingKeyId === k.id ? 'animate-spin' : ''}`} />
+                                    <span>{isRotatingKeyId === k.id ? 'Rotating...' : 'Rotate Key'}</span>
+                                  </button>
+
+                                  <button
+                                    type="button"
+                                    onClick={() => setKeyToRevoke(k)}
+                                    className="px-3 py-2 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer"
+                                    title="Revoke API key immediately"
+                                  >
+                                    <Trash2 className="w-3.5 h-3.5" />
+                                    <span>Revoke</span>
+                                  </button>
+                                </>
+                              ) : (
+                                <span className="text-xs text-rose-600 font-semibold px-3 py-1.5 bg-rose-50 border border-rose-200 rounded-xl">
+                                  Revoked
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
               </div>
-            </div>
-          )}
-        </div>
-      )}
+            )}
+
+            {/* 2. Webhooks Tab */}
+            {currentDevTab === 'webhooks' && (
+              <div className="space-y-6 animate-in fade-in duration-150">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                  <div>
+                    <h3 className="text-base sm:text-lg font-bold text-slate-900">Webhook Endpoints</h3>
+                    <p className="text-xs sm:text-sm text-slate-500">Receive real-time HTTPS POST callbacks when events occur in your tenant.</p>
+                  </div>
+                  <button
+                    onClick={() => setIsCreateWebhookOpen(true)}
+                    className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs sm:text-sm font-semibold flex items-center gap-2 shadow-xs transition-colors cursor-pointer shrink-0"
+                  >
+                    <Plus className="w-4 h-4" />
+                    <span>Add Webhook Endpoint</span>
+                  </button>
+                </div>
+
+                <div className="space-y-3.5">
+                  {webhooks.map(wh => {
+                    const isHookActive = wh.status === 'active';
+                    const recentDelivery = wh.deliveryHistory && wh.deliveryHistory.length > 0 ? wh.deliveryHistory[0] : null;
+
+                    return (
+                      <div key={wh.id} className="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+                        <div className="space-y-2 min-w-0">
+                          <div className="flex items-center gap-2.5 flex-wrap">
+                            <span className="font-mono font-bold text-sm text-slate-900">{wh.url}</span>
+                            <span className={`px-2.5 py-0.5 rounded-full text-xs font-bold ${
+                              isHookActive ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'
+                            }`}>
+                              {isHookActive ? 'Active' : 'Disabled'}
+                            </span>
+
+                            {recentDelivery && (
+                              <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-mono font-bold ${
+                                recentDelivery.success ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-rose-50 text-rose-700 border border-rose-200'
+                              }`}>
+                                <Activity className="w-3 h-3" />
+                                <span>{recentDelivery.statusCode} OK ({recentDelivery.responseTimeMs}ms)</span>
+                              </span>
+                            )}
+                          </div>
+
+                          <p className="text-xs sm:text-sm text-slate-600">{wh.description}</p>
+
+                          <div className="flex flex-wrap items-center gap-2 pt-1">
+                            {wh.events.map(ev => (
+                              <span key={ev} className="px-2.5 py-1 bg-slate-100 text-slate-700 rounded-md text-xs font-mono font-medium">
+                                {ev}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-2.5 shrink-0">
+                          {/* Toggle Active / Disabled */}
+                          <button
+                            type="button"
+                            onClick={() => toggleWebhook(wh.id)}
+                            className={`px-3 py-2 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer border ${
+                              isHookActive 
+                                ? 'bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100' 
+                                : 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100'
+                            }`}
+                          >
+                            <Power className="w-3.5 h-3.5" />
+                            <span>{isHookActive ? 'Disable' : 'Enable'}</span>
+                          </button>
+
+                          <button
+                            onClick={() => handleTestWebhook(wh.id)}
+                            disabled={testingWebhookId === wh.id}
+                            className="px-3.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs sm:text-sm font-semibold flex items-center gap-2 transition-colors cursor-pointer"
+                          >
+                            <Play className={`w-4 h-4 text-indigo-600 ${testingWebhookId === wh.id ? 'animate-spin' : ''}`} />
+                            <span>{testingWebhookId === wh.id ? 'Sending...' : 'Test Ping'}</span>
+                          </button>
+
+                          <button
+                            onClick={() => setWebhookToDelete(wh)}
+                            className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-colors cursor-pointer"
+                            title="Delete webhook"
+                          >
+                            <Trash2 className="w-4.5 h-4.5" />
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* Create Webhook Modal */}
+                {isCreateWebhookOpen && (
+                  <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+                    <div className="bg-white rounded-2xl max-w-lg w-full p-6 sm:p-7 shadow-2xl border border-slate-200 animate-in fade-in">
+                      <h3 className="text-lg font-bold text-slate-900 mb-1">Add Webhook Endpoint</h3>
+                      <p className="text-sm text-slate-500 mb-5">Enter the HTTPS URL on your server where events should be sent.</p>
+                      <form onSubmit={handleCreateWebhookSubmit} className="space-y-4 text-sm">
+                        <div>
+                          <label className="block font-bold text-slate-700 mb-1.5">Endpoint URL (HTTPS Required)</label>
+                          <input
+                            type="url"
+                            required
+                            value={newWebhookUrl}
+                            onChange={e => setNewWebhookUrl(e.target.value)}
+                            placeholder="https://api.yourdomain.com/webhooks/ai"
+                            className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:bg-white focus:ring-2 focus:ring-indigo-600 focus:outline-hidden"
+                          />
+                        </div>
+                        <div>
+                          <label className="block font-bold text-slate-700 mb-1.5">Description</label>
+                          <input
+                            type="text"
+                            value={newWebhookDesc}
+                            onChange={e => setNewWebhookDesc(e.target.value)}
+                            placeholder="e.g. Sync live escalations with internal Slack"
+                            className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:bg-white focus:ring-2 focus:ring-indigo-600 focus:outline-hidden"
+                          />
+                        </div>
+                        <div className="flex items-center justify-end gap-3 pt-3">
+                          <button
+                            type="button"
+                            onClick={() => setIsCreateWebhookOpen(false)}
+                            className="px-4 py-2.5 text-slate-600 hover:bg-slate-100 rounded-xl font-semibold cursor-pointer text-sm"
+                          >
+                            Cancel
+                          </button>
+                          <button
+                            type="submit"
+                            className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold cursor-pointer text-sm shadow-xs"
+                          >
+                            Save Webhook
+                          </button>
+                        </div>
+                      </form>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
 
       {/* 3. API Logs Tab */}
       {currentDevTab === 'api-logs' && (
@@ -745,6 +888,220 @@ print(res.json())`}</pre>
           </div>
         </main>
       </div>
+
+      {/* ONE-TIME SECRET KEY REVEALED MODAL */}
+      {revealedSecretModal && (
+        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl max-w-lg w-full p-6 sm:p-7 shadow-2xl border border-slate-200 animate-in fade-in zoom-in-95 text-slate-900">
+            <div className="flex items-center gap-3 pb-3 border-b border-slate-100">
+              <div className="w-10 h-10 rounded-2xl bg-amber-100 text-amber-800 flex items-center justify-center font-bold shrink-0">
+                <Key className="w-5 h-5 text-amber-600" />
+              </div>
+              <div>
+                <h3 className="text-base sm:text-lg font-bold text-slate-900">Save Your Secret API Key</h3>
+                <p className="text-xs text-slate-500">Key: <strong>{revealedSecretModal.keyName}</strong></p>
+              </div>
+            </div>
+
+            {/* Warning Callout */}
+            <div className="my-4 p-3.5 rounded-2xl bg-amber-50 border border-amber-200 text-amber-900 text-xs space-y-1">
+              <div className="flex items-center gap-1.5 font-bold">
+                <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />
+                <span>Security Notice: Key Shown Only Once</span>
+              </div>
+              <p className="leading-relaxed text-amber-800">
+                Please copy and securely store this secret token now. For your security, <strong>it will never be displayed again</strong> once you close this window.
+              </p>
+            </div>
+
+            {/* Secret Display Box */}
+            <div className="relative bg-slate-900 text-emerald-400 rounded-2xl p-4 font-mono text-xs sm:text-sm break-all border border-slate-800 shadow-inner flex items-center justify-between gap-3">
+              <span className="select-all font-bold">{revealedSecretModal.secret}</span>
+              <button
+                type="button"
+                onClick={() => handleCopy(revealedSecretModal.secret, 'revealed-secret')}
+                className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl text-xs font-sans font-semibold flex items-center gap-1.5 transition-colors shrink-0 cursor-pointer border border-slate-700"
+              >
+                {copiedKey === 'revealed-secret' ? (
+                  <>
+                    <Check className="w-3.5 h-3.5 text-emerald-400" />
+                    <span>Copied</span>
+                  </>
+                ) : (
+                  <>
+                    <Copy className="w-3.5 h-3.5" />
+                    <span>Copy</span>
+                  </>
+                )}
+              </button>
+            </div>
+
+            {/* Done Confirmation */}
+            <div className="pt-5 flex justify-end">
+              <button
+                type="button"
+                onClick={() => setRevealedSecretModal(null)}
+                className="w-full sm:w-auto px-6 py-2.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-sm font-bold shadow-sm transition-colors cursor-pointer flex items-center justify-center gap-2"
+              >
+                <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                <span>I Have Saved This Secret Key</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* CREATE API KEY MODAL */}
+      {isCreateKeyOpen && (
+        <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl max-w-lg w-full p-6 sm:p-7 shadow-2xl border border-slate-200 animate-in fade-in zoom-in-95 text-slate-900">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-xl bg-indigo-50 text-indigo-700 flex items-center justify-center font-bold">
+                  <Key className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-base sm:text-lg font-bold text-slate-900">Create New Secret Key</h3>
+                  <p className="text-xs text-slate-500">Generate authenticated developer credentials.</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setIsCreateKeyOpen(false)}
+                className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-xl transition-colors cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form
+              onSubmit={async (e) => {
+                e.preventDefault();
+                if (!newKeyName.trim()) return;
+                const res = await createApiKey(newKeyName.trim(), newKeyScopes);
+                setIsCreateKeyOpen(false);
+                setNewKeyName('');
+                if (res && res.rawSecret) {
+                  setRevealedSecretModal({
+                    keyName: newKeyName.trim(),
+                    secret: res.rawSecret
+                  });
+                }
+                setNewKeyName('');
+              }}
+              className="space-y-4 pt-4 text-sm"
+            >
+              <div>
+                <label className="block font-bold text-slate-700 mb-1.5 text-xs">Key Label / Name</label>
+                <input
+                  type="text"
+                  required
+                  value={newKeyName}
+                  onChange={e => setNewKeyName(e.target.value)}
+                  placeholder="e.g. Backend Production Server or Zapier Sync"
+                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:bg-white focus:ring-2 focus:ring-indigo-600 focus:outline-hidden"
+                />
+              </div>
+
+              <div>
+                <label className="block font-bold text-slate-700 mb-2 text-xs">Granted Scopes</label>
+                <div className="space-y-2">
+                  {[
+                    { id: 'read:knowledge', name: 'read:knowledge', desc: 'Query vector knowledge & grounding chunks' },
+                    { id: 'write:conversations', name: 'write:conversations', desc: 'Create sessions & send messages' },
+                    { id: 'execute:actions', name: 'execute:actions', desc: 'Execute authorized enterprise tools' }
+                  ].map(sc => (
+                    <label key={sc.id} className="flex items-start gap-2.5 p-2.5 rounded-xl border border-slate-200 hover:bg-slate-50 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={newKeyScopes.includes(sc.id)}
+                        onChange={e => {
+                          if (e.target.checked) {
+                            setNewKeyScopes(prev => [...prev, sc.id]);
+                          } else {
+                            setNewKeyScopes(prev => prev.filter(s => s !== sc.id));
+                          }
+                        }}
+                        className="mt-0.5 rounded text-indigo-600 w-4 h-4 cursor-pointer"
+                      />
+                      <div>
+                        <span className="font-mono text-xs font-bold text-slate-900 block">{sc.name}</span>
+                        <span className="text-[11px] text-slate-500">{sc.desc}</span>
+                      </div>
+                    </label>
+                  ))}
+                </div>
+              </div>
+
+              <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={() => setIsCreateKeyOpen(false)}
+                  className="px-4 py-2.5 text-slate-600 hover:bg-slate-100 rounded-xl font-semibold cursor-pointer text-xs sm:text-sm"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={!newKeyName.trim()}
+                  className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold cursor-pointer text-xs sm:text-sm shadow-xs disabled:opacity-50"
+                >
+                  Generate Secret Key
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* REVOKE API KEY CONFIRMATION MODAL */}
+      <DeleteConfirmationModal
+        isOpen={Boolean(keyToRevoke)}
+        onClose={() => setKeyToRevoke(null)}
+        onConfirm={async () => {
+          if (keyToRevoke) {
+            await revokeApiKey(keyToRevoke.id);
+            setKeyToRevoke(null);
+          }
+        }}
+        title="Revoke API Key"
+        resourceName={keyToRevoke?.name || 'this API key'}
+        confirmText="REVOKE"
+        isPermanent={true}
+        destructiveActionLabel="Revoke Key Immediately"
+        dependencies={[
+          `Prefix: ${keyToRevoke?.keyPrefix}••••`,
+          `Scopes: ${(keyToRevoke?.scopes || []).join(', ')}`
+        ]}
+        consequences={[
+          'Any application, webhook worker, or daemon authenticating with this key will fail immediately with HTTP 401 Unauthorized.',
+          'Revocation is immediate and permanent. This key cannot be re-activated.'
+        ]}
+      />
+
+      {/* DELETE WEBHOOK CONFIRMATION MODAL */}
+      <DeleteConfirmationModal
+        isOpen={Boolean(webhookToDelete)}
+        onClose={() => setWebhookToDelete(null)}
+        onConfirm={async () => {
+          if (webhookToDelete) {
+            deleteWebhook(webhookToDelete.id);
+            setWebhookToDelete(null);
+          }
+        }}
+        title="Delete Webhook"
+        resourceName={webhookToDelete?.url || 'this webhook'}
+        confirmText="DELETE"
+        isPermanent={true}
+        destructiveActionLabel="Delete Webhook"
+        dependencies={[
+          `Events: ${(webhookToDelete?.events || []).join(', ')}`,
+          `Status: ${webhookToDelete?.status}`
+        ]}
+        consequences={[
+          'Real-time webhook event dispatches to this endpoint will cease immediately.',
+          'Historical delivery logs for this webhook will be deleted.'
+        ]}
+      />
     </div>
   );
 };

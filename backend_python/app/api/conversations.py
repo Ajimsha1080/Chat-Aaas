@@ -124,3 +124,53 @@ def takeover_chat(conversation_id: str, req: TakeoverRequest, ctx: TenantContext
 def resolve_chat(conversation_id: str, ctx: TenantContext = Depends(get_tenant_context)):
     res = ConversationService.resolve_conversation(conversation_id, ctx.company_id)
     return {"status": 200, "data": res}
+
+class BulkConversationActionRequest(BaseModel):
+    conversationIds: List[str]
+
+@router.post("/{conversation_id}/archive")
+def archive_conversation(conversation_id: str, ctx: TenantContext = Depends(get_tenant_context)):
+    conv = db.conversations.get(conversation_id)
+    if not conv or conv.get("companyId") != ctx.company_id:
+        raise HTTPException(status_code=404, detail="Conversation not found.")
+    conv["status"] = "archived"
+    conv["archivedAt"] = time.strftime("%Y-%m-%dT%H:%M:%SZ")
+    return {"status": 200, "data": {"conversation": conv, "message": "Conversation archived."}}
+
+@router.delete("/{conversation_id}")
+def delete_conversation(conversation_id: str, ctx: TenantContext = Depends(get_tenant_context)):
+    conv = db.conversations.get(conversation_id)
+    if not conv or conv.get("companyId") != ctx.company_id:
+        raise HTTPException(status_code=404, detail="Conversation not found.")
+    del db.conversations[conversation_id]
+    msg_ids = [mid for mid, m in db.messages.items() if m.get("conversationId") == conversation_id and m.get("companyId") == ctx.company_id]
+    for mid in msg_ids:
+        del db.messages[mid]
+    return {"status": 200, "data": {"message": f"Conversation deleted and {len(msg_ids)} messages removed."}}
+
+@router.post("/bulk-archive")
+def bulk_archive_conversations(req: BulkConversationActionRequest, ctx: TenantContext = Depends(get_tenant_context)):
+    archived_count = 0
+    for cid in req.conversationIds:
+        conv = db.conversations.get(cid)
+        if conv and conv.get("companyId") == ctx.company_id:
+            conv["status"] = "archived"
+            conv["archivedAt"] = time.strftime("%Y-%m-%dT%H:%M:%SZ")
+            archived_count += 1
+    return {"status": 200, "data": {"archivedCount": archived_count, "message": f"{archived_count} conversations archived."}}
+
+@router.post("/bulk-delete")
+def bulk_delete_conversations(req: BulkConversationActionRequest, ctx: TenantContext = Depends(get_tenant_context)):
+    deleted_count = 0
+    total_messages_deleted = 0
+    for cid in req.conversationIds:
+        conv = db.conversations.get(cid)
+        if conv and conv.get("companyId") == ctx.company_id:
+            del db.conversations[cid]
+            deleted_count += 1
+            msg_ids = [mid for mid, m in db.messages.items() if m.get("conversationId") == cid and m.get("companyId") == ctx.company_id]
+            for mid in msg_ids:
+                del db.messages[mid]
+            total_messages_deleted += len(msg_ids)
+    return {"status": 200, "data": {"deletedCount": deleted_count, "messagesDeleted": total_messages_deleted, "message": f"{deleted_count} conversations deleted."}}
+

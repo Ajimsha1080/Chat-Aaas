@@ -16,11 +16,23 @@ import {
   Pencil,
   Send,
   X,
-  ChevronDown
+  ChevronDown,
+  Globe,
+  Code,
+  Smartphone,
+  Server,
+  Power,
+  AlertTriangle,
+  ExternalLink,
+  ShieldAlert,
+  Radio,
+  Layers
 } from 'lucide-react';
 import { useApp } from '../../context';
-import { WidgetCustomization } from '../../types';
+import { WidgetCustomization, DeploymentItem } from '../../types';
 import { soundService } from '../../services/soundService';
+import { GlobalActionMenu } from '../common/GlobalActionMenu';
+import { DeleteConfirmationModal } from '../common/DeleteConfirmationModal';
 
 export const DeployView: React.FC = () => {
   const { 
@@ -28,7 +40,12 @@ export const DeployView: React.FC = () => {
     updateCompany,
     updateWidgetSettings, 
     updateAgentConfig,
-    setIsQuickTestOpen
+    setIsQuickTestOpen,
+    deployments,
+    createDeployment,
+    disableDeployment,
+    enableDeployment,
+    removeDeployment
   } = useApp();
 
   const [brandName, setBrandName] = useState(currentCompany.name || '');
@@ -39,9 +56,14 @@ export const DeployView: React.FC = () => {
   const brandLogoInputRef = useRef<HTMLInputElement>(null);
   const iconPickerRef = useRef<HTMLDivElement>(null);
 
-  const [activeMainTab, setActiveMainTab] = useState<'general' | 'content' | 'appearance' | 'install'>('appearance');
+  const [activeMainTab, setActiveMainTab] = useState<'channels' | 'appearance' | 'content' | 'general' | 'install'>('channels');
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
   const [activeSnippetTab, setActiveSnippetTab] = useState<'script' | 'react' | 'iframe' | 'api'>('script');
+  const [isCreateDeploymentOpen, setIsCreateDeploymentOpen] = useState(false);
+  const [newDepName, setNewDepName] = useState('');
+  const [newDepChannel, setNewDepChannel] = useState<'website_widget' | 'react_iframe' | 'rest_api' | 'mobile_sdk'>('website_widget');
+  const [newDepDomain, setNewDepDomain] = useState('');
+  const [deploymentToDelete, setDeploymentToDelete] = useState<DeploymentItem | null>(null);
   const [localSettings, setLocalSettings] = useState<WidgetCustomization>({ 
     themeMode: 'dark',
     headerTextColor: 'white',
@@ -377,17 +399,18 @@ export default function App() {
       <div className="bg-white rounded-2xl p-6 sm:p-7 border border-slate-200/90 shadow-sm">
         {/* Navigation Tabs Bar */}
         <div className="flex items-center justify-between border-b border-slate-100 mb-6 pb-2">
-          <div className="flex items-center gap-8">
+          <div className="flex items-center gap-6 overflow-x-auto pb-1">
             {[
-              { id: 'general', label: 'General' },
-              { id: 'content', label: 'Content' },
+              { id: 'channels', label: 'Channels & Deployments' },
               { id: 'appearance', label: 'Appearance' },
-              { id: 'install', label: 'Install' }
+              { id: 'content', label: 'Content' },
+              { id: 'general', label: 'General' },
+              { id: 'install', label: 'Embed Code' }
             ].map(tab => (
               <button
                 key={tab.id}
                 onClick={() => setActiveMainTab(tab.id as any)}
-                className={`pb-3 font-semibold text-sm transition-all relative cursor-pointer ${
+                className={`pb-3 font-semibold text-sm transition-all relative cursor-pointer whitespace-nowrap ${
                   activeMainTab === tab.id
                     ? 'text-pink-600 font-bold'
                     : 'text-slate-500 hover:text-slate-900'
@@ -403,7 +426,7 @@ export default function App() {
 
           <button
             onClick={handleSaveBranding}
-            className="px-5 py-2.5 bg-[#007074] hover:bg-[#005a5d] text-white rounded-xl text-sm font-bold flex items-center gap-2 shadow-sm transition-colors cursor-pointer"
+            className="px-5 py-2.5 bg-[#007074] hover:bg-[#005a5d] text-white rounded-xl text-sm font-bold flex items-center gap-2 shadow-sm transition-colors cursor-pointer shrink-0"
           >
             {isSaved ? <Check className="w-4 h-4 text-emerald-300 stroke-[3]" /> : <CheckCircle2 className="w-4 h-4" />}
             <span>{isSaved ? 'Saved' : 'Save Changes'}</span>
@@ -415,6 +438,216 @@ export default function App() {
           {/* Left Form Area (7 Cols) */}
           <div className="lg:col-span-7 space-y-6 text-sm">
             
+            {/* TAB: CHANNELS & DEPLOYMENTS */}
+            {activeMainTab === 'channels' && (
+              <div className="space-y-6 animate-in fade-in duration-150">
+                {/* 1. Channel Types Grid */}
+                <div>
+                  <div className="flex items-center justify-between mb-3">
+                    <h3 className="font-bold text-slate-900 text-sm sm:text-base">Deployment Channels</h3>
+                    <span className="text-xs text-slate-500">Each channel can be independently toggled without disabling the assistant</span>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                    {[
+                      {
+                        channel: 'website_widget',
+                        name: 'Website Widget',
+                        icon: Globe,
+                        desc: 'Floating bubble widget embeddable via single script tag.',
+                        badge: 'Popular',
+                        status: (deployments || []).find(d => d.channel === 'website_widget')?.status || 'active'
+                      },
+                      {
+                        channel: 'react_iframe',
+                        name: 'React / Iframe Embed',
+                        icon: Code,
+                        desc: 'Inline component or responsive iframe modal for web apps.',
+                        badge: 'Flexible',
+                        status: (deployments || []).find(d => d.channel === 'react_iframe')?.status || 'active'
+                      },
+                      {
+                        channel: 'rest_api',
+                        name: 'REST API Integration',
+                        icon: Server,
+                        desc: 'Direct programmatic headless access via authenticated /chat endpoint.',
+                        badge: 'Headless',
+                        status: (deployments || []).find(d => d.channel === 'rest_api')?.status || 'active'
+                      },
+                      {
+                        channel: 'mobile_sdk',
+                        name: 'Mobile SDK',
+                        icon: Smartphone,
+                        desc: 'Native iOS & Android SDKs with turnkey conversational UI.',
+                        badge: 'Native',
+                        status: (deployments || []).find(d => d.channel === 'mobile_sdk')?.status || 'active'
+                      }
+                    ].map(ch => {
+                      const Icon = ch.icon;
+                      const isChannelActive = ch.status === 'active';
+                      return (
+                        <div 
+                          key={ch.channel} 
+                          className={`p-4 rounded-2xl border transition-all ${
+                            isChannelActive 
+                              ? 'bg-slate-50/70 border-slate-200' 
+                              : 'bg-amber-50/40 border-amber-200/80'
+                          }`}
+                        >
+                          <div className="flex items-start justify-between">
+                            <div className="flex items-center gap-2.5">
+                              <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${
+                                isChannelActive ? 'bg-white text-slate-800 shadow-2xs border border-slate-200' : 'bg-amber-100 text-amber-700'
+                              }`}>
+                                <Icon className="w-4.5 h-4.5" />
+                              </div>
+                              <div>
+                                <h4 className="font-bold text-slate-900 text-xs sm:text-sm">{ch.name}</h4>
+                                <span className={`text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-sm ${
+                                  isChannelActive ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'
+                                }`}>
+                                  {isChannelActive ? 'Active' : 'Disabled'}
+                                </span>
+                              </div>
+                            </div>
+                            <span className="text-[11px] font-semibold text-slate-400 bg-white px-2 py-0.5 rounded-md border border-slate-200">
+                              {ch.badge}
+                            </span>
+                          </div>
+                          <p className="text-xs text-slate-600 mt-2.5 leading-relaxed">{ch.desc}</p>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* 2. Active Deployments List */}
+                <div className="pt-4 border-t border-slate-100 space-y-4">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <div>
+                      <h3 className="font-bold text-slate-900 text-sm sm:text-base">Active Deployments ({deployments?.length || 0})</h3>
+                      <p className="text-xs text-slate-500">Configure environments, allowed origins, and monitor live session traffic.</p>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => setIsCreateDeploymentOpen(true)}
+                      className="px-3.5 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs sm:text-sm font-semibold flex items-center gap-2 shadow-xs transition-colors cursor-pointer shrink-0"
+                    >
+                      <Plus className="w-4 h-4" />
+                      <span>New Deployment</span>
+                    </button>
+                  </div>
+
+                  <div className="space-y-3">
+                    {(deployments || []).map(dep => {
+                      const isActive = dep.status === 'active';
+                      const channelIcon = dep.channel === 'website_widget' ? Globe :
+                                          dep.channel === 'react_iframe' ? Code :
+                                          dep.channel === 'rest_api' ? Server : Smartphone;
+                      const ChannelIcon = channelIcon;
+
+                      return (
+                        <div 
+                          key={dep.id}
+                          className={`p-4 sm:p-5 rounded-2xl border transition-all ${
+                            isActive 
+                              ? 'bg-white border-slate-200 shadow-2xs' 
+                              : 'bg-amber-50/30 border-amber-200/80 shadow-2xs'
+                          }`}
+                        >
+                          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                            <div className="flex items-start gap-3.5 min-w-0">
+                              <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${
+                                isActive ? 'bg-slate-100 text-slate-700' : 'bg-amber-100 text-amber-800'
+                              }`}>
+                                <ChannelIcon className="w-5 h-5" />
+                              </div>
+
+                              <div className="min-w-0 space-y-1">
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  <h4 className="font-bold text-slate-900 text-sm">{dep.name}</h4>
+                                  <span className={`px-2 py-0.5 rounded-full text-[11px] font-bold ${
+                                    isActive 
+                                      ? 'bg-emerald-100 text-emerald-800' 
+                                      : 'bg-amber-100 text-amber-800'
+                                  }`}>
+                                    {isActive ? 'Active' : 'Disabled'}
+                                  </span>
+                                  <span className="text-xs text-slate-400 font-mono bg-slate-100 px-2 py-0.5 rounded-md">
+                                    {dep.channel.replace('_', ' ')}
+                                  </span>
+                                </div>
+
+                                <div className="flex items-center gap-4 text-xs text-slate-500 flex-wrap">
+                                  <span>Domain: <strong className="font-mono text-slate-700">{dep.targetDomain || dep.domain || '* (Any Origin)'}</strong></span>
+                                  <span>•</span>
+                                  <span>Sessions: <strong className="font-mono text-slate-700">{(dep.totalSessions ?? (dep.config as any)?.totalSessions ?? 0).toLocaleString()}</strong></span>
+                                  <span>•</span>
+                                  <span>Created: <span className="font-mono">{new Date(dep.createdAt).toLocaleDateString()}</span></span>
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Actions & Toggle */}
+                            <div className="flex items-center gap-2 self-end sm:self-center shrink-0">
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  if (isActive) {
+                                    disableDeployment(dep.id);
+                                  } else {
+                                    enableDeployment(dep.id);
+                                  }
+                                }}
+                                className={`px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer border ${
+                                  isActive
+                                    ? 'bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100'
+                                    : 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100'
+                                }`}
+                              >
+                                <Power className="w-3.5 h-3.5" />
+                                <span>{isActive ? 'Disable' : 'Enable'}</span>
+                              </button>
+
+                              <GlobalActionMenu
+                                items={[
+                                  {
+                                    label: 'View Embed Snippet',
+                                    icon: Code,
+                                    onClick: () => {
+                                      setActiveMainTab('install');
+                                      if (dep.channel === 'website_widget') setActiveSnippetTab('script');
+                                      else if (dep.channel === 'react_iframe') setActiveSnippetTab('react');
+                                      else if (dep.channel === 'rest_api') setActiveSnippetTab('api');
+                                    }
+                                  },
+                                  {
+                                    label: isActive ? 'Disable Channel' : 'Enable Channel',
+                                    icon: Power,
+                                    onClick: () => {
+                                      if (isActive) disableDeployment(dep.id);
+                                      else enableDeployment(dep.id);
+                                    }
+                                  },
+                                  {
+                                    label: 'Remove Deployment',
+                                    icon: Trash2,
+                                    variant: 'destructive',
+                                    onClick: () => setDeploymentToDelete(dep)
+                                  }
+                                ]}
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* TAB: APPEARANCE */}
             {activeMainTab === 'appearance' && (
               <div className="space-y-6 animate-in fade-in duration-150">
@@ -1212,6 +1445,23 @@ export default function App() {
                       </button>
                     </div>
 
+                    {/* Disabled Deployment Warning Banner */}
+                    {(() => {
+                      const isAssistantDisabled = currentCompany.agent.lifecycleStatus === 'disabled' || currentCompany.agent.lifecycleStatus === 'archived';
+                      const widgetDep = (deployments || []).find(d => d.channel === 'website_widget');
+                      const isWidgetDisabled = widgetDep ? widgetDep.status === 'disabled' : false;
+                      const isUnavailable = isAssistantDisabled || isWidgetDisabled;
+
+                      if (!isUnavailable) return null;
+
+                      return (
+                        <div className="mx-5 my-1.5 p-3 rounded-2xl bg-amber-500/15 border border-amber-500/30 text-amber-500 text-xs flex items-center gap-2.5 font-medium animate-in fade-in">
+                          <AlertTriangle className="w-4 h-4 shrink-0 text-amber-500" />
+                          <span>The AI assistant is currently unavailable on this deployment.</span>
+                        </div>
+                      );
+                    })()}
+
                     {/* Chat Message Stream & Starter Prompts */}
                     <div className="px-5 py-2 flex-1 space-y-2.5 overflow-y-auto max-h-[290px] text-xs z-10 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
                       {previewChat.map((msg, mIdx) => (
@@ -1257,19 +1507,43 @@ export default function App() {
 
                     {/* Bottom "Send us a message" input pill */}
                     <div className="p-4 pt-2 z-10 space-y-2">
-                      <div className={`p-1.5 rounded-2xl flex items-center justify-between border shadow-xs ${
-                        isDarkMode ? 'bg-slate-900 text-slate-300 border-slate-800' : 'bg-slate-100 text-slate-700 border-slate-200'
-                      }`}>
-                        <span className={`text-xs font-medium px-3 ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
-                          Send us a message...
-                        </span>
-                        <div 
-                          className="w-8 h-8 rounded-xl flex items-center justify-center text-white shrink-0 shadow-2xs"
-                          style={{ backgroundColor: localSettings.primaryColor }}
-                        >
-                          <Send className="w-3.5 h-3.5" />
-                        </div>
-                      </div>
+                      {(() => {
+                        const isAssistantDisabled = currentCompany.agent.lifecycleStatus === 'disabled' || currentCompany.agent.lifecycleStatus === 'archived';
+                        const widgetDep = (deployments || []).find(d => d.channel === 'website_widget');
+                        const isWidgetDisabled = widgetDep ? widgetDep.status === 'disabled' : false;
+                        const isUnavailable = isAssistantDisabled || isWidgetDisabled;
+
+                        if (isUnavailable) {
+                          return (
+                            <div className={`p-2.5 rounded-2xl flex items-center justify-between border ${
+                              isDarkMode ? 'bg-slate-900/50 text-slate-500 border-slate-800' : 'bg-slate-100 text-slate-400 border-slate-200'
+                            }`}>
+                              <span className="text-xs font-medium px-2 italic">
+                                The AI assistant is currently unavailable on this deployment.
+                              </span>
+                              <div className="w-7 h-7 rounded-xl flex items-center justify-center bg-slate-800 text-slate-500 shrink-0">
+                                <Power className="w-3.5 h-3.5" />
+                              </div>
+                            </div>
+                          );
+                        }
+
+                        return (
+                          <div className={`p-1.5 rounded-2xl flex items-center justify-between border shadow-xs ${
+                            isDarkMode ? 'bg-slate-900 text-slate-300 border-slate-800' : 'bg-slate-100 text-slate-700 border-slate-200'
+                          }`}>
+                            <span className={`text-xs font-medium px-3 ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
+                              Send us a message...
+                            </span>
+                            <div 
+                              className="w-8 h-8 rounded-xl flex items-center justify-center text-white shrink-0 shadow-2xs"
+                              style={{ backgroundColor: localSettings.primaryColor }}
+                            >
+                              <Send className="w-3.5 h-3.5" />
+                            </div>
+                          </div>
+                        );
+                      })()}
 
                       {/* Powered By Footer */}
                       {localSettings.showPoweredBy !== false && (
@@ -1340,6 +1614,124 @@ export default function App() {
           </div>
         </div>
       </div>
+
+      {/* CREATE DEPLOYMENT MODAL */}
+      {isCreateDeploymentOpen && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl max-w-lg w-full p-6 sm:p-7 shadow-2xl border border-slate-200 animate-in fade-in zoom-in-95">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-xl bg-slate-100 text-slate-800 flex items-center justify-center font-bold">
+                  <Plus className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-base sm:text-lg font-bold text-slate-900">Add Deployment Channel</h3>
+                  <p className="text-xs text-slate-500">Configure a new deployment target for this assistant.</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setIsCreateDeploymentOpen(false)}
+                className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-xl transition-colors cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form 
+              onSubmit={async (e) => {
+                e.preventDefault();
+                if (!newDepName.trim()) return;
+                await createDeployment(newDepName.trim(), newDepChannel, newDepDomain.trim() || undefined);
+                setIsCreateDeploymentOpen(false);
+                setNewDepName('');
+                setNewDepDomain('');
+              }} 
+              className="space-y-4 pt-4 text-sm"
+            >
+              <div>
+                <label className="block font-bold text-slate-700 mb-1.5 text-xs">Deployment Name</label>
+                <input
+                  type="text"
+                  required
+                  value={newDepName}
+                  onChange={(e) => setNewDepName(e.target.value)}
+                  placeholder="e.g. Production Web App or Staging Environment"
+                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:bg-white focus:ring-2 focus:ring-slate-900 focus:outline-hidden"
+                />
+              </div>
+
+              <div>
+                <label className="block font-bold text-slate-700 mb-1.5 text-xs">Channel Type</label>
+                <select
+                  value={newDepChannel}
+                  onChange={(e) => setNewDepChannel(e.target.value as any)}
+                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:bg-white focus:ring-2 focus:ring-slate-900 focus:outline-hidden"
+                >
+                  <option value="website_widget">Website Widget (HTML Embed)</option>
+                  <option value="react_iframe">React SDK / Iframe Embed</option>
+                  <option value="rest_api">REST API Headless Endpoint</option>
+                  <option value="mobile_sdk">Mobile SDK (iOS / Android / Flutter)</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block font-bold text-slate-700 mb-1.5 text-xs">Target Domain / Environment (Optional)</label>
+                <input
+                  type="text"
+                  value={newDepDomain}
+                  onChange={(e) => setNewDepDomain(e.target.value)}
+                  placeholder="e.g. app.coarai.com or * (all origins)"
+                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:bg-white focus:ring-2 focus:ring-slate-900 focus:outline-hidden"
+                />
+                <p className="text-[11px] text-slate-400 mt-1">Limits allowed CORS origins for browser-based widgets.</p>
+              </div>
+
+              <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={() => setIsCreateDeploymentOpen(false)}
+                  className="px-4 py-2.5 text-slate-600 hover:bg-slate-100 rounded-xl font-semibold cursor-pointer text-xs sm:text-sm"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={!newDepName.trim()}
+                  className="px-5 py-2.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl font-bold cursor-pointer text-xs sm:text-sm shadow-xs disabled:opacity-50"
+                >
+                  Create Deployment
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* DELETE CONFIRMATION MODAL */}
+      <DeleteConfirmationModal
+        isOpen={Boolean(deploymentToDelete)}
+        onClose={() => setDeploymentToDelete(null)}
+        onConfirm={async () => {
+          if (deploymentToDelete) {
+            await removeDeployment(deploymentToDelete.id);
+            setDeploymentToDelete(null);
+          }
+        }}
+        title="Remove Deployment"
+        resourceName={deploymentToDelete?.name || 'this deployment'}
+        confirmText="DELETE"
+        isPermanent={true}
+        destructiveActionLabel="Remove Deployment"
+        dependencies={[
+          `Channel: ${deploymentToDelete?.channel?.replace('_', ' ')}`,
+          `Target Domain: ${deploymentToDelete?.targetDomain || '* (Any)'}`
+        ]}
+        consequences={[
+          'Traffic routed through this deployment channel will be rejected immediately.',
+          'Embedded widgets or API callers using this deployment will cease functioning.',
+          'The core AI Assistant and its knowledge base remain completely intact.'
+        ]}
+      />
 
       {/* Hidden File Inputs for Logo & Custom Icon Uploads */}
       <input 

@@ -1,4 +1,5 @@
-from fastapi import APIRouter, HTTPException, Depends
+import time
+from fastapi import APIRouter, HTTPException, Depends, status
 from pydantic import BaseModel
 from typing import Optional, Dict, Any
 from app.db.database import db
@@ -66,3 +67,70 @@ def update_widget_configuration(req: UpdateWidgetConfigRequest, ctx: TenantConte
 
     company["settings"]["widget"] = req.model_dump(exclude_unset=True)
     return {"status": 200, "data": {"widgetSettings": company["settings"]["widget"]}}
+
+# ================= LIFECYCLE DEPLOYMENT MANAGEMENT ================= #
+
+class CreateDeploymentRequest(BaseModel):
+    name: str
+    channel: str = "website_widget"  # website_widget, react_iframe, rest_api, webhook, mobile_sdk
+    domain: Optional[str] = None
+    config: Optional[dict] = None
+
+@router.get("")
+def list_deployments(ctx: TenantContext = Depends(get_tenant_context)):
+    """Lists all configured deployment channels and their live status for tenant."""
+    deps = db.get_deployments_for_tenant(ctx.company_id)
+    return {"status": 200, "data": {"deployments": deps, "total": len(deps)}}
+
+@router.post("", status_code=status.HTTP_201_CREATED)
+def create_deployment(req: CreateDeploymentRequest, ctx: TenantContext = Depends(get_tenant_context)):
+    """Creates a new deployment channel for the assistant."""
+    dep_id = f"dep-{ctx.company_id}-{len(db.deployments) + 1}"
+    agent = db.get_agent_for_company(ctx.company_id) or {}
+    new_dep = {
+        "id": dep_id,
+        "companyId": ctx.company_id,
+        "name": req.name,
+        "channel": req.channel,
+        "status": "active",
+        "assistantVersion": f"v{agent.get('publishedVersionNumber', 1)}",
+        "domain": req.domain or f"app.{ctx.company_id}.io",
+        "config": req.config or {},
+        "lastActiveAt": "Just now",
+        "createdAt": time.strftime("%Y-%m-%dT%H:%M:%SZ")
+    }
+    db.deployments[dep_id] = new_dep
+    return {"status": 201, "data": new_dep}
+
+@router.post("/{deployment_id}/disable")
+def disable_deployment(deployment_id: str, ctx: TenantContext = Depends(get_tenant_context)):
+    """Temporarily disables an active deployment without modifying or deleting the assistant."""
+    dep = db.deployments.get(deployment_id)
+    if not dep or dep.get("companyId") != ctx.company_id:
+        raise HTTPException(status_code=404, detail="Deployment channel not found.")
+
+    dep["status"] = "disabled"
+    dep["updatedAt"] = time.strftime("%Y-%m-%dT%H:%M:%SZ")
+    return {"status": 200, "data": {"deployment": dep, "message": f"Deployment '{dep.get('name')}' disabled."}}
+
+@router.post("/{deployment_id}/enable")
+def enable_deployment(deployment_id: str, ctx: TenantContext = Depends(get_tenant_context)):
+    """Re-enables a disabled deployment channel."""
+    dep = db.deployments.get(deployment_id)
+    if not dep or dep.get("companyId") != ctx.company_id:
+        raise HTTPException(status_code=404, detail="Deployment channel not found.")
+
+    dep["status"] = "active"
+    dep["updatedAt"] = time.strftime("%Y-%m-%dT%H:%M:%SZ")
+    return {"status": 200, "data": {"deployment": dep, "message": f"Deployment '{dep.get('name')}' enabled."}}
+
+@router.delete("/{deployment_id}")
+def remove_deployment(deployment_id: str, ctx: TenantContext = Depends(get_tenant_context)):
+    """Removes a deployment channel from the workspace without affecting the assistant."""
+    dep = db.deployments.get(deployment_id)
+    if not dep or dep.get("companyId") != ctx.company_id:
+        raise HTTPException(status_code=404, detail="Deployment channel not found.")
+
+    del db.deployments[deployment_id]
+    return {"status": 200, "data": {"message": f"Deployment '{dep.get('name')}' removed successfully."}}
+

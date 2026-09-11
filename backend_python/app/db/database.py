@@ -25,6 +25,7 @@ class DatabaseStore:
         self.audit_logs: List[Dict[str, Any]] = []
         self.api_keys: Dict[str, Dict[str, Any]] = {}
         self.webhooks: Dict[str, Dict[str, Any]] = {}
+        self.deployments: Dict[str, Dict[str, Any]] = {}
         self._seed_initial_data()
 
     def _seed_initial_data(self):
@@ -67,6 +68,10 @@ class DatabaseStore:
             "description": "Autonomous Technical Support Specialist",
             "avatarUrl": "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe",
             "status": "active",
+            "lifecycleStatus": "published",
+            "publishedVersionNumber": 1,
+            "draftVersionNumber": 1,
+            "lastPublishedAt": "2026-08-15T10:00:00.000Z",
             "tone": "professional",
             "activeVersionId": "ver-tf-v1",
             "draftVersionId": "ver-tf-v1",
@@ -132,6 +137,10 @@ class DatabaseStore:
             "version": 1,
             "category": "SLA",
             "status": "ready",
+            "lifecycleState": "active",
+            "processingStage": "indexed",
+            "retentionDays": 30,
+            "lastIndexedAt": "2026-09-06T10:00:00.000Z",
             "chunkCount": 1,
             "totalTokens": 20,
             "lastSyncedAt": "2026-09-06T10:00:00.000Z",
@@ -149,6 +158,10 @@ class DatabaseStore:
             "version": 1,
             "category": "Billing",
             "status": "ready",
+            "lifecycleState": "active",
+            "processingStage": "indexed",
+            "retentionDays": 30,
+            "lastIndexedAt": "2026-09-06T10:00:00.000Z",
             "chunkCount": 1,
             "totalTokens": 15,
             "lastSyncedAt": "2026-09-06T10:00:00.000Z",
@@ -296,11 +309,89 @@ class DatabaseStore:
             "createdAt": "2026-08-10T00:00:00.000Z"
         }
 
+        # 3. Deployments
+        self.deployments["dep-tf-widget"] = {
+            "id": "dep-tf-widget",
+            "companyId": "comp-techflow",
+            "name": "Production Website Widget",
+            "channel": "website_widget",
+            "status": "active",
+            "assistantVersion": "v1",
+            "domain": "techflow.cloud",
+            "config": {"theme": "dark", "position": "bottom-right"},
+            "lastActiveAt": "2026-09-12T02:30:00.000Z",
+            "createdAt": "2026-08-15T10:00:00.000Z"
+        }
+        self.deployments["dep-tf-api"] = {
+            "id": "dep-tf-api",
+            "companyId": "comp-techflow",
+            "name": "Customer Support REST API",
+            "channel": "rest_api",
+            "status": "active",
+            "assistantVersion": "v1",
+            "domain": "api.techflow.cloud",
+            "config": {"rateLimitPerMin": 120},
+            "lastActiveAt": "2026-09-12T02:15:00.000Z",
+            "createdAt": "2026-08-20T10:00:00.000Z"
+        }
+
+        # 4. API Keys (Safe Metadata)
+        self.api_keys["key-tf-prod"] = {
+            "id": "key-tf-prod",
+            "companyId": "comp-techflow",
+            "name": "Production API Key",
+            "keyPrefix": "aas_live_tf",
+            "keyHash": "hash_tf_live_9941",
+            "secretMasked": "aas_live_tf_••••••••1824",
+            "scopes": ["chat:read", "chat:write"],
+            "status": "active",
+            "lastUsedAt": "5 minutes ago",
+            "createdAt": "2026-08-01T00:00:00.000Z"
+        }
+
+        # 5. Webhooks
+        self.webhooks["hook-tf-prod"] = {
+            "id": "hook-tf-prod",
+            "companyId": "comp-techflow",
+            "targetUrl": "https://api.techflow.cloud/webhooks/ai-events",
+            "events": ["conversation.started", "handoff.triggered", "rag.fallback"],
+            "description": "Production event listener",
+            "secret": "whsec_live_tf_98124",
+            "status": "active",
+            "lastDeliveryStatus": "200 OK",
+            "responseTimeMs": 182,
+            "lastDeliveredAt": "2 minutes ago",
+            "failureCount": 0,
+            "deliveryHistory": [
+                {
+                    "id": "del-1",
+                    "event": "handoff.triggered",
+                    "statusCode": 200,
+                    "responseTimeMs": 182,
+                    "timestamp": "2 minutes ago",
+                    "success": True
+                }
+            ],
+            "createdAt": "2026-08-15T10:00:00.000Z"
+        }
+
     def get_messages_for_conversation(self, conversation_id: str, company_id: str) -> List[Dict[str, Any]]:
         return [m for m in self.messages.values() if m.get("conversationId") == conversation_id and m.get("companyId") == company_id]
 
-    def get_document_chunks_for_tenant(self, company_id: str) -> List[Dict[str, Any]]:
-        return [c for c in self.document_chunks.values() if c.get("companyId") == company_id]
+    def get_document_chunks_for_tenant(self, company_id: str, only_active: bool = True) -> List[Dict[str, Any]]:
+        chunks = [c for c in self.document_chunks.values() if c.get("companyId") == company_id]
+        if only_active:
+            active_source_ids = {
+                sid for sid, s in self.knowledge_sources.items()
+                if s.get("companyId") == company_id
+                and s.get("lifecycleState", "active") == "active"
+                and s.get("status") not in ["disabled", "trash", "archived"]
+            }
+            chunks = [
+                c for c in chunks 
+                if (c.get("knowledgeSourceId") or c.get("knowledge_source_id")) in active_source_ids
+            ]
+        return chunks
 
     def get_collections_for_tenant(self, company_id: str) -> List[Dict[str, Any]]:
         return [c for c in self.knowledge_collections.values() if c.get("companyId") == company_id]
@@ -311,9 +402,15 @@ class DatabaseStore:
         collection_id: Optional[str] = None,
         source_type: Optional[str] = None,
         status: Optional[str] = None,
-        search: Optional[str] = None
+        search: Optional[str] = None,
+        lifecycle_state: Optional[str] = "active"
     ) -> List[Dict[str, Any]]:
         sources = [s for s in self.knowledge_sources.values() if s.get("companyId") == company_id]
+        
+        # Lifecycle state filtering: by default, show 'active' items. 'all' returns everything, 'trash' returns trash.
+        if lifecycle_state and lifecycle_state != "all":
+            sources = [s for s in sources if s.get("lifecycleState", "active") == lifecycle_state]
+
         if collection_id:
             sources = [s for s in sources if s.get("collectionId") == collection_id]
         if source_type and source_type != "all":
@@ -324,6 +421,24 @@ class DatabaseStore:
             q = search.lower()
             sources = [s for s in sources if q in s.get("title", "").lower() or q in s.get("category", "").lower()]
         return sources
+
+    def purge_knowledge_source(self, source_id: str, company_id: str) -> int:
+        """Permanently purges a knowledge source and completely wipes its document chunks, embeddings, and metadata."""
+        if source_id in self.knowledge_sources and self.knowledge_sources[source_id].get("companyId") == company_id:
+            del self.knowledge_sources[source_id]
+
+        chunk_ids_to_del = [
+            cid for cid, c in self.document_chunks.items() 
+            if (c.get("knowledgeSourceId") == source_id or c.get("knowledge_source_id") == source_id) 
+            and c.get("companyId") == company_id
+        ]
+        for cid in chunk_ids_to_del:
+            del self.document_chunks[cid]
+
+        return len(chunk_ids_to_del)
+
+    def get_deployments_for_tenant(self, company_id: str) -> List[Dict[str, Any]]:
+        return [d for d in self.deployments.values() if d.get("companyId") == company_id]
 
     def get_knowledge_gaps_for_tenant(self, company_id: str) -> List[Dict[str, Any]]:
         return [g for g in self.knowledge_gaps.values() if g.get("companyId") == company_id]

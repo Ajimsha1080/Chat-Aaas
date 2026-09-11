@@ -24,7 +24,9 @@ import {
   AgentConfig,
   WidgetCustomization,
   AgentTone,
-  ToastNotification
+  ToastNotification,
+  DeploymentItem,
+  ApiKeyMetadata
 } from '../types';
 import { INITIAL_COMPANIES } from '../data/mockData';
 
@@ -128,6 +130,35 @@ export const normalizeConversation = (c: any): Conversation => {
   };
 };
 
+export const normalizeKnowledgeItem = (k: any): KnowledgeItem => {
+  if (!k) return {
+    id: 'kb-default',
+    type: 'document',
+    title: 'Untitled Document',
+    content: '',
+    status: 'indexed',
+    lifecycleState: 'active',
+    processingStage: 'indexed',
+    chunksCount: 1,
+    tokenCount: 100,
+    lastUpdated: new Date().toISOString()
+  };
+
+  return {
+    ...k,
+    id: k.id || 'kb-default',
+    type: k.type || 'document',
+    title: k.title || 'Untitled Document',
+    content: k.content || '',
+    status: k.status || 'indexed',
+    lifecycleState: k.lifecycleState || 'active',
+    processingStage: k.processingStage || 'indexed',
+    chunksCount: k.chunksCount || 1,
+    tokenCount: k.tokenCount || 100,
+    lastUpdated: k.lastUpdated || new Date().toISOString()
+  };
+};
+
 export interface AppContextType {
   // Navigation & Product Experiences
   currentExperience: ProductExperience;
@@ -171,14 +202,27 @@ export interface AppContextType {
   // Single Agent Management & Versioning
   updateAgentConfig: (updates: Partial<AgentConfig>) => void;
   toggleAgentStatus: () => void;
+  unpublishAgent: () => Promise<void>;
+  disableAgent: () => Promise<void>;
+  enableAgent: () => Promise<void>;
+  archiveAgent: () => Promise<void>;
+  deleteAgent: () => Promise<void>;
   agentVersions: AgentVersionItem[];
   publishAgentVersion: (description?: string) => void;
   rollbackAgentVersion: (versionId: string) => void;
 
-  // Knowledge Management
+  // Knowledge Management & Lifecycle
   knowledgeItems: KnowledgeItem[];
   addKnowledgeItem: (item: Partial<KnowledgeItem> & { title: string; content: string; type: KnowledgeItem['type'] }) => void;
   deleteKnowledgeItem: (id: string) => void;
+  trashKnowledgeItem: (id: string) => Promise<void>;
+  restoreKnowledgeItem: (id: string) => Promise<void>;
+  disableKnowledgeItem: (id: string) => Promise<void>;
+  enableKnowledgeItem: (id: string) => Promise<void>;
+  reprocessKnowledgeItem: (id: string) => Promise<void>;
+  permanentDeleteKnowledgeItem: (id: string) => Promise<void>;
+  bulkTrashKnowledge: (ids: string[]) => Promise<void>;
+  bulkDisableKnowledge: (ids: string[]) => Promise<void>;
 
   // Integrations Management
   integrations: Integration[];
@@ -190,14 +234,24 @@ export interface AppContextType {
   updateAction: (id: string, updates: Partial<ActionDefinition>) => void;
   toggleAction: (id: string) => void;
 
-  // Developer Features (Webhooks & API Logs)
+  // Developer Features (Webhooks & API Keys & API Logs)
+  apiKeys: ApiKeyMetadata[];
+  createApiKey: (name: string, scopes?: string[]) => Promise<{ rawSecret: string } | null>;
+  rotateApiKey: (id: string) => Promise<{ rawSecret: string } | null>;
+  revokeApiKey: (id: string) => Promise<void>;
   webhooks: WebhookEndpoint[];
   createWebhook: (url: string, description: string, events: string[]) => void;
+  toggleWebhook: (id: string) => Promise<void>;
   deleteWebhook: (id: string) => void;
   triggerTestWebhook: (id: string) => Promise<boolean>;
   apiLogs: ApiLogEntry[];
 
-  // Widget & Deployment
+  // Widget & Deployments
+  deployments: DeploymentItem[];
+  createDeployment: (name: string, channel: DeploymentItem['channel'], domain?: string) => Promise<void>;
+  disableDeployment: (id: string) => Promise<void>;
+  enableDeployment: (id: string) => Promise<void>;
+  removeDeployment: (id: string) => Promise<void>;
   updateWidgetSettings: (updates: Partial<WidgetCustomization>) => void;
   regenerateApiKey: () => void;
 
@@ -211,6 +265,10 @@ export interface AppContextType {
   takeoverConversation: (conversationId: string, operatorName?: string, internalNote?: string) => void;
   sendOperatorMessage: (conversationId: string, text: string) => void;
   resolveConversation: (conversationId: string) => void;
+  archiveConversation: (conversationId: string) => Promise<void>;
+  deleteConversation: (conversationId: string) => Promise<void>;
+  bulkArchiveConversations: (ids: string[]) => Promise<void>;
+  bulkDeleteConversations: (ids: string[]) => Promise<void>;
   startNewCustomerChatSession: (initialGreeting?: boolean) => string;
 
   // Analytics & Team & Audit

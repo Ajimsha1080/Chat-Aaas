@@ -25,13 +25,19 @@ import {
   ArrowRight, 
   Bot, 
   Info, 
-  BookOpen 
+  BookOpen,
+  Power,
+  RotateCcw,
+  CheckSquare,
+  Square
 } from 'lucide-react';
 import { useApp } from '../../context';
 import { APIClient } from '../../api/apiClient';
 import { KnowledgeItem, KnowledgeType, KnowledgeCollection, KnowledgeGap, RagTestResponse } from '../../types';
+import { GlobalActionMenu, ActionMenuItem } from '../common/GlobalActionMenu';
+import { DeleteConfirmationModal } from '../common/DeleteConfirmationModal';
 
-type SidebarTab = 'all' | 'published' | 'draft' | 'archived' | 'document' | 'faq' | 'url' | 'gaps';
+type SidebarTab = 'all' | 'active' | 'disabled' | 'trash' | 'published' | 'draft' | 'archived' | 'document' | 'faq' | 'url' | 'gaps';
 
 const genId = (prefix: string) => `${prefix}-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
 
@@ -40,6 +46,14 @@ export const KnowledgeView: React.FC = () => {
     knowledgeItems, 
     addKnowledgeItem, 
     deleteKnowledgeItem, 
+    trashKnowledgeItem,
+    restoreKnowledgeItem,
+    disableKnowledgeItem,
+    enableKnowledgeItem,
+    reprocessKnowledgeItem,
+    permanentDeleteKnowledgeItem,
+    bulkTrashKnowledge,
+    bulkDisableKnowledge,
     currentCompany,
     showToast,
     setIsQuickTestOpen
@@ -48,6 +62,9 @@ export const KnowledgeView: React.FC = () => {
   // Navigation & Filtering
   const [sidebarTab, setSidebarTab] = useState<SidebarTab>('all');
   const [selectedCollection, setSelectedCollection] = useState<string>('all');
+  const [selectedItemIds, setSelectedItemIds] = useState<string[]>([]);
+  const [permanentDeleteTarget, setPermanentDeleteTarget] = useState<KnowledgeItem | null>(null);
+  const [isBulkDeleteModalOpen, setIsBulkDeleteModalOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [articleStatuses] = useState<Record<string, 'published' | 'draft' | 'archived'>>({});
   
@@ -165,26 +182,33 @@ export const KnowledgeView: React.FC = () => {
   };
 
   // Sync health metrics
-  const totalCount = knowledgeItems.length;
-  const publishedCount = knowledgeItems.filter(i => getItemStatus(i) === 'published').length;
-  const draftCount = knowledgeItems.filter(i => getItemStatus(i) === 'draft').length;
-  const archivedCount = knowledgeItems.filter(i => getItemStatus(i) === 'archived').length;
-  const docCount = knowledgeItems.filter(i => i.type === 'document').length;
-  const faqCount = knowledgeItems.filter(i => i.type === 'faq').length;
-  const websiteCount = knowledgeItems.filter(i => i.type === 'url').length;
-  const totalChunks = knowledgeItems.reduce((acc, curr) => acc + (curr.chunksCount || 1), 0);
+  const totalCount = knowledgeItems.filter(i => i.lifecycleState !== 'trash').length;
+  const activeCount = knowledgeItems.filter(i => (i.lifecycleState || 'active') === 'active').length;
+  const disabledCount = knowledgeItems.filter(i => i.lifecycleState === 'disabled').length;
+  const trashCount = knowledgeItems.filter(i => i.lifecycleState === 'trash').length;
+  const publishedCount = knowledgeItems.filter(i => getItemStatus(i) === 'published' && i.lifecycleState !== 'trash').length;
+  const draftCount = knowledgeItems.filter(i => getItemStatus(i) === 'draft' && i.lifecycleState !== 'trash').length;
+  const archivedCount = knowledgeItems.filter(i => getItemStatus(i) === 'archived' && i.lifecycleState !== 'trash').length;
+  const docCount = knowledgeItems.filter(i => i.type === 'document' && i.lifecycleState !== 'trash').length;
+  const faqCount = knowledgeItems.filter(i => i.type === 'faq' && i.lifecycleState !== 'trash').length;
+  const websiteCount = knowledgeItems.filter(i => i.type === 'url' && i.lifecycleState !== 'trash').length;
+  const totalChunks = knowledgeItems.filter(i => (i.lifecycleState || 'active') === 'active').reduce((acc, curr) => acc + (curr.chunksCount || 1), 0);
 
   const filteredItems = knowledgeItems.filter(item => {
     const itemStatus = getItemStatus(item);
+    const itemLifecycle = item.lifecycleState || 'active';
 
     let matchesTab = true;
-    if (sidebarTab === 'all') matchesTab = true;
-    else if (sidebarTab === 'published') matchesTab = itemStatus === 'published';
-    else if (sidebarTab === 'draft') matchesTab = itemStatus === 'draft';
-    else if (sidebarTab === 'archived') matchesTab = itemStatus === 'archived';
-    else if (sidebarTab === 'document') matchesTab = item.type === 'document';
-    else if (sidebarTab === 'faq') matchesTab = item.type === 'faq';
-    else if (sidebarTab === 'url') matchesTab = item.type === 'url';
+    if (sidebarTab === 'all') matchesTab = itemLifecycle !== 'trash';
+    else if (sidebarTab === 'active') matchesTab = itemLifecycle === 'active';
+    else if (sidebarTab === 'disabled') matchesTab = itemLifecycle === 'disabled';
+    else if (sidebarTab === 'trash') matchesTab = itemLifecycle === 'trash';
+    else if (sidebarTab === 'published') matchesTab = itemStatus === 'published' && itemLifecycle !== 'trash';
+    else if (sidebarTab === 'draft') matchesTab = itemStatus === 'draft' && itemLifecycle !== 'trash';
+    else if (sidebarTab === 'archived') matchesTab = itemStatus === 'archived' && itemLifecycle !== 'trash';
+    else if (sidebarTab === 'document') matchesTab = item.type === 'document' && itemLifecycle !== 'trash';
+    else if (sidebarTab === 'faq') matchesTab = item.type === 'faq' && itemLifecycle !== 'trash';
+    else if (sidebarTab === 'url') matchesTab = item.type === 'url' && itemLifecycle !== 'trash';
 
     const matchesSearch = item.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
                           item.content.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -477,6 +501,9 @@ export const KnowledgeView: React.FC = () => {
   const getTabTitle = () => {
     switch (sidebarTab) {
       case 'all': return 'All Knowledge Articles';
+      case 'active': return 'Active Knowledge Sources (Grounding AI)';
+      case 'disabled': return 'Disabled Sources (Excluded from RAG)';
+      case 'trash': return 'Trash (30-Day Retention)';
       case 'published': return 'Published Knowledge';
       case 'draft': return 'Draft Articles';
       case 'archived': return 'Archived Knowledge';
@@ -486,6 +513,95 @@ export const KnowledgeView: React.FC = () => {
       case 'gaps': return 'Unresolved Customer Questions';
       default: return 'Knowledge Base';
     }
+  };
+
+  const renderProcessingBadge = (stage?: string) => {
+    switch (stage) {
+      case 'uploaded':
+        return (
+          <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200">
+            <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
+            Stage 1/5: Uploaded
+          </span>
+        );
+      case 'parsed':
+        return (
+          <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full bg-sky-50 text-sky-700 border border-sky-200">
+            <span className="w-1.5 h-1.5 rounded-full bg-sky-500 animate-pulse" />
+            Stage 2/5: Parsed
+          </span>
+        );
+      case 'chunked':
+        return (
+          <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200">
+            <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse" />
+            Stage 3/5: Chunked
+          </span>
+        );
+      case 'embedded':
+        return (
+          <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200">
+            <span className="w-1.5 h-1.5 rounded-full bg-indigo-500 animate-pulse" />
+            Stage 4/5: Embedded
+          </span>
+        );
+      case 'failed':
+        return (
+          <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full bg-rose-50 text-rose-700 border border-rose-200">
+            <span className="w-1.5 h-1.5 rounded-full bg-rose-500" />
+            Failed
+          </span>
+        );
+      case 'indexed':
+      default:
+        return (
+          <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200/80">
+            <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+            <span>Indexed (Stage 5/5)</span>
+          </span>
+        );
+    }
+  };
+
+  const renderLifecycleTag = (item: KnowledgeItem) => {
+    if (item.lifecycleState === 'trash') {
+      return (
+        <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full bg-rose-50 text-rose-700 border border-rose-200">
+          <Trash2 className="w-3 h-3 text-rose-600" />
+          <span>In Trash</span>
+        </span>
+      );
+    }
+    if (item.lifecycleState === 'disabled') {
+      return (
+        <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200">
+          <Power className="w-3 h-3 text-amber-600" />
+          <span>Disabled (No RAG)</span>
+        </span>
+      );
+    }
+    return (
+      <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
+        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+        <span>Active</span>
+      </span>
+    );
+  };
+
+  const isAllSelected = filteredItems.length > 0 && selectedItemIds.length === filteredItems.length;
+
+  const toggleSelectAll = () => {
+    if (isAllSelected) {
+      setSelectedItemIds([]);
+    } else {
+      setSelectedItemIds(filteredItems.map(i => i.id));
+    }
+  };
+
+  const toggleItemSelection = (id: string) => {
+    setSelectedItemIds(prev => 
+      prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id]
+    );
   };
 
   return (
@@ -509,7 +625,7 @@ export const KnowledgeView: React.FC = () => {
             </button>
           </div>
 
-          {/* Top Category List: All Articles, Published, Draft, Archived */}
+          {/* Top Category List: All Articles, Active, Disabled, Trash */}
           <div className="space-y-1">
             <button
               onClick={() => setSidebarTab('all')}
@@ -519,51 +635,51 @@ export const KnowledgeView: React.FC = () => {
                   : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'
               }`}
             >
-              <span>All Articles</span>
+              <span>All Sources</span>
               <span className={`text-xs px-2 py-0.5 rounded-full font-mono ${sidebarTab === 'all' ? 'bg-sky-200/80 text-slate-900 font-bold' : 'text-slate-400'}`}>
                 {totalCount}
               </span>
             </button>
 
             <button
-              onClick={() => setSidebarTab('published')}
+              onClick={() => setSidebarTab('active')}
               className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-sm font-semibold transition-all cursor-pointer ${
-                sidebarTab === 'published'
-                  ? 'bg-sky-100/70 text-slate-900 border border-sky-200/80 shadow-2xs font-bold'
+                sidebarTab === 'active'
+                  ? 'bg-emerald-100/70 text-emerald-950 border border-emerald-200/80 shadow-2xs font-bold'
                   : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'
               }`}
             >
-              <span>Published</span>
-              <span className={`text-xs px-2 py-0.5 rounded-full font-mono ${sidebarTab === 'published' ? 'bg-sky-200/80 text-slate-900 font-bold' : 'text-slate-400'}`}>
-                {publishedCount}
+              <span>Active</span>
+              <span className={`text-xs px-2 py-0.5 rounded-full font-mono ${sidebarTab === 'active' ? 'bg-emerald-200/80 text-emerald-950 font-bold' : 'text-slate-400'}`}>
+                {activeCount}
               </span>
             </button>
 
             <button
-              onClick={() => setSidebarTab('draft')}
+              onClick={() => setSidebarTab('disabled')}
               className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-sm font-semibold transition-all cursor-pointer ${
-                sidebarTab === 'draft'
-                  ? 'bg-sky-100/70 text-slate-900 border border-sky-200/80 shadow-2xs font-bold'
+                sidebarTab === 'disabled'
+                  ? 'bg-amber-100/70 text-amber-950 border border-amber-200/80 shadow-2xs font-bold'
                   : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'
               }`}
             >
-              <span>Draft</span>
-              <span className={`text-xs px-2 py-0.5 rounded-full font-mono ${sidebarTab === 'draft' ? 'bg-sky-200/80 text-slate-900 font-bold' : 'text-slate-400'}`}>
-                {draftCount}
+              <span>Disabled</span>
+              <span className={`text-xs px-2 py-0.5 rounded-full font-mono ${sidebarTab === 'disabled' ? 'bg-amber-200/80 text-amber-950 font-bold' : 'text-slate-400'}`}>
+                {disabledCount}
               </span>
             </button>
 
             <button
-              onClick={() => setSidebarTab('archived')}
+              onClick={() => setSidebarTab('trash')}
               className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-sm font-semibold transition-all cursor-pointer ${
-                sidebarTab === 'archived'
-                  ? 'bg-sky-100/70 text-slate-900 border border-sky-200/80 shadow-2xs font-bold'
+                sidebarTab === 'trash'
+                  ? 'bg-rose-100/70 text-rose-950 border border-rose-200/80 shadow-2xs font-bold'
                   : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'
               }`}
             >
-              <span>Archived</span>
-              <span className={`text-xs px-2 py-0.5 rounded-full font-mono ${sidebarTab === 'archived' ? 'bg-sky-200/80 text-slate-900 font-bold' : 'text-slate-400'}`}>
-                {archivedCount}
+              <span>Trash (30-day)</span>
+              <span className={`text-xs px-2 py-0.5 rounded-full font-mono ${sidebarTab === 'trash' ? 'bg-rose-200/80 text-rose-950 font-bold' : 'text-slate-400'}`}>
+                {trashCount}
               </span>
             </button>
           </div>
@@ -847,6 +963,89 @@ export const KnowledgeView: React.FC = () => {
         ) : (
           /* STANDARD KNOWLEDGE SOURCE CARDS GRID */
           <div className="space-y-4 animate-in fade-in">
+            {/* Multi-Select Header & Bulk Action Bar */}
+            {filteredItems.length > 0 && (
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-slate-50/60 p-3 rounded-2xl border border-slate-200/70">
+                <button
+                  type="button"
+                  onClick={toggleSelectAll}
+                  className="flex items-center gap-2 text-xs font-semibold text-slate-700 hover:text-slate-900 cursor-pointer select-none"
+                >
+                  {isAllSelected ? (
+                    <CheckSquare className="w-4 h-4 text-indigo-600" />
+                  ) : (
+                    <Square className="w-4 h-4 text-slate-400" />
+                  )}
+                  <span>Select All ({filteredItems.length})</span>
+                </button>
+
+                {selectedItemIds.length > 0 && (
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="text-xs font-bold text-indigo-700 bg-indigo-50 px-2.5 py-1 rounded-lg border border-indigo-200 font-mono">
+                      {selectedItemIds.length} Selected
+                    </span>
+
+                    {sidebarTab === 'trash' ? (
+                      <>
+                        <button
+                          type="button"
+                          onClick={async () => {
+                            for (const id of selectedItemIds) await restoreKnowledgeItem(id);
+                            setSelectedItemIds([]);
+                          }}
+                          className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-semibold flex items-center gap-1.5 cursor-pointer transition-colors shadow-2xs"
+                        >
+                          <RotateCcw className="w-3.5 h-3.5" />
+                          <span>Restore Selected</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setIsBulkDeleteModalOpen(true)}
+                          className="px-3 py-1.5 bg-rose-600 hover:bg-rose-500 text-white rounded-xl text-xs font-semibold flex items-center gap-1.5 cursor-pointer transition-colors shadow-2xs"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                          <span>Delete Permanently</span>
+                        </button>
+                      </>
+                    ) : (
+                      <>
+                        <button
+                          type="button"
+                          onClick={async () => {
+                            await bulkDisableKnowledge(selectedItemIds);
+                            setSelectedItemIds([]);
+                          }}
+                          className="px-3 py-1.5 bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 rounded-xl text-xs font-semibold flex items-center gap-1.5 cursor-pointer transition-colors shadow-2xs"
+                        >
+                          <Power className="w-3.5 h-3.5 text-amber-500" />
+                          <span>Disable</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={async () => {
+                            await bulkTrashKnowledge(selectedItemIds);
+                            setSelectedItemIds([]);
+                          }}
+                          className="px-3 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-xl text-xs font-semibold flex items-center gap-1.5 cursor-pointer transition-colors shadow-2xs"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                          <span>Move to Trash</span>
+                        </button>
+                      </>
+                    )}
+
+                    <button
+                      type="button"
+                      onClick={() => setSelectedItemIds([])}
+                      className="text-xs text-slate-500 hover:text-slate-800 underline ml-1 cursor-pointer"
+                    >
+                      Clear
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
+
             {filteredItems.length === 0 ? (
               <div className="text-center py-16 px-4 bg-slate-50/50 rounded-2xl border border-dashed border-slate-200">
                 <BookOpen className="w-10 h-10 text-slate-300 mx-auto mb-3" />
@@ -868,27 +1067,90 @@ export const KnowledgeView: React.FC = () => {
                   const isUrl = item.type === 'url';
                   const isDoc = item.type === 'document';
                   const isFaq = item.type === 'faq';
-                  const _status = getItemStatus(item);
+                  const isSelected = selectedItemIds.includes(item.id);
+                  const isTrashed = item.lifecycleState === 'trash';
+                  const isDisabled = item.lifecycleState === 'disabled';
+
+                  const itemActionMenuItems: ActionMenuItem[] = [
+                    {
+                      label: 'Preview Content',
+                      icon: Eye,
+                      onClick: () => setPreviewItem(item)
+                    },
+                    {
+                      label: 'Reprocess & Re-index',
+                      icon: RefreshCw,
+                      disabled: isTrashed,
+                      onClick: () => reprocessKnowledgeItem(item.id)
+                    },
+                    ...(isTrashed ? [
+                      {
+                        label: 'Restore to Active',
+                        icon: RotateCcw,
+                        onClick: () => restoreKnowledgeItem(item.id)
+                      },
+                      {
+                        label: 'Delete Permanently',
+                        icon: Trash2,
+                        variant: 'destructive' as const,
+                        onClick: () => setPermanentDeleteTarget(item)
+                      }
+                    ] : [
+                      isDisabled ? {
+                        label: 'Enable Source (Include in RAG)',
+                        icon: Power,
+                        onClick: () => enableKnowledgeItem(item.id)
+                      } : {
+                        label: 'Disable Source (Exclude from RAG)',
+                        icon: Power,
+                        onClick: () => disableKnowledgeItem(item.id)
+                      },
+                      {
+                        label: 'Move to Trash (30-day retention)',
+                        icon: Trash2,
+                        variant: 'destructive' as const,
+                        onClick: () => trashKnowledgeItem(item.id)
+                      }
+                    ])
+                  ];
 
                   return (
                     <div 
                       key={item.id}
-                      className="bg-white rounded-2xl p-5 border border-slate-200/90 shadow-xs hover:shadow-md hover:border-slate-300 transition-all flex flex-col justify-between"
+                      className={`bg-white rounded-2xl p-5 border transition-all flex flex-col justify-between ${
+                        isSelected 
+                          ? 'border-indigo-500 ring-2 ring-indigo-500/20 shadow-md' 
+                          : isTrashed 
+                            ? 'border-rose-200/80 bg-rose-50/20' 
+                            : isDisabled
+                              ? 'border-amber-200/80 bg-amber-50/20'
+                              : 'border-slate-200/90 shadow-xs hover:shadow-md hover:border-slate-300'
+                      }`}
                     >
                       <div>
-                        {/* Card Header: Type Badge & Status Tag */}
-                        <div className="flex items-center justify-between mb-3">
-                          <div className="flex items-center gap-2.5">
-                            <div className="p-2 rounded-xl bg-slate-100 text-slate-700 border border-slate-200/80">
-                              {isUrl ? <Globe className="w-4 h-4" /> : isDoc ? <FileText className="w-4 h-4" /> : isFaq ? <HelpCircle className="w-4 h-4" /> : <AlignLeft className="w-4 h-4" />}
+                        {/* Card Header: Checkbox, Type Badge & Status Tags */}
+                        <div className="flex items-center justify-between mb-3 gap-2">
+                          <div className="flex items-center gap-2">
+                            <button
+                              type="button"
+                              onClick={() => toggleItemSelection(item.id)}
+                              className="text-slate-400 hover:text-indigo-600 transition-colors cursor-pointer"
+                            >
+                              {isSelected ? (
+                                <CheckSquare className="w-4 h-4 text-indigo-600" />
+                              ) : (
+                                <Square className="w-4 h-4 text-slate-300" />
+                              )}
+                            </button>
+                            <div className="p-1.5 rounded-lg bg-slate-100 text-slate-700 border border-slate-200/80">
+                              {isUrl ? <Globe className="w-3.5 h-3.5" /> : isDoc ? <FileText className="w-3.5 h-3.5" /> : isFaq ? <HelpCircle className="w-3.5 h-3.5" /> : <AlignLeft className="w-3.5 h-3.5" />}
                             </div>
-                            <span className="text-xs font-bold font-mono uppercase tracking-wider text-slate-500">{item.type}</span>
+                            <span className="text-[11px] font-bold font-mono uppercase tracking-wider text-slate-500">{item.type}</span>
                           </div>
 
-                          <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200/80">
-                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-                            <span>Active & Indexed</span>
-                          </span>
+                          <div className="flex items-center gap-1.5 flex-wrap justify-end">
+                            {renderLifecycleTag(item)}
+                          </div>
                         </div>
 
                         {/* Title & Preview */}
@@ -896,10 +1158,16 @@ export const KnowledgeView: React.FC = () => {
                         <p className="text-xs text-slate-600 mt-1.5 line-clamp-3 leading-relaxed">
                           {cleanPreviewText(item.faqAnswer || item.content)}
                         </p>
+
+                        {/* Processing Stage Indicator */}
+                        <div className="mt-3 pt-2.5 border-t border-slate-100 flex items-center justify-between">
+                          <span className="text-[11px] text-slate-500 font-medium">Pipeline:</span>
+                          {renderProcessingBadge(item.processingStage)}
+                        </div>
                       </div>
 
                       {/* Card Footer */}
-                      <div className="mt-5 pt-3.5 border-t border-slate-100 flex items-center justify-between text-xs">
+                      <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-xs">
                         <span className="text-[11px] text-slate-500 font-semibold font-mono">
                           {item.category || 'General'} {item.chunksCount ? `· ${item.chunksCount} chunks` : ''}
                         </span>
@@ -912,16 +1180,8 @@ export const KnowledgeView: React.FC = () => {
                           >
                             <Eye className="w-4 h-4" />
                           </button>
-                          <button
-                            onClick={() => {
-                              deleteKnowledgeItem(item.id);
-                              showToast('Knowledge Removed', `Removed "${item.title}".`, 'info');
-                            }}
-                            className="p-1.5 text-slate-500 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer"
-                            title="Delete Source"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
+                          
+                          <GlobalActionMenu items={itemActionMenuItems} />
                         </div>
                       </div>
                     </div>
@@ -1710,6 +1970,51 @@ export const KnowledgeView: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* Single Item Permanent Delete Confirmation Modal */}
+      <DeleteConfirmationModal
+        isOpen={Boolean(permanentDeleteTarget)}
+        title={`Permanently Delete "${permanentDeleteTarget?.title}"?`}
+        resourceName={permanentDeleteTarget?.title || 'Knowledge Source'}
+        confirmText="DELETE PERMANENTLY"
+        isPermanent={true}
+        destructiveActionLabel="Delete Permanently"
+        consequences={[
+          'All document text chunks, vector embeddings, and indexing metadata will be purged immediately.',
+          'RAG searches will no longer retrieve this information under any circumstance.',
+          'This action is permanent, irrevocable, and cannot be undone from trash.'
+        ]}
+        onConfirm={async () => {
+          if (permanentDeleteTarget) {
+            await permanentDeleteKnowledgeItem(permanentDeleteTarget.id);
+            setPermanentDeleteTarget(null);
+          }
+        }}
+        onClose={() => setPermanentDeleteTarget(null)}
+      />
+
+      {/* Bulk Permanent Delete Confirmation Modal */}
+      <DeleteConfirmationModal
+        isOpen={isBulkDeleteModalOpen}
+        title={`Permanently Purge ${selectedItemIds.length} Knowledge Sources?`}
+        resourceName={`${selectedItemIds.length} Knowledge Sources`}
+        confirmText="DELETE PERMANENTLY"
+        isPermanent={true}
+        destructiveActionLabel="Delete Permanently"
+        consequences={[
+          `All ${selectedItemIds.length} sources and their associated chunks and vector embeddings will be erased.`,
+          'Zero traces will remain in vector memory or retrieval indices.',
+          'Data cannot be recovered after this operation.'
+        ]}
+        onConfirm={async () => {
+          for (const id of selectedItemIds) {
+            await permanentDeleteKnowledgeItem(id);
+          }
+          setSelectedItemIds([]);
+          setIsBulkDeleteModalOpen(false);
+        }}
+        onClose={() => setIsBulkDeleteModalOpen(false)}
+      />
     </div>
   );
 };

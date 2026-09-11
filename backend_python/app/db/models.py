@@ -89,6 +89,10 @@ class Agent(Base):
     description = Column(Text, nullable=True)
     avatar_url = Column(String(500), nullable=True)
     status = Column(String(50), default="active", nullable=False)  # active, paused, training
+    lifecycle_status = Column(String(50), default="published", nullable=False)  # draft, processing, ready, published, disabled, archived, deleted
+    published_version_number = Column(Integer, default=1, nullable=False)
+    draft_version_number = Column(Integer, default=1, nullable=False)
+    last_published_at = Column(String(64), nullable=True)
     tone = Column(String(50), default="professional", nullable=False)
     active_version_id = Column(String(64), nullable=True)
     draft_version_id = Column(String(64), nullable=True)
@@ -203,6 +207,11 @@ class KnowledgeSource(Base):
     source_url = Column(String(1000), nullable=True)
     category = Column(String(100), default="General", nullable=False)
     status = Column(String(50), default="ready", nullable=False)  # ready, processing, needs_attention, failed
+    lifecycle_state = Column(String(50), default="active", nullable=False)  # active, disabled, archived, trash, deleted
+    processing_stage = Column(String(50), default="indexed", nullable=False)  # uploaded, parsed, chunked, embedded, indexed, failed
+    deleted_at = Column(String(64), nullable=True)
+    retention_days = Column(Integer, default=30, nullable=False)
+    last_indexed_at = Column(String(64), nullable=True)
     error_message = Column(Text, nullable=True)
     chunk_count = Column(Integer, default=0, nullable=False)
     total_tokens = Column(Integer, default=0, nullable=False)
@@ -363,6 +372,22 @@ class AuditLog(Base):
     created_at = Column(String(64), nullable=False)
 
 
+class Deployment(Base):
+    __tablename__ = "deployments"
+
+    id = Column(String(64), primary_key=True, index=True)
+    company_id = Column(String(64), ForeignKey("companies.id", ondelete="CASCADE"), nullable=False, index=True)
+    name = Column(String(255), nullable=False)
+    channel = Column(String(50), default="website_widget", nullable=False)  # website_widget, react_iframe, rest_api, webhook, mobile_sdk
+    status = Column(String(50), default="active", nullable=False)  # active, disabled
+    assistant_version = Column(String(50), default="v1", nullable=False)
+    domain = Column(String(255), nullable=True)
+    config = Column(JSON, default=dict, nullable=False)
+    last_active_at = Column(String(64), nullable=True)
+    created_at = Column(String(64), nullable=False)
+    updated_at = Column(String(64), nullable=True)
+
+
 class ApiKey(Base):
     __tablename__ = "api_keys"
 
@@ -373,7 +398,10 @@ class ApiKey(Base):
     key_hash = Column(String(255), nullable=False)
     secret_masked = Column(String(64), nullable=False)
     scopes = Column(JSON, default=list, nullable=False)
+    status = Column(String(50), default="active", nullable=False)  # active, revoked
+    last_used_at = Column(String(64), nullable=True)
     expires_at = Column(String(64), nullable=True)
+    revoked_at = Column(String(64), nullable=True)
     created_at = Column(String(64), nullable=False)
 
 
@@ -386,5 +414,11 @@ class Webhook(Base):
     events = Column(JSON, default=list, nullable=False)
     description = Column(String(255), nullable=True)
     secret = Column(String(255), nullable=True)
-    status = Column(String(50), default="active", nullable=False)
+    status = Column(String(50), default="active", nullable=False)  # active, disabled, failing
+    last_delivery_status = Column(String(50), nullable=True)
+    response_time_ms = Column(Integer, default=0, nullable=False)
+    last_delivered_at = Column(String(64), nullable=True)
+    failure_count = Column(Integer, default=0, nullable=False)
+    delivery_history = Column(JSON, default=list, nullable=False)
     created_at = Column(String(64), nullable=False)
+

@@ -11,10 +11,18 @@ import {
   CheckCircle,
   ArrowLeft,
   Info,
-  X
+  X,
+  Archive,
+  Trash2,
+  FileText,
+  CheckSquare,
+  Square,
+  AlertTriangle
 } from 'lucide-react';
 import { useApp } from '../../context';
-import { ConversationStatus } from '../../types';
+import { ConversationStatus, Conversation } from '../../types';
+import { GlobalActionMenu } from '../common/GlobalActionMenu';
+import { DeleteConfirmationModal } from '../common/DeleteConfirmationModal';
 
 export const ConversationsView: React.FC = () => {
   const { 
@@ -25,6 +33,10 @@ export const ConversationsView: React.FC = () => {
     takeoverConversation,
     sendOperatorMessage,
     resolveConversation,
+    archiveConversation,
+    deleteConversation,
+    bulkArchiveConversations,
+    bulkDeleteConversations,
     showToast
   } = useApp();
 
@@ -33,6 +45,10 @@ export const ConversationsView: React.FC = () => {
   const [operatorInput, setOperatorInput] = useState('');
   const [isNoteMode, setIsNoteMode] = useState(false);
   const [isMobileProfileOpen, setIsMobileProfileOpen] = useState(false);
+
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [convToDelete, setConvToDelete] = useState<Conversation | null>(null);
+  const [isBulkDeleting, setIsBulkDeleting] = useState(false);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -51,6 +67,21 @@ export const ConversationsView: React.FC = () => {
                           (conv.tags || []).some(t => t.toLowerCase().includes(searchQuery.toLowerCase()));
     return matchesStatus && matchesSearch;
   });
+
+  const handleToggleSelect = (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setSelectedIds(prev => 
+      prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]
+    );
+  };
+
+  const handleSelectAll = () => {
+    if (selectedIds.length === filteredConversations.length) {
+      setSelectedIds([]);
+    } else {
+      setSelectedIds(filteredConversations.map(c => c.id));
+    }
+  };
 
   const handleSendOperatorReply = (e: React.FormEvent) => {
     e.preventDefault();
@@ -153,6 +184,26 @@ export const ConversationsView: React.FC = () => {
               <span className="w-2.5 h-2.5 rounded-full bg-emerald-500" />
               <h2 className="text-base font-bold text-slate-900">Conversations Inbox</h2>
             </div>
+
+            {filteredConversations.length > 0 && (
+              <button
+                type="button"
+                onClick={handleSelectAll}
+                className="text-xs font-semibold text-slate-500 hover:text-slate-900 transition-colors cursor-pointer flex items-center gap-1.5"
+              >
+                {selectedIds.length === filteredConversations.length && filteredConversations.length > 0 ? (
+                  <>
+                    <CheckSquare className="w-3.5 h-3.5 text-indigo-600" />
+                    <span>Deselect All</span>
+                  </>
+                ) : (
+                  <>
+                    <Square className="w-3.5 h-3.5 text-slate-400" />
+                    <span>Select All</span>
+                  </>
+                )}
+              </button>
+            )}
           </div>
 
           {/* Search */}
@@ -173,7 +224,8 @@ export const ConversationsView: React.FC = () => {
               { id: 'all', label: 'All' },
               { id: 'needs_attention', label: 'Attention' },
               { id: 'active', label: 'Open' },
-              { id: 'resolved', label: 'Resolved' }
+              { id: 'resolved', label: 'Resolved' },
+              { id: 'archived', label: 'Archived' }
             ].map(tab => (
               <button
                 key={tab.id}
@@ -188,6 +240,46 @@ export const ConversationsView: React.FC = () => {
               </button>
             ))}
           </div>
+
+          {/* Bulk Action Bar */}
+          {selectedIds.length > 0 && (
+            <div className="p-2.5 bg-slate-900 text-white flex items-center justify-between gap-2 px-3.5 rounded-xl animate-in fade-in">
+              <span className="text-xs font-semibold">{selectedIds.length} selected</span>
+              <div className="flex items-center gap-1.5">
+                <button
+                  type="button"
+                  onClick={async () => {
+                    await bulkArchiveConversations(selectedIds);
+                    setSelectedIds([]);
+                  }}
+                  className="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg text-xs font-semibold flex items-center gap-1 transition-colors cursor-pointer"
+                  title="Archive selected conversations"
+                >
+                  <Archive className="w-3.5 h-3.5 text-amber-400" />
+                  <span>Archive</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setIsBulkDeleting(true)}
+                  className="px-2.5 py-1 bg-rose-600 hover:bg-rose-700 text-white rounded-lg text-xs font-semibold flex items-center gap-1 transition-colors cursor-pointer"
+                  title="Delete selected conversations"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                  <span>Delete</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setSelectedIds([])}
+                  className="p-1 text-slate-400 hover:text-white rounded-lg cursor-pointer ml-1"
+                  title="Clear selection"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Conversation List Items */}
@@ -199,6 +291,7 @@ export const ConversationsView: React.FC = () => {
           ) : (
             filteredConversations.map(conv => {
               const isActive = currentActiveConversation?.id === conv.id;
+              const isSelected = selectedIds.includes(conv.id);
               const msgs = conv.messages || [];
               const lastMsg = msgs.length > 0 ? msgs[msgs.length - 1] : null;
 
@@ -206,39 +299,82 @@ export const ConversationsView: React.FC = () => {
                 <div
                   key={conv.id}
                   onClick={() => setActiveConversationId(conv.id)}
-                  className={`p-3.5 cursor-pointer transition-colors ${
+                  className={`p-3.5 cursor-pointer transition-colors flex items-start gap-2.5 ${
                     isActive 
                       ? 'bg-slate-100/90 border-l-4 border-l-slate-900' 
                       : 'hover:bg-slate-50'
                   }`}
                 >
-                  <div className="flex items-center justify-between mb-1.5">
-                    <span className="font-bold text-sm text-slate-900 truncate max-w-[160px]">
-                      {conv.customerName || 'Customer'}
-                    </span>
-                    <span className="text-xs text-slate-400 font-mono">
-                      {conv.startedAt || ''}
-                    </span>
+                  {/* Row Checkbox */}
+                  <button
+                    type="button"
+                    onClick={(e) => handleToggleSelect(conv.id, e)}
+                    className="mt-0.5 text-slate-400 hover:text-slate-800 cursor-pointer shrink-0"
+                    title={isSelected ? 'Deselect' : 'Select'}
+                  >
+                    {isSelected ? (
+                      <CheckSquare className="w-4 h-4 text-indigo-600" />
+                    ) : (
+                      <Square className="w-4 h-4 text-slate-300 hover:text-slate-500" />
+                    )}
+                  </button>
+
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="font-bold text-sm text-slate-900 truncate max-w-[130px]">
+                        {conv.customerName || 'Customer'}
+                      </span>
+                      <span className="text-xs text-slate-400 font-mono shrink-0">
+                        {conv.startedAt || ''}
+                      </span>
+                    </div>
+
+                    <p className="text-xs text-slate-600 truncate mb-2">
+                      {lastMsg ? lastMsg.text : 'New session started'}
+                    </p>
+
+                    <div className="flex items-center justify-between">
+                      <span className={`text-[11px] px-2 py-0.5 rounded-md font-semibold ${
+                        conv.status === 'escalated_to_human'
+                          ? 'bg-amber-50 text-amber-800 border border-amber-200'
+                          : conv.status === 'archived'
+                          ? 'bg-slate-200 text-slate-700 border border-slate-300'
+                          : conv.status === 'resolved'
+                          ? 'bg-slate-100 text-slate-700 border border-slate-200'
+                          : 'bg-emerald-50 text-emerald-800 border border-emerald-200'
+                      }`}>
+                        {conv.status === 'escalated_to_human' ? 'Handoff' : conv.status === 'archived' ? 'Archived' : conv.status === 'resolved' ? 'Resolved' : 'Active'}
+                      </span>
+
+                      <span className="text-[11px] text-slate-400 font-mono">
+                        {msgs.length} msgs
+                      </span>
+                    </div>
                   </div>
 
-                  <p className="text-sm text-slate-600 truncate mb-2">
-                    {lastMsg ? lastMsg.text : 'New session started'}
-                  </p>
-
-                  <div className="flex items-center justify-between">
-                    <span className={`text-xs px-2.5 py-0.5 rounded-md font-semibold ${
-                      conv.status === 'escalated_to_human'
-                        ? 'bg-amber-50 text-amber-800 border border-amber-200'
-                        : conv.status === 'resolved'
-                        ? 'bg-slate-100 text-slate-700 border border-slate-200'
-                        : 'bg-emerald-50 text-emerald-800 border border-emerald-200'
-                    }`}>
-                      {conv.status === 'escalated_to_human' ? 'Handoff' : conv.status === 'resolved' ? 'Resolved' : 'Active'}
-                    </span>
-
-                    <span className="text-xs text-slate-500 font-mono">
-                      {msgs.length} msgs
-                    </span>
+                  {/* 3-dot GlobalActionMenu */}
+                  <div onClick={e => e.stopPropagation()} className="shrink-0">
+                    <GlobalActionMenu
+                      items={[
+                        {
+                          label: 'View Transcript',
+                          icon: FileText,
+                          onClick: () => setActiveConversationId(conv.id)
+                        },
+                        {
+                          label: conv.status === 'archived' ? 'Unarchive Thread' : 'Archive Thread',
+                          icon: Archive,
+                          onClick: () => archiveConversation(conv.id)
+                        },
+                        {
+                          label: 'Delete Thread',
+                          icon: Trash2,
+                          variant: 'destructive',
+                          onClick: () => setConvToDelete(conv)
+                        }
+                      ]}
+                      size="sm"
+                    />
                   </div>
                 </div>
               );
@@ -291,6 +427,23 @@ export const ConversationsView: React.FC = () => {
               </button>
             </div>
           </div>
+
+          {/* Archived Banner if Thread is Archived */}
+          {currentActiveConversation.status === 'archived' && (
+            <div className="p-3 bg-amber-50/90 border-b border-amber-200 text-amber-900 text-xs flex items-center justify-between px-5 font-medium animate-in fade-in">
+              <div className="flex items-center gap-2">
+                <Archive className="w-4 h-4 text-amber-700 shrink-0" />
+                <span>This conversation thread is archived and read-only.</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => archiveConversation(currentActiveConversation.id)}
+                className="px-2.5 py-1 bg-amber-100 hover:bg-amber-200 text-amber-900 rounded-lg text-xs font-semibold transition-colors cursor-pointer"
+              >
+                Restore to Active
+              </button>
+            </div>
+          )}
 
           {/* Messages Feed */}
           <div className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-4 bg-slate-50/30">
@@ -367,29 +520,35 @@ export const ConversationsView: React.FC = () => {
               </button>
             </div>
 
-            <form onSubmit={handleSendOperatorReply} className="flex items-center gap-2.5">
-              <input
-                type="text"
-                value={operatorInput}
-                onChange={(e) => setOperatorInput(e.target.value)}
-                placeholder={isNoteMode ? "Write private note..." : "Reply as human operator..."}
-                className={`flex-1 text-sm px-4 py-2.5 border rounded-xl focus:ring-1 focus:ring-slate-900 focus:border-slate-900 focus:outline-hidden ${
-                  isNoteMode ? 'bg-amber-50/50 border-amber-200' : 'bg-slate-50 border-slate-200'
-                }`}
-              />
-              <button
-                type="submit"
-                disabled={!operatorInput.trim()}
-                className={`px-4 sm:px-5 py-2.5 rounded-xl text-sm font-semibold flex items-center gap-2 transition-colors cursor-pointer shadow-sm ${
-                  isNoteMode 
-                    ? 'bg-amber-600 hover:bg-amber-700 text-white' 
-                    : 'bg-slate-900 hover:bg-slate-800 text-white disabled:opacity-50'
-                }`}
-              >
-                <Send className="w-4 h-4" />
-                <span className="hidden xs:inline">{isNoteMode ? 'Save Note' : 'Send'}</span>
-              </button>
-            </form>
+            {currentActiveConversation.status === 'archived' ? (
+              <div className="p-3 bg-slate-100 border border-slate-200 rounded-xl text-xs text-slate-500 text-center font-medium">
+                This conversation is archived and read-only. Restore it to resume messaging.
+              </div>
+            ) : (
+              <form onSubmit={handleSendOperatorReply} className="flex items-center gap-2.5">
+                <input
+                  type="text"
+                  value={operatorInput}
+                  onChange={(e) => setOperatorInput(e.target.value)}
+                  placeholder={isNoteMode ? "Write private note..." : "Reply as human operator..."}
+                  className={`flex-1 text-sm px-4 py-2.5 border rounded-xl focus:ring-1 focus:ring-slate-900 focus:border-slate-900 focus:outline-hidden ${
+                    isNoteMode ? 'bg-amber-50/50 border-amber-200' : 'bg-slate-50 border-slate-200'
+                  }`}
+                />
+                <button
+                  type="submit"
+                  disabled={!operatorInput.trim()}
+                  className={`px-4 sm:px-5 py-2.5 rounded-xl text-sm font-semibold flex items-center gap-2 transition-colors cursor-pointer shadow-sm ${
+                    isNoteMode 
+                      ? 'bg-amber-600 hover:bg-amber-700 text-white' 
+                      : 'bg-slate-900 hover:bg-slate-800 text-white disabled:opacity-50'
+                  }`}
+                >
+                  <Send className="w-4 h-4" />
+                  <span className="hidden xs:inline">{isNoteMode ? 'Save Note' : 'Send'}</span>
+                </button>
+              </form>
+            )}
           </div>
         </div>
       ) : (
@@ -428,6 +587,55 @@ export const ConversationsView: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* DELETE SINGLE CONVERSATION MODAL */}
+      <DeleteConfirmationModal
+        isOpen={Boolean(convToDelete)}
+        onClose={() => setConvToDelete(null)}
+        onConfirm={async () => {
+          if (convToDelete) {
+            await deleteConversation(convToDelete.id);
+            setConvToDelete(null);
+          }
+        }}
+        title="Delete Conversation"
+        resourceName={convToDelete?.customerName ? `${convToDelete.customerName}'s thread` : 'this conversation'}
+        confirmText="DELETE"
+        isPermanent={true}
+        destructiveActionLabel="Delete Conversation"
+        dependencies={[
+          `Customer: ${convToDelete?.customerName || 'Customer'}`,
+          `Channel: ${convToDelete?.channel || 'chat'}`,
+          `Messages: ${(convToDelete?.messages || []).length} items`
+        ]}
+        consequences={[
+          'All messages, customer details, and telemetry for this session will be permanently deleted.',
+          'This action is irreversible and cannot be undone.'
+        ]}
+      />
+
+      {/* BULK DELETE CONVERSATIONS MODAL */}
+      <DeleteConfirmationModal
+        isOpen={isBulkDeleting}
+        onClose={() => setIsBulkDeleting(false)}
+        onConfirm={async () => {
+          await bulkDeleteConversations(selectedIds);
+          setSelectedIds([]);
+          setIsBulkDeleting(false);
+        }}
+        title="Delete Multiple Conversations"
+        resourceName={`${selectedIds.length} conversations`}
+        confirmText="DELETE"
+        isPermanent={true}
+        destructiveActionLabel="Delete Selected Conversations"
+        dependencies={[
+          `Total Selected: ${selectedIds.length} conversation threads`
+        ]}
+        consequences={[
+          'All selected conversations and their message history will be permanently wiped.',
+          'This action is irreversible and cannot be restored.'
+        ]}
+      />
     </div>
   );
 };

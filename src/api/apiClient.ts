@@ -95,6 +95,30 @@ export class APIClient {
     return this.request('/api/v1/agent/rollback', 'POST', { targetVersionId });
   }
 
+  public static async getAgentDependencies() {
+    return this.request('/api/v1/agent/dependencies', 'GET');
+  }
+
+  public static async unpublishAgent() {
+    return this.request('/api/v1/agent/unpublish', 'POST');
+  }
+
+  public static async disableAgent() {
+    return this.request('/api/v1/agent/disable', 'POST');
+  }
+
+  public static async enableAgent() {
+    return this.request('/api/v1/agent/enable', 'POST');
+  }
+
+  public static async archiveAgent() {
+    return this.request('/api/v1/agent/archive', 'POST');
+  }
+
+  public static async deleteAgent() {
+    return this.request('/api/v1/agent', 'DELETE');
+  }
+
   // ================= KNOWLEDGE BASE ================= //
   public static async getKnowledge(params?: { collection_id?: string; source_type?: string; search?: string }) {
     let q = '';
@@ -144,6 +168,34 @@ export class APIClient {
 
   public static async deleteKnowledgeSource(sourceId: string) {
     return this.request(`/api/v1/knowledge/sources/${sourceId}`, 'DELETE');
+  }
+
+  public static async getTrashKnowledge() {
+    return this.request('/api/v1/knowledge/trash', 'GET');
+  }
+
+  public static async disableKnowledgeSource(sourceId: string) {
+    return this.request(`/api/v1/knowledge/sources/${sourceId}/disable`, 'POST');
+  }
+
+  public static async enableKnowledgeSource(sourceId: string) {
+    return this.request(`/api/v1/knowledge/sources/${sourceId}/enable`, 'POST');
+  }
+
+  public static async trashKnowledgeSource(sourceId: string) {
+    return this.request(`/api/v1/knowledge/sources/${sourceId}/trash`, 'POST');
+  }
+
+  public static async restoreKnowledgeSource(sourceId: string) {
+    return this.request(`/api/v1/knowledge/sources/${sourceId}/restore`, 'POST');
+  }
+
+  public static async reprocessKnowledgeSource(sourceId: string) {
+    return this.request(`/api/v1/knowledge/sources/${sourceId}/reprocess`, 'POST');
+  }
+
+  public static async permanentDeleteKnowledgeSource(sourceId: string) {
+    return this.request(`/api/v1/knowledge/sources/${sourceId}/permanent`, 'DELETE');
   }
 
   public static async getKnowledgeHealth() {
@@ -228,8 +280,82 @@ export class APIClient {
     return this.request(`/api/v1/conversations/${conversationId}/resolve`, 'POST');
   }
 
+  public static async archiveConversation(conversationId: string) {
+    return this.request(`/api/v1/conversations/${conversationId}/archive`, 'POST');
+  }
+
+  public static async deleteConversation(conversationId: string) {
+    return this.request(`/api/v1/conversations/${conversationId}`, 'DELETE');
+  }
+
+  public static async bulkArchiveConversations(conversationIds: string[]) {
+    return this.request('/api/v1/conversations/bulk-archive', 'POST', { conversationIds });
+  }
+
+  public static async bulkDeleteConversations(conversationIds: string[]) {
+    return this.request('/api/v1/conversations/bulk-delete', 'POST', { conversationIds });
+  }
+
   public static async takeoverConversation(conversationId: string, operatorName?: string) {
     return this.request(`/api/v1/conversations/${conversationId}/takeover`, 'POST', { operatorName });
+  }
+
+  // ================= DEPLOYMENTS ================= //
+  public static async getDeployments() {
+    return this.request('/api/v1/deployments', 'GET');
+  }
+
+  public static async createDeployment(data: { name: string; channel?: string; domain?: string; config?: any }) {
+    return this.request('/api/v1/deployments', 'POST', data);
+  }
+
+  public static async disableDeployment(deploymentId: string) {
+    return this.request(`/api/v1/deployments/${deploymentId}/disable`, 'POST');
+  }
+
+  public static async enableDeployment(deploymentId: string) {
+    return this.request(`/api/v1/deployments/${deploymentId}/enable`, 'POST');
+  }
+
+  public static async removeDeployment(deploymentId: string) {
+    return this.request(`/api/v1/deployments/${deploymentId}`, 'DELETE');
+  }
+
+  // ================= DEVELOPER & CREDENTIALS ================= //
+  public static async getApiKeys() {
+    return this.request('/api/v1/developer/api-keys', 'GET');
+  }
+
+  public static async createApiKey(keyName: string, scopes?: string[]) {
+    return this.request('/api/v1/developer/api-keys', 'POST', { keyName, scopes });
+  }
+
+  public static async rotateApiKey(keyId: string) {
+    return this.request(`/api/v1/developer/api-keys/${keyId}/rotate`, 'POST');
+  }
+
+  public static async revokeApiKey(keyId: string) {
+    return this.request(`/api/v1/developer/api-keys/${keyId}/revoke`, 'POST');
+  }
+
+  public static async getWebhooks() {
+    return this.request('/api/v1/developer/webhooks', 'GET');
+  }
+
+  public static async createWebhook(data: { targetUrl: string; events: string[]; description?: string }) {
+    return this.request('/api/v1/developer/webhooks', 'POST', data);
+  }
+
+  public static async toggleWebhook(hookId: string) {
+    return this.request(`/api/v1/developer/webhooks/${hookId}/toggle`, 'POST');
+  }
+
+  public static async testWebhook(hookId: string) {
+    return this.request(`/api/v1/developer/webhooks/${hookId}/test`, 'POST');
+  }
+
+  public static async deleteWebhook(hookId: string) {
+    return this.request(`/api/v1/developer/webhooks/${hookId}`, 'DELETE');
   }
 
   // ================= BILLING & USAGE ================= //

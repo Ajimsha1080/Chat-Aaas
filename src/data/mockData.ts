@@ -1121,6 +1121,49 @@ export const INITIAL_WEBHOOKS: Record<string, any[]> = {
   ]
 };
 
+export const INITIAL_DEPLOYMENTS: Record<string, any[]> = {
+  'comp-techflow': [
+    {
+      id: 'dep-tf-widget',
+      companyId: 'comp-techflow',
+      name: 'Production Website Widget',
+      channel: 'website_widget',
+      status: 'active',
+      assistantVersion: 'v12',
+      domain: 'https://techflow.io',
+      lastActiveAt: 'Just now',
+      createdAt: '2026-08-01T10:00:00Z'
+    },
+    {
+      id: 'dep-tf-api',
+      companyId: 'comp-techflow',
+      name: 'Mobile App Core Backend',
+      channel: 'rest_api',
+      status: 'active',
+      assistantVersion: 'v12',
+      domain: 'https://api.techflow.io',
+      lastActiveAt: '5 min ago',
+      createdAt: '2026-08-15T12:00:00Z'
+    }
+  ]
+};
+
+export const INITIAL_API_KEYS: Record<string, any[]> = {
+  'comp-techflow': [
+    {
+      id: 'key-tf-live',
+      companyId: 'comp-techflow',
+      name: 'Default Production Key',
+      keyPrefix: 'aas_live_tf9a',
+      secretMasked: 'aas_live_tf9a••••••••••••••••••••••••••••3a',
+      scopes: ['chat:read', 'chat:write', 'knowledge:read'],
+      status: 'active',
+      lastUsedAt: 'Just now',
+      createdAt: '2026-08-01T10:00:00Z'
+    }
+  ]
+};
+
 export const INITIAL_API_LOGS: any[] = [
   {
     id: 'log-01',

@@ -22,6 +22,19 @@ class AgentRuntime:
         reasoning_steps: List[ReasoningStep] = []
         now_str = time.strftime("%H:%M:%S")
 
+        # 0. Lifecycle Check: If assistant is disabled, unavailble message
+        if agent_config.get("lifecycleStatus") in ["disabled", "archived", "deleted"] or agent_config.get("status") in ["paused", "disabled"]:
+            reasoning_steps.append(ReasoningStep(
+                stage="Assistant State",
+                detail="Assistant is currently unavailable on this deployment.",
+                timestamp=now_str
+            ))
+            return ChatResponse(
+                message="The AI assistant is currently unavailable on this deployment.",
+                reasoning_steps=reasoning_steps,
+                session_id=request.session_id or "sess_live"
+            )
+
         # 1. System Platform Guardrails
         reasoning_steps.append(ReasoningStep(
             stage="Platform Guardrails",

@@ -40,11 +40,18 @@ export interface EscalationSettings {
   requireHumanApprovalForRefund: boolean;
 }
 
+export type ResourceLifecycleState = 'draft' | 'processing' | 'ready' | 'published' | 'disabled' | 'archived' | 'trash' | 'deleted';
+export type KnowledgeProcessingStage = 'uploaded' | 'parsed' | 'chunked' | 'embedded' | 'indexed' | 'failed';
+
 export interface AgentConfig {
   name: string;
   role?: string;
   goals?: string[];
   status: AgentStatus;
+  lifecycleStatus?: ResourceLifecycleState;
+  publishedVersionNumber?: number;
+  draftVersionNumber?: number;
+  lastPublishedAt?: string;
   avatarUrl: string;
   description: string;
   tone: AgentTone;
@@ -72,6 +79,12 @@ export interface KnowledgeItem {
   fileSize?: string;
   content: string;
   status: IndexingStatus;
+  lifecycleState?: 'active' | 'disabled' | 'archived' | 'trash';
+  processingStage?: KnowledgeProcessingStage;
+  deletedAt?: string;
+  retentionDays?: number;
+  lastIndexedAt?: string;
+  errorDetails?: string;
   chunksCount: number;
   tokenCount: number;
   lastUpdated: string;
@@ -178,7 +191,7 @@ export interface ActionDefinition {
   executionCount: number;
 }
 
-export type ConversationStatus = 'active' | 'resolved' | 'escalated_to_human' | 'flagged';
+export type ConversationStatus = 'active' | 'resolved' | 'escalated_to_human' | 'flagged' | 'archived';
 
 export interface ToolExecutionTrace {
   toolName: string;
@@ -389,6 +402,44 @@ export interface AgentVersionItem {
   diffSummary?: string[];
 }
 
+export interface DeploymentItem {
+  id: string;
+  companyId: string;
+  name: string;
+  channel: 'website_widget' | 'react_iframe' | 'rest_api' | 'webhook' | 'mobile_sdk';
+  status: 'active' | 'disabled';
+  assistantVersion: string;
+  domain?: string;
+  targetDomain?: string;
+  totalSessions?: number;
+  config?: Record<string, any>;
+  lastActiveAt?: string;
+  createdAt: string;
+}
+
+export interface ApiKeyMetadata {
+  id: string;
+  companyId: string;
+  name: string;
+  keyPrefix: string;
+  secretMasked: string;
+  scopes: string[];
+  status: 'active' | 'revoked';
+  lastUsedAt?: string;
+  createdAt: string;
+  rawSecret?: string;
+  revokedAt?: string;
+}
+
+export interface WebhookDeliveryHistoryItem {
+  id: string;
+  event: string;
+  statusCode: number;
+  responseTimeMs: number;
+  timestamp: string;
+  success: boolean;
+}
+
 export interface WebhookEndpoint {
   id: string;
   url: string;
@@ -398,6 +449,10 @@ export interface WebhookEndpoint {
   status: 'active' | 'failing' | 'disabled';
   createdAt: string;
   lastDeliveredAt?: string;
+  lastDeliveryStatus?: string;
+  responseTimeMs?: number;
+  failureCount?: number;
+  deliveryHistory?: WebhookDeliveryHistoryItem[];
   successRatePercent: number;
 }
 
