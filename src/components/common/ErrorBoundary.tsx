@@ -28,8 +28,17 @@ export class ErrorBoundary extends Component<Props, State> {
   }
 
   private handleReset = () => {
+    try {
+      Object.keys(localStorage).forEach(key => {
+        if (key.startsWith('coarai_platform_state')) {
+          localStorage.removeItem(key);
+        }
+      });
+    } catch {
+      localStorage.clear();
+    }
     this.setState({ hasError: false, error: null, errorInfo: null });
-    window.location.reload();
+    window.location.href = '/';
   };
 
   public render() {
@@ -64,11 +73,11 @@ export class ErrorBoundary extends Component<Props, State> {
                 className="flex-1 flex items-center justify-center space-x-2 px-4 py-3 bg-indigo-600 hover:bg-indigo-500 text-white font-medium rounded-xl transition shadow-lg shadow-indigo-600/30 cursor-pointer"
               >
                 <RefreshCw className="w-4 h-4" />
-                <span>Reload Application</span>
+                <span>Reset Cache & Reload</span>
               </button>
               <button
                 onClick={() => {
-                  window.location.href = '/';
+                  this.handleReset();
                 }}
                 className="flex items-center justify-center space-x-2 px-4 py-3 bg-slate-700 hover:bg-slate-600 text-slate-200 font-medium rounded-xl transition cursor-pointer"
               >

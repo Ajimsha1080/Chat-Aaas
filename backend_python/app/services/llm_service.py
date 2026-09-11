@@ -31,6 +31,7 @@ class LLMProvider:
                 headers = {"Content-Type": "application/json"}
                 if settings.CUSTOM_LLM_API_KEY:
                     headers["Authorization"] = f"Bearer {settings.CUSTOM_LLM_API_KEY}"
+                    headers["api-subscription-key"] = settings.CUSTOM_LLM_API_KEY
 
                 payload = {
                     "model": target_model,
@@ -79,6 +80,7 @@ class LLMProvider:
                 headers = {"Content-Type": "application/json"}
                 if settings.CUSTOM_LLM_API_KEY:
                     headers["Authorization"] = f"Bearer {settings.CUSTOM_LLM_API_KEY}"
+                    headers["api-subscription-key"] = settings.CUSTOM_LLM_API_KEY
 
                 payload = {
                     "model": target_model,

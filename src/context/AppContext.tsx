@@ -46,7 +46,7 @@ import {
 } from '../data/mockData';
 import { AIAgentEngine } from '../services/aiEngine';
 import { APIClient } from '../api/apiClient';
-import { AppContext } from './AppContextDefinition';
+import { AppContext, normalizeCompany, normalizeConversation } from './AppContextDefinition';
 
 const LOCAL_STORAGE_KEY = 'coarai_platform_state_v6';
 
@@ -76,7 +76,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // Multi-tenant Entities
   const [companies, setCompanies] = useState<Company[]>(() => {
     const saved = localStorage.getItem(`${LOCAL_STORAGE_KEY}_companies`);
-    return saved ? JSON.parse(saved) : INITIAL_COMPANIES;
+    const rawList: any[] = saved ? JSON.parse(saved) : INITIAL_COMPANIES;
+    return rawList.map(normalizeCompany);
   });
 
   const [currentCompanyId, setCurrentCompanyId] = useState<string>(() => {
@@ -105,7 +106,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const [conversationsMap, setConversationsMap] = useState<Record<string, Conversation[]>>(() => {
     const saved = localStorage.getItem(`${LOCAL_STORAGE_KEY}_conversations`);
-    return saved ? JSON.parse(saved) : INITIAL_CONVERSATIONS;
+    const rawMap: Record<string, any[]> = saved ? JSON.parse(saved) : INITIAL_CONVERSATIONS;
+    const result: Record<string, Conversation[]> = {};
+    for (const [key, val] of Object.entries(rawMap)) {
+      result[key] = (val || []).map(normalizeConversation);
+    }
+    return result;
   });
 
   const [auditLogs, setAuditLogs] = useState<AuditLogItem[]>(() => {
@@ -169,7 +175,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       try {
         const compRes = await APIClient.getCompanies();
         if (compRes && compRes.companies && Array.isArray(compRes.companies) && compRes.companies.length > 0) {
-          setCompanies(compRes.companies);
+          setCompanies(compRes.companies.map(normalizeCompany));
         }
       } catch (err) {
         console.info('[Live Sync] Using local cache until backend reconnects:', err);
@@ -198,51 +204,36 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             status: s.status === 'ready' ? 'indexed' : (s.status || 'indexed'),
             chunksCount: s.chunkCount || 1,
             tokenCount: s.totalTokens || 150,
-            lastUpdated: s.lastSyncedAt || 'Just now',
-            category: s.category || 'General',
-            collectionId: s.collectionId
+            lastUpdated: s.createdAt || new Date().toISOString()
           }));
-          if (mappedKnowledge.length > 0) {
-            setKnowledgeMap(prev => ({ ...prev, [currentCompanyId]: mappedKnowledge }));
-          }
+          setKnowledgeMap(prev => ({ ...prev, [currentCompanyId]: mappedKnowledge }));
         }
 
         // Fetch Live Tools
         const tRes = await APIClient.getTools();
-        if (tRes && tRes.tools && tRes.tools.length > 0) {
-          const mappedActions: ActionDefinition[] = tRes.tools.map((t: any) => ({
-            id: t.tool_id || t.id,
-            name: t.name,
-            code: t.code,
-            description: t.description,
-            riskLevel: t.risk_level || 'read_only',
-            requiresUserConfirmation: t.requires_user_confirmation || false,
-            enabled: t.enabled !== false,
-            parameters: t.parameters || {},
-            executionCount: 0
-          }));
-          setActionsMap(prev => ({ ...prev, [currentCompanyId]: mappedActions }));
+        if (tRes && tRes.tools) {
+          setActionsMap(prev => ({ ...prev, [currentCompanyId]: tRes.tools }));
         }
 
-        // Fetch Live Versions
+        // Fetch Live Agent Versions
         const vRes = await APIClient.getAgentVersions();
-        if (vRes && vRes.versions && vRes.versions.length > 0) {
+        if (vRes && vRes.versions) {
           setVersionsMap(prev => ({ ...prev, [currentCompanyId]: vRes.versions }));
-        }
-
-        // Fetch Live Conversations
-        const cRes = await APIClient.getConversations();
-        if (cRes && cRes.conversations && cRes.conversations.length > 0) {
-          setConversationsMap(prev => ({ ...prev, [currentCompanyId]: cRes.conversations }));
         }
 
         // Fetch Live Audit Logs
         const aRes = await APIClient.getAuditLogs();
-        if (aRes && aRes.logs && aRes.logs.length > 0) {
+        if (aRes && aRes.logs) {
           setAuditLogs(aRes.logs);
         }
+
+        // Fetch Live Conversations
+        const cRes = await APIClient.getConversations();
+        if (cRes && cRes.conversations) {
+          setConversationsMap(prev => ({ ...prev, [currentCompanyId]: cRes.conversations }));
+        }
       } catch (err) {
-        console.info('[Live Sync] Tenant state synchronized with local fallback:', err);
+        console.info('[Live Sync] Fallback to local state:', err);
       }
     };
 
@@ -255,10 +246,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       try {
         const cRes = await APIClient.getConversations();
         if (cRes && cRes.conversations && Array.isArray(cRes.conversations)) {
+          const normalized = cRes.conversations.map(normalizeConversation);
           setConversationsMap(prev => {
             const current = prev[currentCompanyId] || [];
-            if (JSON.stringify(current) !== JSON.stringify(cRes.conversations)) {
-              return { ...prev, [currentCompanyId]: cRes.conversations };
+            if (JSON.stringify(current) !== JSON.stringify(normalized)) {
+              return { ...prev, [currentCompanyId]: normalized };
             }
             return prev;
           });
@@ -289,15 +281,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   }, [companies, allPlans, knowledgeMap, integrationsMap, actionsMap, conversationsMap, auditLogs, versionsMap, webhooksMap]);
 
   // Derived current tenant data
-  const currentCompany = companies.find(c => c.id === currentCompanyId) || companies[0] || INITIAL_COMPANIES[0];
-  const currentPlan = (currentCompany && allPlans.find(p => p.id === currentCompany.planId)) || allPlans[1] || SUBSCRIPTION_PLANS[1];
-  const knowledgeItems = (currentCompanyId && knowledgeMap[currentCompanyId]) || [];
-  const integrations = (currentCompanyId && integrationsMap[currentCompanyId]) || [];
-  const actions = (currentCompanyId && actionsMap[currentCompanyId]) || [];
-  const conversations = (currentCompanyId && conversationsMap[currentCompanyId]) || [];
-  const agentVersions = (currentCompanyId && versionsMap[currentCompanyId]) || [];
-  const webhooks = (currentCompanyId && webhooksMap[currentCompanyId]) || [];
-  const currentActiveConversation = (conversations && conversations.find(c => c.id === activeConversationId)) || null;
+  const rawCompany = companies.find(c => c.id === currentCompanyId) || companies[0];
+  const currentCompany = normalizeCompany(rawCompany);
+  const currentPlan = allPlans.find(p => p.id === currentCompany.planId) || allPlans[1];
+  const knowledgeItems = knowledgeMap[currentCompanyId] || [];
+  const integrations = integrationsMap[currentCompanyId] || [];
+  const actions = actionsMap[currentCompanyId] || [];
+  const conversations = conversationsMap[currentCompanyId] || [];
+  const agentVersions = versionsMap[currentCompanyId] || [];
+  const webhooks = webhooksMap[currentCompanyId] || [];
+  const currentActiveConversation = conversations.find(c => c.id === activeConversationId) || null;
 
   const addAuditLog = (action: string, details: string, severity: 'info' | 'warning' | 'critical' = 'info') => {
     const newLog: AuditLogItem = {
@@ -601,6 +594,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   // Knowledge Management
   const addKnowledgeItem = (item: Partial<KnowledgeItem> & { title: string; content: string; type: KnowledgeItem['type'] }) => {
+    let calculatedChunks = item.chunksCount;
+    if (!calculatedChunks) {
+      if (item.fileSize) {
+        const kb = parseFloat(item.fileSize) || 120;
+        calculatedChunks = Math.max(1, Math.ceil((kb * 1024) / 1500));
+      } else {
+        calculatedChunks = Math.max(1, Math.ceil(item.content.length / 500));
+      }
+    }
+
     const newItem: KnowledgeItem = {
       id: genId('kb'),
       type: item.type,
@@ -610,10 +613,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       fileSize: item.fileSize || '120 KB',
       content: item.content,
       status: 'indexed',
-      chunksCount: Math.max(1, Math.ceil(item.content.length / 500)),
-      tokenCount: Math.ceil(item.content.length / 4),
+      chunksCount: calculatedChunks,
+      tokenCount: calculatedChunks * 125,
       lastUpdated: 'Just now',
-      category: item.category || 'General FAQ',
+      category: item.category || 'General',
       faqAnswer: item.faqAnswer
     };
 
@@ -622,13 +625,31 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       [currentCompanyId]: [newItem, ...(prev[currentCompanyId] || [])]
     }));
 
-    // Real-time backend ingestion
+    // Real-time backend ingestion & dynamic chunk count sync
     if (item.type === 'faq' && item.faqAnswer) {
       APIClient.ingestFaq({ question: item.title, answer: item.faqAnswer, category: item.category }).catch(e => console.info('Backend FAQ ingest error:', e));
     } else if (item.type === 'url' && item.sourceUrl) {
-      APIClient.ingestWebsite({ url: item.sourceUrl, category: item.category }).catch(e => console.info('Backend website ingest error:', e));
+      APIClient.ingestWebsite({ url: item.sourceUrl, category: item.category })
+        .then(res => {
+          if (res?.data?.chunksCreated) {
+            setKnowledgeMap(prev => ({
+              ...prev,
+              [currentCompanyId]: (prev[currentCompanyId] || []).map(k => k.id === newItem.id ? { ...k, chunksCount: res.data.chunksCreated } : k)
+            }));
+          }
+        })
+        .catch(e => console.info('Backend website ingest error:', e));
     } else {
-      APIClient.ingestFile({ title: item.title, content: item.content, fileName: item.fileName, category: item.category }).catch(e => console.info('Backend file ingest error:', e));
+      APIClient.ingestFile({ title: item.title, content: item.content, fileName: item.fileName, category: item.category })
+        .then(res => {
+          if (res?.data?.chunksCreated) {
+            setKnowledgeMap(prev => ({
+              ...prev,
+              [currentCompanyId]: (prev[currentCompanyId] || []).map(k => k.id === newItem.id ? { ...k, chunksCount: res.data.chunksCreated } : k)
+            }));
+          }
+        })
+        .catch(e => console.info('Backend file ingest error:', e));
     }
 
     addAuditLog('KNOWLEDGE_INGESTED', `Ingested knowledge item: "${newItem.title}" (${newItem.type})`);
@@ -966,9 +987,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         })
       };
     });
-
-    // Real-time backend operator message sync
-    APIClient.sendMessage(conversationId, text, 'Live Support Operator (Staff)', 'staff@internal.io').catch(e => console.info('Backend operator message sync:', e));
   };
 
   const resolveConversation = (conversationId: string) => {

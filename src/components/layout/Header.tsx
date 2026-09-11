@@ -37,8 +37,8 @@ export const Header: React.FC<HeaderProps> = ({
 
   const [isCompanyDropdownOpen, setIsCompanyDropdownOpen] = useState(false);
   const messagesThisMonth = currentCompany?.stats?.messagesThisMonth ?? 0;
-  const maxConvs = currentPlan?.maxConversationsMonth || 1000;
-  const usagePercent = Math.min(100, Math.round((messagesThisMonth / maxConvs) * 100));
+  const maxConversations = currentPlan?.maxConversationsMonth ?? 5000;
+  const usagePercent = Math.min(100, Math.round((messagesThisMonth / maxConversations) * 100));
 
   return (
     <header className="h-14 sm:h-16 bg-white/90 backdrop-blur-md border-b border-slate-200/80 px-3 sm:px-6 flex items-center justify-between z-10 shrink-0 sticky top-0">

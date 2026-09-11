@@ -57,7 +57,7 @@ export class AIAgentEngine {
       }));
 
       const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Backend timeout')), 2500)
+        setTimeout(() => reject(new Error('Backend timeout')), 20000)
       );
 
       const backendCall = APIClient.sendChatMessage(userQuery, {
@@ -304,7 +304,7 @@ export class AIAgentEngine {
     } else if (company.agent.tone === 'direct') {
       fallbackText = `No verified records found for this query. Handoff to human agent available.`;
     } else if (company.agent.tone === 'technical') {
-      fallbackText = `[Refusal Gate: Anti-Hallucination] Query returned 0 vector matches above threshold (>0.70). Speculation suppressed.`;
+      fallbackText = `No verified documentation matched this query above the required confidence threshold (>0.70). Refusing speculation to preserve grounded accuracy.`;
     }
 
     return {

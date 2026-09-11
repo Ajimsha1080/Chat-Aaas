@@ -113,6 +113,27 @@ export class APIClient {
     return this.request('/api/v1/knowledge/files', 'POST', data);
   }
 
+  public static async uploadRealFile(formData: FormData) {
+    const headers: Record<string, string> = {
+      'x-company-id': this.currentCompanyId,
+      'x-correlation-id': `cli-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`
+    };
+    if (this.token) {
+      headers['Authorization'] = `Bearer ${this.token}`;
+    }
+
+    const response = await fetch(`${this.baseUrl}/api/v1/knowledge/upload-file`, {
+      method: 'POST',
+      headers,
+      body: formData
+    });
+
+    if (!response.ok) {
+      throw new Error(`File upload failed with status ${response.status}`);
+    }
+    return await response.json();
+  }
+
   public static async ingestFaq(data: { question: string; answer: string; collectionId?: string; category?: string }) {
     return this.request('/api/v1/knowledge/faq', 'POST', data);
   }
@@ -188,73 +209,6 @@ export class APIClient {
       is_test_mode: options?.isTestMode ?? false,
       history: options?.history ?? []
     });
-  }
-
-  public static async streamChatMessage(
-    message: string,
-    options: {
-      conversationId?: string;
-      sessionId?: string;
-      onToken?: (token: string) => void;
-      onDone?: (fullResult: any) => void;
-      onError?: (err: any) => void;
-    }
-  ) {
-    const headers: Record<string, string> = {
-      'Content-Type': 'application/json',
-      'x-company-id': this.currentCompanyId,
-      'x-correlation-id': `cli-stream-${Date.now()}`
-    };
-    if (this.token) headers['Authorization'] = `Bearer ${this.token}`;
-
-    try {
-      const response = await fetch(`${this.baseUrl}/api/v1/chat/stream`, {
-        method: 'POST',
-        headers,
-        body: JSON.stringify({
-          message,
-          conversation_id: options.conversationId,
-          session_id: options.sessionId
-        })
-      });
-
-      if (!response.ok || !response.body) {
-        throw new Error(`Stream request failed with HTTP ${response.status}`);
-      }
-
-      const reader = response.body.getReader();
-      const decoder = new TextDecoder();
-      let buffer = '';
-
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-
-        buffer += decoder.decode(value, { stream: true });
-        const lines = buffer.split('\n\n');
-        buffer = lines.pop() || '';
-
-        for (const line of lines) {
-          if (line.startsWith('data: ')) {
-            const dataStr = line.replace(/^data:\s*/, '').trim();
-            if (!dataStr) continue;
-            try {
-              const data = JSON.parse(dataStr);
-              if (data.type === 'done') {
-                if (options.onDone) options.onDone(data);
-              } else if (data.token) {
-                if (options.onToken) options.onToken(data.token);
-              }
-            } catch {
-              if (options.onToken) options.onToken(dataStr);
-            }
-          }
-        }
-      }
-    } catch (err) {
-      if (options.onError) options.onError(err);
-      throw err;
-    }
   }
 
   // ================= CONVERSATIONS ================= //

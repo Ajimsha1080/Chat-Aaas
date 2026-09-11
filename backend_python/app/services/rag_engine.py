@@ -83,11 +83,13 @@ class RAGEngine:
             else:
                 relevance = min(1.0, (overlap / max(1, len(query_words))) * 0.8 + 0.2)
             
+            title = chunk.get("metadata", {}).get("title") or chunk.get("title") or "Knowledge Base"
             if relevance >= threshold:
                 results.append(ChunkSearchResult(
                     chunk_id=chunk.get("id", "chk_1"),
                     knowledge_source_id=chunk.get("knowledgeSourceId") or chunk.get("knowledge_source_id", "src_1"),
                     content=content,
+                    title=title,
                     similarity_score=round(relevance, 3)
                 ))
 
@@ -107,13 +109,13 @@ class RAGEngine:
     @classmethod
     def sanitize_untrusted_text(cls, text: str) -> str:
         """Sanitizes retrieved text against malicious prompt injection delimiters."""
-        text = text.replace("</company_knowledge>", "[escaped]")
-        text = text.replace("<system_prompt>", "[escaped]")
-        text = text.replace("</system_prompt>", "[escaped]")
-        return text
+        text = text.replace("</company_knowledge>", "")
+        text = text.replace("<system_prompt>", "")
+        text = text.replace("</system_prompt>", "")
+        return text.strip()
 
     @classmethod
-    def execute_rag_query(
+    async def execute_rag_query(
         cls,
         query: str,
         company_id: str,
@@ -125,7 +127,7 @@ class RAGEngine:
         1. Retrieval with strict tenant isolation
         2. Groundedness validation (anti-hallucination)
         3. Prompt injection containment fences
-        4. Citations formatting
+        4. LLM synthesis & citations formatting
         """
         chunks = cls.search_chunks(query, company_id, stored_chunks, threshold=0.1, top_k=top_k)
         is_grounded, ground_msg = cls.evaluate_groundedness(chunks, threshold=0.50)
@@ -143,7 +145,7 @@ class RAGEngine:
         if not is_grounded or not citations:
             return {
                 "success": False,
-                "answer": "I couldn't find enough information in your company's knowledge to answer this question accurately.",
+                "answer": f"I couldn't find enough information in your company's knowledge to answer '{query}' accurately.",
                 "isGrounded": False,
                 "grounded": False,
                 "citations": [],
@@ -151,9 +153,18 @@ class RAGEngine:
                 "needsGapRecorded": True
             }
 
-        # Build grounded synthesis
-        top_content = chunks[0].content
-        answer = f"Based on your company knowledge:\n\n{top_content}"
+        # Build grounded synthesis via LLMProvider
+        try:
+            from app.services.llm_service import LLMProvider
+            context_str = "\n\n".join([f"Source ({getattr(c, 'title', 'Knowledge Document')}): {c.content}" for c in chunks[:3]])
+            sys_inst = (
+                f"You are an AI assistant for company {company_id}. "
+                f"Answer the user's question accurately and concisely using only the verified knowledge context below.\n\n"
+                f"Verified Knowledge Context:\n{context_str}"
+            )
+            answer = await LLMProvider.generate_response(prompt=query, system_instruction=sys_inst)
+        except Exception:
+            answer = f"Based on verified company knowledge in '{getattr(chunks[0], 'title', 'Knowledge Base')}':\n\n{chunks[0].content}"
 
         return {
             "success": True,

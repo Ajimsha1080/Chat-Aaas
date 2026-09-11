@@ -102,12 +102,25 @@ class AgentRuntime:
                 session_id=request.session_id or "sess_live"
             )
 
-        # 5. Synthesize Grounded Response
-        top_context = chunks[0].content
-        synthesized_text = f"Based on our official company documentation:\n\n{top_context}\n\nPlease let me know if you need any further assistance!"
+        # 5. Synthesize Grounded Response using Real-Time Sarvam AI LLM
+        from app.services.llm_service import LLMProvider
+        context_str = "\n\n".join([f"Source ({getattr(c, 'title', 'Knowledge Base')}): {c.content}" for c in chunks[:3]])
+        sys_instruction = (
+            f"You are the official AI Q&A assistant for company {company_id}. "
+            f"Persona tone: {agent_config.get('tone', 'professional')}. "
+            f"Answer the customer's question accurately and helpfully using the verified context below.\n\n"
+            f"Verified Knowledge Context:\n{context_str}"
+        )
+
+        llm_response = await LLMProvider.generate_response(
+            prompt=user_msg,
+            system_instruction=sys_instruction,
+            model=agent_config.get('modelTier', 'sarvam-2b'),
+            temperature=float(agent_config.get('creativityLevel', 0.3)) if isinstance(agent_config.get('creativityLevel'), (int, float)) else 0.3
+        )
         
         return ChatResponse(
-            message=synthesized_text,
+            message=llm_response,
             reasoning_steps=reasoning_steps,
             confidence_score=chunks[0].similarity_score,
             session_id=request.session_id or "sess_live"

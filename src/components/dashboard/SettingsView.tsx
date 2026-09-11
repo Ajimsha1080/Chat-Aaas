@@ -43,9 +43,9 @@ export const SettingsView: React.FC = () => {
   const [showApiKey, setShowApiKey] = useState(false);
 
   // Assistant Form State
-  const [agentTone, setAgentTone] = useState(currentCompany.agent.tone);
-  const [agentGreeting, setAgentGreeting] = useState(currentCompany.agent.greetingMessage);
-  const [modelTier, setModelTier] = useState(currentCompany.agent.modelTier || 'automatic');
+  const [agentTone, setAgentTone] = useState(currentCompany?.agent?.tone || 'professional');
+  const [agentGreeting, setAgentGreeting] = useState(currentCompany?.agent?.greetingMessage || 'Hello!');
+  const [modelTier, setModelTier] = useState(currentCompany?.agent?.modelTier || 'automatic');
 
   const handleCopy = (text: string, keyName: string) => {
     navigator.clipboard.writeText(text);

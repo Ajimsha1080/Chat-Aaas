@@ -94,3 +94,32 @@ class DocumentAIService:
             ))
 
         return chunks
+
+    @staticmethod
+    def extract_text_from_file_bytes(content_bytes: bytes, filename: str) -> str:
+        """
+        Extracts raw textual content from uploaded PDF, TXT, MD, CSV, JSON files.
+        """
+        import io
+        ext = filename.split('.')[-1].lower() if '.' in filename else 'txt'
+
+        if ext == 'pdf':
+            try:
+                import pypdf
+                reader = pypdf.PdfReader(io.BytesIO(content_bytes))
+                extracted_pages = []
+                for i, page in enumerate(reader.pages):
+                    page_text = page.extract_text()
+                    if page_text and page_text.strip():
+                        extracted_pages.append(f"## Page {i + 1}\n{page_text.strip()}")
+                if extracted_pages:
+                    return "\n\n".join(extracted_pages)
+            except Exception as e:
+                print(f"[DocumentAIService] PDF extraction fallback: {e}")
+
+        # Fallback to UTF-8 decoding
+        try:
+            return content_bytes.decode('utf-8', errors='ignore').strip()
+        except Exception:
+            return ""
+

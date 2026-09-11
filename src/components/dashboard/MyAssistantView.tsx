@@ -26,14 +26,15 @@ export const MyAssistantView: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'identity' | 'messaging' | 'knowledge_summary'>('identity');
 
   // Local form state for draft edits
-  const [formState, setFormState] = useState<AgentConfig>({ ...currentCompany.agent });
-  const [prevAgentState, setPrevAgentState] = useState(currentCompany.agent);
-  if (prevAgentState !== currentCompany.agent) {
-    setPrevAgentState(currentCompany.agent);
-    setFormState({ ...currentCompany.agent });
-  }
+  const [editingCompanyId, setEditingCompanyId] = useState(currentCompany?.id);
+  const [formState, setFormState] = useState<AgentConfig>(() => ({ ...(currentCompany?.agent || {}) } as AgentConfig));
   const [isSaving, setIsSaving] = useState(false);
-  const isLive = currentCompany.agent.status === 'active';
+  const isLive = currentCompany?.agent?.status === 'active';
+
+  if (editingCompanyId !== currentCompany?.id) {
+    setEditingCompanyId(currentCompany?.id);
+    setFormState({ ...(currentCompany?.agent || {}) } as AgentConfig);
+  }
 
   const tones: { id: AgentTone; label: string; desc: string; sample: string }[] = [
     { 

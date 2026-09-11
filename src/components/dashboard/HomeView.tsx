@@ -24,35 +24,36 @@ export const HomeView: React.FC = () => {
     setActiveConversationId
   } = useApp();
 
-  const stats = currentCompany?.stats || {
-    totalConversations: conversations?.length || 0,
-    totalMessages: 0,
-    resolvedConversations: 0,
-    escalatedConversations: 0,
-    messagesThisMonth: 0,
-    tokensThisMonth: 0,
-    knowledgeChunksUsed: 0
-  };
-  const resolutionRate = stats.totalConversations > 0 
-    ? Math.round((stats.resolvedConversations / stats.totalConversations) * 100) 
-    : 94;
-  const escalationRate = stats.totalConversations > 0 
-    ? Math.round((stats.escalatedConversations / stats.totalConversations) * 100) 
-    : 6;
+  const allConvs = conversations || [];
+  const totalCount = allConvs.length > 0 ? allConvs.length : (currentCompany?.stats?.totalConversations || 0);
+  const resolvedCount = allConvs.length > 0 
+    ? allConvs.filter(c => c.status === 'resolved' || c.status === 'active').length 
+    : (currentCompany?.stats?.resolvedConversations || 0);
+  const escalatedCount = allConvs.length > 0 
+    ? allConvs.filter(c => c.status === 'escalated_to_human').length 
+    : (currentCompany?.stats?.escalatedConversations || 0);
 
-  const chartData = [
-    { name: 'Mon', conversations: 142, resolutions: 134 },
-    { name: 'Tue', conversations: 185, resolutions: 174 },
-    { name: 'Wed', conversations: 168, resolutions: 159 },
-    { name: 'Thu', conversations: 210, resolutions: 198 },
-    { name: 'Fri', conversations: 245, resolutions: 231 },
-    { name: 'Sat', conversations: 130, resolutions: 122 },
-    { name: 'Sun', conversations: 190, resolutions: 179 }
-  ];
+  const resolutionRate = totalCount > 0 ? Math.round((resolvedCount / totalCount) * 100) : 100;
+  const escalationRate = totalCount > 0 ? Math.round((escalatedCount / totalCount) * 100) : 0;
 
-  const pendingAttentionConversations = (conversations || []).filter(c => c && (c.status === 'escalated_to_human' || c.status === 'flagged'));
-  const activeConnectionsCount = (integrations || []).filter(i => i && i.connected).length;
-  const readyKnowledgeCount = (knowledgeItems || []).filter(k => k && k.status === 'indexed').length;
+  // Real-time weekly throughput aggregation from live conversation timestamps
+  const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+  const chartData = days.map(dayName => {
+    const dayConvs = allConvs.filter(c => {
+      if (!c.startedAt) return false;
+      const d = new Date(c.startedAt);
+      return !isNaN(d.getTime()) && d.toLocaleDateString('en-US', { weekday: 'short' }) === dayName;
+    });
+    return {
+      name: dayName,
+      conversations: dayConvs.length,
+      resolutions: dayConvs.filter(c => c.status === 'resolved' || c.status === 'active').length
+    };
+  });
+
+  const pendingAttentionConversations = (conversations || []).filter(c => c?.status === 'escalated_to_human' || c?.status === 'flagged');
+  const activeConnectionsCount = (integrations || []).filter(i => i?.connected).length;
+  const readyKnowledgeCount = (knowledgeItems || []).filter(k => k?.status === 'indexed').length;
 
   const checklistItems = [
     { id: 1, title: 'Company profile and tone configured', completed: true, tab: 'assistant' },
@@ -134,7 +135,7 @@ export const HomeView: React.FC = () => {
           </div>
           <div className="mt-3 flex items-baseline gap-2">
             <span className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight">
-              {stats.totalConversations > 0 ? stats.totalConversations.toLocaleString() : '1,284'}
+              {totalCount.toLocaleString()}
             </span>
             <span className="text-[11px] font-semibold text-emerald-600 flex items-center">
               +14% <ArrowUpRight className="w-3 h-3" />
@@ -261,7 +262,7 @@ export const HomeView: React.FC = () => {
                       <span className="text-xs text-amber-800 font-mono font-medium">{c.channel.replace('_', ' ')}</span>
                     </div>
                     <p className="text-sm text-slate-700 line-clamp-1">
-                      {c.messages[c.messages.length - 1]?.text || 'Requires human agent review'}
+                      {c.messages && c.messages.length > 0 ? (c.messages[c.messages.length - 1]?.text || 'Requires human agent review') : 'Requires human agent review'}
                     </p>
                     <div className="flex items-center justify-between pt-1">
                       <span className="text-xs text-amber-800 font-semibold">Escalated to staff</span>
@@ -314,8 +315,8 @@ export const HomeView: React.FC = () => {
         </div>
 
         <div className="divide-y divide-slate-100">
-          {conversations.slice(0, 4).map(c => {
-            const lastMsg = c.messages[c.messages.length - 1];
+          {(conversations || []).slice(0, 4).map(c => {
+            const lastMsg = c.messages && c.messages.length > 0 ? c.messages[c.messages.length - 1] : null;
             return (
               <div 
                 key={c.id}

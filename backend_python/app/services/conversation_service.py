@@ -11,8 +11,17 @@ class ConversationService:
                 convs = [c for c in convs if c.get("status") == "escalated_to_human"]
             else:
                 convs = [c for c in convs if c.get("status") == status_filter]
-        convs.sort(key=lambda x: x.get("lastMessageAt", ""), reverse=True)
-        return convs
+        
+        result = []
+        for c in convs:
+            cd = dict(c)
+            msgs = db.get_messages_for_conversation(c["id"], company_id)
+            msgs.sort(key=lambda m: m.get("createdAt", ""))
+            cd["messages"] = msgs
+            result.append(cd)
+
+        result.sort(key=lambda x: x.get("lastMessageAt", ""), reverse=True)
+        return result
 
     @staticmethod
     def get_conversation_details(conversation_id: str, company_id: str) -> Optional[Dict[str, Any]]:

@@ -157,6 +157,7 @@ class ChunkSearchResult(BaseModel):
     knowledge_source_id: str
     content: str
     similarity_score: float
+    title: Optional[str] = "Knowledge Base"
 
 class KnowledgeSearchRequest(BaseModel):
     query: str

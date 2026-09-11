@@ -26,6 +26,107 @@ import {
   AgentTone,
   ToastNotification
 } from '../types';
+import { INITIAL_COMPANIES } from '../data/mockData';
+
+const defaultStats = {
+  totalConversations: 124,
+  totalMessages: 890,
+  resolvedConversations: 110,
+  escalatedConversations: 14,
+  messagesThisMonth: 340,
+  tokensThisMonth: 12500,
+  knowledgeChunksUsed: 42
+};
+
+const defaultAgent: AgentConfig = {
+  name: 'AI Assistant',
+  status: 'active',
+  avatarUrl: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe',
+  description: 'AI Support Specialist',
+  tone: 'professional',
+  creativityLevel: 0.3,
+  systemInstructions: 'Assist users accurately.',
+  businessInstructions: 'Be polite and helpful.',
+  greetingMessage: 'Hello! How can I help you today?',
+  fallbackMessage: 'I do not have verified knowledge on this topic.',
+  allowedActions: [],
+  escalationSettings: {
+    enabled: true,
+    triggerKeywords: ['human', 'agent', 'support'],
+    maxUnansweredQueriesBeforeEscalation: 2,
+    notifyEmail: 'support@company.com',
+    escalationMessage: 'Connecting you to a team member.',
+    requireHumanApprovalForRefund: true
+  },
+  customSafetyRules: []
+};
+
+const defaultWidgetSettings: WidgetCustomization = {
+  primaryColor: '#4f46e5',
+  secondaryColor: '#6366f1',
+  headerTitle: 'Customer Support',
+  headerSubtitle: 'We usually reply in a few seconds',
+  launcherText: 'Chat with us',
+  position: 'bottom_right',
+  botAvatar: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe',
+  userAvatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb',
+  borderRadius: 'rounded-2xl',
+  showPoweredBy: true,
+  enableSound: true,
+  autoExpandSeconds: 0
+};
+
+export const normalizeCompany = (c: any): Company => {
+  if (!c) return INITIAL_COMPANIES[0];
+  return {
+    ...c,
+    id: c.id || 'comp-default',
+    name: c.name || 'Workspace',
+    slug: c.slug || 'workspace',
+    domain: c.domain || 'example.com',
+    industry: c.industry || 'Technology',
+    planId: c.planId || 'growth',
+    billingCycle: c.billingCycle || 'monthly',
+    planStatus: c.planStatus || 'active',
+    agent: { ...defaultAgent, ...(c.agent || {}) },
+    widgetSettings: { ...defaultWidgetSettings, ...(c.widgetSettings || {}) },
+    apiKey: c.apiKey || 'aas_live_default',
+    apiSecretMasked: c.apiSecretMasked || '••••••••••••',
+    isSuspended: Boolean(c.isSuspended),
+    stats: { ...defaultStats, ...(c.stats || {}) }
+  };
+};
+
+export const normalizeConversation = (c: any): Conversation => {
+  if (!c) return {
+    id: 'conv-default',
+    companyId: 'comp-techflow',
+    customerName: 'Website Visitor',
+    channel: 'website_widget',
+    startedAt: new Date().toISOString(),
+    lastMessageAt: new Date().toISOString(),
+    status: 'active',
+    messages: [],
+    sentiment: 'neutral',
+    tags: ['Live Session'],
+    totalTokensUsed: 100
+  };
+
+  return {
+    ...c,
+    id: c.id || 'conv-default',
+    companyId: c.companyId || 'comp-default',
+    customerName: c.customerName || 'Website Visitor',
+    channel: c.channel || 'website_widget',
+    startedAt: c.startedAt || new Date().toISOString(),
+    lastMessageAt: c.lastMessageAt || new Date().toISOString(),
+    status: c.status || 'active',
+    messages: Array.isArray(c.messages) ? c.messages : [],
+    sentiment: c.sentiment || 'neutral',
+    tags: Array.isArray(c.tags) ? c.tags : ['Live Session'],
+    totalTokensUsed: c.totalTokensUsed || 0
+  };
+};
 
 export interface AppContextType {
   // Navigation & Product Experiences

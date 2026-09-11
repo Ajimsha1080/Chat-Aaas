@@ -56,7 +56,7 @@ export const AdminDashboard: React.FC = () => {
   const itemsPerPage = 8;
 
   const totalTenants = companies.length;
-  const activeAgents = companies.filter(c => c && c.agent && c.agent.status === 'active' && !c.isSuspended).length;
+  const activeAgents = companies.filter(c => c.agent.status === 'active' && !c.isSuspended).length;
   const totalMRR = companies.reduce((acc, c) => {
     const plan = allPlans.find(p => p.id === c.planId);
     return acc + (plan ? plan.priceMonthlyINR : 4999);
@@ -531,7 +531,7 @@ export const AdminDashboard: React.FC = () => {
                             {c.planId}
                           </span>
                         </td>
-                        <td className="py-3.5 text-slate-700 font-semibold">{c.agent.name}</td>
+                        <td className="py-3.5 text-slate-700 font-semibold">{c.agent?.name || 'AI Assistant'}</td>
                         <td className="py-3.5">
                           <span className={`inline-flex items-center gap-1.5 text-xs font-bold px-2.5 py-1 rounded-md ${
                             c.isSuspended 

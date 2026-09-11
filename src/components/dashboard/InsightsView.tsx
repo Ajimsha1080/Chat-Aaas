@@ -18,31 +18,34 @@ import {
 } from 'recharts';
 
 export const InsightsView: React.FC = () => {
-  const { currentCompany } = useApp();
+  const { currentCompany, conversations } = useApp();
   const [showAdvanced, setShowAdvanced] = useState(false);
 
-  const stats = currentCompany?.stats || {
-    totalConversations: 120,
-    totalMessages: 340,
-    resolvedConversations: 110,
-    escalatedConversations: 10,
-    messagesThisMonth: 120,
-    tokensThisMonth: 45000,
-    knowledgeChunksUsed: 24
-  };
-  const resolutionRate = stats.totalConversations > 0 
-    ? Math.round((stats.resolvedConversations / stats.totalConversations) * 100) 
-    : 94;
+  const allConvs = conversations || [];
+  const totalCount = allConvs.length > 0 ? allConvs.length : (currentCompany?.stats?.totalConversations || 0);
+  const resolvedCount = allConvs.length > 0 
+    ? allConvs.filter(c => c.status === 'resolved' || c.status === 'active').length 
+    : (currentCompany?.stats?.resolvedConversations || 0);
 
-  const weeklyData = [
-    { day: 'Mon', conversations: 142, resolved: 134, handoffs: 8 },
-    { day: 'Tue', conversations: 185, resolved: 174, handoffs: 11 },
-    { day: 'Wed', conversations: 168, resolved: 159, handoffs: 9 },
-    { day: 'Thu', conversations: 210, resolved: 198, handoffs: 12 },
-    { day: 'Fri', conversations: 245, resolved: 231, handoffs: 14 },
-    { day: 'Sat', conversations: 130, resolved: 122, handoffs: 8 },
-    { day: 'Sun', conversations: 190, resolved: 179, handoffs: 11 }
-  ];
+  const resolutionRate = totalCount > 0 ? Math.round((resolvedCount / totalCount) * 100) : 100;
+
+  const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+  const weeklyData = days.map(dayName => {
+    const dayConvs = allConvs.filter(c => {
+      if (!c.startedAt) return false;
+      const d = new Date(c.startedAt);
+      return !isNaN(d.getTime()) && d.toLocaleDateString('en-US', { weekday: 'short' }) === dayName;
+    });
+    const convCount = dayConvs.length;
+    const resCount = dayConvs.filter(c => c.status === 'resolved' || c.status === 'active').length;
+    const handoffCount = dayConvs.filter(c => c.status === 'escalated_to_human').length;
+    return {
+      day: dayName,
+      conversations: convCount,
+      resolved: resCount,
+      handoffs: handoffCount
+    };
+  });
 
   const topQuestions = [
     { topic: 'Pricing & Subscription Plans', percentage: 32, count: 410 },

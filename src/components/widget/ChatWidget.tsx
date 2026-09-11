@@ -259,8 +259,14 @@ export const ChatWidget: React.FC<ChatWidgetProps> = ({ isInlinePreview = false 
                       {msg.toolTraces && msg.toolTraces.length > 0 && (
                         <div className="mt-2 space-y-1">
                           {msg.toolTraces.map((trace, tIdx) => (
-                            <div key={tIdx} className="bg-slate-900 text-indigo-300 p-2.5 rounded-xl font-mono text-xs border border-slate-800">
-                              <span className="text-amber-400 font-bold">⚡ {trace.toolName}()</span>: {trace.status}
+                            <div key={tIdx} className={`px-3 py-1.5 rounded-xl text-xs flex items-center gap-1.5 border ${
+                              isDarkMode 
+                                ? 'bg-slate-800/80 text-slate-300 border-slate-700' 
+                                : 'bg-slate-50 text-slate-700 border-slate-200'
+                            }`}>
+                              <Zap className="w-3.5 h-3.5 text-amber-500 shrink-0" />
+                              <span className="font-semibold capitalize">{trace.toolName.replace(/_/g, ' ')}</span>
+                              <span className="text-[11px] opacity-75 font-mono">({trace.status})</span>
                             </div>
                           ))}
                         </div>

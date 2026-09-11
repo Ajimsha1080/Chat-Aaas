@@ -40,15 +40,15 @@ export const ConversationsView: React.FC = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [currentActiveConversation?.messages]);
 
-  const filteredConversations = conversations.filter(conv => {
+  const filteredConversations = (conversations || []).filter(conv => {
     let matchesStatus = true;
     if (filterStatus === 'needs_attention') {
       matchesStatus = conv.status === 'escalated_to_human';
     } else if (filterStatus !== 'all') {
       matchesStatus = conv.status === filterStatus;
     }
-    const matchesSearch = conv.customerName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                          conv.tags.some(t => t.toLowerCase().includes(searchQuery.toLowerCase()));
+    const matchesSearch = (conv.customerName || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+                          (conv.tags || []).some(t => t.toLowerCase().includes(searchQuery.toLowerCase()));
     return matchesStatus && matchesSearch;
   });
 
@@ -199,7 +199,8 @@ export const ConversationsView: React.FC = () => {
           ) : (
             filteredConversations.map(conv => {
               const isActive = currentActiveConversation?.id === conv.id;
-              const lastMsg = conv.messages[conv.messages.length - 1];
+              const msgs = conv.messages || [];
+              const lastMsg = msgs.length > 0 ? msgs[msgs.length - 1] : null;
 
               return (
                 <div
@@ -213,10 +214,10 @@ export const ConversationsView: React.FC = () => {
                 >
                   <div className="flex items-center justify-between mb-1.5">
                     <span className="font-bold text-sm text-slate-900 truncate max-w-[160px]">
-                      {conv.customerName}
+                      {conv.customerName || 'Customer'}
                     </span>
                     <span className="text-xs text-slate-400 font-mono">
-                      {conv.startedAt}
+                      {conv.startedAt || ''}
                     </span>
                   </div>
 
@@ -236,7 +237,7 @@ export const ConversationsView: React.FC = () => {
                     </span>
 
                     <span className="text-xs text-slate-500 font-mono">
-                      {conv.messages.length} msgs
+                      {msgs.length} msgs
                     </span>
                   </div>
                 </div>
@@ -293,7 +294,7 @@ export const ConversationsView: React.FC = () => {
 
           {/* Messages Feed */}
           <div className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-4 bg-slate-50/30">
-            {currentActiveConversation.messages.map(msg => {
+            {(currentActiveConversation?.messages || []).map(msg => {
               const isUser = msg.sender === 'user';
               const isHumanOperator = msg.sender === 'human_agent';
               const isSystemNote = msg.sender === 'system';

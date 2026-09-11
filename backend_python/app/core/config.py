@@ -31,10 +31,12 @@ class Settings(BaseSettings):
     OPENAI_API_KEY: Optional[str] = os.getenv("OPENAI_API_KEY", None)
     ANTHROPIC_API_KEY: Optional[str] = os.getenv("ANTHROPIC_API_KEY", None)
     GEMINI_API_KEY: Optional[str] = os.getenv("GEMINI_API_KEY", None)
+    SARVAM_API_KEY: Optional[str] = os.getenv("SARVAM_API_KEY", None)
     
-    # Custom In-House / Private Model API Endpoint
-    CUSTOM_LLM_API_URL: Optional[str] = os.getenv("CUSTOM_LLM_API_URL", None)
-    CUSTOM_LLM_API_KEY: Optional[str] = os.getenv("CUSTOM_LLM_API_KEY", None)
-    DEFAULT_LLM_MODEL: str = os.getenv("DEFAULT_LLM_MODEL", "custom-model")
+    # Custom In-House / Private Model / Sarvam AI API Endpoint
+    CUSTOM_LLM_API_URL: Optional[str] = os.getenv("CUSTOM_LLM_API_URL", "https://api.sarvam.ai/v1/chat/completions")
+    CUSTOM_LLM_API_KEY: Optional[str] = os.getenv("CUSTOM_LLM_API_KEY", None) or os.getenv("SARVAM_API_KEY", None)
+    DEFAULT_LLM_MODEL: str = os.getenv("DEFAULT_LLM_MODEL", "sarvam-2b")
 
 settings = Settings()
+
