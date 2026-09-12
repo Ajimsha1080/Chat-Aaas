@@ -116,7 +116,13 @@ IMPROVE KNOWLEDGE
 - Python 3.11+
 - PostgreSQL 16 with pgvector & Redis 7 (or Docker)
 
-### 1. Start Python Backend
+### 1. Configure Environment Variables
+```powershell
+cp .env.example .env
+cp .env.example backend_python/.env
+```
+
+### 2. Start Python Backend
 ```powershell
 cd backend_python
 python -m venv venv
@@ -125,7 +131,7 @@ pip install -r requirements.txt
 python -m uvicorn app.main:app --reload --port 8001
 ```
 
-### 2. Start React Frontend
+### 3. Start React Frontend
 ```powershell
 npm install
 npm run dev
@@ -137,7 +143,7 @@ Visit the dashboard at `http://localhost:5173`.
 
 ## 🐳 Docker Deployment
 
-Run the complete 5-service production stack:
+Run the complete 5-service production stack (PostgreSQL + pgvector, Redis, FastAPI Backend, Async Worker, Nginx SPA):
 
 ```powershell
 docker-compose up -d --build
@@ -147,15 +153,19 @@ docker-compose up -d --build
 
 ## 🧪 Testing & Verification
 
-### Run Backend Pytest Suite (42/42 tests passing):
+### Run Backend Pytest Suite (45/45 tests passing):
 ```powershell
 python -m pytest backend_python/app/tests/ -v
 ```
 Includes:
-- Full end-to-end fresh customer lifecycle test (`test_production_e2e_customer.py`) starting from empty database to signup, clean workspace verification, honest refusal, document ingestion, RAG answer, draft publishing, deployment, chat persistence, trash/restore, and multi-tenant security isolation.
-- Resource lifecycles (`test_resource_lifecycle.py`), agent versioning (`test_agent_lifecycle.py`), authentication (`test_auth.py`), RBAC permissions, and SSRF crawler defenses.
+- **Full End-to-End Fresh Customer Lifecycle** (`test_production_e2e_customer.py`): Starts from empty database to signup, clean workspace verification, honest refusal, document ingestion, RAG answer, draft publishing, deployment, chat persistence, trash/restore, and multi-tenant security isolation.
+- **SSRF Multi-Hop Redirect Defense** (`test_rag_and_ssrf.py`): Verifies that direct targets and multi-hop HTTP 301/302 redirects to cloud metadata (`169.254.169.254`), loopback (`127.0.0.1`), and RFC1918 private subnets are strictly intercepted and blocked.
+- **Tenant Billing & GST Invoicing** (`test_billing_and_gst.py`): Verifies plan catalog, Indian GST (18%) intra/inter-state tax breakdown, upgrade generation, and multi-tenant invoice isolation (`GET /api/v1/billing/invoices`).
+- **Resource Lifecycles & 1:1 Schema Constraint** (`test_resource_lifecycle.py`, `models.py`): Enforces 1 AI assistant per company invariant, version draft/publish/rollback, API keys, webhooks, and tool risk gates.
+- **Authentication & RBAC** (`test_auth.py`, `test_multi_tenancy.py`): JWT token verification, password hashing, and role permissions.
 
 ### Run Frontend Production Build:
 ```powershell
 npm run build
 ```
+Production build compiles with zero errors in ~6s with split vendor chunks and optimized public widget.
