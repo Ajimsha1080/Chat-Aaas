@@ -66,6 +66,21 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [isLiveSandboxOpen, setIsLiveSandboxOpen] = useState<boolean>(false);
   const [isQuickTestOpen, setIsQuickTestOpen] = useState<boolean>(false);
   const [currentUserRole, setCurrentUserRole] = useState<UserRole>('owner');
+  const [isImpersonating, setIsImpersonating] = useState<boolean>(false);
+  const [impersonatedCompanyName, setImpersonatedCompanyName] = useState<string | null>(null);
+
+  const startImpersonation = (_companyId: string, companyName: string, _token: string) => {
+    setIsImpersonating(true);
+    setImpersonatedCompanyName(companyName);
+  };
+
+  const stopImpersonation = () => {
+    APIClient.clearImpersonation();
+    setIsImpersonating(false);
+    setImpersonatedCompanyName(null);
+    setCurrentExperience('admin');
+    showToast('Impersonation Ended', 'Returned to Super Admin portal.', 'info');
+  };
 
   const setCurrentExperience = (exp: ProductExperience) => {
     setCurrentExperienceState(exp);
@@ -1636,17 +1651,22 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }));
   };
 
-  const adminUpdatePlanPrice = (planId: SubscriptionPlanId, monthlyINR: number) => {
+  const adminUpdatePlanPrice = async (planId: SubscriptionPlanId, monthlyINR: number) => {
     setAllPlans(prev => prev.map(p => {
       if (p.id === planId) {
         return {
           ...p,
           priceMonthlyINR: monthlyINR,
-          priceAnnualINR: Math.round(monthlyINR * 0.8)
+          priceAnnualINR: Math.round(monthlyINR * 10)
         };
       }
       return p;
     }));
+    try {
+      await APIClient.updateAdminPlanPrice(planId, monthlyINR, Math.round(monthlyINR * 10));
+    } catch (e: any) {
+      console.warn('Backend plan pricing update fallback:', e.message);
+    }
     showToast('Plan Price Updated', `Monthly price for ${planId} updated to ₹${monthlyINR.toLocaleString('en-IN')}`, 'success');
   };
 
@@ -1671,8 +1691,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         setCurrentUserRole,
 
         companies,
-        currentCompanyId,
         currentCompany,
+        currentCompanyId,
         switchCompany,
         updateCompany,
         createCompanyWorkspace,
@@ -1758,6 +1778,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         securityEvents,
         adminToggleCompanySuspension,
         adminUpdatePlanPrice,
+        isImpersonating,
+        impersonatedCompanyName,
+        startImpersonation,
+        stopImpersonation,
 
         toasts,
         showToast,

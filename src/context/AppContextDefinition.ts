@@ -285,6 +285,10 @@ export interface AppContextType {
   securityEvents: SecurityEventItem[];
   adminToggleCompanySuspension: (companyId: string) => void;
   adminUpdatePlanPrice: (planId: SubscriptionPlanId, monthlyINR: number) => void;
+  isImpersonating: boolean;
+  impersonatedCompanyName: string | null;
+  startImpersonation: (companyId: string, companyName: string, token: string) => void;
+  stopImpersonation: () => void;
 
   // Toast System
   toasts: ToastNotification[];

@@ -42,6 +42,7 @@ class DatabaseStore:
         self.action_executions: Dict[str, Dict[str, Any]] = {}
         self.background_jobs: Dict[str, Dict[str, Any]] = {}
         self.handoff_sessions: Dict[str, Dict[str, Any]] = {}
+        self.subscription_plans: Dict[str, Dict[str, Any]] = {}
         self.global_killswitch_active: bool = False
         self.global_killswitch_reason: str = ""
         self.global_killswitch_updated_at: str = ""
@@ -451,7 +452,8 @@ class DatabaseStore:
                 "deployments": self.deployments,
                 "action_executions": self.action_executions,
                 "background_jobs": self.background_jobs,
-                "handoff_sessions": self.handoff_sessions
+                "handoff_sessions": self.handoff_sessions,
+                "subscription_plans": self.subscription_plans
             }
             tmp_path = self.storage_file + ".tmp"
             with open(tmp_path, "w", encoding="utf-8") as f:
@@ -685,6 +687,7 @@ class DatabaseStore:
             self.action_executions = data.get("action_executions", {})
             self.background_jobs = data.get("background_jobs", {})
             self.handoff_sessions = data.get("handoff_sessions", {})
+            self.subscription_plans = data.get("subscription_plans", {})
             return len(self.companies) > 0
         except Exception:
             return False

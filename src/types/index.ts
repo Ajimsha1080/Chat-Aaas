@@ -346,6 +346,7 @@ export type UserRole =
 export type AdminNavigationTab = 
   | 'overview' 
   | 'organizations' 
+  | 'users'
   | 'agents' 
   | 'subscriptions' 
   | 'revenue' 

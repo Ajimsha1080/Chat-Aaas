@@ -24,7 +24,11 @@ import {
   Download,
   ChevronLeft,
   ChevronRight,
-  RefreshCw
+  RefreshCw,
+  Users,
+  UserCheck,
+  UserX,
+  ShieldCheck
 } from 'lucide-react';
 import { useApp } from '../../context';
 import { APIClient } from '../../api/apiClient';
@@ -39,15 +43,32 @@ export const AdminDashboard: React.FC = () => {
     systemHealth, 
     securityEvents, 
     auditLogs, 
-    showToast 
+    showToast,
+    startImpersonation
   } = useApp();
 
-  const [activeTab, setActiveTab] = useState<'overview' | 'organizations' | 'fleet' | 'health' | 'security'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'organizations' | 'users' | 'fleet' | 'health' | 'security'>('overview');
   const [searchOrg, setSearchOrg] = useState('');
   const [supportOrgId, setSupportOrgId] = useState(companies[0]?.id || '');
   const [supportDiagnosticOutput, setSupportDiagnosticOutput] = useState<any | null>(null);
   const [isEmergencyKillswitchActive, setIsEmergencyKillswitchActive] = useState(false);
   const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
+
+  // Organizations Directory Server-Side Filtering & Pagination
+  const [liveTenants, setLiveTenants] = useState<any[] | null>(null);
+  const [orgStatusFilter, setOrgStatusFilter] = useState<'all' | 'active' | 'suspended'>('all');
+  const [orgPlanFilter, setOrgPlanFilter] = useState<string>('all');
+  const [orgPage, setOrgPage] = useState<number>(1);
+  const [orgLimit] = useState<number>(10);
+  const [orgTotal, setOrgTotal] = useState<number>(companies.length);
+  const [isTenantsLoading, setIsTenantsLoading] = useState<boolean>(false);
+
+  // Platform Users Management State
+  const [usersList, setUsersList] = useState<any[]>([]);
+  const [userSearch, setUserSearch] = useState('');
+  const [userRoleFilter, setUserRoleFilter] = useState('all');
+  const [isUsersLoading, setIsUsersLoading] = useState(false);
+  const [updatingUserId, setUpdatingUserId] = useState<string | null>(null);
 
   // Live Backend Telemetry & Observability States
   const [liveHealth, setLiveHealth] = useState<any[] | null>(null);
@@ -86,11 +107,97 @@ export const AdminDashboard: React.FC = () => {
     }
   };
 
+  const fetchTenants = async () => {
+    setIsTenantsLoading(true);
+    try {
+      const res = await APIClient.getAdminTenants({
+        search: searchOrg || undefined,
+        status: orgStatusFilter !== 'all' ? orgStatusFilter : undefined,
+        planId: orgPlanFilter !== 'all' ? orgPlanFilter : undefined,
+        page: orgPage,
+        limit: orgLimit
+      });
+      if (res?.companies) {
+        setLiveTenants(res.companies);
+        setOrgTotal(res.total ?? res.companies.length);
+      }
+    } catch (e: any) {
+      console.warn('Live admin tenants fetch error:', e);
+    } finally {
+      setIsTenantsLoading(false);
+    }
+  };
+
+  const fetchUsers = async () => {
+    setIsUsersLoading(true);
+    try {
+      const res = await APIClient.getAdminUsers({
+        search: userSearch || undefined,
+        role: userRoleFilter !== 'all' ? userRoleFilter : undefined
+      });
+      if (res?.users) {
+        setUsersList(res.users);
+      }
+    } catch (e: any) {
+      console.warn('Live platform users fetch error:', e);
+    } finally {
+      setIsUsersLoading(false);
+    }
+  };
+
   useEffect(() => {
     fetchLiveData();
-    const interval = setInterval(fetchLiveData, 15000);
+    fetchTenants();
+    fetchUsers();
+    const interval = setInterval(() => {
+      fetchLiveData();
+      fetchTenants();
+    }, 15000);
     return () => clearInterval(interval);
   }, []);
+
+  useEffect(() => {
+    fetchTenants();
+  }, [searchOrg, orgStatusFilter, orgPlanFilter, orgPage]);
+
+  useEffect(() => {
+    if (activeTab === 'users') {
+      fetchUsers();
+    }
+  }, [activeTab, userSearch, userRoleFilter]);
+
+  const handleRoleChange = async (targetUser: any, newRole: string) => {
+    setUpdatingUserId(targetUser.id);
+    try {
+      await APIClient.updateUserRole(targetUser.id, newRole, targetUser.companyId);
+      showToast('Role Updated', `Updated role for ${targetUser.fullName || targetUser.email} to ${newRole}.`, 'success');
+      await fetchUsers();
+      fetchLiveData();
+    } catch (e: any) {
+      showToast('Role Update Blocked', e.message || 'Could not update user role.', 'error');
+    } finally {
+      setUpdatingUserId(null);
+    }
+  };
+
+  const handleToggleUserSuspension = async (targetUser: any) => {
+    setUpdatingUserId(targetUser.id);
+    try {
+      if (targetUser.isSuspended) {
+        await APIClient.activateUser(targetUser.id);
+        showToast('User Activated', `User account ${targetUser.email} has been reactivated.`, 'success');
+      } else {
+        await APIClient.suspendUser(targetUser.id);
+        showToast('User Suspended', `User account ${targetUser.email} has been suspended.`, 'warning');
+      }
+      await fetchUsers();
+      fetchLiveData();
+    } catch (e: any) {
+      showToast('Action Failed', e.message || 'Could not update user status.', 'error');
+    } finally {
+      setUpdatingUserId(null);
+    }
+  };
 
   // Audit Trail states & filters
   const [auditSearch, setAuditSearch] = useState('');
@@ -100,7 +207,7 @@ export const AdminDashboard: React.FC = () => {
   const [expandedLogId, setExpandedLogId] = useState<string | null>(null);
   const itemsPerPage = 8;
 
-  const totalTenants = liveMetrics?.totalTenants ?? companies.length;
+  const totalTenants = liveMetrics?.totalTenants ?? (liveTenants ? orgTotal : companies.length);
   const activeAgents = liveMetrics?.activeAgents ?? companies.filter(c => c.agent?.status === 'active' && !c.isSuspended).length;
   const totalMRR = liveMetrics?.totalMRRINR ?? companies.reduce((acc, c) => {
     const plan = allPlans.find(p => p.id === c.planId);
@@ -110,10 +217,15 @@ export const AdminDashboard: React.FC = () => {
   const displayedHealth = (liveHealth && liveHealth.length > 0) ? liveHealth : systemHealth;
   const displayedAuditLogs = (liveAuditLogs && liveAuditLogs.length > 0) ? liveAuditLogs : auditLogs;
 
-  const filteredCompanies = companies.filter(c => 
-    c.name.toLowerCase().includes(searchOrg.toLowerCase()) || 
-    c.domain.toLowerCase().includes(searchOrg.toLowerCase())
-  );
+  const displayedTenants = liveTenants ?? companies.filter(c => {
+    const matchesSearch = !searchOrg || 
+      c.name.toLowerCase().includes(searchOrg.toLowerCase()) || 
+      c.domain.toLowerCase().includes(searchOrg.toLowerCase());
+    const matchesStatus = orgStatusFilter === 'all' || 
+      (orgStatusFilter === 'suspended' ? c.isSuspended : !c.isSuspended);
+    const matchesPlan = orgPlanFilter === 'all' || c.planId === orgPlanFilter;
+    return matchesSearch && matchesStatus && matchesPlan;
+  });
 
   const handleRunDiagnostic = async () => {
     const targetComp = companies.find(c => c.id === supportOrgId);
@@ -161,14 +273,17 @@ export const AdminDashboard: React.FC = () => {
   };
 
   const handleImpersonate = async (comp: typeof companies[0]) => {
+    let scopedToken = '';
     try {
       const res = await APIClient.impersonateTenant(comp.id);
       if (res?.token) {
+        scopedToken = res.token;
         APIClient.setAuth(res.token, comp.id);
       }
     } catch (e: any) {
       console.warn('Impersonation token generation warning:', e.message);
     }
+    startImpersonation(comp.id, comp.name, scopedToken);
     switchCompany(comp.id);
     setCurrentExperience('customer');
     showToast('Tenant Impersonated', `Logged into workspace for ${comp.name}.`, 'info');
@@ -379,6 +494,7 @@ export const AdminDashboard: React.FC = () => {
   const adminNavs = [
     { id: 'overview' as const, label: 'Platform Overview', icon: TrendingUp },
     { id: 'organizations' as const, label: 'Organizations & Fleet', icon: Building2, badge: `${totalTenants}` },
+    { id: 'users' as const, label: 'Platform Users', icon: Users, badge: usersList.length > 0 ? `${usersList.length}` : undefined },
     { id: 'fleet' as const, label: 'AI Fleet & Diagnostics', icon: Bot, badge: `${activeAgents} Active` },
     { id: 'health' as const, label: 'Infrastructure & Telemetry', icon: HeartPulse, badge: '99.99%' },
     { id: 'security' as const, label: 'Security & Audit Logs', icon: ShieldAlert, count: securityEvents.length }
@@ -686,18 +802,65 @@ export const AdminDashboard: React.FC = () => {
           <div className="bg-white rounded-2xl border border-slate-200/80 p-6 sm:p-7 shadow-[0_1px_2px_rgba(0,0,0,0.02)] space-y-4">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div>
-                <h3 className="text-base sm:text-lg font-bold text-slate-900">Tenant Workspaces Directory</h3>
+                <h3 className="text-base sm:text-lg font-bold text-slate-900 flex items-center gap-2">
+                  <span>Tenant Workspaces Directory</span>
+                  <span className="px-2.5 py-0.5 rounded-md text-xs font-mono font-semibold bg-slate-100 text-slate-700 border border-slate-200">
+                    {orgTotal} Tenants
+                  </span>
+                </h3>
                 <p className="text-sm text-slate-500">Manage tenant isolation, plan allocations, and operational status.</p>
               </div>
-              <div className="relative w-full sm:w-80">
-                <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
-                <input
-                  type="text"
-                  placeholder="Search organization or domain..."
-                  value={searchOrg}
-                  onChange={e => setSearchOrg(e.target.value)}
-                  className="w-full pl-9 pr-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium focus:ring-2 focus:ring-slate-900 focus:outline-hidden"
-                />
+
+              <div className="flex flex-wrap items-center gap-2.5">
+                <div className="relative min-w-56 flex-1 sm:flex-none">
+                  <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                  <input
+                    type="text"
+                    placeholder="Search organization or domain..."
+                    value={searchOrg}
+                    onChange={e => {
+                      setSearchOrg(e.target.value);
+                      setOrgPage(1);
+                    }}
+                    className="w-full pl-9 pr-3.5 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium focus:ring-2 focus:ring-slate-900 focus:outline-hidden"
+                  />
+                </div>
+
+                <select
+                  value={orgStatusFilter}
+                  onChange={e => {
+                    setOrgStatusFilter(e.target.value as any);
+                    setOrgPage(1);
+                  }}
+                  className="px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 focus:ring-2 focus:ring-slate-900 focus:outline-hidden cursor-pointer"
+                >
+                  <option value="all">All Statuses</option>
+                  <option value="active">Active Only</option>
+                  <option value="suspended">Suspended Only</option>
+                </select>
+
+                <select
+                  value={orgPlanFilter}
+                  onChange={e => {
+                    setOrgPlanFilter(e.target.value);
+                    setOrgPage(1);
+                  }}
+                  className="px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 focus:ring-2 focus:ring-slate-900 focus:outline-hidden cursor-pointer"
+                >
+                  <option value="all">All Plans</option>
+                  <option value="starter">Starter</option>
+                  <option value="growth">Growth</option>
+                  <option value="business">Business</option>
+                </select>
+
+                <button
+                  onClick={fetchTenants}
+                  disabled={isTenantsLoading}
+                  className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-semibold flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                >
+                  <RefreshCw className={`w-3.5 h-3.5 ${isTenantsLoading ? 'animate-spin text-indigo-600' : ''}`} />
+                  <span>Refresh</span>
+                </button>
               </div>
             </div>
 
@@ -714,51 +877,249 @@ export const AdminDashboard: React.FC = () => {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
-                  {filteredCompanies.map(c => (
-                    <tr key={c.id} className="hover:bg-slate-50 transition-colors">
-                      <td className="py-3.5">
-                        <div className="font-bold text-slate-900">{c.name}</div>
-                        <span className="text-xs text-slate-500 font-mono">{c.domain}</span>
+                  {displayedTenants.length === 0 ? (
+                    <tr>
+                      <td colSpan={6} className="py-12 text-center text-slate-500 text-sm">
+                        {isTenantsLoading ? 'Loading organizations...' : 'No tenant workspaces match the selected criteria.'}
                       </td>
-                      <td className="py-3.5 text-slate-700 font-medium capitalize">{c.industry}</td>
-                      <td className="py-3.5">
-                        <span className="px-2.5 py-1 rounded-md text-xs font-mono font-bold uppercase bg-slate-100 text-slate-700 border border-slate-200">
-                          {c.planId}
-                        </span>
+                    </tr>
+                  ) : (
+                    displayedTenants.map(c => (
+                      <tr key={c.id} className="hover:bg-slate-50 transition-colors">
+                        <td className="py-3.5">
+                          <div className="font-bold text-slate-900">{c.name}</div>
+                          <span className="text-xs text-slate-500 font-mono">{c.domain}</span>
+                        </td>
+                        <td className="py-3.5 text-slate-700 font-medium capitalize">{c.industry || 'General'}</td>
+                        <td className="py-3.5">
+                          <span className="px-2.5 py-1 rounded-md text-xs font-mono font-bold uppercase bg-slate-100 text-slate-700 border border-slate-200">
+                            {c.planId}
+                          </span>
+                        </td>
+                        <td className="py-3.5 font-mono font-semibold text-slate-800">{c.stats?.totalMessages?.toLocaleString() ?? '0'}</td>
+                        <td className="py-3.5">
+                          <span className={`inline-flex items-center gap-1.5 text-xs font-bold px-2.5 py-1 rounded-md ${
+                            c.isSuspended 
+                              ? 'bg-rose-50 text-rose-700 border border-rose-200/60' 
+                              : 'bg-emerald-50 text-emerald-700 border border-emerald-200/60'
+                          }`}>
+                            <span className={`w-2 h-2 rounded-full ${c.isSuspended ? 'bg-rose-500' : 'bg-emerald-500'}`} />
+                            {c.isSuspended ? 'Suspended' : 'Active'}
+                          </span>
+                        </td>
+                        <td className="py-3.5 text-right">
+                          <div className="flex items-center justify-end gap-2">
+                            <button
+                              onClick={() => handleImpersonate(c)}
+                              className="px-3 py-1.5 bg-slate-900 hover:bg-slate-800 text-white rounded-lg text-xs font-semibold cursor-pointer shadow-xs"
+                            >
+                              Impersonate
+                            </button>
+                            <button
+                              onClick={async () => {
+                                await adminToggleCompanySuspension(c.id);
+                                fetchTenants();
+                                fetchLiveData();
+                              }}
+                              className={`px-3 py-1.5 rounded-lg text-xs font-semibold cursor-pointer transition-colors border ${
+                                c.isSuspended 
+                                  ? 'bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border-emerald-200' 
+                                  : 'bg-white hover:bg-rose-50 text-rose-700 border-rose-200'
+                              }`}
+                            >
+                              {c.isSuspended ? 'Activate' : 'Suspend'}
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Organizations Pagination Bar */}
+            {orgTotal > orgLimit && (
+              <div className="flex items-center justify-between pt-3 border-t border-slate-100 text-xs font-medium text-slate-500">
+                <span>
+                  Showing {Math.min((orgPage - 1) * orgLimit + 1, orgTotal)}–{Math.min(orgPage * orgLimit, orgTotal)} of {orgTotal} organizations
+                </span>
+                <div className="flex items-center gap-2">
+                  <button
+                    disabled={orgPage <= 1}
+                    onClick={() => setOrgPage(prev => Math.max(1, prev - 1))}
+                    className="p-1.5 rounded-lg border border-slate-200 hover:bg-slate-50 disabled:opacity-40 cursor-pointer disabled:cursor-not-allowed"
+                  >
+                    <ChevronLeft className="w-4 h-4" />
+                  </button>
+                  <span className="font-mono font-semibold text-slate-700 px-2">
+                    Page {orgPage} of {Math.ceil(orgTotal / orgLimit)}
+                  </span>
+                  <button
+                    disabled={orgPage >= Math.ceil(orgTotal / orgLimit)}
+                    onClick={() => setOrgPage(prev => prev + 1)}
+                    className="p-1.5 rounded-lg border border-slate-200 hover:bg-slate-50 disabled:opacity-40 cursor-pointer disabled:cursor-not-allowed"
+                  >
+                    <ChevronRight className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* 2.5 PLATFORM USERS TAB */}
+      {activeTab === 'users' && (
+        <div className="space-y-4 animate-in fade-in duration-150">
+          <div className="bg-white rounded-2xl border border-slate-200/80 p-6 sm:p-7 shadow-[0_1px_2px_rgba(0,0,0,0.02)] space-y-5">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div>
+                <h3 className="text-base sm:text-lg font-bold text-slate-900 flex items-center gap-2">
+                  <span>Platform Users Management</span>
+                  <span className="px-2.5 py-0.5 rounded-md text-xs font-mono font-semibold bg-indigo-50 text-indigo-700 border border-indigo-200/60">
+                    Universal Multi-Tenant RBAC
+                  </span>
+                </h3>
+                <p className="text-sm text-slate-500">Promote or demote user roles across all tenants, enforce Super Admin security guards, and control account suspensions.</p>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-2.5">
+                <div className="relative min-w-56 flex-1 sm:flex-none">
+                  <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                  <input
+                    type="text"
+                    placeholder="Search name, email, or user ID..."
+                    value={userSearch}
+                    onChange={e => setUserSearch(e.target.value)}
+                    className="w-full pl-9 pr-3.5 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium focus:ring-2 focus:ring-slate-900 focus:outline-hidden"
+                  />
+                </div>
+
+                <select
+                  value={userRoleFilter}
+                  onChange={e => setUserRoleFilter(e.target.value)}
+                  className="px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 focus:ring-2 focus:ring-slate-900 focus:outline-hidden cursor-pointer"
+                >
+                  <option value="all">All Roles</option>
+                  <option value="super_admin">Super Admin</option>
+                  <option value="owner">Owner</option>
+                  <option value="admin">Admin</option>
+                  <option value="agent_editor">Agent Editor</option>
+                  <option value="support_lead">Support Lead</option>
+                  <option value="viewer">Viewer</option>
+                </select>
+
+                <button
+                  onClick={fetchUsers}
+                  disabled={isUsersLoading}
+                  className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-semibold flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                >
+                  <RefreshCw className={`w-3.5 h-3.5 ${isUsersLoading ? 'animate-spin text-indigo-600' : ''}`} />
+                  <span>Refresh Users</span>
+                </button>
+              </div>
+            </div>
+
+            <div className="overflow-x-auto pt-2">
+              <table className="w-full text-left text-sm">
+                <thead>
+                  <tr className="border-b border-slate-200 text-slate-500 uppercase text-xs font-mono font-bold">
+                    <th className="pb-3">User</th>
+                    <th className="pb-3">Organization</th>
+                    <th className="pb-3">Platform Role</th>
+                    <th className="pb-3">Account Status</th>
+                    <th className="pb-3 text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {usersList.length === 0 ? (
+                    <tr>
+                      <td colSpan={5} className="py-12 text-center text-slate-500 text-sm">
+                        {isUsersLoading ? 'Loading platform users...' : 'No users found matching current filters.'}
                       </td>
-                      <td className="py-3.5 font-mono font-semibold text-slate-800">{c.stats.totalMessages.toLocaleString()}</td>
-                      <td className="py-3.5">
-                        <span className={`inline-flex items-center gap-1.5 text-xs font-bold px-2.5 py-1 rounded-md ${
-                          c.isSuspended 
-                            ? 'bg-rose-50 text-rose-700 border border-rose-200/60' 
-                            : 'bg-emerald-50 text-emerald-700 border border-emerald-200/60'
-                        }`}>
-                          <span className={`w-2 h-2 rounded-full ${c.isSuspended ? 'bg-rose-500' : 'bg-emerald-500'}`} />
-                          {c.isSuspended ? 'Suspended' : 'Active'}
-                        </span>
-                      </td>
-                      <td className="py-3.5 text-right">
-                        <div className="flex items-center justify-end gap-2">
+                    </tr>
+                  ) : (
+                    usersList.map(u => (
+                      <tr key={u.id} className="hover:bg-slate-50 transition-colors">
+                        <td className="py-3.5">
+                          <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 rounded-full bg-slate-900 text-white flex items-center justify-center font-bold text-xs shrink-0">
+                              {(u.fullName || u.email || 'U').charAt(0).toUpperCase()}
+                            </div>
+                            <div>
+                              <div className="font-bold text-slate-900 flex items-center gap-1.5">
+                                <span>{u.fullName || 'Unnamed User'}</span>
+                                {u.isEmailVerified && (
+                                  <span title="Email Verified" className="text-emerald-500 text-[10px]">●</span>
+                                )}
+                              </div>
+                              <span className="text-xs text-slate-500 font-mono">{u.email}</span>
+                            </div>
+                          </div>
+                        </td>
+
+                        <td className="py-3.5">
+                          <div className="font-medium text-slate-800">{u.companyName || 'Unassigned'}</div>
+                          <span className="text-[11px] text-slate-400 font-mono">{u.companyId || 'No context'}</span>
+                        </td>
+
+                        <td className="py-3.5">
+                          <div className="flex items-center gap-2">
+                            <select
+                              value={u.role}
+                              disabled={updatingUserId === u.id}
+                              onChange={e => handleRoleChange(u, e.target.value)}
+                              className={`px-2.5 py-1 rounded-lg text-xs font-mono font-bold uppercase border cursor-pointer focus:ring-2 focus:ring-slate-900 focus:outline-hidden disabled:opacity-50 ${
+                                u.role === 'super_admin'
+                                  ? 'bg-rose-50 text-rose-700 border-rose-200'
+                                  : u.role === 'owner' || u.role === 'admin'
+                                  ? 'bg-purple-50 text-purple-700 border-purple-200'
+                                  : 'bg-slate-100 text-slate-700 border-slate-200'
+                              }`}
+                            >
+                              <option value="super_admin">SUPER_ADMIN</option>
+                              <option value="owner">OWNER</option>
+                              <option value="admin">ADMIN</option>
+                              <option value="agent_editor">AGENT_EDITOR</option>
+                              <option value="support_lead">SUPPORT_LEAD</option>
+                              <option value="viewer">VIEWER</option>
+                            </select>
+                            {u.role === 'super_admin' && (
+                              <span title="Platform Root Administrator">
+                                <ShieldCheck className="w-4 h-4 text-rose-600 shrink-0" />
+                              </span>
+                            )}
+                          </div>
+                        </td>
+
+                        <td className="py-3.5">
+                          <span className={`inline-flex items-center gap-1.5 text-xs font-bold px-2.5 py-1 rounded-md ${
+                            u.isSuspended
+                              ? 'bg-rose-50 text-rose-700 border border-rose-200/60'
+                              : 'bg-emerald-50 text-emerald-700 border border-emerald-200/60'
+                          }`}>
+                            <span className={`w-2 h-2 rounded-full ${u.isSuspended ? 'bg-rose-500' : 'bg-emerald-500'}`} />
+                            {u.isSuspended ? 'Suspended' : 'Active'}
+                          </span>
+                        </td>
+
+                        <td className="py-3.5 text-right">
                           <button
-                            onClick={() => handleImpersonate(c)}
-                            className="px-3 py-1.5 bg-slate-900 hover:bg-slate-800 text-white rounded-lg text-xs font-semibold cursor-pointer shadow-xs"
-                          >
-                            Impersonate
-                          </button>
-                          <button
-                            onClick={() => adminToggleCompanySuspension(c.id)}
-                            className={`px-3 py-1.5 rounded-lg text-xs font-semibold cursor-pointer transition-colors border ${
-                              c.isSuspended 
-                                ? 'bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border-emerald-200' 
+                            onClick={() => handleToggleUserSuspension(u)}
+                            disabled={updatingUserId === u.id}
+                            className={`px-3 py-1.5 rounded-lg text-xs font-semibold cursor-pointer transition-colors border shadow-2xs disabled:opacity-50 ${
+                              u.isSuspended
+                                ? 'bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border-emerald-200'
                                 : 'bg-white hover:bg-rose-50 text-rose-700 border-rose-200'
                             }`}
                           >
-                            {c.isSuspended ? 'Activate' : 'Suspend'}
+                            {u.isSuspended ? 'Activate User' : 'Suspend User'}
                           </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
+                        </td>
+                      </tr>
+                    ))
+                  )}
                 </tbody>
               </table>
             </div>

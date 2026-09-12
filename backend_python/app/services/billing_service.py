@@ -32,7 +32,33 @@ PLANS_CATALOG = [
 class BillingService:
     @staticmethod
     def get_plans() -> List[Dict[str, Any]]:
+        plans_map = getattr(db, "subscription_plans", None)
+        if plans_map and len(plans_map) > 0:
+            return list(plans_map.values())
         return PLANS_CATALOG
+
+    @staticmethod
+    def update_plan_price(plan_id: str, price_monthly_inr: int, price_annual_inr: Optional[int] = None) -> Dict[str, Any]:
+        if not getattr(db, "subscription_plans", None):
+            db.subscription_plans = {p["id"]: dict(p) for p in PLANS_CATALOG}
+        if plan_id not in db.subscription_plans:
+            raise ValueError(f"Plan '{plan_id}' not found.")
+        
+        plan = db.subscription_plans[plan_id]
+        plan["priceMonthlyINR"] = price_monthly_inr
+        if price_annual_inr is not None:
+            plan["priceAnnualINR"] = price_annual_inr
+        else:
+            plan["priceAnnualINR"] = price_monthly_inr * 10
+        
+        for p in PLANS_CATALOG:
+            if p["id"] == plan_id:
+                p["priceMonthlyINR"] = plan["priceMonthlyINR"]
+                p["priceAnnualINR"] = plan["priceAnnualINR"]
+                break
+        
+        db.save_state()
+        return plan
 
     @staticmethod
     def calculate_gst_invoice(amount_inr: float, is_interstate: bool = False) -> Dict[str, Any]:

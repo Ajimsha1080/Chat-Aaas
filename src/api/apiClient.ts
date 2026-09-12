@@ -658,4 +658,22 @@ export class APIClient {
     await this.ensureSuperAdminAuth();
     return this.request(`/api/v1/admin/diagnostics/${companyId}`, 'POST');
   }
+
+  public static clearImpersonation(): void {
+    if (this.adminToken) {
+      this.token = this.adminToken;
+      this.currentCompanyId = 'comp-techflow';
+    }
+  }
+
+  public static async getAdminPlans() {
+    await this.ensureSuperAdminAuth();
+    return this.request('/api/v1/admin/plans', 'GET');
+  }
+
+  public static async updateAdminPlanPrice(planId: string, priceMonthlyINR: number, priceAnnualINR?: number) {
+    await this.ensureSuperAdminAuth();
+    return this.request(`/api/v1/admin/plans/${planId}`, 'PATCH', { priceMonthlyINR, priceAnnualINR });
+  }
 }
+

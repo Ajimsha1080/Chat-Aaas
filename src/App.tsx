@@ -19,13 +19,17 @@ import { ToastContainer } from './components/common/ToastContainer';
 import { HelpModal } from './components/common/HelpModal';
 import { CommandPalette } from './components/common/CommandPalette';
 import { ErrorBoundary } from './components/common/ErrorBoundary';
+import { AlertTriangle, ArrowRight } from 'lucide-react';
 
 const DashboardContent: React.FC = () => {
   const { 
     currentExperience,
     currentTab, 
     isAdminMode, 
-    setIsQuickTestOpen
+    setIsQuickTestOpen,
+    isImpersonating,
+    impersonatedCompanyName,
+    stopImpersonation
   } = useApp();
 
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
@@ -94,6 +98,27 @@ const DashboardContent: React.FC = () => {
 
       {/* Main Workspace Container */}
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
+        {isImpersonating && (
+          <div className="bg-amber-500 text-slate-950 px-4 py-2 text-xs font-semibold flex items-center justify-between shadow-sm z-40 border-b border-amber-600 shrink-0">
+            <div className="flex items-center gap-2">
+              <span className="flex h-2.5 w-2.5 relative">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-slate-950 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-slate-950"></span>
+              </span>
+              <AlertTriangle className="w-4 h-4 text-slate-950 shrink-0" />
+              <span>
+                <strong>Super Admin Impersonation Active:</strong> Operating inside tenant workspace <u>{impersonatedCompanyName || 'Customer Workspace'}</u>.
+              </span>
+            </div>
+            <button
+              onClick={stopImpersonation}
+              className="px-3 py-1 bg-slate-950 hover:bg-slate-900 text-amber-300 rounded font-semibold transition-colors text-xs flex items-center gap-1.5 cursor-pointer shadow-xs"
+            >
+              <span>End Impersonation &amp; Return</span>
+              <ArrowRight className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        )}
         <Header 
           onOpenOnboarding={() => setIsOnboardingOpen(true)} 
           onOpenHelp={() => setIsHelpOpen(true)}

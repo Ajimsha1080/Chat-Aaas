@@ -7,6 +7,7 @@ from sqlalchemy import text
 from app.db.database import db
 from app.core.tenant import TenantContext, require_super_admin
 from app.core.security import create_jwt_token
+from app.services.billing_service import BillingService
 
 router = APIRouter(prefix="/admin", tags=["Platform Super Admin"])
 
@@ -18,6 +19,10 @@ class SuspendTenantRequest(BaseModel):
 class UpdateUserRoleRequest(BaseModel):
     role: str = Field(..., description="Target role: super_admin, owner, admin, agent_editor, support_lead, viewer")
     companyId: Optional[str] = Field(None, description="Target company context for membership")
+
+class UpdatePlanPriceRequest(BaseModel):
+    priceMonthlyINR: int = Field(..., ge=0, description="Monthly subscription price in INR")
+    priceAnnualINR: Optional[int] = Field(None, ge=0, description="Annual subscription price in INR")
 
 class ImpersonateRequest(BaseModel):
     companyId: str = Field(..., description="Target company ID to impersonate")
@@ -542,12 +547,8 @@ def get_platform_metrics(ctx: TenantContext = Depends(require_super_admin)):
     total_chunks = len(db.document_chunks)
     total_conversations = len(db.conversations)
 
-    plan_pricing = {
-        "starter": 4999,
-        "growth": 14999,
-        "business": 39999,
-        "enterprise": 89999
-    }
+    plans_list = BillingService.get_plans()
+    plan_pricing = {p["id"]: p.get("priceMonthlyINR", 4999) for p in plans_list}
     mrr = sum(plan_pricing.get(c.get("planId", "starter"), 4999) for c in db.companies.values() if not c.get("isSuspended"))
 
     return {
@@ -654,4 +655,44 @@ def run_tenant_diagnostic(
     )
 
     return {"status": 200, "data": output}
+ 
+# ================= SUBSCRIPTION PLANS MANAGEMENT ================= #
+
+@router.get("/plans")
+def get_platform_plans(ctx: TenantContext = Depends(require_super_admin)):
+    return {"status": 200, "data": {"plans": BillingService.get_plans()}}
+
+@router.patch("/plans/{plan_id}")
+def update_platform_plan_price(
+    plan_id: str,
+    req: UpdatePlanPriceRequest,
+    ctx: TenantContext = Depends(require_super_admin)
+):
+    try:
+        updated_plan = BillingService.update_plan_price(
+            plan_id=plan_id,
+            price_monthly_inr=req.priceMonthlyINR,
+            price_annual_inr=req.priceAnnualINR
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+
+    db.record_audit_log(
+        company_id="comp-platform",
+        actor_id=ctx.user_id,
+        actor_role=ctx.role,
+        action="PLAN_PRICE_UPDATED",
+        target_resource="plan",
+        target_id=plan_id,
+        details=f"Super Admin '{ctx.user_id}' updated pricing for plan '{plan_id}' to Monthly: ₹{req.priceMonthlyINR:,}, Annual: ₹{updated_plan['priceAnnualINR']:,}.",
+        severity="critical",
+        metadata={
+            "plan_id": plan_id,
+            "priceMonthlyINR": req.priceMonthlyINR,
+            "priceAnnualINR": updated_plan["priceAnnualINR"]
+        }
+    )
+
+    return {"status": 200, "data": updated_plan}
+
 

@@ -270,3 +270,46 @@ def test_tenant_diagnostic_probe():
     assert diag_data["tenantId"] == "comp-techflow"
     assert "pgvectorLatency" in diag_data
     assert "knowledgeChunksIndexed" in diag_data
+
+# ================= 8. SUBSCRIPTION PLAN PRICING MANAGEMENT ================= #
+
+def test_platform_plan_pricing_management():
+    admin_headers = get_super_admin_headers()
+    alex_headers = get_tenant_owner_headers()
+
+    # 1. Non-super admin cannot update plan price
+    forbidden_res = client.patch(
+        "/api/v1/admin/plans/starter",
+        headers=alex_headers,
+        json={"priceMonthlyINR": 6999}
+    )
+    assert forbidden_res.status_code == 403
+
+    # 2. Super admin gets current plans
+    plans_res = client.get("/api/v1/admin/plans", headers=admin_headers)
+    assert plans_res.status_code == 200
+    plans = plans_res.json()["data"]["plans"]
+    assert len(plans) >= 3
+
+    # 3. Super admin updates starter plan price
+    update_res = client.patch(
+        "/api/v1/admin/plans/starter",
+        headers=admin_headers,
+        json={"priceMonthlyINR": 5999, "priceAnnualINR": 59990}
+    )
+    assert update_res.status_code == 200
+    updated = update_res.json()["data"]
+    assert updated["id"] == "starter"
+    assert updated["priceMonthlyINR"] == 5999
+    assert updated["priceAnnualINR"] == 59990
+
+    # 4. Verify billing endpoint reflects updated pricing
+    public_plans = client.get("/api/v1/billing/plans").json()["data"]["plans"]
+    starter_plan = next(p for p in public_plans if p["id"] == "starter")
+    assert starter_plan["priceMonthlyINR"] == 5999
+
+    # 5. Verify audit log was recorded
+    audit_res = client.get("/api/v1/admin/audit-logs?search=PLAN_PRICE_UPDATED", headers=admin_headers)
+    assert audit_res.status_code == 200
+    assert len(audit_res.json()["data"]["logs"]) >= 1
+
