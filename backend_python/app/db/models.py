@@ -445,3 +445,48 @@ class ActionExecution(Base):
     )
 
 
+class BackgroundJob(Base):
+    __tablename__ = "background_jobs"
+
+    id = Column(String(64), primary_key=True, index=True)
+    company_id = Column(String(64), nullable=False, index=True)
+    queue_name = Column(String(64), default="default", nullable=False, index=True)
+    job_type = Column(String(64), nullable=False, index=True)
+    payload = Column(JSON, default=dict, nullable=False)
+    status = Column(String(50), default="queued", nullable=False, index=True)  # queued, claimed, processing, completed, failed
+    attempts = Column(Integer, default=0, nullable=False)
+    max_attempts = Column(Integer, default=3, nullable=False)
+    error = Column(Text, nullable=True)
+    result = Column(JSON, nullable=True)
+    locked_by = Column(String(64), nullable=True)
+    locked_at = Column(String(64), nullable=True)
+    created_at = Column(String(64), nullable=False)
+    updated_at = Column(String(64), nullable=True)
+    completed_at = Column(String(64), nullable=True)
+
+    __table_args__ = (
+        Index("idx_job_queue_status", "queue_name", "status"),
+        Index("idx_job_tenant", "company_id", "status"),
+    )
+
+
+class HandoffSession(Base):
+    __tablename__ = "handoff_sessions"
+
+    id = Column(String(64), primary_key=True, index=True)
+    company_id = Column(String(64), ForeignKey("companies.id", ondelete="CASCADE"), nullable=False, index=True)
+    conversation_id = Column(String(64), ForeignKey("conversations.id", ondelete="CASCADE"), nullable=False, index=True)
+    operator_id = Column(String(64), nullable=True)
+    operator_name = Column(String(255), nullable=True)
+    status = Column(String(50), default="requested", nullable=False)  # requested, assigned, active, resolved, closed
+    reason = Column(Text, nullable=True)
+    requested_at = Column(String(64), nullable=False)
+    assigned_at = Column(String(64), nullable=True)
+    resolved_at = Column(String(64), nullable=True)
+
+    __table_args__ = (
+        Index("idx_handoff_tenant_conv", "company_id", "conversation_id"),
+    )
+
+
+

@@ -56,7 +56,8 @@ class AgentService:
             raise ValueError(f"No agent found for company {company_id}")
 
         active_ver = db.agent_versions.get(agent.get("activeVersionId", ""))
-        next_ver_num = (active_ver.get("versionNumber", 1) if active_ver else 0) + 1
+        current_num = active_ver.get("versionNumber") if active_ver else agent.get("publishedVersionNumber", 1)
+        next_ver_num = max((current_num or 1) + 1, (agent.get("publishedVersionNumber", 0) or 0) + 1)
         draft_ver = db.agent_versions.get(agent.get("draftVersionId", ""))
 
         new_version_id = f"ver-{company_id}-v{next_ver_num}"
@@ -80,6 +81,7 @@ class AgentService:
         agent["publishedVersionNumber"] = next_ver_num
         agent["lastPublishedAt"] = time.strftime("%Y-%m-%dT%H:%M:%SZ")
         agent["status"] = "active"
+        db.save_state()
         return published_version
 
     @staticmethod
@@ -95,6 +97,7 @@ class AgentService:
         agent["activeVersionId"] = target_version_id
         agent["draftVersionId"] = target_version_id
         agent["lifecycleStatus"] = "published"
+        db.save_state()
         return target_ver
 
     @staticmethod

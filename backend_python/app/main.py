@@ -1,9 +1,10 @@
 import time
 import uuid
-from fastapi import FastAPI, Header, HTTPException, Request, Response
+from fastapi import FastAPI, Header, HTTPException, Request, Response, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse, JSONResponse
 from typing import Optional, List, Dict, Any
+from app.core.tenant import TenantContext, get_tenant_context
 
 from app.core.config import settings
 from app.schemas import (
@@ -121,41 +122,52 @@ async def health_check():
 @app.get("/ready", response_model=ReadinessResponse)
 @app.get("/api/v1/ready")
 async def readiness_check():
-    from app.db.database import db
+    from app.db.database import db, engine
+    from sqlalchemy import text
     checks = {}
     
-    # 1. Database Store check
+    # 1. Authoritative SQL Database Connectivity
     try:
-        checks["database_connected"] = isinstance(db.companies, dict) and isinstance(db.document_chunks, dict)
+        with engine.connect() as conn:
+            conn.execute(text("SELECT 1"))
+        checks["database_connected"] = True
     except Exception:
         checks["database_connected"] = False
 
-    # 2. Embedding Pipeline check
+    # 2. Redis / Background Worker Queue check
+    try:
+        from app.core.queue import JobQueue
+        test_q = JobQueue("readiness_check")
+        checks["worker_queue"] = True
+    except Exception:
+        checks["worker_queue"] = False
+
+    # 3. Dense Vector Embeddings Pipeline check
     try:
         emb_res = EmbeddingService.generate_embeddings(EmbeddingRequest(texts=["ready_probe"]))
         checks["embedding_pipeline"] = bool(emb_res.success and emb_res.embeddings)
     except Exception:
         checks["embedding_pipeline"] = False
 
-    # 3. Reranker Engine check
+    # 4. Cross-Encoder Reranker Engine check
     try:
         checks["reranker_engine"] = hasattr(RerankingService, "rerank_candidates")
     except Exception:
         checks["reranker_engine"] = False
 
-    # 4. Document AI Processor check
+    # 5. Document AI Processor check
     try:
         checks["document_ai"] = hasattr(DocumentAIService, "process_document")
     except Exception:
         checks["document_ai"] = False
 
-    # 5. RAG Evaluator check
+    # 6. RAG Groundedness Evaluator check
     try:
         checks["rag_evaluator"] = hasattr(EvaluationService, "evaluate_rag_response")
     except Exception:
         checks["rag_evaluator"] = False
 
-    # 6. NLP Intent Classifier check
+    # 7. NLP Intent Classifier check
     try:
         checks["nlp_classifier"] = hasattr(ClassificationService, "classify_text")
     except Exception:
@@ -167,28 +179,28 @@ async def readiness_check():
         checks=checks
     )
 
-# ----------------- Specialized AI Endpoints -----------------
+# ----------------- Specialized AI Endpoints (Protected) -----------------
 @app.post("/v1/embeddings", response_model=EmbeddingResponse)
 @app.post("/api/v1/embeddings", response_model=EmbeddingResponse)
-async def generate_embeddings(req: EmbeddingRequest):
+async def generate_embeddings(req: EmbeddingRequest, ctx: TenantContext = Depends(get_tenant_context)):
     return EmbeddingService.generate_embeddings(req)
 
 @app.post("/v1/rerank", response_model=RerankResponse)
 @app.post("/api/v1/rerank", response_model=RerankResponse)
-async def rerank_knowledge_chunks(req: RerankRequest):
+async def rerank_knowledge_chunks(req: RerankRequest, ctx: TenantContext = Depends(get_tenant_context)):
     return RerankingService.rerank_candidates(req)
 
 @app.post("/v1/evaluate", response_model=EvaluateResponse)
 @app.post("/api/v1/evaluate", response_model=EvaluateResponse)
-async def evaluate_rag_faithfulness(req: EvaluateRequest):
+async def evaluate_rag_faithfulness(req: EvaluateRequest, ctx: TenantContext = Depends(get_tenant_context)):
     return EvaluationService.evaluate_rag_response(req)
 
 @app.post("/v1/process-document", response_model=DocumentProcessResponse)
 @app.post("/api/v1/process-document", response_model=DocumentProcessResponse)
-async def process_raw_document(req: DocumentProcessRequest):
+async def process_raw_document(req: DocumentProcessRequest, ctx: TenantContext = Depends(get_tenant_context)):
     return DocumentAIService.process_document(req)
 
 @app.post("/v1/classify", response_model=ClassificationResponse)
 @app.post("/api/v1/classify", response_model=ClassificationResponse)
-async def classify_user_intent(req: ClassificationRequest):
+async def classify_user_intent(req: ClassificationRequest, ctx: TenantContext = Depends(get_tenant_context)):
     return ClassificationService.classify_text(req)

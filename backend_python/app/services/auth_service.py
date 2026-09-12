@@ -11,8 +11,14 @@ class AuthService:
             return None
 
         membership = next((m for m in db.memberships.values() if m.get("userId") == user["id"]), None)
-        company_id = membership["companyId"] if membership else "comp-techflow"
-        role = membership["role"] if membership else "owner"
+        if not membership:
+            from fastapi import HTTPException, status
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="User account is not linked to an active workspace company."
+            )
+        company_id = membership["companyId"]
+        role = membership.get("role", "member")
         token = create_jwt_token(user["id"], company_id, role)
 
         return {

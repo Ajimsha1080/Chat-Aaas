@@ -264,24 +264,31 @@ def test_async_worker_pipelines():
 
 
 def test_ai_specialized_services():
-    """Verify specialized AI endpoints: embeddings, rerank, evaluate, classify."""
-    # Embeddings
-    emb_res = client.post("/api/v1/embeddings", json={"texts": ["TechFlow enterprise cloud", "Billing policy"]})
+    """Verify specialized AI endpoints: embeddings, rerank, evaluate, classify with auth protection."""
+    token = create_jwt_token("usr-alex", "comp-techflow", "owner")
+    headers = {"Authorization": f"Bearer {token}"}
+
+    # Unauthenticated request must be rejected
+    unauth_res = client.post("/api/v1/embeddings", json={"texts": ["Unauthenticated check"]})
+    assert unauth_res.status_code == 401
+
+    # Embeddings (Authenticated)
+    emb_res = client.post("/api/v1/embeddings", json={"texts": ["TechFlow enterprise cloud", "Billing policy"]}, headers=headers)
     assert emb_res.status_code == 200
     assert len(emb_res.json()["embeddings"]) == 2
 
-    # Reranking
+    # Reranking (Authenticated)
     rerank_res = client.post("/api/v1/rerank", json={
         "query": "refund timeline",
         "candidates": [
             {"id": "c1", "content": "Mumbai cluster status"},
             {"id": "c2", "content": "14 days refund policy window"}
         ]
-    })
+    }, headers=headers)
     assert rerank_res.status_code == 200
     assert rerank_res.json()["results"][0]["id"] == "c2"
 
-    # NLP Intent Classification
-    cls_res = client.post("/api/v1/classify", json={"text": "I want to cancel my subscription right now"})
+    # NLP Intent Classification (Authenticated)
+    cls_res = client.post("/api/v1/classify", json={"text": "I want to cancel my subscription right now"}, headers=headers)
     assert cls_res.status_code == 200
     assert cls_res.json()["intent"] in ["cancellation_request", "refund_request", "general_inquiry"]

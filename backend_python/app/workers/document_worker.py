@@ -5,58 +5,38 @@ from typing import Dict, Any, Optional
 from app.db.database import db
 from app.services.document_ai import DocumentAIService
 from app.schemas import DocumentProcessRequest
+from app.core.queue import JobQueue
 
 class DocumentWorker:
     """
     Production Asynchronous Worker for Document Ingestion, Semantic Chunking,
-    and Persistent Knowledge Storage with Job Queue State Management.
+    and Persistent Knowledge Storage with Redis and SQL JobQueue.
     """
-    _jobs: Dict[str, Dict[str, Any]] = {}
-    _queue: Optional[asyncio.Queue] = None
-    _loop = None
+    _queue = JobQueue("document_processing")
     _running: bool = False
-
-    @classmethod
-    def _get_queue(cls) -> asyncio.Queue:
-        try:
-            current_loop = asyncio.get_running_loop()
-        except RuntimeError:
-            current_loop = None
-
-        if cls._queue is None or cls._loop != current_loop:
-            cls._queue = asyncio.Queue()
-            cls._loop = current_loop
-            # Re-queue any pending jobs for this loop
-            for jid, j in cls._jobs.items():
-                if j.get("status") == "queued":
-                    cls._queue.put_nowait(jid)
-        return cls._queue
 
     @classmethod
     async def enqueue_job(cls, job_payload: Dict[str, Any]) -> str:
         """Enqueues a document processing job and returns its tracking job ID."""
-        job_id = f"docjob_{int(time.time())}_{uuid.uuid4().hex[:6]}"
-        job_record = {
-            "jobId": job_id,
-            "status": "queued",
-            "payload": job_payload,
-            "companyId": job_payload.get("companyId", "comp-techflow"),
-            "title": job_payload.get("title", "Untitled Document"),
-            "enqueuedAt": time.strftime("%Y-%m-%dT%H:%M:%SZ"),
-            "completedAt": None,
-            "error": None,
-            "result": None,
-            "retryCount": 0
-        }
-        cls._jobs[job_id] = job_record
-        queue = cls._get_queue()
-        await queue.put(job_id)
+        company_id = job_payload.get("companyId") or job_payload.get("company_id")
+        if not company_id:
+            raise ValueError("Document job enqueue failed: 'companyId' is required.")
+
+        job_id = await cls._queue.enqueue(
+            job_type="process_document",
+            company_id=company_id,
+            payload=job_payload,
+            prefix="docjob_"
+        )
         return job_id
 
     @classmethod
     def get_job(cls, job_id: str) -> Optional[Dict[str, Any]]:
         """Retrieve the live status and result of a document processing job."""
-        return cls._jobs.get(job_id)
+        st = cls._queue.get_job_status(job_id)
+        if st:
+            st["jobId"] = st.get("id", job_id)
+        return st
 
     @staticmethod
     async def process_document_job(job_payload: Dict[str, Any]) -> Dict[str, Any]:
@@ -64,7 +44,9 @@ class DocumentWorker:
         Executes document ingestion, chunking, and durable persistence.
         Ensures backing knowledge source exists so chunks are searchable.
         """
-        company_id = job_payload.get("companyId", "comp-techflow")
+        company_id = job_payload.get("companyId") or job_payload.get("company_id")
+        if not company_id:
+            raise ValueError("Document processing failed: 'companyId' is required and cannot be omitted.")
         title = job_payload.get("title", "Untitled Document")
         raw_text = job_payload.get("rawText", "")
         doc_type = job_payload.get("docType", "pdf")
@@ -132,42 +114,26 @@ class DocumentWorker:
     @classmethod
     async def run_worker_loop(cls, max_iterations: Optional[int] = None, poll_interval: float = 0.5):
         """
-        Background queue runner that processes pending jobs with retries.
+        Background queue runner that processes pending jobs via Redis and SQL store.
         """
         cls._running = True
         iterations = 0
-        queue = cls._get_queue()
+        worker_id = f"doc_worker_{uuid.uuid4().hex[:6]}"
         while cls._running:
             if max_iterations is not None and iterations >= max_iterations:
                 break
-            try:
-                job_id = await asyncio.wait_for(queue.get(), timeout=poll_interval)
-            except asyncio.TimeoutError:
+            claimed = await cls._queue.claim_job(worker_id=worker_id, poll_timeout=poll_interval)
+            if not claimed:
                 iterations += 1
+                await asyncio.sleep(poll_interval)
                 continue
 
-            job = cls._jobs.get(job_id)
-            if not job:
-                queue.task_done()
-                continue
-
-            job["status"] = "processing"
             try:
-                result = await cls.process_document_job(job["payload"])
-                job["status"] = "completed"
-                job["result"] = result
-                job["completedAt"] = time.strftime("%Y-%m-%dT%H:%M:%SZ")
+                result = await cls.process_document_job(claimed["payload"])
+                await cls._queue.complete_job(claimed["id"], result)
             except Exception as exc:
-                job["retryCount"] += 1
-                if job["retryCount"] < 3:
-                    job["status"] = "queued"
-                    await queue.put(job_id)
-                else:
-                    job["status"] = "failed"
-                    job["error"] = str(exc)
-                    job["completedAt"] = time.strftime("%Y-%m-%dT%H:%M:%SZ")
+                await cls._queue.fail_job(claimed["id"], str(exc), retry=True)
             finally:
-                queue.task_done()
                 iterations += 1
 
     @classmethod

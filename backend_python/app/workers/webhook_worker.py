@@ -6,31 +6,15 @@ import time
 import uuid
 from typing import Dict, Any, Optional
 import httpx
+from app.core.queue import JobQueue
 
 class WebhookWorker:
     """
     Production Asynchronous Worker for Webhook Dispatch with HMAC-SHA256 Signing,
-    Exponential Backoff Retries, and Background Queue Management.
+    Exponential Backoff Retries, and Redis/SQL JobQueue Management.
     """
-    _events: Dict[str, Dict[str, Any]] = {}
-    _queue: Optional[asyncio.Queue] = None
-    _loop = None
+    _queue = JobQueue("webhook_dispatch")
     _running: bool = False
-
-    @classmethod
-    def _get_queue(cls) -> asyncio.Queue:
-        try:
-            current_loop = asyncio.get_running_loop()
-        except RuntimeError:
-            current_loop = None
-
-        if cls._queue is None or cls._loop != current_loop:
-            cls._queue = asyncio.Queue()
-            cls._loop = current_loop
-            for did, rec in cls._events.items():
-                if rec.get("status") == "queued":
-                    cls._queue.put_nowait(did)
-        return cls._queue
 
     @classmethod
     async def enqueue_event(
@@ -41,28 +25,26 @@ class WebhookWorker:
         secret: Optional[str] = None
     ) -> str:
         """Enqueues a webhook delivery task and returns its delivery ID."""
-        delivery_id = f"del_{int(time.time() * 1000)}_{uuid.uuid4().hex[:6]}"
-        record = {
-            "deliveryId": delivery_id,
-            "targetUrl": target_url,
-            "eventType": event_type,
-            "payload": payload,
-            "secret": secret,
-            "status": "queued",
-            "attempts": 0,
-            "enqueuedAt": time.strftime("%Y-%m-%dT%H:%M:%SZ"),
-            "completedAt": None,
-            "error": None
-        }
-        cls._events[delivery_id] = record
-        queue = cls._get_queue()
-        await queue.put(delivery_id)
+        company_id = payload.get("companyId") or payload.get("company_id") or "comp_global"
+        delivery_id = await cls._queue.enqueue(
+            job_type=event_type,
+            company_id=company_id,
+            payload={
+                "targetUrl": target_url,
+                "eventType": event_type,
+                "payload": payload,
+                "secret": secret
+            }
+        )
         return delivery_id
 
     @classmethod
     def get_event_status(cls, delivery_id: str) -> Optional[Dict[str, Any]]:
         """Retrieve delivery status and history for a given webhook delivery."""
-        return cls._events.get(delivery_id)
+        st = cls._queue.get_job_status(delivery_id)
+        if st:
+            st["deliveryId"] = st.get("id", delivery_id)
+        return st
 
     @staticmethod
     async def dispatch_event(
@@ -160,34 +142,32 @@ class WebhookWorker:
         """Continuous background queue consumer for webhook deliveries."""
         cls._running = True
         iterations = 0
-        queue = cls._get_queue()
+        worker_id = f"webhook_worker_{uuid.uuid4().hex[:6]}"
         while cls._running:
             if max_iterations is not None and iterations >= max_iterations:
                 break
-            try:
-                delivery_id = await asyncio.wait_for(queue.get(), timeout=poll_interval)
-            except asyncio.TimeoutError:
+            claimed = await cls._queue.claim_job(worker_id=worker_id, poll_timeout=poll_interval)
+            if not claimed:
                 iterations += 1
+                await asyncio.sleep(poll_interval)
                 continue
 
-            record = cls._events.get(delivery_id)
-            if not record:
-                queue.task_done()
-                continue
-
-            record["status"] = "delivering"
-            result = await cls.dispatch_event(
-                target_url=record["targetUrl"],
-                event_type=record["eventType"],
-                payload=record["payload"],
-                secret=record.get("secret")
-            )
-            record["status"] = result["status"]
-            record["attempts"] = result.get("attempts", 1)
-            record["error"] = result.get("error")
-            record["completedAt"] = time.strftime("%Y-%m-%dT%H:%M:%SZ")
-            queue.task_done()
-            iterations += 1
+            payload = claimed["payload"]
+            try:
+                result = await cls.dispatch_event(
+                    target_url=payload["targetUrl"],
+                    event_type=payload["eventType"],
+                    payload=payload["payload"],
+                    secret=payload.get("secret")
+                )
+                if result.get("status") == "delivered":
+                    await cls._queue.complete_job(claimed["id"], result)
+                else:
+                    await cls._queue.fail_job(claimed["id"], result.get("error", "Delivery failed"), retry=True)
+            except Exception as exc:
+                await cls._queue.fail_job(claimed["id"], str(exc), retry=True)
+            finally:
+                iterations += 1
 
     @classmethod
     def stop_worker(cls):

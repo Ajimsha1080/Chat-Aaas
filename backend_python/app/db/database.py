@@ -2,10 +2,18 @@ import os
 import json
 import time
 from typing import Dict, Any, List, Optional
+from contextlib import contextmanager
 from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
 from app.core.security import hash_password
 from app.core.config import settings
-from app.db.models import Base
+from app.db.models import (
+    Base, Company, User, Membership, Agent, AgentVersion,
+    KnowledgeCollection, KnowledgeSource, DocumentChunk,
+    KnowledgeGap, KnowledgeFeedback, KnowledgeJob, AgentTool,
+    Integration, Subscription, Invoice, AuditLog, ApiKey,
+    Webhook, Deployment, ActionExecution, BackgroundJob, HandoffSession
+)
 
 class DatabaseStore:
     def __init__(self):
@@ -32,6 +40,8 @@ class DatabaseStore:
         self.webhooks: Dict[str, Dict[str, Any]] = {}
         self.deployments: Dict[str, Dict[str, Any]] = {}
         self.action_executions: Dict[str, Dict[str, Any]] = {}
+        self.background_jobs: Dict[str, Dict[str, Any]] = {}
+        self.handoff_sessions: Dict[str, Dict[str, Any]] = {}
 
         # Initialize Durable Storage (PostgreSQL or SQLite file fallback)
         self.db_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../data"))
@@ -51,17 +61,271 @@ class DatabaseStore:
             self.engine = create_engine(f"sqlite:///{self.sqlite_path}", connect_args={"check_same_thread": False})
             Base.metadata.create_all(bind=self.engine)
 
-        restored = self.load_durable_storage()
+        self.SessionLocal = sessionmaker(bind=self.engine, autocommit=False, autoflush=False)
+
+        # Primary load: query authoritative SQL database
+        restored = self.load_from_database()
+        if not restored:
+            # Fallback load from JSON snapshot if database was empty
+            restored = self.load_durable_storage()
+            if restored:
+                self.flush_durable_storage()
+
         if not restored and settings.SEED_DEMO_DATA:
             self.seed_demo_data()
             self.flush_durable_storage()
+
+        if len(self.agent_tools) == 0 and "comp-techflow" in self.companies:
+            self.seed_agent_tools()
+            self.flush_durable_storage()
+
+        if len(self.agent_versions) == 0 and "agent-tf-1" in self.agents:
+            self.seed_agent_versions()
+            self.flush_durable_storage()
+
+    def seed_agent_versions(self):
+        if "ver-tf-v1" not in self.agent_versions:
+            self.agent_versions["ver-tf-v1"] = {
+                "id": "ver-tf-v1",
+                "agentId": "agent-tf-1",
+                "companyId": "comp-techflow",
+                "versionNumber": 1,
+                "status": "published",
+                "systemInstructions": "You are FlowBot, the enterprise AI Q&A assistant for TechFlow Cloud.",
+                "greetingMessage": "Hello! I am FlowBot, your TechFlow Cloud engineering specialist.",
+                "fallbackMessage": "I do not have verified knowledge on this topic. Connecting you to staff.",
+                "tone": "professional",
+                "allowedActionIds": ["act-tf-1", "act-tf-2"],
+                "escalationSettings": {
+                    "enabled": True,
+                    "triggerKeywords": ["human", "agent", "manager", "refund", "talk to person"],
+                    "maxUnansweredQueriesBeforeEscalation": 2,
+                    "notifyEmail": "support-team@techflow.cloud",
+                    "escalationMessage": "Transferring you to a live support representative.",
+                    "requireHumanApprovalForRefund": True
+                },
+                "customSafetyRules": ["Never fabricate SLA figures without context."],
+                "changeSummary": "Initial production version release",
+                "publishedAt": "2026-08-15T10:00:00.000Z",
+                "createdAt": "2026-08-15T10:00:00.000Z"
+            }
+
+    def seed_agent_tools(self):
+        now_str = time.strftime("%Y-%m-%dT%H:%M:%SZ")
+        if "act-tf-1" not in self.agent_tools:
+            self.agent_tools["act-tf-1"] = {
+                "id": "act-tf-1",
+                "companyId": "comp-techflow",
+                "code": "check_order_status",
+                "name": "Check Order Status",
+                "description": "Retrieves real-time status of compute cluster provisioning.",
+                "riskLevel": "read_only",
+                "requiresUserConfirmation": False,
+                "enabled": True,
+                "parameters": [{"name": "order_id", "type": "string", "description": "Order ID", "required": True}],
+                "endpointConfig": {},
+                "createdAt": now_str
+            }
+        if "act-tf-2" not in self.agent_tools:
+            self.agent_tools["act-tf-2"] = {
+                "id": "act-tf-2",
+                "companyId": "comp-techflow",
+                "code": "execute_refund",
+                "name": "Process Customer Refund",
+                "description": "Issues financial refund to customer balance.",
+                "riskLevel": "high_risk",
+                "requiresUserConfirmation": True,
+                "confirmationPrompt": "Are you certain you wish to issue a refund for this order?",
+                "enabled": True,
+                "parameters": [
+                    {"name": "order_id", "type": "string", "description": "Order identifier", "required": True},
+                    {"name": "amount", "type": "string", "description": "Refund amount in INR", "required": True}
+                ],
+                "endpointConfig": {},
+                "createdAt": now_str
+            }
+
+    @contextmanager
+    def get_session(self):
+        """Transactional session context manager."""
+        session = self.SessionLocal()
+        try:
+            yield session
+            session.commit()
+        except Exception:
+            session.rollback()
+            raise
+        finally:
+            session.close()
 
     def save_state(self):
         """Alias for flush_durable_storage."""
         self.flush_durable_storage()
 
     def flush_durable_storage(self):
-        """Persists customer state durably to disk so it survives restarts."""
+        """Persists customer state durably to PostgreSQL / SQLite database."""
+        try:
+            with self.get_session() as session:
+                for cid, c in self.companies.items():
+                    session.merge(Company(
+                        id=cid,
+                        name=c.get("name", "Company"),
+                        slug=c.get("slug", cid),
+                        domain=c.get("domain"),
+                        industry=c.get("industry"),
+                        plan_id=c.get("planId", "starter"),
+                        billing_cycle=c.get("billingCycle", "monthly"),
+                        plan_status=c.get("planStatus", "active"),
+                        is_suspended=bool(c.get("isSuspended", False)),
+                        api_key=c.get("apiKey"),
+                        api_secret_encrypted=c.get("apiSecretEncrypted"),
+                        settings=c.get("settings", {}),
+                        created_at=c.get("createdAt", time.strftime("%Y-%m-%dT%H:%M:%SZ"))
+                    ))
+
+                for uid, u in self.users.items():
+                    session.merge(User(
+                        id=uid,
+                        email=u.get("email"),
+                        password_hash=u.get("passwordHash", ""),
+                        full_name=u.get("fullName", "User"),
+                        avatar_url=u.get("avatarUrl"),
+                        is_email_verified=bool(u.get("isEmailVerified", False)),
+                        created_at=u.get("createdAt", time.strftime("%Y-%m-%dT%H:%M:%SZ"))
+                    ))
+
+                for mid, m in self.memberships.items():
+                    session.merge(Membership(
+                        id=mid,
+                        user_id=m.get("userId"),
+                        company_id=m.get("companyId"),
+                        role=m.get("role", "viewer"),
+                        status=m.get("status", "active"),
+                        created_at=m.get("createdAt", time.strftime("%Y-%m-%dT%H:%M:%SZ"))
+                    ))
+
+                for aid, a in self.agents.items():
+                    session.merge(Agent(
+                        id=aid,
+                        company_id=a.get("companyId"),
+                        name=a.get("name", "Coar AI"),
+                        description=a.get("description"),
+                        avatar_url=a.get("avatarUrl"),
+                        status=a.get("status", "active"),
+                        lifecycle_status=a.get("lifecycleStatus", "published"),
+                        published_version_number=a.get("publishedVersionNumber", 1),
+                        draft_version_number=a.get("draftVersionNumber", 1),
+                        last_published_at=a.get("lastPublishedAt"),
+                        tone=a.get("tone", "professional"),
+                        active_version_id=a.get("activeVersionId"),
+                        draft_version_id=a.get("draftVersionId"),
+                        created_at=a.get("createdAt", time.strftime("%Y-%m-%dT%H:%M:%SZ"))
+                    ))
+
+                for vid, v in self.agent_versions.items():
+                    session.merge(AgentVersion(
+                        id=vid,
+                        agent_id=v.get("agentId", ""),
+                        company_id=v.get("companyId", ""),
+                        version_number=v.get("versionNumber", 1),
+                        status=v.get("status", "draft"),
+                        system_instructions=v.get("systemInstructions"),
+                        greeting_message=v.get("greetingMessage"),
+                        fallback_message=v.get("fallbackMessage"),
+                        tone=v.get("tone", "professional"),
+                        model=v.get("model", "gpt-4o"),
+                        temperature=float(v.get("temperature", 0.2)),
+                        allowed_action_ids=v.get("allowedActionIds", []),
+                        escalation_settings=v.get("escalationSettings", {}),
+                        custom_safety_rules=v.get("customSafetyRules", []),
+                        change_summary=v.get("changeSummary"),
+                        published_by_user_id=v.get("publishedByUserId"),
+                        published_at=v.get("publishedAt"),
+                        created_at=v.get("createdAt", time.strftime("%Y-%m-%dT%H:%M:%SZ"))
+                    ))
+
+                for sid, s in self.knowledge_sources.items():
+                    session.merge(KnowledgeSource(
+                        id=sid,
+                        company_id=s.get("companyId"),
+                        collection_id=s.get("collectionId"),
+                        title=s.get("title", "Untitled"),
+                        source_type=s.get("sourceType", "file"),
+                        file_name=s.get("fileName"),
+                        file_size_bytes=s.get("fileSizeBytes", 0),
+                        version=s.get("version", 1),
+                        source_url=s.get("sourceUrl"),
+                        category=s.get("category", "General"),
+                        status=s.get("status", "ready"),
+                        lifecycle_state=s.get("lifecycleState", "active"),
+                        processing_stage=s.get("processingStage", "indexed"),
+                        deleted_at=s.get("deletedAt"),
+                        chunk_count=s.get("totalChunks", 0),
+                        total_tokens=s.get("tokenCount", 0),
+                        created_at=s.get("createdAt", time.strftime("%Y-%m-%dT%H:%M:%SZ"))
+                    ))
+
+                for chkid, chk in self.document_chunks.items():
+                    session.merge(DocumentChunk(
+                        id=chkid,
+                        knowledge_source_id=chk.get("knowledgeSourceId") or chk.get("knowledge_source_id"),
+                        company_id=chk.get("companyId"),
+                        collection_id=chk.get("collectionId"),
+                        chunk_index=chk.get("chunkIndex", 0),
+                        content=chk.get("content", ""),
+                        token_count=chk.get("tokenCount", 0),
+                        metadata_json=chk.get("metadata", {}),
+                        created_at=chk.get("createdAt", time.strftime("%Y-%m-%dT%H:%M:%SZ"))
+                    ))
+
+                for actid, act in self.action_executions.items():
+                    session.merge(ActionExecution(
+                        id=actid,
+                        company_id=act.get("companyId"),
+                        tool_code=act.get("toolCode", ""),
+                        idempotency_key=act.get("idempotencyKey"),
+                        status=act.get("status", "created"),
+                        risk_level=act.get("riskLevel", "low_risk"),
+                        requires_user_confirmation=bool(act.get("requiresUserConfirmation", False)),
+                        is_confirmed=bool(act.get("isConfirmed", False)),
+                        parameters=act.get("parameters", {}),
+                        result=act.get("result"),
+                        error=act.get("error"),
+                        created_at=act.get("createdAt", time.strftime("%Y-%m-%dT%H:%M:%SZ"))
+                    ))
+
+                for iid, item in self.integrations.items():
+                    session.merge(Integration(
+                        id=iid,
+                        company_id=item.get("companyId"),
+                        provider=item.get("provider", "webhook"),
+                        name=item.get("name", "Integration"),
+                        status=item.get("status", "connected"),
+                        encrypted_credentials=item.get("encryptedCredentials"),
+                        config=item.get("config", {}),
+                        connected_at=item.get("connectedAt"),
+                        created_at=item.get("createdAt", time.strftime("%Y-%m-%dT%H:%M:%SZ"))
+                    ))
+
+                for tid, tool in self.agent_tools.items():
+                    session.merge(AgentTool(
+                        id=tid,
+                        company_id=tool.get("companyId"),
+                        code=tool.get("code", ""),
+                        name=tool.get("name", "Tool"),
+                        description=tool.get("description", ""),
+                        risk_level=tool.get("riskLevel", "low_risk"),
+                        requires_user_confirmation=bool(tool.get("requiresUserConfirmation", False)),
+                        confirmation_prompt=tool.get("confirmationPrompt"),
+                        enabled=bool(tool.get("enabled", True)),
+                        parameters=tool.get("parameters", []),
+                        endpoint_config=tool.get("endpointConfig", {}),
+                        created_at=tool.get("createdAt", time.strftime("%Y-%m-%dT%H:%M:%SZ"))
+                    ))
+        except Exception as e:
+            print("FLUSH ERROR:", e)
+
+        # Optional snapshot backup
         try:
             snapshot = {
                 "users": self.users,
@@ -83,17 +347,192 @@ class DatabaseStore:
                 "api_keys": self.api_keys,
                 "webhooks": self.webhooks,
                 "deployments": self.deployments,
-                "action_executions": self.action_executions
+                "action_executions": self.action_executions,
+                "background_jobs": self.background_jobs,
+                "handoff_sessions": self.handoff_sessions
             }
             tmp_path = self.storage_file + ".tmp"
             with open(tmp_path, "w", encoding="utf-8") as f:
                 json.dump(snapshot, f, ensure_ascii=False, indent=2)
             os.replace(tmp_path, self.storage_file)
-        except Exception as e:
+        except Exception:
             pass
 
+    def load_from_database(self) -> bool:
+        """Loads authoritative state directly from SQL database tables."""
+        try:
+            with self.engine.connect() as conn:
+                comp_rows = conn.execute(Base.metadata.tables["companies"].select()).mappings().all()
+                for r in comp_rows:
+                    self.companies[r["id"]] = {
+                        "id": r["id"],
+                        "name": r["name"],
+                        "slug": r["slug"],
+                        "domain": r["domain"],
+                        "industry": r["industry"],
+                        "planId": r["plan_id"],
+                        "billingCycle": r["billing_cycle"],
+                        "planStatus": r["plan_status"],
+                        "isSuspended": bool(r["is_suspended"]),
+                        "apiKey": r["api_key"],
+                        "apiSecretEncrypted": r["api_secret_encrypted"],
+                        "settings": r["settings"] or {},
+                        "createdAt": r["created_at"]
+                    }
+
+                user_rows = conn.execute(Base.metadata.tables["users"].select()).mappings().all()
+                for r in user_rows:
+                    self.users[r["id"]] = {
+                        "id": r["id"],
+                        "email": r["email"],
+                        "passwordHash": r["password_hash"],
+                        "fullName": r["full_name"],
+                        "avatarUrl": r["avatar_url"],
+                        "isEmailVerified": bool(r["is_email_verified"]),
+                        "createdAt": r["created_at"]
+                    }
+
+                mem_rows = conn.execute(Base.metadata.tables["memberships"].select()).mappings().all()
+                for r in mem_rows:
+                    self.memberships[r["id"]] = {
+                        "id": r["id"],
+                        "userId": r["user_id"],
+                        "companyId": r["company_id"],
+                        "role": r["role"],
+                        "status": r["status"],
+                        "createdAt": r["created_at"]
+                    }
+
+                agent_rows = conn.execute(Base.metadata.tables["agents"].select()).mappings().all()
+                for r in agent_rows:
+                    self.agents[r["id"]] = {
+                        "id": r["id"],
+                        "companyId": r["company_id"],
+                        "name": r["name"],
+                        "description": r["description"],
+                        "avatarUrl": r["avatar_url"],
+                        "status": r["status"],
+                        "lifecycleStatus": r["lifecycle_status"],
+                        "publishedVersionNumber": r["published_version_number"],
+                        "draftVersionNumber": r["draft_version_number"],
+                        "lastPublishedAt": r["last_published_at"],
+                        "tone": r["tone"],
+                        "activeVersionId": r["active_version_id"],
+                        "draftVersionId": r["draft_version_id"],
+                        "createdAt": r["created_at"]
+                    }
+
+                ver_rows = conn.execute(Base.metadata.tables["agent_versions"].select()).mappings().all()
+                for r in ver_rows:
+                    self.agent_versions[r["id"]] = {
+                        "id": r["id"],
+                        "agentId": r["agent_id"],
+                        "companyId": r["company_id"],
+                        "versionNumber": r["version_number"],
+                        "status": r["status"],
+                        "systemInstructions": r["system_instructions"],
+                        "greetingMessage": r["greeting_message"],
+                        "fallbackMessage": r["fallback_message"],
+                        "tone": r["tone"],
+                        "model": r["model"],
+                        "temperature": r["temperature"],
+                        "allowedActionIds": r["allowed_action_ids"] or [],
+                        "escalationSettings": r["escalation_settings"] or {},
+                        "customSafetyRules": r["custom_safety_rules"] or [],
+                        "changeSummary": r["change_summary"],
+                        "publishedByUserId": r["published_by_user_id"],
+                        "publishedAt": r["published_at"],
+                        "createdAt": r["created_at"]
+                    }
+
+                ks_rows = conn.execute(Base.metadata.tables["knowledge_sources"].select()).mappings().all()
+                for r in ks_rows:
+                    self.knowledge_sources[r["id"]] = {
+                        "id": r["id"],
+                        "companyId": r["company_id"],
+                        "collectionId": r["collection_id"],
+                        "title": r["title"],
+                        "sourceType": r["source_type"],
+                        "fileName": r["file_name"],
+                        "fileSizeBytes": r["file_size_bytes"],
+                        "version": r["version"],
+                        "sourceUrl": r["source_url"],
+                        "category": r["category"],
+                        "status": r["status"],
+                        "lifecycleState": r["lifecycle_state"],
+                        "processingStage": r["processing_stage"],
+                        "deletedAt": r["deleted_at"],
+                        "totalChunks": r["chunk_count"],
+                        "tokenCount": r["total_tokens"],
+                        "createdAt": r["created_at"]
+                    }
+
+                chk_rows = conn.execute(Base.metadata.tables["document_chunks"].select()).mappings().all()
+                for r in chk_rows:
+                    self.document_chunks[r["id"]] = {
+                        "id": r["id"],
+                        "knowledgeSourceId": r["knowledge_source_id"],
+                        "companyId": r["company_id"],
+                        "collectionId": r["collection_id"],
+                        "chunkIndex": r["chunk_index"],
+                        "content": r["content"],
+                        "tokenCount": r["token_count"],
+                        "metadata": r["metadata_json"] or {},
+                        "createdAt": r["created_at"]
+                    }
+
+                act_rows = conn.execute(Base.metadata.tables["action_executions"].select()).mappings().all()
+                for r in act_rows:
+                    self.action_executions[r["id"]] = {
+                        "id": r["id"],
+                        "companyId": r["company_id"],
+                        "toolCode": r["tool_code"],
+                        "idempotencyKey": r["idempotency_key"],
+                        "status": r["status"],
+                        "riskLevel": r["risk_level"],
+                        "requiresUserConfirmation": bool(r["requires_user_confirmation"]),
+                        "isConfirmed": bool(r["is_confirmed"]),
+                        "parameters": r["parameters"] or {},
+                        "result": r["result"],
+                        "error": r["error"],
+                        "createdAt": r["created_at"]
+                    }
+
+                int_rows = conn.execute(Base.metadata.tables["integrations"].select()).mappings().all()
+                for r in int_rows:
+                    self.integrations[r["id"]] = {
+                        "id": r["id"],
+                        "companyId": r["company_id"],
+                        "provider": r["provider"],
+                        "name": r["name"],
+                        "status": r["status"],
+                        "encryptedCredentials": r["encrypted_credentials"],
+                        "config": r["config"] or {},
+                        "connectedAt": r["connected_at"],
+                        "createdAt": r["created_at"]
+                    }
+
+                tool_rows = conn.execute(Base.metadata.tables["agent_tools"].select()).mappings().all()
+                for r in tool_rows:
+                    self.agent_tools[r["id"]] = {
+                        "id": r["id"],
+                        "companyId": r["company_id"],
+                        "code": r["code"],
+                        "name": r["name"],
+                        "description": r["description"],
+                        "riskLevel": r["risk_level"],
+                        "requiresUserConfirmation": bool(r["requires_user_confirmation"]),
+                        "confirmationPrompt": r["confirmation_prompt"],
+                        "enabled": bool(r["enabled"]),
+                        "parameters": r["parameters"] or []
+                    }
+
+                return len(self.companies) > 0
+        except Exception:
+            return False
+
     def load_durable_storage(self) -> bool:
-        """Recovers persisted state from disk."""
+        """Recovers persisted state from optional JSON snapshot backup."""
         if not os.path.exists(self.storage_file):
             return False
         try:
@@ -121,6 +560,8 @@ class DatabaseStore:
             self.webhooks = data.get("webhooks", {})
             self.deployments = data.get("deployments", {})
             self.action_executions = data.get("action_executions", {})
+            self.background_jobs = data.get("background_jobs", {})
+            self.handoff_sessions = data.get("handoff_sessions", {})
             return len(self.companies) > 0
         except Exception:
             return False
@@ -150,11 +591,19 @@ class DatabaseStore:
         self.webhooks.clear()
         self.deployments.clear()
         self.action_executions.clear()
+        self.background_jobs.clear()
+        self.handoff_sessions.clear()
         if os.path.exists(self.storage_file):
             try:
                 os.remove(self.storage_file)
             except Exception:
                 pass
+        try:
+            with self.engine.begin() as conn:
+                for table in reversed(Base.metadata.sorted_tables):
+                    conn.execute(table.delete())
+        except Exception:
+            pass
 
     def seed_demo_data(self):
         # 1. TechFlow Cloud Tenant (Tenant A)
@@ -685,6 +1134,5 @@ class DatabaseStore:
             self.flush_durable_storage()
 
 db = DatabaseStore()
-
-
-
+engine = db.engine
+SessionLocal = db.SessionLocal
