@@ -5,10 +5,7 @@ import {
   Zap, 
   Check, 
   AlertTriangle, 
-  RotateCcw, 
-  ChevronDown, 
-  ChevronUp, 
-  Cpu 
+  RotateCcw 
 } from 'lucide-react';
 import { useApp } from '../../context';
 import { Message, ToolExecutionTrace } from '../../types';
@@ -38,7 +35,6 @@ export const TestAgentDrawer: React.FC = () => {
     }
   ]);
   const [isProcessing, setIsProcessing] = useState(false);
-  const [showReasoningMap, setShowReasoningMap] = useState<Record<string, boolean>>({});
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -90,9 +86,6 @@ export const TestAgentDrawer: React.FC = () => {
       setMessages(prev => [...prev, agentMsg]);
       if (currentCompany.widgetSettings?.enableSound !== false) {
         soundService.playMessageSound();
-      }
-      if (result.reasoningSteps && result.reasoningSteps.length > 0) {
-        setShowReasoningMap(prev => ({ ...prev, [agentMsg.id]: true }));
       }
     } catch (err) {
       console.error(err);
@@ -238,7 +231,6 @@ export const TestAgentDrawer: React.FC = () => {
         }`}>
           {messages.map((msg) => {
             const isUser = msg.sender === 'user';
-            const showReasoning = showReasoningMap[msg.id];
 
             return (
               <div key={msg.id} className={`flex flex-col ${isUser ? 'items-end' : 'items-start'}`}>
@@ -314,33 +306,6 @@ export const TestAgentDrawer: React.FC = () => {
                             </div>
                           </div>
                         ))}
-                      </div>
-                    )}
-
-                    {/* Step-by-Step Hierarchical Reasoning Inspector */}
-                    {msg.reasoningSteps && msg.reasoningSteps.length > 0 && (
-                      <div className="mt-2">
-                        <button
-                          onClick={() => setShowReasoningMap(prev => ({ ...prev, [msg.id]: !prev[msg.id] }))}
-                          className={`flex items-center gap-1.5 text-xs font-semibold transition-colors cursor-pointer ${
-                            isDarkMode ? 'text-indigo-400 hover:text-indigo-300' : 'text-indigo-600 hover:text-indigo-800'
-                          }`}
-                        >
-                          <Cpu className="w-3.5 h-3.5" />
-                          <span>{showReasoning ? 'Hide' : 'Inspect'} AI Reasoning Hierarchy ({msg.reasoningSteps.length} steps)</span>
-                          {showReasoning ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
-                        </button>
-
-                        {showReasoning && (
-                          <div className="mt-2 p-3 bg-slate-900 text-slate-300 rounded-xl border border-slate-800 text-xs font-mono space-y-1.5 animate-in fade-in">
-                            {msg.reasoningSteps.map((step, sIdx) => (
-                              <div key={sIdx} className="flex items-start gap-2">
-                                <span className="text-indigo-400 shrink-0 font-bold">#{sIdx + 1}</span>
-                                <span className="leading-relaxed">{step}</span>
-                              </div>
-                            ))}
-                          </div>
-                        )}
                       </div>
                     )}
                   </div>
