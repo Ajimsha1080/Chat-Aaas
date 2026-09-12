@@ -60,19 +60,99 @@ class LLMProvider:
 
         # 2. Local Grounded Extraction (when external API is not configured or offline)
         if system_instruction and "Verified Knowledge Context:" in system_instruction:
-            context_body = system_instruction.split("Verified Knowledge Context:")[1].strip()
-            cleaned_snippets = []
-            for line in context_body.split("\n"):
-                line = line.strip()
-                if not line:
-                    continue
-                if line.startswith("Source (") and "): " in line:
-                    line = line.split("): ", 1)[1].strip()
-                cleaned_snippets.append(line)
-            if cleaned_snippets:
-                return f"Based on verified documentation: {' '.join(cleaned_snippets[:3])}"
+            return cls.synthesize_grounded_answer(prompt, system_instruction)
 
         return f"Regarding your inquiry about '{prompt}', our team is available to assist."
+
+    @classmethod
+    def synthesize_grounded_answer(cls, prompt: str, system_instruction: str) -> str:
+        """
+        Synthesizes a structured, highly informative grounded answer from verified company context
+        without cutting off after arbitrary line counts.
+        """
+        import re
+
+        if not system_instruction or "Verified Knowledge Context:" not in system_instruction:
+            return f"Regarding your inquiry about '{prompt}', our team is available to assist."
+
+        context_body = system_instruction.split("Verified Knowledge Context:")[1].strip()
+        raw_sources = context_body.split("Source (")
+        extracted_sections = []
+
+        stop_words = {
+            "what", "is", "the", "a", "an", "in", "on", "at", "for", "to", "of", "and", "or",
+            "are", "how", "do", "does", "can", "tell", "me", "about", "our", "your", "this", "explain", "policy"
+        }
+        all_query_words = set(re.findall(r'\w+', prompt.lower()))
+        prompt_words = [w for w in all_query_words if w not in stop_words] or list(all_query_words)
+
+        seen_content = set()
+
+        for raw in raw_sources:
+            if not raw.strip():
+                continue
+            title = "Verified Documentation"
+            body = raw
+            if "): " in raw:
+                parts = raw.split("): ", 1)
+                title = parts[0].strip()
+                body = parts[1]
+
+            cleaned_paragraphs = []
+            current_block = []
+
+            for line in body.split("\n"):
+                sline = line.strip()
+                if not sline:
+                    continue
+                # Strip raw markdown page markers or standalone numbers
+                if re.match(r'^##\s*Page\s*\d+', sline, re.I):
+                    continue
+                if re.match(r'^\d{1,3}$', sline):
+                    continue
+                if "• INTERNAL OPERATIONS" in sline or "• INTERNAL SOP" in sline or "INTERNAL COMPANY OPERATIONS" in sline and len(sline) < 40:
+                    continue
+                if sline in seen_content:
+                    continue
+                seen_content.add(sline)
+
+                # Format section headers
+                if sline.isupper() and len(sline) < 40 and not sline.startswith("HTTP"):
+                    if current_block:
+                        cleaned_paragraphs.append(" ".join(current_block))
+                        current_block = []
+                    cleaned_paragraphs.append(f"**{sline.title()}**:")
+                elif sline.startswith("□") or sline.startswith("•") or sline.startswith("-") or re.match(r'^\d{2}\s+', sline):
+                    if current_block:
+                        cleaned_paragraphs.append(" ".join(current_block))
+                        current_block = []
+                    item = re.sub(r'^[□•\-\d\.\s]+', '', sline).strip()
+                    if item:
+                        cleaned_paragraphs.append(f"- {item}")
+                else:
+                    current_block.append(sline)
+
+            if current_block:
+                cleaned_paragraphs.append(" ".join(current_block))
+
+            if cleaned_paragraphs:
+                extracted_sections.append({
+                    "title": title,
+                    "text": "\n\n".join(cleaned_paragraphs)
+                })
+
+        if not extracted_sections:
+            return f"Regarding your inquiry about '{prompt}', our team is available to assist."
+
+        # Rank sections by keyword overlap with user prompt
+        for sec in extracted_sections:
+            sec_words = set(re.findall(r'\w+', sec["text"].lower()))
+            sec["score"] = sum(1 for w in prompt_words if w in sec_words)
+
+        extracted_sections.sort(key=lambda s: s.get("score", 0), reverse=True)
+
+        combined_body = "\n\n".join([f"### {sec['title']}\n{sec['text']}" for sec in extracted_sections[:2]])
+        return f"Based on verified documentation:\n\n{combined_body}"
 
     @classmethod
     async def stream_chat_completion(
@@ -114,10 +194,11 @@ class LLMProvider:
             except Exception as e:
                 print(f"[Custom LLM Stream Error] {e}")
 
-        # Fallback local stream
+        # Fallback local stream with grounded synthesis
         last_message = messages[-1]["content"] if messages else "Hello"
-        simulated_words = f"Based on verified knowledge base documentation, here is the answer to your question regarding {last_message}.".split(" ")
+        synthesized_text = cls.synthesize_grounded_answer(last_message, system_instruction)
+        words = synthesized_text.split(" ")
 
-        for i, word in enumerate(simulated_words):
-            yield word + (" " if i < len(simulated_words) - 1 else "")
+        for i, word in enumerate(words):
+            yield word + (" " if i < len(words) - 1 else "")
             await asyncio.sleep(0.015)

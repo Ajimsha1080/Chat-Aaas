@@ -63,8 +63,13 @@ class RAGEngine:
         """
         Retrieves relevant chunks strictly filtered by tenant company_id.
         """
-        # Keyword-based & semantic similarity score calculation
-        query_words = set(re.findall(r'\w+', query.lower()))
+        # Keyword-based & semantic similarity score calculation with stop-word filtering
+        stop_words = {
+            "what", "is", "the", "a", "an", "in", "on", "at", "for", "to", "of", "and", "or",
+            "are", "how", "do", "does", "can", "tell", "me", "about", "our", "your", "this", "explain", "please"
+        }
+        all_query_words = set(re.findall(r'\w+', query.lower()))
+        meaningful_query_words = {w for w in all_query_words if w not in stop_words} or all_query_words
         results: List[ChunkSearchResult] = []
 
         for chunk in stored_chunks:
@@ -74,16 +79,20 @@ class RAGEngine:
                 continue
 
             content = chunk.get("content", "")
-            chunk_words = set(re.findall(r'\w+', content.lower()))
-            overlap = len(query_words.intersection(chunk_words))
+            title = chunk.get("metadata", {}).get("title") or chunk.get("title") or "Knowledge Base"
+            section = chunk.get("sectionHeader") or ""
+
+            chunk_words = set(re.findall(r'\w+', f"{content} {title} {section}".lower()))
+            overlap = len(meaningful_query_words.intersection(chunk_words))
             
             # Combined relevance metric
             if overlap == 0:
                 relevance = 0.0
             else:
-                relevance = min(1.0, (overlap / max(1, len(query_words))) * 0.8 + 0.2)
-            
-            title = chunk.get("metadata", {}).get("title") or chunk.get("title") or "Knowledge Base"
+                relevance = min(1.0, (overlap / max(1, len(meaningful_query_words))) * 0.8 + 0.2)
+                if any(w in section.lower() or w in title.lower() for w in meaningful_query_words):
+                    relevance = min(1.0, relevance + 0.1)
+
             if relevance >= threshold:
                 results.append(ChunkSearchResult(
                     chunk_id=chunk.get("id", "chk_1"),
