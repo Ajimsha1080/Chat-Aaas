@@ -70,24 +70,28 @@ IMPROVE KNOWLEDGE
 
 ### 1. ONE Prebuilt AI Q&A Assistant
 - **Strict 1:1 Company Mapping**: Every business receives one dedicated, pre-configured Q&A Assistant.
-- **Draft → Test → Publish → Rollback**: Edit draft configurations in isolation, publish immutable version releases, and perform 1-click rollbacks.
-- **Identity & Tone Customization**: Tone presets (Professional, Friendly, Empathetic, Direct, Technical), custom greeting, and plain-English business rules.
+- **Enterprise Lifecycle & Versioning**: Complete state machine (`Draft` → `Ready` → `Published` → `Disabled` → `Archived` → `Deleted`) with immutable version snapshots, change summaries, and 1-click rollbacks.
+- **Dependency-Aware Protection**: Safety checks warn users of active websites, mobile apps, or API channels before disabling or unpublishing an assistant.
+- **Identity & Tone Customization**: Tone presets (Professional, Friendly, Empathetic, Direct, Technical), custom greetings, fallback messages, and plain-English safety rules.
 
 ### 2. Multi-Tenant Knowledge Base & Grounded RAG
-- **Multi-Modal Ingestion**: Ingest PDFs, DOCX, TXT, FAQs, and Website URLs with automatic chunking and vector embeddings.
+- **5-Stage Telemetry Pipeline**: Real-time progress tracking through `UPLOADING` → `PARSING` → `CHUNKING` → `EMBEDDING` → `INDEXING` → `READY`.
+- **Trash & 30-Day Retention**: Soft-delete knowledge to Trash where documents are immediately excluded from live RAG retrieval; 1-click restore re-indexes vector chunks automatically.
+- **Permanent Purge**: Complete eradication of original files, parsed content, document chunks, vector embeddings, and search references with typed confirmation (`DELETE PERMANENTLY`).
 - **SSRF Crawler Defense**: Proactively blocks private subnets (`10.0.0.0/8`, `172.16.0.0/12`, `192.168.0.0/16`), loopback (`127.0.0.1`, `localhost`), and cloud metadata (`169.254.169.254`).
-- **Anti-Hallucination Threshold**: Strict confidence evaluation — if verified knowledge is insufficient, the assistant gracefully provides a fallback message or human handoff.
+- **Anti-Hallucination Threshold**: Strict confidence evaluation — if verified knowledge is insufficient, the assistant honestly refuses to answer rather than hallucinating.
 - **Knowledge Gaps Triage**: Automatically captures unanswered user questions so teams can convert them into FAQs with 1 click.
 
 ### 3. Multi-Channel Distribution Hub
-- **Website Embed Widget**: Fast, responsive HTML `<script>` embed with custom branding and placement controls.
-- **React SDK & Iframe**: Drop-in React components and embedded chat frames.
-- **REST API & Webhooks**: Developer-friendly endpoints for querying the assistant from mobile apps and external backend services.
+- **Independent Deployment Channels**: Website widgets, React iframes, REST API, and Webhooks can be independently created, paused, disabled, or removed without impacting the core assistant.
+- **Website Embed Widget**: Fast, responsive HTML `<script>` embed with custom branding, placement, and sound effects.
+- **REST API & Developer Credentials**: Hashed API key storage, one-time secret revelation, instant rotation, and immediate revocation.
+- **Enterprise Webhook Deliveries**: Webhook endpoints with delivery logs, HTTP response codes, latency tracking (ms), and failure retries.
 
 ### 4. Conversations & Live Human Takeover
-- **Conversation Inbox**: Filter by Answered, Unanswered, and Human Handoffs.
-- **Citation Inspection**: Inspect source documents used for every generated answer.
-- **1-Click Human Handoff**: Seamlessly transition from AI to live operator.
+- **Conversation Inbox**: Real-time persisted customer threads with multi-select bulk archive and bulk deletion.
+- **Citation Inspection**: Inspect source documents and confidence scores used for every generated answer.
+- **1-Click Human Handoff**: Seamlessly escalate from AI to live operator with status tracking (`AI Active`, `Human Requested`, `Human Active`, `Resolved`).
 
 ### 5. Indian GST (18%) Billing & Metering
 - **Transparent Tier Pricing**: Starter (₹4,999/mo), Growth (₹14,999/mo), and Enterprise Business (₹39,999/mo).
@@ -108,7 +112,7 @@ cd backend_python
 python -m venv venv
 venv\Scripts\activate
 pip install -r requirements.txt
-uvicorn app.main:app --reload --port 8001
+python -m uvicorn app.main:app --reload --port 8001
 ```
 
 ### 2. Start React Frontend
@@ -131,12 +135,15 @@ docker-compose up -d --build
 
 ---
 
-## 🧪 Testing
+## 🧪 Testing & Verification
 
-### Run Backend Unit & Integration Tests:
+### Run Backend Pytest Suite (42/42 tests passing):
 ```powershell
 python -m pytest backend_python/app/tests/ -v
 ```
+Includes:
+- Full end-to-end fresh customer lifecycle test (`test_production_e2e_customer.py`) starting from empty database to signup, clean workspace verification, honest refusal, document ingestion, RAG answer, draft publishing, deployment, chat persistence, trash/restore, and multi-tenant security isolation.
+- Resource lifecycles (`test_resource_lifecycle.py`), agent versioning (`test_agent_lifecycle.py`), authentication (`test_auth.py`), RBAC permissions, and SSRF crawler defenses.
 
 ### Run Frontend Production Build:
 ```powershell
