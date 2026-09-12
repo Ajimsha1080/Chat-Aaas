@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { 
   Building2, 
   Bot, 
@@ -26,8 +26,6 @@ import {
   ChevronRight,
   RefreshCw,
   Users,
-  UserCheck,
-  UserX,
   ShieldCheck
 } from 'lucide-react';
 import { useApp } from '../../context';
@@ -77,7 +75,7 @@ export const AdminDashboard: React.FC = () => {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [lastTelemetrySync, setLastTelemetrySync] = useState<Date>(new Date());
 
-  const fetchLiveData = async () => {
+  const fetchLiveData = useCallback(async () => {
     setIsRefreshing(true);
     try {
       const [healthRes, metricsRes, auditRes, killswitchRes] = await Promise.allSettled([
@@ -105,9 +103,9 @@ export const AdminDashboard: React.FC = () => {
     } finally {
       setIsRefreshing(false);
     }
-  };
+  }, []);
 
-  const fetchTenants = async () => {
+  const fetchTenants = useCallback(async () => {
     setIsTenantsLoading(true);
     try {
       const res = await APIClient.getAdminTenants({
@@ -126,9 +124,9 @@ export const AdminDashboard: React.FC = () => {
     } finally {
       setIsTenantsLoading(false);
     }
-  };
+  }, [searchOrg, orgStatusFilter, orgPlanFilter, orgPage, orgLimit]);
 
-  const fetchUsers = async () => {
+  const fetchUsers = useCallback(async () => {
     setIsUsersLoading(true);
     try {
       const res = await APIClient.getAdminUsers({
@@ -143,28 +141,25 @@ export const AdminDashboard: React.FC = () => {
     } finally {
       setIsUsersLoading(false);
     }
-  };
+  }, [userSearch, userRoleFilter]);
 
   useEffect(() => {
     fetchLiveData();
-    fetchTenants();
-    fetchUsers();
     const interval = setInterval(() => {
       fetchLiveData();
-      fetchTenants();
     }, 15000);
     return () => clearInterval(interval);
-  }, []);
+  }, [fetchLiveData]);
 
   useEffect(() => {
     fetchTenants();
-  }, [searchOrg, orgStatusFilter, orgPlanFilter, orgPage]);
+  }, [fetchTenants]);
 
   useEffect(() => {
     if (activeTab === 'users') {
       fetchUsers();
     }
-  }, [activeTab, userSearch, userRoleFilter]);
+  }, [activeTab, fetchUsers]);
 
   const handleRoleChange = async (targetUser: any, newRole: string) => {
     setUpdatingUserId(targetUser.id);
@@ -646,7 +641,7 @@ export const AdminDashboard: React.FC = () => {
             <button
               onClick={fetchLiveData}
               disabled={isRefreshing}
-              title="Refresh Live Infrastructure Telemetry"
+              title={`Refresh Live Infrastructure Telemetry (Synced: ${lastTelemetrySync.toLocaleTimeString()})`}
               className="px-3 py-2 bg-white hover:bg-slate-50 text-slate-700 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer border border-slate-200 shadow-2xs disabled:opacity-60"
             >
               <RefreshCw className={`w-3.5 h-3.5 text-slate-500 ${isRefreshing ? 'animate-spin text-indigo-600' : ''}`} />

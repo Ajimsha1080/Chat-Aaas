@@ -22,11 +22,7 @@ import {
   Smartphone,
   Server,
   Power,
-  AlertTriangle,
-  ExternalLink,
-  ShieldAlert,
-  Radio,
-  Layers
+  AlertTriangle
 } from 'lucide-react';
 import { useApp } from '../../context';
 import { WidgetCustomization, DeploymentItem } from '../../types';

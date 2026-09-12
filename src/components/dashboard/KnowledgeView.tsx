@@ -45,7 +45,6 @@ export const KnowledgeView: React.FC = () => {
   const { 
     knowledgeItems, 
     addKnowledgeItem, 
-    deleteKnowledgeItem, 
     trashKnowledgeItem,
     restoreKnowledgeItem,
     disableKnowledgeItem,
@@ -186,9 +185,6 @@ export const KnowledgeView: React.FC = () => {
   const activeCount = knowledgeItems.filter(i => (i.lifecycleState || 'active') === 'active').length;
   const disabledCount = knowledgeItems.filter(i => i.lifecycleState === 'disabled').length;
   const trashCount = knowledgeItems.filter(i => i.lifecycleState === 'trash').length;
-  const publishedCount = knowledgeItems.filter(i => getItemStatus(i) === 'published' && i.lifecycleState !== 'trash').length;
-  const draftCount = knowledgeItems.filter(i => getItemStatus(i) === 'draft' && i.lifecycleState !== 'trash').length;
-  const archivedCount = knowledgeItems.filter(i => getItemStatus(i) === 'archived' && i.lifecycleState !== 'trash').length;
   const docCount = knowledgeItems.filter(i => i.type === 'document' && i.lifecycleState !== 'trash').length;
   const faqCount = knowledgeItems.filter(i => i.type === 'faq' && i.lifecycleState !== 'trash').length;
   const websiteCount = knowledgeItems.filter(i => i.type === 'url' && i.lifecycleState !== 'trash').length;

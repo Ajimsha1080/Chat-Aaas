@@ -2,15 +2,8 @@ import React, { useState } from 'react';
 import { 
   CreditCard, 
   Check, 
-  Sparkles, 
   Download, 
-  ArrowUpRight, 
-  Clock, 
-  ShieldCheck, 
-  FileText, 
-  ChevronRight,
-  Zap,
-  Building
+  FileText
 } from 'lucide-react';
 import { useApp } from '../../context';
 import { InvoiceModal } from '../common/InvoiceModal';

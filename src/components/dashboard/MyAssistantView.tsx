@@ -49,7 +49,6 @@ export const MyAssistantView: React.FC = () => {
   const [isDisableModalOpen, setIsDisableModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [dependencies, setDependencies] = useState<string[]>([]);
-  const [isLoadingDependencies, setIsLoadingDependencies] = useState(false);
 
   const isLive = currentCompany?.agent?.status === 'active';
   const lifecycle = currentCompany?.agent?.lifecycleStatus || 'published';
@@ -66,7 +65,6 @@ export const MyAssistantView: React.FC = () => {
   useEffect(() => {
     const fetchDeps = async () => {
       try {
-        setIsLoadingDependencies(true);
         const res = await APIClient.getAgentDependencies();
         if (res && res.dependencies) {
           const list: string[] = [];
@@ -83,8 +81,6 @@ export const MyAssistantView: React.FC = () => {
         }
       } catch {
         setDependencies(['Production Website Widget (https://techflow.io)', 'Mobile App REST API Integration', 'Active Customer Chat Sessions']);
-      } finally {
-        setIsLoadingDependencies(false);
       }
     };
     fetchDeps();

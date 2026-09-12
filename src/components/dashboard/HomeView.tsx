@@ -2,7 +2,6 @@ import {
   CheckCircle2, 
   MessageSquare, 
   Clock, 
-  UserX, 
   BookOpen, 
   ArrowRight, 
   AlertTriangle, 
@@ -33,12 +32,7 @@ export const HomeView: React.FC = () => {
   const resolvedCount = allConvs.length > 0 
     ? allConvs.filter(c => c.status === 'resolved' || c.status === 'active').length 
     : (currentCompany?.stats?.resolvedConversations || 0);
-  const escalatedCount = allConvs.length > 0 
-    ? allConvs.filter(c => c.status === 'escalated_to_human').length 
-    : (currentCompany?.stats?.escalatedConversations || 0);
-
   const resolutionRate = totalCount > 0 ? Math.round((resolvedCount / totalCount) * 100) : 100;
-  const escalationRate = totalCount > 0 ? Math.round((escalatedCount / totalCount) * 100) : 0;
 
   // Real-time weekly throughput aggregation from live conversation timestamps
   const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];

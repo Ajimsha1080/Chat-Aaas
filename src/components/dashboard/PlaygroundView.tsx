@@ -7,18 +7,11 @@ import {
   ThumbsDown, 
   BookOpen, 
   Plus, 
-  CheckCircle2, 
-  AlertTriangle, 
-  ExternalLink, 
   Globe, 
   FileText, 
   HelpCircle, 
-  Check, 
-  ArrowRight,
   ShieldCheck,
-  Zap,
-  Clock,
-  Layers
+  Zap
 } from 'lucide-react';
 import { useApp } from '../../context';
 import { Message, KnowledgeItem } from '../../types';
@@ -134,6 +127,7 @@ export const PlaygroundView: React.FC = () => {
 
       soundService?.playMessageSound?.();
     } catch (err: any) {
+      console.warn('Playground execution error:', err?.message || err);
       const fallbackMsg: Message = {
         id: genId('play-err'),
         sender: 'agent',
@@ -198,7 +192,7 @@ export const PlaygroundView: React.FC = () => {
       setImproveQuestion('');
       setImproveAnswer('');
     } catch (err: any) {
-      showToast('Error', 'Failed to save knowledge item.', 'error');
+      showToast('Error', err?.message || 'Failed to save knowledge item.', 'error');
     } finally {
       setIsSavingFaq(false);
     }

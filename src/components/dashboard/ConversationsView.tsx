@@ -17,10 +17,7 @@ import {
   FileText,
   CheckSquare,
   Square,
-  AlertTriangle,
   Plus,
-  HelpCircle,
-  Sparkles,
   BookOpen
 } from 'lucide-react';
 import { useApp } from '../../context';

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { AlertTriangle, Trash2, X, AlertCircle, ShieldAlert } from 'lucide-react';
+import { AlertTriangle, Trash2, X, ShieldAlert } from 'lucide-react';
 
 export interface DeleteConfirmationModalProps {
   isOpen: boolean;
