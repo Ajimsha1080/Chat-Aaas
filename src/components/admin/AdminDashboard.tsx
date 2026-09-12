@@ -23,7 +23,8 @@ import {
   Clock,
   Download,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  RefreshCw
 } from 'lucide-react';
 import { useApp } from '../../context';
 import { APIClient } from '../../api/apiClient';
@@ -48,15 +49,47 @@ export const AdminDashboard: React.FC = () => {
   const [isEmergencyKillswitchActive, setIsEmergencyKillswitchActive] = useState(false);
   const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
 
-  // Sync initial killswitch state from backend
+  // Live Backend Telemetry & Observability States
+  const [liveHealth, setLiveHealth] = useState<any[] | null>(null);
+  const [liveMetrics, setLiveMetrics] = useState<any | null>(null);
+  const [liveAuditLogs, setLiveAuditLogs] = useState<any[] | null>(null);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [lastTelemetrySync, setLastTelemetrySync] = useState<Date>(new Date());
+
+  const fetchLiveData = async () => {
+    setIsRefreshing(true);
+    try {
+      const [healthRes, metricsRes, auditRes, killswitchRes] = await Promise.allSettled([
+        APIClient.getAdminHealth(),
+        APIClient.getAdminMetrics(),
+        APIClient.getAdminAuditLogs({ limit: 100 }),
+        APIClient.getKillswitchStatus()
+      ]);
+
+      if (healthRes.status === 'fulfilled' && healthRes.value?.services) {
+        setLiveHealth(healthRes.value.services);
+      }
+      if (metricsRes.status === 'fulfilled' && metricsRes.value) {
+        setLiveMetrics(metricsRes.value);
+      }
+      if (auditRes.status === 'fulfilled' && auditRes.value?.logs) {
+        setLiveAuditLogs(auditRes.value.logs);
+      }
+      if (killswitchRes.status === 'fulfilled' && typeof killswitchRes.value?.active === 'boolean') {
+        setIsEmergencyKillswitchActive(killswitchRes.value.active);
+      }
+      setLastTelemetrySync(new Date());
+    } catch (e) {
+      console.warn('Live admin telemetry fetch error:', e);
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
+
   useEffect(() => {
-    APIClient.getKillswitchStatus()
-      .then(res => {
-        if (res && typeof res.active === 'boolean') {
-          setIsEmergencyKillswitchActive(res.active);
-        }
-      })
-      .catch(() => {});
+    fetchLiveData();
+    const interval = setInterval(fetchLiveData, 15000);
+    return () => clearInterval(interval);
   }, []);
 
   // Audit Trail states & filters
@@ -67,12 +100,15 @@ export const AdminDashboard: React.FC = () => {
   const [expandedLogId, setExpandedLogId] = useState<string | null>(null);
   const itemsPerPage = 8;
 
-  const totalTenants = companies.length;
-  const activeAgents = companies.filter(c => c.agent.status === 'active' && !c.isSuspended).length;
-  const totalMRR = companies.reduce((acc, c) => {
+  const totalTenants = liveMetrics?.totalTenants ?? companies.length;
+  const activeAgents = liveMetrics?.activeAgents ?? companies.filter(c => c.agent?.status === 'active' && !c.isSuspended).length;
+  const totalMRR = liveMetrics?.totalMRRINR ?? companies.reduce((acc, c) => {
     const plan = allPlans.find(p => p.id === c.planId);
     return acc + (plan ? plan.priceMonthlyINR : 4999);
   }, 0);
+
+  const displayedHealth = (liveHealth && liveHealth.length > 0) ? liveHealth : systemHealth;
+  const displayedAuditLogs = (liveAuditLogs && liveAuditLogs.length > 0) ? liveAuditLogs : auditLogs;
 
   const filteredCompanies = companies.filter(c => 
     c.name.toLowerCase().includes(searchOrg.toLowerCase()) || 
@@ -87,6 +123,7 @@ export const AdminDashboard: React.FC = () => {
       if (res) {
         setSupportDiagnosticOutput(res);
         showToast('Diagnostic Complete', `Diagnostic inspection completed for ${targetComp.name}.`, 'info');
+        fetchLiveData();
         return;
       }
     } catch (e: any) {
@@ -104,6 +141,7 @@ export const AdminDashboard: React.FC = () => {
       lastActive: 'Just now'
     });
     showToast('Diagnostic Complete', `Diagnostic inspection completed for ${targetComp.name}.`, 'info');
+    fetchLiveData();
   };
 
   const handleToggleKillswitch = async () => {
@@ -119,6 +157,7 @@ export const AdminDashboard: React.FC = () => {
       nextState ? 'All outbound AI calls paused globally.' : 'Global AI processing resumed.',
       nextState ? 'warning' : 'success'
     );
+    fetchLiveData();
   };
 
   const handleImpersonate = async (comp: typeof companies[0]) => {
@@ -136,7 +175,7 @@ export const AdminDashboard: React.FC = () => {
   };
 
   // Audit Log Filtering & Formatting
-  const filteredAuditLogs = auditLogs.filter(log => {
+  const filteredAuditLogs = displayedAuditLogs.filter(log => {
     const matchesSearch = 
       !auditSearch || 
       log.action.toLowerCase().includes(auditSearch.toLowerCase()) ||
@@ -327,7 +366,7 @@ export const AdminDashboard: React.FC = () => {
   };
 
   const handleExportAuditLogs = () => {
-    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(auditLogs, null, 2));
+    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(displayedAuditLogs, null, 2));
     const downloadAnchor = document.createElement('a');
     downloadAnchor.setAttribute("href", dataStr);
     downloadAnchor.setAttribute("download", `chat_aaas_audit_trail_${new Date().toISOString().slice(0,10)}.json`);
@@ -489,6 +528,15 @@ export const AdminDashboard: React.FC = () => {
 
           <div className="flex items-center gap-3">
             <button
+              onClick={fetchLiveData}
+              disabled={isRefreshing}
+              title="Refresh Live Infrastructure Telemetry"
+              className="px-3 py-2 bg-white hover:bg-slate-50 text-slate-700 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer border border-slate-200 shadow-2xs disabled:opacity-60"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 text-slate-500 ${isRefreshing ? 'animate-spin text-indigo-600' : ''}`} />
+              <span className="hidden sm:inline">Refresh Telemetry</span>
+            </button>
+            <button
               onClick={() => setCurrentExperience('customer')}
               className="hidden sm:flex px-3.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-sm font-semibold items-center gap-2 transition-colors cursor-pointer border border-slate-200"
             >
@@ -615,7 +663,7 @@ export const AdminDashboard: React.FC = () => {
                 <p className="text-sm text-slate-500">FastAPI runtime, pgvector & KMS latency</p>
               </div>
               <div className="space-y-2.5">
-                {systemHealth.map((h, i) => (
+                {displayedHealth.map((h, i) => (
                   <div key={i} className="p-3.5 bg-slate-50/70 rounded-xl border border-slate-200/70 flex items-center justify-between">
                     <div>
                       <p className="font-bold text-slate-900 text-sm">{h.service}</p>
@@ -776,11 +824,11 @@ export const AdminDashboard: React.FC = () => {
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-              {systemHealth.map((h, i) => (
+              {displayedHealth.map((h, i) => (
                 <div key={i} className="p-5 bg-slate-50/70 rounded-xl border border-slate-200/70 space-y-2">
                   <div className="flex items-center justify-between">
                     <span className="font-bold text-slate-900 text-sm">{h.service}</span>
-                    <span className="w-2.5 h-2.5 rounded-full bg-emerald-500" />
+                    <span className={`w-2.5 h-2.5 rounded-full ${h.status === 'unhealthy' || h.status === 'down' ? 'bg-rose-500' : 'bg-emerald-500'}`} />
                   </div>
                   <div className="text-2xl font-bold text-slate-900 font-mono">{h.uptimePercent}%</div>
                   <p className="text-xs sm:text-sm text-slate-500">Latency: <strong className="text-slate-800 font-mono">{h.latencyMs} ms</strong></p>
@@ -874,7 +922,7 @@ export const AdminDashboard: React.FC = () => {
                   </div>
                   <h3 className="text-base sm:text-lg font-bold text-slate-900">Platform-Wide Immutable Audit Trail</h3>
                   <span className="px-2.5 py-0.5 rounded-full text-xs font-mono font-bold bg-slate-100 text-slate-700 border border-slate-200">
-                    {auditLogs.length} Events
+                    {displayedAuditLogs.length} Events
                   </span>
                 </div>
                 <p className="text-xs sm:text-sm text-slate-500">
