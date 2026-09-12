@@ -153,11 +153,12 @@ docker-compose up -d --build
 
 ## 🧪 Testing & Verification
 
-### Run Backend Pytest Suite (50/50 tests passing):
+### Run Backend Pytest Suite (57/57 tests passing):
 ```powershell
 python -m pytest backend_python/app/tests/ -v
 ```
 Includes:
+- **Round 2 Production Completion** (`test_round2_production_completion.py`): Authoritative SQL persistence across reloads (`load_from_database` / `flush_durable_storage`), cross-process distributed worker `JobQueue` backed by Redis & durable `BackgroundJob` table with atomic claims, strict eradication of unassociated tenant fallbacks in `AuthService`, dynamic tool execution without fake mock data, real integration network handshake latency measurement (`perf_counter`), protected specialized AI endpoints (`/v1/embeddings`, `/v1/rerank`, etc.), and live database/worker readiness checks.
 - **Production Features & Hardening** (`test_production_features.py`): Real SSE token streaming without simulated word splitting, 6-stage human handoff lifecycle (`ai_active` → `handoff_requested` → `assigned` → `human_active` → `resolved` → `closed`) with automated AI reply suppression during human operator sessions, tool idempotency key replay caching, multi-connection integrations with unique UUID IDs, and asynchronous queue workers with HMAC-SHA256 signature generation.
 - **Full End-to-End Fresh Customer Lifecycle** (`test_production_e2e_customer.py`): Starts from empty database to signup, clean workspace verification, honest refusal, document ingestion, RAG answer, draft publishing, deployment, chat persistence, trash/restore, and multi-tenant security isolation.
 - **SSRF Multi-Hop Redirect Defense** (`test_rag_and_ssrf.py`): Verifies that direct targets and multi-hop HTTP 301/302 redirects to cloud metadata (`169.254.169.254`), loopback (`127.0.0.1`), and RFC1918 private subnets are strictly intercepted and blocked.
