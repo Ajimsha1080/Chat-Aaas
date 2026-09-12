@@ -1244,6 +1244,9 @@ class DatabaseStore:
         for a in self.agents.values():
             if a.get("companyId") == company_id:
                 return a
+        comp = self.companies.get(company_id)
+        if comp and comp.get("agent"):
+            return comp["agent"]
         return None
 
     def get_published_version_for_company(self, company_id: str) -> Optional[Dict[str, Any]]:

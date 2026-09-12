@@ -15,6 +15,52 @@ class TenantContext:
     is_impersonated: bool = False
     impersonator_user_id: Optional[str] = None
 
+def _resolve_api_key_context(key_str: str, header_comp: Optional[str], correlation_id: str) -> TenantContext:
+    matched_key = next((k for k in db.api_keys.values() if k.get("key") == key_str or k.get("id") == key_str), None)
+    if matched_key:
+        if matched_key.get("status") == "revoked":
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="API key has been revoked."
+            )
+        comp_id = matched_key.get("companyId")
+        if header_comp and header_comp != comp_id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Forbidden: API key does not match requested company."
+            )
+        key_comp = db.companies.get(comp_id)
+        if key_comp and key_comp.get("isSuspended"):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Company workspace is suspended."
+            )
+        return TenantContext(
+            company_id=comp_id,
+            user_id=f"key_{matched_key.get('id')}",
+            role="api_client",
+            correlation_id=correlation_id
+        )
+
+    matched_comp = next((c for c in db.companies.values() if c.get("apiKey") == key_str), None)
+    if matched_comp:
+        if matched_comp.get("isSuspended"):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Company workspace is suspended."
+            )
+        return TenantContext(
+            company_id=matched_comp["id"],
+            user_id=f"api_{matched_comp['id']}",
+            role="owner",
+            correlation_id=correlation_id
+        )
+
+    raise HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Invalid or unrecognized API key."
+    )
+
 def get_tenant_context(
     authorization: Optional[str] = Header(None),
     x_api_key: Optional[str] = Header(None, alias="x-api-key"),
@@ -37,106 +83,69 @@ def get_tenant_context(
             correlation_id=correlation_id
         )
 
-    # 2. JWT Bearer Token (Dashboard & Admin Users)
+    # 2. Authorization Header (JWT Bearer Token or API Key)
     if authorization and authorization.startswith("Bearer "):
         token = authorization[7:].strip()
         payload = decode_jwt_token(token)
-        if not payload:
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Invalid or expired authentication token."
-            )
-        
-        token_comp = payload.get("company_id")
-        if not token_comp:
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Authentication token missing tenant workspace identifier."
-            )
-
-        user_role = payload.get("role", "member")
-        is_impersonation = bool(payload.get("is_impersonation", False))
-        impersonator_id = payload.get("impersonator_user_id")
-
-        # Multi-Tenant Boundary: forbid accessing other company workspaces unless platform_super_admin
-        if header_comp and header_comp != token_comp and user_role not in ["super_admin", "platform_super_admin"]:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail=f"Forbidden: Token is scoped to tenant '{token_comp}', cannot access '{header_comp}'."
-            )
-
-        # Check tenant suspension status (Super Admin bypasses to allow administrative remediation)
-        comp = db.companies.get(token_comp)
-        if comp and comp.get("isSuspended") and user_role not in ["super_admin", "platform_super_admin"]:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail=f"Company workspace '{comp.get('name', token_comp)}' has been suspended by platform administration."
-            )
-
-        # Check user account suspension status
-        user_id = payload.get("sub", "usr-auth")
-        user = db.users.get(user_id)
-        if user and user.get("isSuspended"):
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="User account has been suspended."
-            )
-
-        return TenantContext(
-            company_id=token_comp,
-            user_id=user_id,
-            role=user_role,
-            correlation_id=correlation_id,
-            is_impersonated=is_impersonation,
-            impersonator_user_id=impersonator_id
-        )
-
-    # 3. Verified API Key (REST API & Server Integrations)
-    if x_api_key:
-        matched_key = next((k for k in db.api_keys.values() if k.get("key") == x_api_key or k.get("id") == x_api_key), None)
-        if matched_key:
-            if matched_key.get("status") == "revoked":
+        if payload:
+            token_comp = payload.get("company_id")
+            if not token_comp:
                 raise HTTPException(
                     status_code=status.HTTP_401_UNAUTHORIZED,
-                    detail="API key has been revoked."
+                    detail="Authentication token missing tenant workspace identifier."
                 )
-            comp_id = matched_key.get("companyId")
-            if header_comp and header_comp != comp_id:
-                raise HTTPException(
-                    status_code=status.HTTP_403_FORBIDDEN,
-                    detail="Forbidden: API key does not match requested company."
-                )
-            key_comp = db.companies.get(comp_id)
-            if key_comp and key_comp.get("isSuspended"):
-                raise HTTPException(
-                    status_code=status.HTTP_403_FORBIDDEN,
-                    detail="Company workspace is suspended."
-                )
-            return TenantContext(
-                company_id=comp_id,
-                user_id=f"key_{matched_key.get('id')}",
-                role="api_client",
-                correlation_id=correlation_id
-            )
 
-        matched_comp = next((c for c in db.companies.values() if c.get("apiKey") == x_api_key), None)
-        if matched_comp:
-            if matched_comp.get("isSuspended"):
+            user_role = payload.get("role", "member")
+            is_impersonation = bool(payload.get("is_impersonation", False))
+            impersonator_id = payload.get("impersonator_user_id")
+
+            # Multi-Tenant Boundary: forbid accessing other company workspaces unless platform_super_admin
+            if header_comp and header_comp != token_comp and user_role not in ["super_admin", "platform_super_admin"]:
                 raise HTTPException(
                     status_code=status.HTTP_403_FORBIDDEN,
-                    detail="Company workspace is suspended."
+                    detail=f"Forbidden: Token is scoped to tenant '{token_comp}', cannot access '{header_comp}'."
                 )
-            return TenantContext(
-                company_id=matched_comp["id"],
-                user_id=f"api_{matched_comp['id']}",
-                role="owner",
-                correlation_id=correlation_id
-            )
 
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid or unrecognized API key."
-        )
+            # Check tenant suspension status (Super Admin bypasses to allow administrative remediation)
+            comp = db.companies.get(token_comp)
+            if comp and comp.get("isSuspended") and user_role not in ["super_admin", "platform_super_admin"]:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail=f"Company workspace '{comp.get('name', token_comp)}' has been suspended by platform administration."
+                )
+
+            # Check user account suspension status
+            user_id = payload.get("sub", "usr-auth")
+            user = db.users.get(user_id)
+            if user and user.get("isSuspended"):
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="User account has been suspended."
+                )
+
+            return TenantContext(
+                company_id=token_comp,
+                user_id=user_id,
+                role=user_role,
+                correlation_id=correlation_id,
+                is_impersonated=is_impersonation,
+                impersonator_user_id=impersonator_id
+            )
+        
+        # If not a valid JWT, check if Bearer token is a valid API Key (e.g., widget.js, cURL)
+        try:
+            return _resolve_api_key_context(token, header_comp, correlation_id)
+        except HTTPException as e:
+            if "." in token and token.count(".") == 2:
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail="Invalid or expired authentication token."
+                )
+            raise e
+
+    # 3. Verified API Key (REST API via x-api-key header)
+    if x_api_key:
+        return _resolve_api_key_context(x_api_key, header_comp, correlation_id)
 
     # 4. Verified Deployment ID (Public Chat Widget Channel)
     if x_deployment_id:

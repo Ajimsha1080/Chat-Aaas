@@ -295,7 +295,22 @@
       });
 
       if (!resp.ok) {
-        throw new Error(`Server returned ${resp.status}`);
+        let errDetail = '';
+        try {
+          const errJson = await resp.json();
+          errDetail = errJson.detail || '';
+        } catch {}
+        if (resp.status === 503) {
+          throw new Error(errDetail || "Our AI assistant is temporarily offline for scheduled maintenance. Please check back shortly.");
+        } else if (resp.status === 402) {
+          throw new Error("This workspace has reached its monthly conversation limit. Please contact the website administrator to upgrade.");
+        } else if (resp.status === 403) {
+          throw new Error(errDetail || "This AI assistant is currently paused.");
+        } else if (resp.status === 429) {
+          throw new Error("Too many messages sent in a short time. Please wait a moment before sending another message.");
+        } else {
+          throw new Error(errDetail || `Server returned ${resp.status}`);
+        }
       }
 
       const data = await resp.json();
@@ -306,11 +321,11 @@
       botMsg.textContent = data.message || "Thank you for reaching out! How else can I assist you?";
       messagesEl.appendChild(botMsg);
       messagesEl.scrollTop = messagesEl.scrollHeight;
-    } catch {
+    } catch (err) {
       typingIndicator.remove();
       const botMsg = document.createElement('div');
       botMsg.className = 'aaas-msg aaas-msg-bot';
-      botMsg.textContent = "I'm having trouble connecting right now. Please try again in a moment or refresh the page.";
+      botMsg.textContent = err?.message || "I'm having trouble connecting right now. Please try again in a moment or refresh the page.";
       messagesEl.appendChild(botMsg);
       messagesEl.scrollTop = messagesEl.scrollHeight;
     }

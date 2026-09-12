@@ -433,6 +433,14 @@ export class APIClient {
     return this.request('/api/v1/users/team/invite', 'POST', { fullName, email, role });
   }
 
+  public static async updateTeamMemberRole(membershipId: string, role: string) {
+    return this.request(`/api/v1/users/team/${membershipId}/role`, 'PUT', { role });
+  }
+
+  public static async removeTeamMember(membershipId: string) {
+    return this.request(`/api/v1/users/team/${membershipId}`, 'DELETE');
+  }
+
   // ================= AUTOMATED TEST RUNNER ================= //
   public static async runAutomatedTests(): Promise<{ results: TestResult[]; summary: { total: number; passed: number; failed: number; durationMs: number } }> {
     const startTime = Date.now();

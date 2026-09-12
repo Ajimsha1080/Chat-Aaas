@@ -229,6 +229,7 @@ class ChatResponse(BaseModel):
     confidence_score: Optional[float] = 1.0
     is_refusal: bool = False
     session_id: Optional[str] = None
+    conversation_id: Optional[str] = None
     citations: List[str] = []
     tokens_used: int = 120
 

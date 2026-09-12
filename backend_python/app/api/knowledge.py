@@ -263,6 +263,24 @@ def delete_knowledge_source(source_id: str, ctx: TenantContext = Depends(get_ten
 
 # ================= 2. DOCUMENT / FILE INGESTION ================= #
 
+def _check_knowledge_quota(company_id: str, role: str):
+    if role in ["super_admin", "platform_super_admin"]:
+        return
+    company = db.companies.get(company_id, {})
+    plan_id = company.get("planId", "starter")
+    plan_doc_limits = {
+        "starter": 10,
+        "growth": 100,
+        "business": 500
+    }
+    max_allowed = plan_doc_limits.get(plan_id, 10)
+    current_count = len([s for s in db.knowledge_sources.values() if s.get("companyId") == company_id and s.get("lifecycleState") != "trash"])
+    if current_count >= max_allowed:
+        raise HTTPException(
+            status_code=status.HTTP_402_PAYMENT_REQUIRED,
+            detail=f"Knowledge source limit ({max_allowed} documents) reached for {plan_id.capitalize()} plan. Please upgrade your subscription to add more documents."
+        )
+
 @router.post("/files", status_code=status.HTTP_201_CREATED)
 @router.post("/upload", status_code=status.HTTP_201_CREATED)
 @router.post("/ingest", status_code=status.HTTP_201_CREATED)
@@ -270,6 +288,8 @@ def ingest_file_document(req: IngestFileRequest, ctx: TenantContext = Depends(ge
     """Ingests, sanitizes, and chunks multi-format documents (.pdf, .docx, .txt, .md, .csv, .json)."""
     if not has_permission(ctx.role, "knowledge:write"):
         raise HTTPException(status_code=403, detail="Forbidden: Insufficient role permissions to ingest knowledge.")
+
+    _check_knowledge_quota(ctx.company_id, ctx.role)
 
     if not req.content or not req.content.strip():
         raise HTTPException(status_code=400, detail="Document content cannot be empty.")
@@ -362,6 +382,8 @@ async def upload_real_file_document(
     """
     if not has_permission(ctx.role, "knowledge:write"):
         raise HTTPException(status_code=403, detail="Forbidden: Insufficient permissions.")
+
+    _check_knowledge_quota(ctx.company_id, ctx.role)
 
     content_bytes = await file.read()
     if not content_bytes:
@@ -461,6 +483,8 @@ async def crawl_and_ingest_website(req: IngestWebsiteRequest, ctx: TenantContext
     """Crawls website URL with strict SSRF defense, depth limits, and HTML parsing."""
     if not has_permission(ctx.role, "knowledge:write"):
         raise HTTPException(status_code=403, detail="Forbidden: Insufficient role permissions.")
+
+    _check_knowledge_quota(ctx.company_id, ctx.role)
 
     safe, reason = CrawlerService.validate_url_safety(req.url)
     if not safe:

@@ -35,7 +35,14 @@ def upgrade_plan(req: UpgradePlanRequest, ctx: TenantContext = Depends(get_tenan
 @router.get("/usage")
 def get_usage(ctx: TenantContext = Depends(get_tenant_context)):
     summary = UsageService.get_tenant_summary(ctx.company_id)
-    return {"status": 200, "data": {"usage": summary}}
+    quota = UsageService.check_monthly_quota(ctx.company_id)
+    return {
+        "status": 200,
+        "data": {
+            "usage": summary,
+            "quota": quota
+        }
+    }
 
 @router.get("/invoices")
 def get_invoices(ctx: TenantContext = Depends(get_tenant_context)):

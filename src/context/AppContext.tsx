@@ -1618,6 +1618,38 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     showToast('Invitation Sent', `Sent invite link to ${email}.`, 'success');
   };
 
+  const updateTeamMemberRole = async (membershipId: string, role: TeamMember['role']) => {
+    setTeamMembersMap(prev => ({
+      ...prev,
+      [currentCompanyId]: (prev[currentCompanyId] || []).map(m =>
+        m.id === membershipId ? { ...m, role } : m
+      )
+    }));
+
+    try {
+      await APIClient.updateTeamMemberRole(membershipId, role);
+      showToast('Role Updated', `Updated team member role to ${role}.`, 'success');
+      addAuditLog('TEAM_MEMBER_ROLE_UPDATED', `Changed role for member ${membershipId} to ${role}`);
+    } catch (e: any) {
+      showToast('Update Failed', e.message || 'Could not update member role.', 'error');
+    }
+  };
+
+  const removeTeamMember = async (membershipId: string) => {
+    setTeamMembersMap(prev => ({
+      ...prev,
+      [currentCompanyId]: (prev[currentCompanyId] || []).filter(m => m.id !== membershipId)
+    }));
+
+    try {
+      await APIClient.removeTeamMember(membershipId);
+      showToast('Member Removed', 'Team member removed from workspace.', 'info');
+      addAuditLog('TEAM_MEMBER_REMOVED', `Removed member ${membershipId}`);
+    } catch (e: any) {
+      showToast('Removal Failed', e.message || 'Could not remove member.', 'error');
+    }
+  };
+
   const adminToggleCompanySuspension = async (companyId: string) => {
     const targetComp = companies.find(c => c.id === companyId);
     if (!targetComp) return;
@@ -1771,6 +1803,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         teamMembers,
         invoices,
         addTeamMember,
+        updateTeamMemberRole,
+        removeTeamMember,
         currentUserProfile,
         updateCurrentUserProfile,
 

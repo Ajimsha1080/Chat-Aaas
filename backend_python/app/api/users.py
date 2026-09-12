@@ -3,6 +3,7 @@ from fastapi import APIRouter, HTTPException, Depends, status
 from pydantic import BaseModel, EmailStr
 from typing import Optional, List, Dict, Any
 from app.db.database import db
+from app.services.audit_service import AuditService
 from app.core.tenant import TenantContext, get_tenant_context
 from app.core.permissions import has_permission
 
@@ -106,5 +107,94 @@ def invite_team_member(req: InviteMemberRequest, ctx: TenantContext = Depends(ge
             "message": f"Invitation sent to {req.email}",
             "membershipId": new_mem_id,
             "role": req.role
+        }
+    }
+
+@router.put("/team/{membership_id}/role")
+def update_team_member_role(
+    membership_id: str,
+    req: UpdateRoleRequest,
+    ctx: TenantContext = Depends(get_tenant_context)
+):
+    if not has_permission(ctx.role, "team:manage"):
+        raise HTTPException(status_code=403, detail="Forbidden: Insufficient permissions to update team roles.")
+
+    membership = db.memberships.get(membership_id)
+    if not membership or membership.get("companyId") != ctx.company_id:
+        raise HTTPException(status_code=404, detail="Team membership not found.")
+
+    allowed_roles = ["admin", "agent_editor", "support_agent", "viewer", "owner"]
+    if req.role not in allowed_roles:
+        raise HTTPException(status_code=400, detail=f"Invalid role. Allowed: {', '.join(allowed_roles)}")
+
+    # If demoting from owner, ensure at least one active owner remains
+    if membership.get("role") == "owner" and req.role != "owner":
+        other_owners = [
+            m for m in db.memberships.values()
+            if m.get("companyId") == ctx.company_id and m.get("role") == "owner" and m.get("id") != membership_id
+        ]
+        if not other_owners:
+            raise HTTPException(status_code=400, detail="Cannot demote the sole workspace owner. Transfer ownership first.")
+
+    membership["role"] = req.role
+    membership["updatedAt"] = time.strftime("%Y-%m-%dT%H:%M:%SZ")
+    db.flush_durable_storage()
+
+    AuditService.log(
+        company_id=ctx.company_id,
+        actor=ctx.user_id,
+        actor_role=ctx.role,
+        action="TEAM_MEMBER_ROLE_UPDATED",
+        details=f"Updated role for membership {membership_id} to {req.role}",
+        severity="info"
+    )
+
+    return {
+        "status": 200,
+        "data": {
+            "message": f"Updated role to {req.role}.",
+            "membership": membership
+        }
+    }
+
+@router.delete("/team/{membership_id}")
+def remove_team_member(
+    membership_id: str,
+    ctx: TenantContext = Depends(get_tenant_context)
+):
+    if not has_permission(ctx.role, "team:manage"):
+        raise HTTPException(status_code=403, detail="Forbidden: Insufficient permissions to remove team members.")
+
+    membership = db.memberships.get(membership_id)
+    if not membership or membership.get("companyId") != ctx.company_id:
+        raise HTTPException(status_code=404, detail="Team membership not found.")
+
+    # Guard: Cannot remove last owner
+    if membership.get("role") == "owner":
+        other_owners = [
+            m for m in db.memberships.values()
+            if m.get("companyId") == ctx.company_id and m.get("role") == "owner" and m.get("id") != membership_id
+        ]
+        if not other_owners:
+            raise HTTPException(status_code=400, detail="Cannot remove the sole workspace owner.")
+
+    user_id = membership.get("userId")
+    del db.memberships[membership_id]
+    db.flush_durable_storage()
+
+    AuditService.log(
+        company_id=ctx.company_id,
+        actor=ctx.user_id,
+        actor_role=ctx.role,
+        action="TEAM_MEMBER_REMOVED",
+        details=f"Removed membership {membership_id} (user: {user_id})",
+        severity="warning"
+    )
+
+    return {
+        "status": 200,
+        "data": {
+            "message": "Team member successfully removed from workspace.",
+            "membershipId": membership_id
         }
     }

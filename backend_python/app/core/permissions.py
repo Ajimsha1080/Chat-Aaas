@@ -30,6 +30,12 @@ ROLE_PERMISSIONS: Dict[str, Set[str]] = {
     },
     "viewer": {
         "agent:read", "agent:readall", "knowledge:read", "knowledge:readall", "conversation:read", "conversation:readall", "analytics:read"
+    },
+    "api_client": {
+        "agent:read", "agent:write",
+        "knowledge:read", "knowledge:write", "knowledge:delete",
+        "conversation:read", "conversation:write", "conversation:takeover",
+        "tool:read", "tool:execute", "analytics:read", "team:manage", "billing:manage", "company:manage"
     }
 }
 
