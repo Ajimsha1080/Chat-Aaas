@@ -1,7 +1,7 @@
 import time
 from dataclasses import dataclass
 from typing import Optional
-from fastapi import Header, HTTPException, status
+from fastapi import Header, HTTPException, status, Depends
 from app.core.security import decode_jwt_token
 from app.core.config import settings
 from app.db.database import db
@@ -12,6 +12,8 @@ class TenantContext:
     user_id: str
     role: str
     correlation_id: str
+    is_impersonated: bool = False
+    impersonator_user_id: Optional[str] = None
 
 def get_tenant_context(
     authorization: Optional[str] = Header(None),
@@ -53,6 +55,8 @@ def get_tenant_context(
             )
 
         user_role = payload.get("role", "member")
+        is_impersonation = bool(payload.get("is_impersonation", False))
+        impersonator_id = payload.get("impersonator_user_id")
 
         # Multi-Tenant Boundary: forbid accessing other company workspaces unless platform_super_admin
         if header_comp and header_comp != token_comp and user_role not in ["super_admin", "platform_super_admin"]:
@@ -61,11 +65,30 @@ def get_tenant_context(
                 detail=f"Forbidden: Token is scoped to tenant '{token_comp}', cannot access '{header_comp}'."
             )
 
+        # Check tenant suspension status (Super Admin bypasses to allow administrative remediation)
+        comp = db.companies.get(token_comp)
+        if comp and comp.get("isSuspended") and user_role not in ["super_admin", "platform_super_admin"]:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=f"Company workspace '{comp.get('name', token_comp)}' has been suspended by platform administration."
+            )
+
+        # Check user account suspension status
+        user_id = payload.get("sub", "usr-auth")
+        user = db.users.get(user_id)
+        if user and user.get("isSuspended"):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="User account has been suspended."
+            )
+
         return TenantContext(
             company_id=token_comp,
-            user_id=payload.get("sub", "usr-auth"),
+            user_id=user_id,
             role=user_role,
-            correlation_id=correlation_id
+            correlation_id=correlation_id,
+            is_impersonated=is_impersonation,
+            impersonator_user_id=impersonator_id
         )
 
     # 3. Verified API Key (REST API & Server Integrations)
@@ -82,6 +105,12 @@ def get_tenant_context(
                 raise HTTPException(
                     status_code=status.HTTP_403_FORBIDDEN,
                     detail="Forbidden: API key does not match requested company."
+                )
+            key_comp = db.companies.get(comp_id)
+            if key_comp and key_comp.get("isSuspended"):
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="Company workspace is suspended."
                 )
             return TenantContext(
                 company_id=comp_id,
@@ -122,6 +151,12 @@ def get_tenant_context(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="The AI assistant is currently unavailable on this deployment channel."
             )
+        comp = db.companies.get(dep["companyId"])
+        if comp and comp.get("isSuspended"):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="The company workspace for this AI assistant has been suspended."
+            )
         return TenantContext(
             company_id=dep["companyId"],
             user_id=f"visitor_{int(time.time())}",
@@ -133,6 +168,11 @@ def get_tenant_context(
     if header_comp and settings.ENVIRONMENT != "production":
         comp = db.companies.get(header_comp)
         if comp:
+            if comp.get("isSuspended"):
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="Company workspace is suspended."
+                )
             return TenantContext(
                 company_id=header_comp,
                 user_id=f"usr-{header_comp}-owner",
@@ -145,5 +185,35 @@ def get_tenant_context(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Authentication required. Provide a valid Bearer token or API key."
     )
+
+
+def require_super_admin(
+    ctx: TenantContext = Depends(get_tenant_context)
+) -> TenantContext:
+    """
+    Centralized dependency enforcing genuine Platform Super Admin authority.
+    Strictly denies:
+    - Impersonated sessions
+    - Non-platform roles (owner, admin, member, visitor)
+    - Suspended administrator accounts
+    """
+    if ctx.is_impersonated:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Forbidden: Impersonation sessions cannot access super admin administration endpoints."
+        )
+    if ctx.role not in ["super_admin", "platform_super_admin"]:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Forbidden: Platform Super Admin privileges required."
+        )
+    if ctx.user_id != "service_worker":
+        user = db.users.get(ctx.user_id)
+        if user and user.get("isSuspended"):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Super Admin account is suspended."
+            )
+    return ctx
 
 

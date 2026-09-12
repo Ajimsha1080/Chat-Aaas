@@ -107,6 +107,14 @@ IMPROVE KNOWLEDGE
 - **Transparent Tier Pricing**: Starter (₹4,999/mo), Growth (₹14,999/mo), and Enterprise Business (₹39,999/mo).
 - **Automated GST Tax Invoicing**: Calculates 9% CGST + 9% SGST (intra-state) or 18% IGST (inter-state) with PDF downloads.
 
+### 7. Platform Super Admin & Master Control Plane
+- **Master Operator Telemetry**: Real measured infrastructure health latencies (PostgreSQL `SELECT 1` query probe, Redis event streams, pgvector hybrid index, and upstream AI Gateway).
+- **Tenant Workspace Lifecycle**: Search, filter by plan/status, 1-click workspace suspension & re-activation with immediate multi-tenant boundary enforcement (JWT Bearer tokens, API keys, and public widget deployment channels).
+- **Secure Audited Impersonation**: Short-lived scoped JWT tokens with explicit actor context (`is_impersonation: true`, `impersonator_user_id`), strictly blocked from accessing `/admin/*` administrative endpoints to prevent privilege escalation.
+- **Platform-Wide Immutable Audit Logging**: Tamper-evident audit trail backed by SQLAlchemy `AuditLog` table with keyword search, severity filtering, category filters, and JSON export.
+- **Emergency Global AI Killswitch**: Instantly halts all outbound AI invocations globally across all tenants during upstream provider incidents or runaway loops.
+- **Last Super Admin Protection**: Prevents demoting or suspending the final active platform administrator.
+
 ---
 
 ## 🚀 Quick Start (Local Development)
@@ -153,11 +161,12 @@ docker-compose up -d --build
 
 ## 🧪 Testing & Verification
 
-### Run Backend Pytest Suite (57/57 tests passing):
+### Run Backend Pytest Suite (67/67 tests passing):
 ```powershell
 python -m pytest backend_python/app/tests/ -v
 ```
 Includes:
+- **Platform Super Admin & Security** (`test_super_admin.py`): Platform-level RBAC enforcement, rejection of anonymous access, non-admin forbidden access, role tampering attack defense, tenant suspension with immediate cross-channel block (JWT, API keys, chat widget), tenant re-activation, user management with Last Super Admin protection, audited impersonation sessions strictly barred from `/admin/*` endpoints, real infrastructure health probes (`SELECT 1`, Redis, pgvector), durable metrics reconciliation, emergency global AI killswitch enforcement across `/chat`, and tenant diagnostics inspection.
 - **Round 2 Production Completion** (`test_round2_production_completion.py`): Authoritative SQL persistence across reloads (`load_from_database` / `flush_durable_storage`), cross-process distributed worker `JobQueue` backed by Redis & durable `BackgroundJob` table with atomic claims, strict eradication of unassociated tenant fallbacks in `AuthService`, dynamic tool execution without fake mock data, real integration network handshake latency measurement (`perf_counter`), protected specialized AI endpoints (`/v1/embeddings`, `/v1/rerank`, etc.), and live database/worker readiness checks.
 - **Production Features & Hardening** (`test_production_features.py`): Real SSE token streaming without simulated word splitting, 6-stage human handoff lifecycle (`ai_active` → `handoff_requested` → `assigned` → `human_active` → `resolved` → `closed`) with automated AI reply suppression during human operator sessions, tool idempotency key replay caching, multi-connection integrations with unique UUID IDs, and asynchronous queue workers with HMAC-SHA256 signature generation.
 - **Full End-to-End Fresh Customer Lifecycle** (`test_production_e2e_customer.py`): Starts from empty database to signup, clean workspace verification, honest refusal, document ingestion, RAG answer, draft publishing, deployment, chat persistence, trash/restore, and multi-tenant security isolation.
@@ -170,4 +179,4 @@ Includes:
 ```powershell
 npm run build
 ```
-Production build compiles with zero errors in ~6s with split vendor chunks and optimized public widget.
+Production build compiles with zero errors in ~1.6s with split vendor chunks and optimized public widget.

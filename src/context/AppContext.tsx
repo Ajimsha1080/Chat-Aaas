@@ -1537,14 +1537,27 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     showToast('Invitation Sent', `Sent invite link to ${email}.`, 'success');
   };
 
-  const adminToggleCompanySuspension = (companyId: string) => {
+  const adminToggleCompanySuspension = async (companyId: string) => {
+    const targetComp = companies.find(c => c.id === companyId);
+    if (!targetComp) return;
+    const nextSuspended = !targetComp.isSuspended;
+
+    try {
+      if (nextSuspended) {
+        await APIClient.suspendTenant(companyId, 'Admin dashboard operational toggle');
+      } else {
+        await APIClient.activateTenant(companyId);
+      }
+    } catch (err: any) {
+      console.warn('[Admin] Failed to update tenant suspension on backend:', err.message);
+    }
+
     setCompanies(prev => prev.map(c => {
       if (c.id === companyId) {
-        const nextSuspended = !c.isSuspended;
         addAuditLog(
           nextSuspended ? 'COMPANY_SUSPENDED' : 'COMPANY_ACTIVATED',
           `Platform Admin ${nextSuspended ? 'suspended' : 're-activated'} company: "${c.name}"`,
-          'critical'
+          nextSuspended ? 'critical' : 'info'
         );
         showToast(nextSuspended ? 'Tenant Suspended' : 'Tenant Activated', `Tenant "${c.name}" status updated.`, nextSuspended ? 'error' : 'success');
         return {

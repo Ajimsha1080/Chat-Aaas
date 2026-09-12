@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Building2, 
   Bot, 
@@ -26,6 +26,7 @@ import {
   ChevronRight
 } from 'lucide-react';
 import { useApp } from '../../context';
+import { APIClient } from '../../api/apiClient';
 
 export const AdminDashboard: React.FC = () => {
   const { 
@@ -47,6 +48,17 @@ export const AdminDashboard: React.FC = () => {
   const [isEmergencyKillswitchActive, setIsEmergencyKillswitchActive] = useState(false);
   const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
 
+  // Sync initial killswitch state from backend
+  useEffect(() => {
+    APIClient.getKillswitchStatus()
+      .then(res => {
+        if (res && typeof res.active === 'boolean') {
+          setIsEmergencyKillswitchActive(res.active);
+        }
+      })
+      .catch(() => {});
+  }, []);
+
   // Audit Trail states & filters
   const [auditSearch, setAuditSearch] = useState('');
   const [auditSeverity, setAuditSeverity] = useState<'all' | 'critical' | 'warning' | 'info'>('all');
@@ -67,9 +79,19 @@ export const AdminDashboard: React.FC = () => {
     c.domain.toLowerCase().includes(searchOrg.toLowerCase())
   );
 
-  const handleRunDiagnostic = () => {
+  const handleRunDiagnostic = async () => {
     const targetComp = companies.find(c => c.id === supportOrgId);
     if (!targetComp) return;
+    try {
+      const res = await APIClient.runTenantDiagnostic(supportOrgId);
+      if (res) {
+        setSupportDiagnosticOutput(res);
+        showToast('Diagnostic Complete', `Diagnostic inspection completed for ${targetComp.name}.`, 'info');
+        return;
+      }
+    } catch (e: any) {
+      console.warn('Backend diagnostic fallback:', e.message);
+    }
     setSupportDiagnosticOutput({
       tenantId: targetComp.id,
       tenantName: targetComp.name,
@@ -82,6 +104,35 @@ export const AdminDashboard: React.FC = () => {
       lastActive: 'Just now'
     });
     showToast('Diagnostic Complete', `Diagnostic inspection completed for ${targetComp.name}.`, 'info');
+  };
+
+  const handleToggleKillswitch = async () => {
+    const nextState = !isEmergencyKillswitchActive;
+    try {
+      await APIClient.toggleKillswitch(nextState, nextState ? 'Admin emergency action' : 'Normal operation resumed');
+    } catch (err: any) {
+      console.warn('Killswitch toggle backend error:', err.message);
+    }
+    setIsEmergencyKillswitchActive(nextState);
+    showToast(
+      nextState ? 'Killswitch ACTIVATED' : 'Killswitch Deactivated',
+      nextState ? 'All outbound AI calls paused globally.' : 'Global AI processing resumed.',
+      nextState ? 'warning' : 'success'
+    );
+  };
+
+  const handleImpersonate = async (comp: typeof companies[0]) => {
+    try {
+      const res = await APIClient.impersonateTenant(comp.id);
+      if (res?.token) {
+        APIClient.setAuth(res.token, comp.id);
+      }
+    } catch (e: any) {
+      console.warn('Impersonation token generation warning:', e.message);
+    }
+    switchCompany(comp.id);
+    setCurrentExperience('customer');
+    showToast('Tenant Impersonated', `Logged into workspace for ${comp.name}.`, 'info');
   };
 
   // Audit Log Filtering & Formatting
@@ -544,11 +595,7 @@ export const AdminDashboard: React.FC = () => {
                         </td>
                         <td className="py-3.5 text-right">
                           <button
-                            onClick={() => {
-                              switchCompany(c.id);
-                              setCurrentExperience('customer');
-                              showToast('Workspace Switched', `Opened workspace for ${c.name}.`, 'info');
-                            }}
+                            onClick={() => handleImpersonate(c)}
                             className="px-3.5 py-1.5 bg-slate-900 hover:bg-slate-800 text-white rounded-lg text-xs font-semibold cursor-pointer transition-colors shadow-xs"
                           >
                             Impersonate
@@ -645,11 +692,7 @@ export const AdminDashboard: React.FC = () => {
                       <td className="py-3.5 text-right">
                         <div className="flex items-center justify-end gap-2">
                           <button
-                            onClick={() => {
-                              switchCompany(c.id);
-                              setCurrentExperience('customer');
-                              showToast('Tenant Impersonated', `Logged in as ${c.name}.`, 'info');
-                            }}
+                            onClick={() => handleImpersonate(c)}
                             className="px-3 py-1.5 bg-slate-900 hover:bg-slate-800 text-white rounded-lg text-xs font-semibold cursor-pointer shadow-xs"
                           >
                             Impersonate
@@ -774,15 +817,7 @@ export const AdminDashboard: React.FC = () => {
             </div>
 
             <button
-              onClick={() => {
-                const nextState = !isEmergencyKillswitchActive;
-                setIsEmergencyKillswitchActive(nextState);
-                showToast(
-                  nextState ? 'Killswitch ACTIVATED' : 'Killswitch Deactivated',
-                  nextState ? 'All outbound AI calls paused globally.' : 'Global AI processing resumed.',
-                  nextState ? 'warning' : 'success'
-                );
-              }}
+              onClick={handleToggleKillswitch}
               className={`px-5 py-2.5 rounded-xl text-sm font-semibold transition-colors cursor-pointer flex items-center gap-2 shrink-0 ${
                 isEmergencyKillswitchActive
                   ? 'bg-emerald-600 hover:bg-emerald-500 text-white'

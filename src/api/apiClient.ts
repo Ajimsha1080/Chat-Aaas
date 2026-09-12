@@ -30,7 +30,7 @@ export class APIClient {
     this.currentCompanyId = companyId;
   }
 
-  private static async request(path: string, method: 'GET' | 'POST' | 'PUT' | 'DELETE' = 'GET', body?: any) {
+  private static async request(path: string, method: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE' = 'GET', body?: any) {
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
       'x-company-id': this.currentCompanyId,
@@ -511,5 +511,83 @@ export class APIClient {
         durationMs: Date.now() - startTime
       }
     };
+  }
+
+  // ================= PLATFORM SUPER ADMIN ================= //
+
+  public static async getAdminTenants(params?: { search?: string; planId?: string; status?: string; page?: number; limit?: number }) {
+    const query = new URLSearchParams();
+    if (params?.search) query.append('search', params.search);
+    if (params?.planId) query.append('plan_id', params.planId);
+    if (params?.status) query.append('status', params.status);
+    if (params?.page) query.append('page', params.page.toString());
+    if (params?.limit) query.append('limit', params.limit.toString());
+    const qs = query.toString() ? `?${query.toString()}` : '';
+    return this.request(`/api/v1/admin/tenants${qs}`, 'GET');
+  }
+
+  public static async suspendTenant(companyId: string, reason?: string) {
+    return this.request(`/api/v1/admin/tenants/${companyId}/suspend`, 'POST', { reason });
+  }
+
+  public static async activateTenant(companyId: string) {
+    return this.request(`/api/v1/admin/tenants/${companyId}/activate`, 'POST');
+  }
+
+  public static async getAdminUsers(params?: { search?: string; role?: string; companyId?: string }) {
+    const query = new URLSearchParams();
+    if (params?.search) query.append('search', params.search);
+    if (params?.role) query.append('role', params.role);
+    if (params?.companyId) query.append('company_id', params.companyId);
+    const qs = query.toString() ? `?${query.toString()}` : '';
+    return this.request(`/api/v1/admin/users${qs}`, 'GET');
+  }
+
+  public static async updateUserRole(userId: string, role: string, companyId?: string) {
+    return this.request(`/api/v1/admin/users/${userId}/role`, 'PATCH', { role, companyId });
+  }
+
+  public static async suspendUser(userId: string) {
+    return this.request(`/api/v1/admin/users/${userId}/suspend`, 'POST');
+  }
+
+  public static async activateUser(userId: string) {
+    return this.request(`/api/v1/admin/users/${userId}/activate`, 'POST');
+  }
+
+  public static async impersonateTenant(companyId: string, userId?: string) {
+    return this.request('/api/v1/admin/impersonate', 'POST', { companyId, userId });
+  }
+
+  public static async getAdminAuditLogs(params?: { search?: string; severity?: string; category?: string; companyId?: string; page?: number; limit?: number }) {
+    const query = new URLSearchParams();
+    if (params?.search) query.append('search', params.search);
+    if (params?.severity) query.append('severity', params.severity);
+    if (params?.category) query.append('category', params.category);
+    if (params?.companyId) query.append('company_id', params.companyId);
+    if (params?.page) query.append('page', params.page.toString());
+    if (params?.limit) query.append('limit', params.limit.toString());
+    const qs = query.toString() ? `?${query.toString()}` : '';
+    return this.request(`/api/v1/admin/audit-logs${qs}`, 'GET');
+  }
+
+  public static async getAdminHealth() {
+    return this.request('/api/v1/admin/health', 'GET');
+  }
+
+  public static async getAdminMetrics() {
+    return this.request('/api/v1/admin/metrics', 'GET');
+  }
+
+  public static async getKillswitchStatus() {
+    return this.request('/api/v1/admin/killswitch', 'GET');
+  }
+
+  public static async toggleKillswitch(active: boolean, reason?: string) {
+    return this.request('/api/v1/admin/killswitch', 'POST', { active, reason });
+  }
+
+  public static async runTenantDiagnostic(companyId: string) {
+    return this.request(`/api/v1/admin/diagnostics/${companyId}`, 'POST');
   }
 }

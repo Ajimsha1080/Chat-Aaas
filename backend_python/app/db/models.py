@@ -56,6 +56,7 @@ class User(Base):
     full_name = Column(String(255), nullable=False)
     avatar_url = Column(String(500), nullable=True)
     is_email_verified = Column(Boolean, default=False, nullable=False)
+    is_suspended = Column(Boolean, default=False, nullable=False)
     created_at = Column(String(64), nullable=False)
     updated_at = Column(String(64), nullable=True)
 

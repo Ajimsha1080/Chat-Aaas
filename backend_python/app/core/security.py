@@ -14,7 +14,7 @@ def hash_password(password: str) -> str:
 def verify_password(plain_password: str, hashed_password: str) -> bool:
     return hash_password(plain_password) == hashed_password
 
-def create_jwt_token(user_id: str, company_id: str, role: str, expires_delta: Optional[timedelta] = None) -> str:
+def create_jwt_token(user_id: str, company_id: str, role: str, expires_delta: Optional[timedelta] = None, extra_claims: Optional[Dict[str, Any]] = None) -> str:
     payload = {
         "sub": user_id,
         "company_id": company_id,
@@ -22,6 +22,8 @@ def create_jwt_token(user_id: str, company_id: str, role: str, expires_delta: Op
         "iat": int(time.time()),
         "exp": int(time.time() + (expires_delta.total_seconds() if expires_delta else settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60))
     }
+    if extra_claims:
+        payload.update(extra_claims)
     header = base64.urlsafe_b64encode(b'{"alg":"HS256","typ":"JWT"}').decode('utf-8').rstrip("=")
     payload_str = base64.urlsafe_b64encode(json.dumps(payload).encode('utf-8')).decode('utf-8').rstrip("=")
     signature = hmac.new(

@@ -3,7 +3,7 @@ import json
 import time
 from typing import Dict, Any, List, Optional
 from contextlib import contextmanager
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker
 from app.core.security import hash_password
 from app.core.config import settings
@@ -42,6 +42,9 @@ class DatabaseStore:
         self.action_executions: Dict[str, Dict[str, Any]] = {}
         self.background_jobs: Dict[str, Dict[str, Any]] = {}
         self.handoff_sessions: Dict[str, Dict[str, Any]] = {}
+        self.global_killswitch_active: bool = False
+        self.global_killswitch_reason: str = ""
+        self.global_killswitch_updated_at: str = ""
 
         # Initialize Durable Storage (PostgreSQL or SQLite file fallback)
         self.db_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../data"))
@@ -60,6 +63,12 @@ class DatabaseStore:
             # Fallback to local SQLite if PostgreSQL is unreachable in dev
             self.engine = create_engine(f"sqlite:///{self.sqlite_path}", connect_args={"check_same_thread": False})
             Base.metadata.create_all(bind=self.engine)
+
+        try:
+            with self.engine.begin() as conn:
+                conn.execute(text("ALTER TABLE users ADD COLUMN is_suspended BOOLEAN DEFAULT 0"))
+        except Exception:
+            pass
 
         self.SessionLocal = sessionmaker(bind=self.engine, autocommit=False, autoflush=False)
 
@@ -81,6 +90,25 @@ class DatabaseStore:
 
         if len(self.agent_versions) == 0 and "agent-tf-1" in self.agents:
             self.seed_agent_versions()
+            self.flush_durable_storage()
+
+        if "usr-root-admin" not in self.users:
+            self.users["usr-root-admin"] = {
+                "id": "usr-root-admin",
+                "email": "admin@chataaas.internal",
+                "passwordHash": hash_password("SuperAdmin123!"),
+                "fullName": "Platform Super Administrator",
+                "isEmailVerified": True,
+                "isSuspended": False,
+                "createdAt": "2026-08-01T00:00:00.000Z"
+            }
+            self.memberships["mem-root-admin"] = {
+                "id": "mem-root-admin",
+                "userId": "usr-root-admin",
+                "companyId": "comp-techflow",
+                "role": "super_admin",
+                "status": "active"
+            }
             self.flush_durable_storage()
 
     def seed_agent_versions(self):
@@ -158,6 +186,65 @@ class DatabaseStore:
         finally:
             session.close()
 
+    def record_audit_log(
+        self,
+        company_id: str,
+        actor_id: str,
+        actor_role: str,
+        action: str,
+        target_resource: str,
+        target_id: Optional[str] = None,
+        ip_address: Optional[str] = None,
+        details: Optional[str] = None,
+        severity: str = "info",
+        metadata: Optional[Dict[str, Any]] = None
+    ) -> Dict[str, Any]:
+        """Atomically appends and persists an immutable audit log entry."""
+        log_id = f"aud_{int(time.time() * 1000)}_{len(self.audit_logs) + 1}"
+        meta = dict(metadata or {})
+        if details:
+            meta["details"] = details
+        meta["severity"] = severity
+
+        now_str = time.strftime("%Y-%m-%dT%H:%M:%SZ")
+        log_entry = {
+            "id": log_id,
+            "companyId": company_id,
+            "actor": actor_id,
+            "actorId": actor_id,
+            "actorRole": actor_role,
+            "action": action,
+            "targetResource": target_resource,
+            "targetId": target_id,
+            "ipAddress": ip_address,
+            "details": details or action,
+            "severity": severity,
+            "metadata": meta,
+            "timestamp": now_str,
+            "createdAt": now_str
+        }
+        self.audit_logs.insert(0, log_entry)
+
+        # Durable write
+        try:
+            with self.get_session() as session:
+                session.merge(AuditLog(
+                    id=log_id,
+                    company_id=company_id,
+                    actor_id=actor_id,
+                    actor_role=actor_role,
+                    action=action,
+                    target_resource=target_resource,
+                    target_id=target_id,
+                    ip_address=ip_address,
+                    metadata_json=meta,
+                    created_at=now_str
+                ))
+        except Exception:
+            pass
+
+        return log_entry
+
     def save_state(self):
         """Alias for flush_durable_storage."""
         self.flush_durable_storage()
@@ -191,6 +278,7 @@ class DatabaseStore:
                         full_name=u.get("fullName", "User"),
                         avatar_url=u.get("avatarUrl"),
                         is_email_verified=bool(u.get("isEmailVerified", False)),
+                        is_suspended=bool(u.get("isSuspended", False)),
                         created_at=u.get("createdAt", time.strftime("%Y-%m-%dT%H:%M:%SZ"))
                     ))
 
@@ -322,6 +410,20 @@ class DatabaseStore:
                         endpoint_config=tool.get("endpointConfig", {}),
                         created_at=tool.get("createdAt", time.strftime("%Y-%m-%dT%H:%M:%SZ"))
                     ))
+
+                for log in self.audit_logs:
+                    session.merge(AuditLog(
+                        id=log.get("id"),
+                        company_id=log.get("companyId", "comp-platform"),
+                        actor_id=log.get("actorId") or log.get("actor", "system"),
+                        actor_role=log.get("actorRole", "super_admin"),
+                        action=log.get("action", "SYSTEM_EVENT"),
+                        target_resource=log.get("targetResource", "platform"),
+                        target_id=log.get("targetId"),
+                        ip_address=log.get("ipAddress"),
+                        metadata_json=log.get("metadata", {}),
+                        created_at=log.get("createdAt") or log.get("timestamp", time.strftime("%Y-%m-%dT%H:%M:%SZ"))
+                    ))
         except Exception as e:
             print("FLUSH ERROR:", e)
 
@@ -389,6 +491,7 @@ class DatabaseStore:
                         "fullName": r["full_name"],
                         "avatarUrl": r["avatar_url"],
                         "isEmailVerified": bool(r["is_email_verified"]),
+                        "isSuspended": bool(r.get("is_suspended", False)),
                         "createdAt": r["created_at"]
                     }
 
@@ -527,6 +630,26 @@ class DatabaseStore:
                         "parameters": r["parameters"] or []
                     }
 
+                audit_rows = conn.execute(Base.metadata.tables["audit_logs"].select()).mappings().all()
+                for r in audit_rows:
+                    meta = r["metadata_json"] or {}
+                    self.audit_logs.append({
+                        "id": r["id"],
+                        "companyId": r["company_id"],
+                        "actor": r["actor_id"],
+                        "actorId": r["actor_id"],
+                        "actorRole": r["actor_role"],
+                        "action": r["action"],
+                        "targetResource": r["target_resource"],
+                        "targetId": r["target_id"],
+                        "ipAddress": r["ip_address"],
+                        "metadata": meta,
+                        "timestamp": r["created_at"],
+                        "createdAt": r["created_at"],
+                        "severity": meta.get("severity", "info"),
+                        "details": meta.get("details", r["action"])
+                    })
+
                 return len(self.companies) > 0
         except Exception:
             return False
@@ -655,12 +778,30 @@ class DatabaseStore:
         }
 
 
+        self.users["usr-root-admin"] = {
+            "id": "usr-root-admin",
+            "email": "admin@chataaas.internal",
+            "passwordHash": hash_password("SuperAdmin123!"),
+            "fullName": "Platform Super Administrator",
+            "isEmailVerified": True,
+            "isSuspended": False,
+            "createdAt": "2026-08-01T00:00:00.000Z"
+        }
+        self.memberships["mem-root-admin"] = {
+            "id": "mem-root-admin",
+            "userId": "usr-root-admin",
+            "companyId": "comp-techflow",
+            "role": "super_admin",
+            "status": "active"
+        }
+
         self.users["usr-alex"] = {
             "id": "usr-alex",
             "email": "alex@techflow.io",
             "passwordHash": hash_password("Password123!"),
             "fullName": "Alex Vance",
             "isEmailVerified": True,
+            "isSuspended": False,
             "createdAt": "2026-08-01T00:00:00.000Z"
         }
         self.memberships["mem-alex"] = {
