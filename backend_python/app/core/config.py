@@ -7,7 +7,7 @@ class Settings(BaseSettings):
     VERSION: str = "2.0.0"
     API_V1_STR: str = "/api/v1"
     
-    ENVIRONMENT: str = os.getenv("ENVIRONMENT", "production")
+    ENVIRONMENT: str = os.getenv("ENVIRONMENT", "development")
     DEBUG: bool = os.getenv("DEBUG", "false").lower() == "true"
     PORT: int = int(os.getenv("PORT", "8000"))
     
@@ -37,8 +37,12 @@ class Settings(BaseSettings):
     CUSTOM_LLM_API_URL: Optional[str] = os.getenv("CUSTOM_LLM_API_URL", "https://api.sarvam.ai/v1/chat/completions")
     CUSTOM_LLM_API_KEY: Optional[str] = os.getenv("CUSTOM_LLM_API_KEY", None) or os.getenv("SARVAM_API_KEY", None)
     DEFAULT_LLM_MODEL: str = os.getenv("DEFAULT_LLM_MODEL", "sarvam-2b")
-    # Demo / Seed Data Flag (Disabled by default in production)
-    SEED_DEMO_DATA: bool = os.getenv("SEED_DEMO_DATA", "false").lower() == "true"
+    # Demo / Seed Data Flag (Enabled by default in development, configurable via SEED_DEMO_DATA)
+    SEED_DEMO_DATA: bool = os.getenv(
+        "SEED_DEMO_DATA",
+        "true" if os.getenv("ENVIRONMENT", "development") != "production" else "false"
+    ).lower() == "true"
+
 
 settings = Settings()
 

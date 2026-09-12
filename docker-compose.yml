@@ -39,7 +39,7 @@ services:
       dockerfile: Dockerfile
     container_name: aaas-worker
     restart: always
-    command: ["python", "-c", "import asyncio; from app.workers.document_worker import DocumentWorker; print('Background worker started listening to Redis tasks.'); asyncio.Event().wait()"]
+    command: ["python", "-c", "import asyncio; from app.workers.document_worker import DocumentWorker; print('Background worker started listening to Redis tasks.'); asyncio.run(asyncio.Event().wait())"]
     environment:
       - ENVIRONMENT=production
       - DATABASE_URL=postgresql+asyncpg://aaas_admin:secret_password@postgres:5432/aaas_production

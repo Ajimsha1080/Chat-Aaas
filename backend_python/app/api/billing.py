@@ -36,3 +36,9 @@ def upgrade_plan(req: UpgradePlanRequest, ctx: TenantContext = Depends(get_tenan
 def get_usage(ctx: TenantContext = Depends(get_tenant_context)):
     summary = UsageService.get_tenant_summary(ctx.company_id)
     return {"status": 200, "data": {"usage": summary}}
+
+@router.get("/invoices")
+def get_invoices(ctx: TenantContext = Depends(get_tenant_context)):
+    invoices = BillingService.get_invoices_for_company(ctx.company_id)
+    return {"status": 200, "data": {"invoices": invoices}}
+

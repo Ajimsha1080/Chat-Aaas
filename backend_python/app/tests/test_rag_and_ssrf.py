@@ -171,5 +171,23 @@ def test_knowledge_health_metrics():
     assert "totalSources" in data
     assert "totalChunks" in data
 
+def test_crawler_fetch_and_parse_ssrf_direct_block():
+    import asyncio
+    # Target 127.0.0.1
+    res1 = asyncio.run(CrawlerService.fetch_and_parse("http://127.0.0.1:8000/api/v1/agent"))
+    assert res1["success"] is False
+    assert "SSRF Protection Blocked" in res1["error"]
+
+    # Target cloud metadata 169.254.169.254
+    res2 = asyncio.run(CrawlerService.fetch_and_parse("http://169.254.169.254/latest/meta-data/"))
+    assert res2["success"] is False
+    assert "SSRF Protection Blocked" in res2["error"]
+
+    # Target private subnet 10.0.0.5
+    res3 = asyncio.run(CrawlerService.fetch_and_parse("http://10.0.0.5/internal/metrics"))
+    assert res3["success"] is False
+    assert "SSRF Protection Blocked" in res3["error"]
+
+
 
 

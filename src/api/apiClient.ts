@@ -367,6 +367,10 @@ export class APIClient {
     return this.request('/api/v1/billing/upgrade', 'POST', { planId, billingCycle });
   }
 
+  public static async getInvoices() {
+    return this.request('/api/v1/billing/invoices', 'GET');
+  }
+
   public static async getUsageSummary() {
     return this.request('/api/v1/usage/summary', 'GET');
   }
@@ -462,6 +466,16 @@ export class APIClient {
         test: async () => {
           const res = await this.getAuditLogs();
           if (!res || !res.logs) throw new Error("Audit logs missing");
+        }
+      },
+      {
+        suite: "11. Billing & Subscriptions",
+        name: "Verify plan catalog and tenant invoice retrieval",
+        test: async () => {
+          const plansRes = await this.getPlans();
+          if (!plansRes || !plansRes.plans) throw new Error("Billing plans missing");
+          const invRes = await this.getInvoices();
+          if (!invRes || !invRes.invoices) throw new Error("Invoices missing");
         }
       }
     ];

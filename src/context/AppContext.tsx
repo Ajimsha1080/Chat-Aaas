@@ -169,7 +169,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [securityEvents] = useState<SecurityEventItem[]>(INITIAL_SECURITY_EVENTS);
 
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>(INITIAL_TEAM);
-  const [invoices] = useState<Invoice[]>(INITIAL_INVOICES);
+  const [invoices, setInvoices] = useState<Invoice[]>(INITIAL_INVOICES);
   const [analytics] = useState<AnalyticsSummary>(INITIAL_ANALYTICS);
 
   const [activeConversationId, setActiveConversationId] = useState<string | null>(null);
@@ -478,7 +478,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return newId;
   };
 
-  const upgradeSubscription = (planId: SubscriptionPlanId, cycle: 'monthly' | 'annual') => {
+  const upgradeSubscription = async (planId: SubscriptionPlanId, cycle: 'monthly' | 'annual') => {
     setCompanies(prev => prev.map(c => {
       if (c.id === currentCompanyId) {
         return {
@@ -489,6 +489,24 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       }
       return c;
     }));
+
+    try {
+      const res = await APIClient.upgradePlan(planId, cycle);
+      if (res && res.invoice) {
+        const newInv: Invoice = {
+          id: res.invoice.id,
+          number: res.invoice.invoiceNumber,
+          date: res.invoice.date,
+          amountINR: res.invoice.amountINR,
+          status: 'paid',
+          planName: res.invoice.planName
+        };
+        setInvoices(prev => [newInv, ...prev]);
+      }
+    } catch (e) {
+      console.info('[Billing] Backend sync note:', e);
+    }
+
     addAuditLog('SUBSCRIPTION_UPGRADED', `Plan upgraded to ${planId.toUpperCase()} (${cycle})`);
     showToast('Plan Updated', `Successfully upgraded subscription to ${planId}.`, 'success');
   };

@@ -84,7 +84,7 @@ class Agent(Base):
     __tablename__ = "agents"
 
     id = Column(String(64), primary_key=True, index=True)
-    company_id = Column(String(64), ForeignKey("companies.id", ondelete="CASCADE"), nullable=False, index=True)
+    company_id = Column(String(64), ForeignKey("companies.id", ondelete="CASCADE"), nullable=False, index=True, unique=True)
     name = Column(String(255), nullable=False)
     description = Column(Text, nullable=True)
     avatar_url = Column(String(500), nullable=True)

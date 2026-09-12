@@ -81,33 +81,60 @@ class CrawlerService:
     async def fetch_and_parse(cls, url: str) -> dict:
         """
         Fetches web page content, extracts <title>, and strips HTML to clean readable text.
+        Includes strict multi-hop SSRF validation across all redirects.
         """
         import re
         import httpx
+        current_url = url
+        max_redirects = 5
         try:
-            async with httpx.AsyncClient(timeout=10.0, follow_redirects=True) as client:
+            async with httpx.AsyncClient(timeout=10.0, follow_redirects=False) as client:
                 headers = {"User-Agent": "CoarAI-WebCrawler/2.0 (+https://github.com/Ajimsha1080/Chat-Aaas)"}
-                resp = await client.get(url, headers=headers)
-                if resp.status_code >= 400:
-                    return {"success": False, "error": f"HTTP {resp.status_code} returned by web server."}
+                resp = None
+                for hop in range(max_redirects + 1):
+                    # Strict SSRF check before each request and redirect hop
+                    is_safe, safety_reason = cls.validate_url_safety(current_url)
+                    if not is_safe:
+                        return {
+                            "success": False,
+                            "error": f"SSRF Protection Blocked (hop {hop}): {safety_reason}",
+                            "url": current_url
+                        }
+
+                    resp = await client.get(current_url, headers=headers)
+                    if resp.is_redirect:
+                        location = resp.headers.get("Location")
+                        if not location:
+                            return {"success": False, "error": f"Redirect missing Location header at hop {hop}.", "url": current_url}
+                        current_url = str(httpx.URL(current_url).join(location))
+                        if hop == max_redirects:
+                            return {"success": False, "error": f"Too many redirects (exceeded limit of {max_redirects}).", "url": current_url}
+                        continue
+                    else:
+                        break
+
+                if not resp or resp.status_code >= 400:
+                    status_code = resp.status_code if resp else "unknown"
+                    return {"success": False, "error": f"HTTP {status_code} returned by web server.", "url": current_url}
                 
                 raw_html = resp.text
                 title_match = re.search(r'<title>(.*?)</title>', raw_html, re.IGNORECASE)
-                page_title = title_match.group(1).strip() if title_match else url
+                page_title = title_match.group(1).strip() if title_match else current_url
                 cleaned_text = cls.clean_html_content(raw_html)
 
                 return {
                     "success": True,
                     "title": page_title,
                     "content": cleaned_text,
-                    "url": url,
+                    "url": current_url,
                     "rawLength": len(raw_html),
                     "textLength": len(cleaned_text)
                 }
         except Exception as e:
             return {
                 "success": False,
-                "error": f"Failed to fetch content from {url}: {str(e)}",
-                "url": url
+                "error": f"Failed to fetch content from {current_url}: {str(e)}",
+                "url": current_url
             }
+
 

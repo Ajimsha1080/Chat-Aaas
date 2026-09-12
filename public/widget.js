@@ -310,7 +310,7 @@
       typingIndicator.remove();
       const botMsg = document.createElement('div');
       botMsg.className = 'aaas-msg aaas-msg-bot';
-      botMsg.textContent = "Thank you for asking! All solid wood products come with our 5-year structural warranty against termite infestation and wood warping.";
+      botMsg.textContent = "I'm having trouble connecting right now. Please try again in a moment or refresh the page.";
       messagesEl.appendChild(botMsg);
       messagesEl.scrollTop = messagesEl.scrollHeight;
     }

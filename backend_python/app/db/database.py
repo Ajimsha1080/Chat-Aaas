@@ -73,6 +73,39 @@ class DatabaseStore:
             "createdAt": "2026-08-01T00:00:00.000Z"
         }
 
+        # 2. UrbanCraft Living Tenant (Tenant B)
+        self.companies["comp-urbancraft"] = {
+            "id": "comp-urbancraft",
+            "name": "UrbanCraft Living",
+            "slug": "urbancraft-living",
+            "domain": "urbancraft.in",
+            "industry": "Home & Decor",
+            "planId": "growth",
+            "billingCycle": "monthly",
+            "planStatus": "active",
+            "isSuspended": False,
+            "apiKey": "aas_live_uc_481029418911",
+            "apiSecretEncrypted": "enc_kms_sec_urbancraft_prod",
+            "createdAt": "2026-08-05T00:00:00.000Z"
+        }
+
+        # 3. FinScale Technologies (Tenant C)
+        self.companies["comp-finscale"] = {
+            "id": "comp-finscale",
+            "name": "FinScale Technologies",
+            "slug": "finscale-tech",
+            "domain": "finscale.io",
+            "industry": "Fintech & Payments",
+            "planId": "starter",
+            "billingCycle": "annual",
+            "planStatus": "active",
+            "isSuspended": False,
+            "apiKey": "aas_live_fs_112093849102",
+            "apiSecretEncrypted": "enc_kms_sec_finscale_prod",
+            "createdAt": "2026-08-10T00:00:00.000Z"
+        }
+
+
         self.users["usr-alex"] = {
             "id": "usr-alex",
             "email": "alex@techflow.io",

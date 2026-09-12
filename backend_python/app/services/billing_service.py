@@ -99,3 +99,10 @@ class BillingService:
             "invoice": new_invoice,
             "pricing": invoice_calc
         }
+
+    @staticmethod
+    def get_invoices_for_company(company_id: str) -> List[Dict[str, Any]]:
+        """Returns all invoices associated with a tenant company, sorted newest first."""
+        invoices = [inv for inv in db.invoices.values() if inv.get("companyId") == company_id]
+        invoices.sort(key=lambda x: x.get("createdAt", ""), reverse=True)
+        return invoices
