@@ -390,6 +390,19 @@ export const INITIAL_KNOWLEDGE: Record<string, KnowledgeItem[]> = {
       tokenCount: 680,
       lastUpdated: '2026-08-15T09:00:00Z',
       category: 'Support Policy'
+    },
+    {
+      id: 'kb-6',
+      type: 'document',
+      title: 'Production Deployment & Architecture Guide',
+      fileName: 'techflow_deployment_guide.md',
+      fileSize: '4.5 KB',
+      content: 'TechFlow Cloud production deployment utilizes automated CI/CD pipelines, containerized microservices via Docker, and zero-downtime rolling deployments on multi-region Kubernetes clusters with automated health probes and SSL termination. To deploy into production: 1. Push code to the release branch to trigger automated unit & integration testing. 2. Build and scan immutable Docker container images. 3. Deploy to production Kubernetes clusters with canary traffic shifting (10% -> 50% -> 100%). 4. Automated rollback initiates immediately if error rates exceed 0.1% or latency degrades.',
+      status: 'indexed',
+      chunksCount: 2,
+      tokenCount: 180,
+      lastUpdated: '2026-09-08T10:00:00Z',
+      category: 'Deployment'
     }
   ],
   'comp-apexhealth': [

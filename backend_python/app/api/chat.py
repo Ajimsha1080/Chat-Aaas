@@ -126,6 +126,27 @@ async def process_chat_message(
     UsageService.record_event(company_id, "message", 1, "messages", conv_id)
     UsageService.record_event(company_id, "llm_tokens", response.tokens_used, "tokens", conv_id)
 
+    # 6. Automatic Knowledge Gap Detection
+    if getattr(response, "is_refusal", False) and req.message:
+        import hashlib
+        norm_query = req.message.strip()
+        gap_id = f"gap-{company_id}-{hashlib.md5(norm_query.lower().encode()).hexdigest()[:8]}"
+        now_iso = time.strftime("%Y-%m-%dT%H:%M:%S.000Z", time.gmtime())
+        if gap_id in db.knowledge_gaps:
+            db.knowledge_gaps[gap_id]["occurrences"] = db.knowledge_gaps[gap_id].get("occurrences", 1) + 1
+            db.knowledge_gaps[gap_id]["lastAskedAt"] = now_iso
+        else:
+            db.knowledge_gaps[gap_id] = {
+                "id": gap_id,
+                "companyId": company_id,
+                "query": norm_query,
+                "occurrences": 1,
+                "lastAskedAt": now_iso,
+                "status": "unresolved",
+                "suggestedCategory": "Deployment" if "deploy" in norm_query.lower() else "General",
+                "createdAt": now_iso
+            }
+
     return response
 
 @router.post("/stream")

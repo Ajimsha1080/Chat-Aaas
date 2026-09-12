@@ -93,6 +93,10 @@ class DatabaseStore:
             self.seed_agent_versions()
             self.flush_durable_storage()
 
+        if "ks-tf-3" not in self.knowledge_sources and "comp-techflow" in self.companies:
+            self.seed_deployment_guide()
+            self.flush_durable_storage()
+
         if "usr-root-admin" not in self.users:
             self.users["usr-root-admin"] = {
                 "id": "usr-root-admin",
@@ -172,6 +176,53 @@ class DatabaseStore:
                 ],
                 "endpointConfig": {},
                 "createdAt": now_str
+            }
+
+    def seed_deployment_guide(self):
+        if "ks-tf-3" not in self.knowledge_sources:
+            now_str = time.strftime("%Y-%m-%dT%H:%M:%SZ")
+            self.knowledge_sources["ks-tf-3"] = {
+                "id": "ks-tf-3",
+                "companyId": "comp-techflow",
+                "collectionId": "col-tf-1",
+                "title": "Production Deployment & Architecture Guide",
+                "sourceType": "document",
+                "fileName": "techflow_deployment_guide.md",
+                "fileSizeBytes": 4500,
+                "mimeType": "text/markdown",
+                "version": 1,
+                "category": "Deployment",
+                "status": "ready",
+                "lifecycleState": "active",
+                "processingStage": "indexed",
+                "retentionDays": 30,
+                "lastIndexedAt": now_str,
+                "chunkCount": 2,
+                "totalTokens": 180,
+                "lastSyncedAt": now_str,
+                "createdAt": now_str
+            }
+            self.document_chunks["chk-tf-3"] = {
+                "id": "chk-tf-3",
+                "knowledgeSourceId": "ks-tf-3",
+                "companyId": "comp-techflow",
+                "collectionId": "col-tf-1",
+                "chunkIndex": 0,
+                "content": "TechFlow Cloud production deployment utilizes automated CI/CD pipelines, containerized microservices via Docker, and zero-downtime rolling deployments on multi-region Kubernetes clusters with automated health probes and SSL termination.",
+                "tokenCount": 35,
+                "sectionHeader": "Production Deployment Overview",
+                "metadata": {"title": "Production Deployment & Architecture Guide", "category": "Deployment", "fileName": "techflow_deployment_guide.md", "page": 1}
+            }
+            self.document_chunks["chk-tf-4"] = {
+                "id": "chk-tf-4",
+                "knowledgeSourceId": "ks-tf-3",
+                "companyId": "comp-techflow",
+                "collectionId": "col-tf-1",
+                "chunkIndex": 1,
+                "content": "To deploy into production: 1. Push code to the release branch to trigger automated unit and integration testing. 2. Build and scan immutable Docker container images. 3. Deploy to production Kubernetes clusters with canary traffic shifting (10% -> 50% -> 100%). 4. Automated rollback initiates immediately if error rates exceed 0.1% or latency degrades.",
+                "tokenCount": 55,
+                "sectionHeader": "Deployment Steps & Verification",
+                "metadata": {"title": "Production Deployment & Architecture Guide", "category": "Deployment", "fileName": "techflow_deployment_guide.md", "page": 2}
             }
 
     @contextmanager
@@ -922,6 +973,28 @@ class DatabaseStore:
             "createdAt": "2026-08-15T10:00:00.000Z"
         }
 
+        self.knowledge_sources["ks-tf-3"] = {
+            "id": "ks-tf-3",
+            "companyId": "comp-techflow",
+            "collectionId": "col-tf-1",
+            "title": "Production Deployment & Architecture Guide",
+            "sourceType": "document",
+            "fileName": "techflow_deployment_guide.md",
+            "fileSizeBytes": 4500,
+            "mimeType": "text/markdown",
+            "version": 1,
+            "category": "Deployment",
+            "status": "ready",
+            "lifecycleState": "active",
+            "processingStage": "indexed",
+            "retentionDays": 30,
+            "lastIndexedAt": "2026-09-06T10:00:00.000Z",
+            "chunkCount": 2,
+            "totalTokens": 180,
+            "lastSyncedAt": "2026-09-06T10:00:00.000Z",
+            "createdAt": "2026-08-15T10:00:00.000Z"
+        }
+
         # Document Chunks
         self.document_chunks["chk-tf-1"] = {
             "id": "chk-tf-1",
@@ -944,6 +1017,28 @@ class DatabaseStore:
             "tokenCount": 30,
             "sectionHeader": "Refund Window",
             "metadata": {"title": "Refund & Cancellation Policy", "category": "Billing", "faq": True}
+        }
+        self.document_chunks["chk-tf-3"] = {
+            "id": "chk-tf-3",
+            "knowledgeSourceId": "ks-tf-3",
+            "companyId": "comp-techflow",
+            "collectionId": "col-tf-1",
+            "chunkIndex": 0,
+            "content": "TechFlow Cloud production deployment utilizes automated CI/CD pipelines, containerized microservices via Docker, and zero-downtime rolling deployments on multi-region Kubernetes clusters with automated health probes and SSL termination.",
+            "tokenCount": 35,
+            "sectionHeader": "Production Deployment Overview",
+            "metadata": {"title": "Production Deployment & Architecture Guide", "category": "Deployment", "fileName": "techflow_deployment_guide.md", "page": 1}
+        }
+        self.document_chunks["chk-tf-4"] = {
+            "id": "chk-tf-4",
+            "knowledgeSourceId": "ks-tf-3",
+            "companyId": "comp-techflow",
+            "collectionId": "col-tf-1",
+            "chunkIndex": 1,
+            "content": "To deploy into production: 1. Push code to the release branch to trigger automated unit and integration testing. 2. Build and scan immutable Docker container images. 3. Deploy to production Kubernetes clusters with canary traffic shifting (10% -> 50% -> 100%). 4. Automated rollback initiates immediately if error rates exceed 0.1% or latency degrades.",
+            "tokenCount": 55,
+            "sectionHeader": "Deployment Steps & Verification",
+            "metadata": {"title": "Production Deployment & Architecture Guide", "category": "Deployment", "fileName": "techflow_deployment_guide.md", "page": 2}
         }
 
         # Knowledge Gaps
