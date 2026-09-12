@@ -23,7 +23,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ isMobileOpen = false, onCloseM
   const { 
     currentTab, 
     setCurrentTab, 
-    conversations
+    conversations,
+    currentUserProfile
   } = useApp();
 
   const unreadConversationsCount = conversations.filter(c => c.status === 'escalated_to_human' || c.status === 'flagged').length;
@@ -137,6 +138,34 @@ export const Sidebar: React.FC<SidebarProps> = ({ isMobileOpen = false, onCloseM
             })}
           </div>
         ))}
+      </div>
+
+      {/* User Identity Footer */}
+      <div className="p-3 border-t border-slate-800/80 mt-auto shrink-0 bg-[#070a12]">
+        <button
+          onClick={() => handleSelectTab('settings')}
+          className="w-full flex items-center gap-3 p-2 rounded-xl hover:bg-slate-800/70 transition-colors text-left cursor-pointer group"
+          title="View profile & account settings"
+        >
+          <div className="w-8.5 h-8.5 rounded-xl bg-slate-800 border border-slate-700/80 overflow-hidden flex items-center justify-center shrink-0">
+            {currentUserProfile?.avatarUrl ? (
+              <img src={currentUserProfile.avatarUrl} alt={currentUserProfile.fullName} className="w-full h-full object-cover" />
+            ) : (
+              <span className="font-bold text-slate-200 text-xs">{currentUserProfile?.fullName?.charAt(0) || 'U'}</span>
+            )}
+          </div>
+          <div className="min-w-0 flex-1">
+            <span className="font-semibold text-white text-xs block truncate group-hover:text-indigo-300 transition-colors">
+              {currentUserProfile?.fullName || 'User Profile'}
+            </span>
+            <div className="flex items-center gap-1.5 mt-0.5">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+              <span className="text-[10px] font-mono text-slate-400 uppercase tracking-tight truncate">
+                {currentUserProfile?.role || 'owner'}
+              </span>
+            </div>
+          </div>
+        </button>
       </div>
     </div>
   );

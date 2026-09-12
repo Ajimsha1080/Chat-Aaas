@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Users, 
+  User,
   CreditCard, 
   ShieldCheck, 
   Bot, 
@@ -8,12 +9,12 @@ import {
   Copy, 
   UserPlus, 
   Download, 
-  RefreshCw,
-  Terminal,
-  Lock,
-  Eye,
-  EyeOff,
-  History
+  RefreshCw, 
+  Terminal, 
+  Lock, 
+  Eye, 
+  EyeOff, 
+  History 
 } from 'lucide-react';
 import { useApp } from '../../context';
 import { TeamMember } from '../../types';
@@ -24,16 +25,18 @@ export const SettingsView: React.FC = () => {
     currentCompany, 
     teamMembers, 
     addTeamMember, 
-    auditLogs,
-    allPlans,
-    upgradeSubscription,
-    invoices,
-    regenerateApiKey,
-    updateAgentConfig,
-    showToast
+    auditLogs, 
+    allPlans, 
+    upgradeSubscription, 
+    invoices, 
+    regenerateApiKey, 
+    updateAgentConfig, 
+    currentUserProfile,
+    updateCurrentUserProfile,
+    showToast 
   } = useApp();
 
-  const [activeTab, setActiveTab] = useState<'assistant' | 'team' | 'billing' | 'developer'>('assistant');
+  const [activeTab, setActiveTab] = useState<'profile' | 'assistant' | 'team' | 'billing' | 'developer'>('assistant');
   const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
   const [inviteName, setInviteName] = useState('');
   const [inviteEmail, setInviteEmail] = useState('');
@@ -41,6 +44,25 @@ export const SettingsView: React.FC = () => {
   const [selectedInvoice, setSelectedInvoice] = useState<any | null>(null);
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
   const [showApiKey, setShowApiKey] = useState(false);
+
+  // User Profile Form State
+  const [profileName, setProfileName] = useState(currentUserProfile?.fullName || 'Alex Morgan');
+  const [profileAvatar, setProfileAvatar] = useState(currentUserProfile?.avatarUrl || '');
+  const [isSavingProfile, setIsSavingProfile] = useState(false);
+
+  useEffect(() => {
+    if (currentUserProfile) {
+      setProfileName(currentUserProfile.fullName || '');
+      setProfileAvatar(currentUserProfile.avatarUrl || '');
+    }
+  }, [currentUserProfile]);
+
+  const handleSaveProfile = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSavingProfile(true);
+    await updateCurrentUserProfile(profileName, profileAvatar);
+    setIsSavingProfile(false);
+  };
 
   // Assistant Form State
   const [agentTone, setAgentTone] = useState(currentCompany?.agent?.tone || 'professional');
@@ -71,7 +93,6 @@ export const SettingsView: React.FC = () => {
     setIsInviteModalOpen(false);
     setInviteName('');
     setInviteEmail('');
-    showToast('Member Invited', `Invited ${inviteName} as ${inviteRole.replace('_', ' ')}.`, 'success');
   };
 
   return (
@@ -89,6 +110,7 @@ export const SettingsView: React.FC = () => {
       {/* Streamlined Tabs */}
       <div className="flex items-center gap-2 border-b border-slate-200 overflow-x-auto pb-px">
         {[
+          { id: 'profile', label: 'My Account', icon: User },
           { id: 'assistant', label: 'AI Assistant', icon: Bot },
           { id: 'team', label: 'Team & Access', icon: Users, count: teamMembers.length },
           { id: 'billing', label: 'Billing & Plans', icon: CreditCard },
@@ -119,6 +141,86 @@ export const SettingsView: React.FC = () => {
           );
         })}
       </div>
+
+      {/* 0. My Account Tab */}
+      {activeTab === 'profile' && (
+        <div className="bg-white rounded-2xl border border-slate-200/90 p-6 sm:p-7 shadow-sm max-w-3xl space-y-6">
+          <div>
+            <h3 className="text-base font-bold text-slate-900">User Account & Profile</h3>
+            <p className="text-sm text-slate-500 mt-0.5">Manage your personal credentials, display name, and avatar.</p>
+          </div>
+
+          <form onSubmit={handleSaveProfile} className="space-y-5 text-sm">
+            <div className="flex items-center gap-4">
+              <div className="w-16 h-16 rounded-2xl bg-indigo-50 border border-indigo-200/60 overflow-hidden flex items-center justify-center shrink-0">
+                {profileAvatar ? (
+                  <img src={profileAvatar} alt={profileName} className="w-full h-full object-cover" />
+                ) : (
+                  <span className="text-xl font-bold text-indigo-700">{profileName.charAt(0)}</span>
+                )}
+              </div>
+              <div className="flex-1">
+                <label className="font-semibold text-slate-800 block mb-1">Avatar Image URL</label>
+                <input
+                  type="url"
+                  placeholder="https://images.unsplash.com/..."
+                  value={profileAvatar}
+                  onChange={e => setProfileAvatar(e.target.value)}
+                  className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl font-medium text-slate-900 text-xs focus:ring-1 focus:ring-slate-900 focus:outline-hidden font-mono"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="font-semibold text-slate-800 block mb-1.5">Full Name</label>
+                <input
+                  type="text"
+                  value={profileName}
+                  onChange={e => setProfileName(e.target.value)}
+                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl font-medium text-slate-900 focus:ring-1 focus:ring-slate-900 focus:outline-hidden"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="font-semibold text-slate-800 block mb-1.5">Email Address</label>
+                <input
+                  type="email"
+                  value={currentUserProfile?.email || 'alex@techflow.io'}
+                  disabled
+                  className="w-full px-3.5 py-2.5 bg-slate-100 border border-slate-200 rounded-xl font-medium text-slate-500 cursor-not-allowed"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="font-semibold text-slate-800 block mb-1.5">Workspace Role</label>
+                <span className="inline-block px-3 py-2 bg-indigo-50 text-indigo-700 font-mono font-bold text-xs uppercase rounded-xl border border-indigo-200/60">
+                  {currentUserProfile?.role || 'owner'}
+                </span>
+              </div>
+              <div>
+                <label className="font-semibold text-slate-800 block mb-1.5">User ID</label>
+                <span className="inline-block px-3 py-2 bg-slate-100 text-slate-700 font-mono text-xs rounded-xl border border-slate-200">
+                  {currentUserProfile?.id || 'usr-alex'}
+                </span>
+              </div>
+            </div>
+
+            <div className="pt-2 flex justify-start">
+              <button
+                type="submit"
+                disabled={isSavingProfile}
+                className="px-5 py-2.5 bg-slate-900 hover:bg-slate-800 text-white font-semibold rounded-xl text-sm transition-colors cursor-pointer shadow-sm flex items-center gap-2 disabled:opacity-60"
+              >
+                <span>{isSavingProfile ? 'Saving...' : 'Save Profile Changes'}</span>
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
 
       {/* 1. AI Assistant Tab */}
       {activeTab === 'assistant' && (

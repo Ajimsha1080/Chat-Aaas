@@ -277,6 +277,8 @@ export interface AppContextType {
   teamMembers: TeamMember[];
   invoices: Invoice[];
   addTeamMember: (name: string, email: string, role: TeamMember['role']) => void;
+  currentUserProfile: { id: string; fullName: string; email: string; role: string; avatarUrl?: string } | null;
+  updateCurrentUserProfile: (fullName: string, avatarUrl?: string) => Promise<void>;
 
   // Super Admin Platform Controls & Health
   systemHealth: SystemHealthMetric[];

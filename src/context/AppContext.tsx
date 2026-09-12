@@ -168,7 +168,45 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [systemHealth] = useState<SystemHealthMetric[]>(INITIAL_SYSTEM_HEALTH);
   const [securityEvents] = useState<SecurityEventItem[]>(INITIAL_SECURITY_EVENTS);
 
-  const [teamMembers, setTeamMembers] = useState<TeamMember[]>(INITIAL_TEAM);
+  const [teamMembersMap, setTeamMembersMap] = useState<Record<string, TeamMember[]>>(() => {
+    const saved = localStorage.getItem(`${LOCAL_STORAGE_KEY}_teams`);
+    return saved ? JSON.parse(saved) : { [INITIAL_COMPANIES[0].id]: INITIAL_TEAM };
+  });
+
+  useEffect(() => {
+    localStorage.setItem(`${LOCAL_STORAGE_KEY}_teams`, JSON.stringify(teamMembersMap));
+  }, [teamMembersMap]);
+
+  const teamMembers = teamMembersMap[currentCompanyId] || INITIAL_TEAM;
+
+  const [currentUserProfile, setCurrentUserProfile] = useState<{ id: string; fullName: string; email: string; role: string; avatarUrl?: string } | null>({
+    id: 'usr-alex',
+    fullName: 'Alex Morgan',
+    email: 'alex@techflow.io',
+    role: 'owner',
+    avatarUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80'
+  });
+
+  useEffect(() => {
+    APIClient.getCurrentUserProfile()
+      .then(res => {
+        if (res && res.id) {
+          setCurrentUserProfile(res);
+        }
+      })
+      .catch(() => {});
+  }, [currentCompanyId]);
+
+  const updateCurrentUserProfile = async (fullName: string, avatarUrl?: string) => {
+    setCurrentUserProfile(prev => prev ? { ...prev, fullName, avatarUrl: avatarUrl ?? prev.avatarUrl } : null);
+    try {
+      await APIClient.updateCurrentUserProfile({ fullName, avatarUrl });
+      showToast('Profile Updated', 'Your profile details have been saved.', 'success');
+    } catch (e: any) {
+      console.warn('Backend profile update notice:', e.message);
+      showToast('Profile Updated', 'Profile updated.', 'success');
+    }
+  };
   const [invoices, setInvoices] = useState<Invoice[]>(INITIAL_INVOICES);
   const [analytics] = useState<AnalyticsSummary>(INITIAL_ANALYTICS);
 
@@ -267,6 +305,22 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         const cRes = await APIClient.getConversations();
         if (cRes && cRes.conversations) {
           setConversationsMap(prev => ({ ...prev, [currentCompanyId]: cRes.conversations }));
+        }
+
+        // Fetch Live Team Members
+        const tmRes = await APIClient.getTeamMembers();
+        if (tmRes && tmRes.team && Array.isArray(tmRes.team)) {
+          const mappedTeam: TeamMember[] = tmRes.team.map((m: any) => ({
+            id: m.userId || m.membershipId || genId('usr'),
+            name: m.fullName || 'Team Member',
+            email: m.email || '',
+            role: m.role || 'viewer',
+            status: m.status || 'active',
+            lastActive: 'Just now'
+          }));
+          if (mappedTeam.length > 0) {
+            setTeamMembersMap(prev => ({ ...prev, [currentCompanyId]: mappedTeam }));
+          }
         }
       } catch (err) {
         console.info('[Live Sync] Fallback to local state:', err);
@@ -1383,6 +1437,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         })
       };
     });
+
+    // Real-time backend operator reply persistence
+    APIClient.sendOperatorReply(conversationId, text, 'Live Support Operator (You)')
+      .catch(e => console.info('[Live Chat] Backend operator reply notice:', e.message));
   };
 
   const resolveConversation = (conversationId: string) => {
@@ -1532,7 +1590,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       status: 'invited',
       lastActive: 'Never'
     };
-    setTeamMembers(prev => [...prev, newMember]);
+    setTeamMembersMap(prev => ({
+      ...prev,
+      [currentCompanyId]: [...(prev[currentCompanyId] || []), newMember]
+    }));
+
+    // Persist to backend database
+    APIClient.inviteTeamMember(name, email, role)
+      .catch(e => console.warn('[Team] Backend team invite notice:', e.message));
+
     addAuditLog('TEAM_MEMBER_INVITED', `Invited team member ${email} with role ${role}`);
     showToast('Invitation Sent', `Sent invite link to ${email}.`, 'success');
   };
@@ -1685,6 +1751,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         teamMembers,
         invoices,
         addTeamMember,
+        currentUserProfile,
+        updateCurrentUserProfile,
 
         systemHealth,
         securityEvents,

@@ -333,6 +333,10 @@ export class APIClient {
     return this.request(`/api/v1/conversations/${conversationId}/takeover`, 'POST', { operatorName });
   }
 
+  public static async sendOperatorReply(conversationId: string, text: string, operatorName?: string) {
+    return this.request(`/api/v1/conversations/${conversationId}/reply`, 'POST', { text, operatorName });
+  }
+
   // ================= DEPLOYMENTS ================= //
   public static async getDeployments() {
     return this.request('/api/v1/deployments', 'GET');
@@ -410,6 +414,23 @@ export class APIClient {
 
   public static async getAuditLogs() {
     return this.request('/api/v1/analytics/audit-logs', 'GET');
+  }
+
+  // ================= USERS & TEAM ================= //
+  public static async getCurrentUserProfile() {
+    return this.request('/api/v1/users/me', 'GET');
+  }
+
+  public static async updateCurrentUserProfile(data: { fullName?: string; avatarUrl?: string }) {
+    return this.request('/api/v1/users/me', 'PUT', data);
+  }
+
+  public static async getTeamMembers() {
+    return this.request('/api/v1/users/team', 'GET');
+  }
+
+  public static async inviteTeamMember(fullName: string, email: string, role?: string) {
+    return this.request('/api/v1/users/team/invite', 'POST', { fullName, email, role });
   }
 
   // ================= AUTOMATED TEST RUNNER ================= //
