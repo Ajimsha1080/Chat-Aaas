@@ -183,3 +183,80 @@ class AgentRuntime:
             yield f"data: {chunk}\n\n"
             await asyncio.sleep(0.02)
         yield "data: [DONE]\n\n"
+
+    @classmethod
+    async def stream_process_message(
+        cls,
+        request: ChatRequest,
+        company_id: str,
+        agent_config: Dict[str, Any],
+        stored_chunks: List[Dict[str, Any]]
+    ) -> AsyncGenerator[str, None]:
+        """
+        True SSE streaming generator for real token delivery from the LLM provider.
+        Yields structured SSE data events: start -> token -> done.
+        """
+        import json
+        from app.services.llm_service import LLMProvider
+
+        user_msg = request.message.strip()
+
+        # 1. State / Availability Check
+        if agent_config.get("status") == "paused" or agent_config.get("lifecycleStatus") in ["disabled", "paused"]:
+            yield f"data: {json.dumps({'type': 'error', 'message': 'This AI assistant is currently paused or unavailable.'})}\n\n"
+            yield "data: [DONE]\n\n"
+            return
+
+        # 2. Human Escalation Trigger
+        escalation_keywords = ["human", "agent", "representative", "manager", "support person", "call me", "talk to human"]
+        if any(kw in user_msg.lower() for kw in escalation_keywords):
+            yield f"data: {json.dumps({'type': 'escalate', 'message': 'I am connecting you with a human support specialist right now.'})}\n\n"
+            yield "data: [DONE]\n\n"
+            return
+
+        # 3. RAG Retrieval & Grounding
+        chunks = RAGEngine.search_chunks(user_msg, company_id, stored_chunks, threshold=0.25)
+        is_grounded, ground_msg = RAGEngine.evaluate_groundedness(chunks, threshold=0.35)
+
+        if not is_grounded:
+            refusal_payload = {
+                "type": "refusal",
+                "message": "I do not have enough verified information in our company knowledge base to answer that accurately. I can connect you with our team if you would like!"
+            }
+            yield f"data: {json.dumps(refusal_payload)}\n\n"
+            yield "data: [DONE]\n\n"
+            return
+
+        # 4. Emit Start Event with Citations
+        conv_id = getattr(request, "conversation_id", None) or getattr(request, "session_id", None)
+        citations = [{"chunkId": c.chunk_id, "title": getattr(c, "title", "Knowledge Base")} for c in chunks[:3]]
+        yield f"data: {json.dumps({'type': 'start', 'conversationId': conv_id, 'citations': citations, 'confidenceScore': chunks[0].similarity_score})}\n\n"
+
+        # 5. Stream Real Tokens from LLMProvider
+        context_str = "\n\n".join([f"Source ({getattr(c, 'title', 'Knowledge Base')}): {c.content}" for c in chunks[:3]])
+        sys_instruction = (
+            f"You are the official AI Q&A assistant for company {company_id}. "
+            f"Persona tone: {agent_config.get('tone', 'professional')}. "
+            f"Answer the customer's question accurately and helpfully using the verified context below.\n\n"
+            f"Verified Knowledge Context:\n{context_str}"
+        )
+
+        full_acc = []
+        async for token in LLMProvider.stream_chat_completion(
+            messages=[{"role": "user", "content": user_msg}],
+            system_instruction=sys_instruction,
+            model=agent_config.get("modelTier", "sarvam-2b"),
+            temperature=0.3
+        ):
+            full_acc.append(token)
+            yield f"data: {json.dumps({'type': 'token', 'token': token})}\n\n"
+
+        full_msg = ''.join(full_acc)
+        tokens_est = max(1, len(full_msg.split()) + len(user_msg.split()))
+        from app.services.usage_service import UsageService
+        UsageService.record_event(company_id, "message", 1, "messages", conv_id)
+        UsageService.record_event(company_id, "llm_tokens", tokens_est, "tokens", conv_id)
+
+        yield f"data: {json.dumps({'type': 'done', 'conversationId': conv_id, 'fullMessage': full_msg, 'tokensUsed': tokens_est})}\n\n"
+        yield "data: [DONE]\n\n"
+

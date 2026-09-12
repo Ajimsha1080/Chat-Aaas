@@ -129,8 +129,8 @@ def get_tenant_context(
             correlation_id=correlation_id
         )
 
-    # 5. Direct Company Header (Only if registered company exists)
-    if header_comp:
+    # 5. Direct Company Header (Permitted ONLY in non-production environments for local testing/dev)
+    if header_comp and settings.ENVIRONMENT != "production":
         comp = db.companies.get(header_comp)
         if comp:
             return TenantContext(
@@ -145,4 +145,5 @@ def get_tenant_context(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Authentication required. Provide a valid Bearer token or API key."
     )
+
 

@@ -11,6 +11,7 @@ class ExecuteToolRequest(BaseModel):
     toolCode: str
     args: Optional[Dict[str, Any]] = {}
     userConfirmed: Optional[bool] = False
+    idempotencyKey: Optional[str] = None
 
 @router.get("")
 def list_tools(ctx: TenantContext = Depends(get_tenant_context)):
@@ -26,6 +27,7 @@ def execute_tool(req: ExecuteToolRequest, ctx: TenantContext = Depends(get_tenan
         company_id=ctx.company_id,
         tool_code=req.toolCode,
         arguments=req.args or {},
-        user_confirmed=req.userConfirmed or False
+        user_confirmed=req.userConfirmed or False,
+        idempotency_key=req.idempotencyKey
     )
     return {"status": 200, "data": result}

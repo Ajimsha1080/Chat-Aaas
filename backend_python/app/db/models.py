@@ -422,3 +422,26 @@ class Webhook(Base):
     delivery_history = Column(JSON, default=list, nullable=False)
     created_at = Column(String(64), nullable=False)
 
+
+class ActionExecution(Base):
+    __tablename__ = "action_executions"
+
+    id = Column(String(64), primary_key=True, index=True)
+    company_id = Column(String(64), ForeignKey("companies.id", ondelete="CASCADE"), nullable=False, index=True)
+    tool_code = Column(String(100), nullable=False)
+    idempotency_key = Column(String(255), nullable=True, index=True)
+    status = Column(String(50), default="created", nullable=False)  # created, confirmation_required, confirmed, executing, succeeded, failed
+    risk_level = Column(String(50), default="low_risk", nullable=False)
+    requires_user_confirmation = Column(Boolean, default=False, nullable=False)
+    is_confirmed = Column(Boolean, default=False, nullable=False)
+    parameters = Column(JSON, default=dict, nullable=False)
+    result = Column(JSON, nullable=True)
+    error = Column(Text, nullable=True)
+    created_at = Column(String(64), nullable=False)
+    updated_at = Column(String(64), nullable=True)
+
+    __table_args__ = (
+        Index("idx_tenant_idempotency", "company_id", "idempotency_key", unique=False),
+    )
+
+

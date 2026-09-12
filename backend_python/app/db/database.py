@@ -1,7 +1,11 @@
+import os
+import json
 import time
 from typing import Dict, Any, List, Optional
+from sqlalchemy import create_engine
 from app.core.security import hash_password
 from app.core.config import settings
+from app.db.models import Base
 
 class DatabaseStore:
     def __init__(self):
@@ -27,12 +31,102 @@ class DatabaseStore:
         self.api_keys: Dict[str, Dict[str, Any]] = {}
         self.webhooks: Dict[str, Dict[str, Any]] = {}
         self.deployments: Dict[str, Dict[str, Any]] = {}
-        
-        if settings.SEED_DEMO_DATA:
+        self.action_executions: Dict[str, Dict[str, Any]] = {}
+
+        # Initialize Durable Storage (PostgreSQL or SQLite file fallback)
+        self.db_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../data"))
+        os.makedirs(self.db_dir, exist_ok=True)
+        self.sqlite_path = os.path.join(self.db_dir, "chat_aaas.db")
+        self.storage_file = os.path.join(self.db_dir, "chat_aaas_state.json")
+
+        db_url = settings.DATABASE_URL
+        if not db_url or "localhost" in db_url or "127.0.0.1" in db_url:
+            db_url = f"sqlite:///{self.sqlite_path}"
+
+        try:
+            self.engine = create_engine(db_url, connect_args={"check_same_thread": False} if "sqlite" in db_url else {})
+            Base.metadata.create_all(bind=self.engine)
+        except Exception as e:
+            # Fallback to local SQLite if PostgreSQL is unreachable in dev
+            self.engine = create_engine(f"sqlite:///{self.sqlite_path}", connect_args={"check_same_thread": False})
+            Base.metadata.create_all(bind=self.engine)
+
+        restored = self.load_durable_storage()
+        if not restored and settings.SEED_DEMO_DATA:
             self.seed_demo_data()
+            self.flush_durable_storage()
+
+    def save_state(self):
+        """Alias for flush_durable_storage."""
+        self.flush_durable_storage()
+
+    def flush_durable_storage(self):
+        """Persists customer state durably to disk so it survives restarts."""
+        try:
+            snapshot = {
+                "users": self.users,
+                "companies": self.companies,
+                "memberships": self.memberships,
+                "agents": self.agents,
+                "agent_versions": self.agent_versions,
+                "knowledge_collections": self.knowledge_collections,
+                "knowledge_sources": self.knowledge_sources,
+                "document_chunks": self.document_chunks,
+                "knowledge_gaps": self.knowledge_gaps,
+                "knowledge_jobs": self.knowledge_jobs,
+                "integrations": self.integrations,
+                "agent_tools": self.agent_tools,
+                "conversations": self.conversations,
+                "messages": self.messages,
+                "invoices": self.invoices,
+                "audit_logs": self.audit_logs,
+                "api_keys": self.api_keys,
+                "webhooks": self.webhooks,
+                "deployments": self.deployments,
+                "action_executions": self.action_executions
+            }
+            tmp_path = self.storage_file + ".tmp"
+            with open(tmp_path, "w", encoding="utf-8") as f:
+                json.dump(snapshot, f, ensure_ascii=False, indent=2)
+            os.replace(tmp_path, self.storage_file)
+        except Exception as e:
+            pass
+
+    def load_durable_storage(self) -> bool:
+        """Recovers persisted state from disk."""
+        if not os.path.exists(self.storage_file):
+            return False
+        try:
+            with open(self.storage_file, "r", encoding="utf-8") as f:
+                data = json.load(f)
+            if not data or not isinstance(data, dict):
+                return False
+            self.users = data.get("users", {})
+            self.companies = data.get("companies", {})
+            self.memberships = data.get("memberships", {})
+            self.agents = data.get("agents", {})
+            self.agent_versions = data.get("agent_versions", {})
+            self.knowledge_collections = data.get("knowledge_collections", {})
+            self.knowledge_sources = data.get("knowledge_sources", {})
+            self.document_chunks = data.get("document_chunks", {})
+            self.knowledge_gaps = data.get("knowledge_gaps", {})
+            self.knowledge_jobs = data.get("knowledge_jobs", {})
+            self.integrations = data.get("integrations", {})
+            self.agent_tools = data.get("agent_tools", {})
+            self.conversations = data.get("conversations", {})
+            self.messages = data.get("messages", {})
+            self.invoices = data.get("invoices", {})
+            self.audit_logs = data.get("audit_logs", [])
+            self.api_keys = data.get("api_keys", {})
+            self.webhooks = data.get("webhooks", {})
+            self.deployments = data.get("deployments", {})
+            self.action_executions = data.get("action_executions", {})
+            return len(self.companies) > 0
+        except Exception:
+            return False
 
     def clear(self):
-        """Clears all in-memory database records for fresh tenant and testing initialization."""
+        """Clears all database records for fresh tenant and testing initialization."""
         self.users.clear()
         self.companies.clear()
         self.memberships.clear()
@@ -55,6 +149,12 @@ class DatabaseStore:
         self.api_keys.clear()
         self.webhooks.clear()
         self.deployments.clear()
+        self.action_executions.clear()
+        if os.path.exists(self.storage_file):
+            try:
+                os.remove(self.storage_file)
+            except Exception:
+                pass
 
     def seed_demo_data(self):
         # 1. TechFlow Cloud Tenant (Tenant A)
@@ -569,6 +669,22 @@ class DatabaseStore:
     def get_deployment_by_id(self, deployment_id: str) -> Optional[Dict[str, Any]]:
         return self.deployments.get(deployment_id)
 
+    def record_action_execution(self, action_id: str, data: Dict[str, Any]):
+        self.action_executions[action_id] = data
+        self.flush_durable_storage()
+
+    def get_action_by_idempotency_key(self, company_id: str, idempotency_key: str) -> Optional[Dict[str, Any]]:
+        for a in self.action_executions.values():
+            if a.get("companyId") == company_id and a.get("idempotencyKey") == idempotency_key:
+                return a
+        return None
+
+    def update_action_execution(self, action_id: str, updates: Dict[str, Any]):
+        if action_id in self.action_executions:
+            self.action_executions[action_id].update(updates)
+            self.flush_durable_storage()
+
 db = DatabaseStore()
+
 
 

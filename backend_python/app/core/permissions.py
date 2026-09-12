@@ -11,13 +11,13 @@ ROLE_PERMISSIONS: Dict[str, Set[str]] = {
         "agent:create", "agent:write", "agent:publish", "agent:rollback",
         "knowledge:read", "knowledge:write", "knowledge:delete", "conversation:read", "conversation:takeover",
         "tool:read", "tool:write", "tool:execute", "billing:manage", "analytics:read", "audit:readall",
-        "developer:manage", "team:manage", "company:manage"
+        "developer:manage", "team:manage", "company:manage", "integration:manage"
     },
     "admin": {
         "agent:create", "agent:write", "agent:publish", "agent:rollback",
         "knowledge:read", "knowledge:write", "knowledge:delete", "conversation:read", "conversation:takeover",
         "tool:read", "tool:write", "tool:execute", "analytics:read", "audit:readall",
-        "developer:manage", "team:invite", "company:manage"
+        "developer:manage", "team:invite", "company:manage", "integration:manage"
     },
     "agent_editor": {
         "agent:read", "agent:write",

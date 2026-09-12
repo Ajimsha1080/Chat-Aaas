@@ -37,3 +37,7 @@ env/
 venv/
 .venv/
 .pytest_cache/
+backend_python/data/
+*.db
+chat_aaas_state.json
+

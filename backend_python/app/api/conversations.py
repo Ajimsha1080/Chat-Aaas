@@ -20,7 +20,17 @@ class SendMessageRequest(BaseModel):
     customerEmail: Optional[str] = "visitor@guest.io"
 
 class TakeoverRequest(BaseModel):
-    operatorName: Optional[str] = "Staff Agent"
+    operatorName: Optional[str] = None
+    operatorId: Optional[str] = None
+
+class HumanReplyRequest(BaseModel):
+    text: Optional[str] = None
+    content: Optional[str] = None
+    operatorName: Optional[str] = None
+    operatorId: Optional[str] = None
+
+class HandoffRequest(BaseModel):
+    reason: Optional[str] = "Customer requested live support"
 
 @router.get("")
 def list_conversations(status: Optional[str] = "all", ctx: TenantContext = Depends(get_tenant_context)):
@@ -75,13 +85,36 @@ async def send_message(req: SendMessageRequest, ctx: TenantContext = Depends(get
     }
     db.messages[user_msg_id] = user_msg
 
-    # 2. Process through Agent Runtime
+    # 2. Check if AI response is suppressed because a human is active or requested
+    if ConversationService.is_ai_suppressed(conv_id, company_id):
+        conv["lastMessageAt"] = time.strftime("%Y-%m-%dT%H:%M:%SZ")
+        db.flush_durable_storage()
+        UsageService.record_event(company_id, "message", 1, "count", conv_id)
+        notice_msg = {
+            "id": f"msg-sys-{int(time.time() * 1000)}",
+            "conversationId": conv_id,
+            "companyId": company_id,
+            "sender": "system",
+            "text": "Your message was sent to our support team. An operator will respond momentarily.",
+            "createdAt": time.strftime("%Y-%m-%dT%H:%M:%SZ")
+        }
+        return {
+            "status": 200,
+            "data": {
+                "conversation": conv,
+                "userMessage": user_msg,
+                "agentMessage": notice_msg,
+                "isHumanActive": True
+            }
+        }
+
+    # 3. Process through Agent Runtime
     chunks = db.get_document_chunks_for_tenant(company_id, only_active=True)
     agent = db.get_agent_for_company(company_id) or {}
     chat_req = ChatRequest(message=req.text, session_id=conv_id)
     runtime_res = await AgentRuntime.process_message(chat_req, company_id, agent, chunks)
 
-    # 3. Agent Response Message
+    # 4. Agent Response Message
     agent_msg_id = f"msg-a-{int(time.time() * 1000)}"
     agent_msg = {
         "id": agent_msg_id,
@@ -100,9 +133,10 @@ async def send_message(req: SendMessageRequest, ctx: TenantContext = Depends(get
 
     conv["lastMessageAt"] = time.strftime("%Y-%m-%dT%H:%M:%SZ")
     if runtime_res.should_escalate_to_human or runtime_res.handoff_required:
-        conv["status"] = "escalated_to_human"
+        conv["status"] = "handoff_requested"
         conv["sentiment"] = "urgent"
 
+    db.flush_durable_storage()
     UsageService.record_event(company_id, "message", 2, "count", conv_id)
     UsageService.record_event(company_id, "token_consumption", 350, "tokens", conv_id)
 
@@ -117,12 +151,31 @@ async def send_message(req: SendMessageRequest, ctx: TenantContext = Depends(get
 
 @router.post("/{conversation_id}/takeover")
 def takeover_chat(conversation_id: str, req: TakeoverRequest, ctx: TenantContext = Depends(get_tenant_context)):
-    res = ConversationService.human_takeover(conversation_id, ctx.company_id, req.operatorName or "Staff Agent")
+    op_name = req.operatorName or req.operatorId or "Staff Agent"
+    res = ConversationService.human_takeover(conversation_id, ctx.company_id, op_name)
+    return {"status": 200, "data": res}
+
+@router.post("/{conversation_id}/handoff")
+def handoff_chat(conversation_id: str, req: Optional[HandoffRequest] = None, ctx: TenantContext = Depends(get_tenant_context)):
+    reason = req.reason if req else "Customer requested live assistance"
+    res = ConversationService.request_handoff(conversation_id, ctx.company_id, reason)
+    return {"status": 200, "data": res}
+
+@router.post("/{conversation_id}/reply")
+def reply_as_human(conversation_id: str, req: HumanReplyRequest, ctx: TenantContext = Depends(get_tenant_context)):
+    op_name = req.operatorName or req.operatorId or "Staff Agent"
+    msg_text = req.text or req.content or ""
+    res = ConversationService.send_human_reply(conversation_id, ctx.company_id, op_name, msg_text)
     return {"status": 200, "data": res}
 
 @router.post("/{conversation_id}/resolve")
 def resolve_chat(conversation_id: str, ctx: TenantContext = Depends(get_tenant_context)):
     res = ConversationService.resolve_conversation(conversation_id, ctx.company_id)
+    return {"status": 200, "data": res}
+
+@router.post("/{conversation_id}/close")
+def close_chat(conversation_id: str, ctx: TenantContext = Depends(get_tenant_context)):
+    res = ConversationService.close_conversation(conversation_id, ctx.company_id)
     return {"status": 200, "data": res}
 
 class BulkConversationActionRequest(BaseModel):
