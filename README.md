@@ -68,32 +68,42 @@ IMPROVE KNOWLEDGE
 
 ## ⚡ Key Platform Capabilities
 
-### 1. ONE Prebuilt AI Q&A Assistant
-- **Strict 1:1 Company Mapping**: Every business receives one dedicated, pre-configured Q&A Assistant.
-- **Enterprise Lifecycle & Versioning**: Complete state machine (`Draft` → `Ready` → `Published` → `Disabled` → `Archived` → `Deleted`) with immutable version snapshots, change summaries, and 1-click rollbacks.
-- **Dependency-Aware Protection**: Safety checks warn users of active websites, mobile apps, or API channels before disabling or unpublishing an assistant.
-- **Identity & Tone Customization**: Tone presets (Professional, Friendly, Empathetic, Direct, Technical), custom greetings, fallback messages, and plain-English safety rules.
+### 1. Simplified 9-Tab Enterprise Workspace
+- **Executive Overview**: High-impact KPI outcome cards (`Total Inquiries`, `Questions Answered`, `Resolution Rate %`, `Unanswered Questions`), real-time assistant status banner, and getting started checklist.
+- **My Assistant**: Intuitive configuration of assistant identity, persona tone presets (Professional, Friendly, Empathetic, Direct), custom greetings, fallback responses, and simple lifecycle states (`Published`, `Draft changes pending`, `Paused`).
+- **Knowledge Base**: Simplified source ingestion for Websites, Documents (PDF/TXT/DOCX), and FAQs with clean business statuses (`✓ Ready`, `Processing...`, `⚠ Needs attention`).
+- **Dedicated Playground**: Split-screen workbench with live chat simulator, response source inspector citing verified knowledge, 👍 / 👎 feedback rating, and 1-click `[Teach New Answer]`.
+- **Conversations & Unanswered Questions**: Complete customer inbox with live staff takeover and an **Unanswered Questions** tab for continuous improvement.
+- **Deploy**: Real-time website widget customizer (color, positioning, greeting), copy-paste `<script>` tag, React component embed, and REST API.
+- **Analytics & Insights**: Outcome-driven KPIs (autonomous resolution rate, inquiries handled, staff time saved, top customer inquiry topics).
+- **Billing & Plans**: Standalone subscription management, monthly usage meters (inquiries and documents), and tax invoices.
+- **Settings & Developer**: Consolidated company profile, team access control, security audit trail, and developer API credentials.
 
-### 2. Multi-Tenant Knowledge Base & Grounded RAG
+### 2. Dedicated Side-by-Side Playground
+- **Live Simulator**: Test how the assistant answers customer questions before publishing changes.
+- **Source Inspection**: Inspect exact verified documents and citations referenced in every response.
+- **Continuous Calibration**: Rate responses with `[👍 Good answer]` or `[👎 Needs improvement]`, and use `[Teach New Answer]` to instantly store approved answers into the knowledge base.
+
+### 3. Multi-Tenant Knowledge Base & Grounded RAG
 - **5-Stage Telemetry Pipeline**: Real-time progress tracking through `UPLOADING` → `PARSING` → `CHUNKING` → `EMBEDDING` → `INDEXING` → `READY`.
-- **Trash & 30-Day Retention**: Soft-delete knowledge to Trash where documents are immediately excluded from live RAG retrieval; 1-click restore re-indexes vector chunks automatically.
+- **Trash & 30-Day Retention**: Soft-delete knowledge to Trash where documents are immediately excluded from live RAG retrieval; 1-click restore re-indexes knowledge sources automatically.
 - **Permanent Purge**: Complete eradication of original files, parsed content, document chunks, vector embeddings, and search references with typed confirmation (`DELETE PERMANENTLY`).
 - **SSRF Crawler Defense**: Proactively blocks private subnets (`10.0.0.0/8`, `172.16.0.0/12`, `192.168.0.0/16`), loopback (`127.0.0.1`, `localhost`), and cloud metadata (`169.254.169.254`).
 - **Anti-Hallucination Threshold**: Strict confidence evaluation — if verified knowledge is insufficient, the assistant honestly refuses to answer rather than hallucinating.
-- **Knowledge Gaps Triage**: Automatically captures unanswered user questions so teams can convert them into FAQs with 1 click.
+- **Unanswered Questions Triage**: Automatically captures escalated or low-confidence user queries so teams can convert them into verified FAQs with 1 click.
 
-### 3. Multi-Channel Distribution Hub
+### 4. Multi-Channel Distribution Hub
 - **Independent Deployment Channels**: Website widgets, React iframes, REST API, and Webhooks can be independently created, paused, disabled, or removed without impacting the core assistant.
 - **Website Embed Widget**: Fast, responsive HTML `<script>` embed with custom branding, placement, and sound effects.
 - **REST API & Developer Credentials**: Hashed API key storage, one-time secret revelation, instant rotation, and immediate revocation.
 - **Enterprise Webhook Deliveries**: Webhook endpoints with delivery logs, HTTP response codes, latency tracking (ms), and failure retries.
 
-### 4. Conversations & Live Human Takeover
+### 5. Conversations & Live Human Takeover
 - **Conversation Inbox**: Real-time persisted customer threads with multi-select bulk archive and bulk deletion.
 - **Citation Inspection**: Inspect source documents and confidence scores used for every generated answer.
 - **1-Click Human Handoff**: Seamlessly escalate from AI to live operator with status tracking (`AI Active`, `Human Requested`, `Human Active`, `Resolved`).
 
-### 5. Indian GST (18%) Billing & Metering
+### 6. Indian GST (18%) Billing & Metering
 - **Transparent Tier Pricing**: Starter (₹4,999/mo), Growth (₹14,999/mo), and Enterprise Business (₹39,999/mo).
 - **Automated GST Tax Invoicing**: Calculates 9% CGST + 9% SGST (intra-state) or 18% IGST (inter-state) with PDF downloads.
 
