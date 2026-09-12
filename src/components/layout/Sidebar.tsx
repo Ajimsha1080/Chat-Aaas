@@ -7,6 +7,8 @@ import {
   Globe, 
   Settings, 
   Sparkles,
+  FlaskConical,
+  CreditCard,
   X
 } from 'lucide-react';
 import { useApp } from '../../context';
@@ -37,32 +39,35 @@ export const Sidebar: React.FC<SidebarProps> = ({ isMobileOpen = false, onCloseM
   }[] = [
     {
       items: [
-        { id: 'home', label: 'Home', icon: LayoutDashboard }
+        { id: 'overview', label: 'Overview', icon: LayoutDashboard }
       ]
     },
     {
-      groupName: 'Assistant',
+      groupName: 'AI Assistant',
       items: [
-        { id: 'assistant', label: 'My Assistant', icon: Sparkles },
+        { id: 'assistant', label: 'Assistant', icon: Sparkles },
+        { id: 'knowledge', label: 'Knowledge', icon: BookOpen },
+        { id: 'playground', label: 'Playground', icon: FlaskConical }
+      ]
+    },
+    {
+      groupName: 'Engagement & Channels',
+      items: [
         { 
           id: 'conversations', 
           label: 'Conversations', 
           icon: MessageSquare, 
           badge: unreadConversationsCount > 0 ? `${unreadConversationsCount}` : undefined 
-        }
+        },
+        { id: 'deploy', label: 'Deploy', icon: Globe }
       ]
     },
     {
-      groupName: 'Knowledge Base',
+      groupName: 'Management',
       items: [
-        { id: 'knowledge', label: 'Knowledge', icon: BookOpen }
-      ]
-    },
-    {
-      groupName: 'Distribution & Analytics',
-      items: [
-        { id: 'deploy', label: 'Deploy', icon: Globe },
-        { id: 'insights', label: 'Analytics', icon: BarChart3 }
+        { id: 'analytics', label: 'Analytics', icon: BarChart3 },
+        { id: 'billing', label: 'Billing', icon: CreditCard },
+        { id: 'settings', label: 'Settings', icon: Settings }
       ]
     }
   ];
@@ -132,23 +137,6 @@ export const Sidebar: React.FC<SidebarProps> = ({ isMobileOpen = false, onCloseM
             })}
           </div>
         ))}
-
-        {/* Customer Settings Divider */}
-        <div className="pt-2 border-t border-slate-800/70 space-y-1">
-          <button
-            onClick={() => handleSelectTab('settings')}
-            className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm transition-all cursor-pointer ${
-              currentTab === 'settings'
-                ? 'bg-indigo-600/20 text-white font-semibold border-l-2 border-indigo-400 pl-2.5 shadow-xs'
-                : 'text-slate-400 hover:bg-slate-900/90 hover:text-slate-200 font-medium'
-            }`}
-          >
-            <div className="flex items-center gap-2.5">
-              <Settings className={`w-4 h-4 ${currentTab === 'settings' ? 'text-indigo-400' : 'text-slate-400'}`} />
-              <span className="tracking-tight text-sm">Settings</span>
-            </div>
-          </button>
-        </div>
       </div>
     </div>
   );

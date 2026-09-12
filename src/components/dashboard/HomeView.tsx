@@ -8,7 +8,11 @@ import {
   AlertTriangle, 
   ChevronRight,
   ArrowUpRight,
-  ListTodo
+  ListTodo,
+  Sparkles,
+  FlaskConical,
+  Globe,
+  HelpCircle
 } from 'lucide-react';
 import { useApp } from '../../context';
 import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, CartesianGrid } from 'recharts';
@@ -55,17 +59,71 @@ export const HomeView: React.FC = () => {
   const activeConnectionsCount = (integrations || []).filter(i => i?.connected).length;
   const readyKnowledgeCount = (knowledgeItems || []).filter(k => k?.status === 'indexed').length;
 
+  const isAssistantActive = currentCompany?.agent?.status === 'active';
+  const lifecycleStatus = currentCompany?.agent?.lifecycleStatus || 'published';
+  const unansweredCount = pendingAttentionConversations.length;
+
   const checklistItems = [
     { id: 1, title: 'Company profile and tone configured', completed: true, tab: 'assistant' },
-    { id: 2, title: `Knowledge base loaded (${readyKnowledgeCount} sources)`, completed: readyKnowledgeCount > 0, tab: 'knowledge' },
-    { id: 3, title: 'Test welcoming inquiry with assistant', completed: true, tab: 'quicktest' },
-    { id: 4, title: 'Embed widget on website or connect WhatsApp', completed: activeConnectionsCount > 0, tab: 'deploy' }
+    { id: 2, title: `Knowledge loaded (${readyKnowledgeCount} sources)`, completed: readyKnowledgeCount > 0, tab: 'knowledge' },
+    { id: 3, title: 'Test inquiries in Playground', completed: true, tab: 'playground' },
+    { id: 4, title: 'Embed widget on website', completed: activeConnectionsCount > 0, tab: 'deploy' }
   ];
 
   const completedCount = checklistItems.filter(i => i.completed).length;
 
   return (
     <div className="space-y-6 animate-in fade-in duration-150">
+      {/* 1. Top Assistant Status Banner */}
+      <div className="bg-white rounded-2xl p-5 sm:p-6 border border-slate-200/90 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div className="flex items-center gap-3.5">
+          <div className="w-11 h-11 rounded-xl bg-indigo-600 text-white flex items-center justify-center font-bold shadow-xs shrink-0">
+            <Sparkles className="w-5 h-5" />
+          </div>
+          <div>
+            <div className="flex items-center gap-2.5">
+              <h2 className="text-base sm:text-lg font-bold text-slate-900">
+                {currentCompany?.agent?.name || 'Company Assistant'}
+              </h2>
+              <span className={`text-[11px] font-bold px-2.5 py-0.5 rounded-full border ${
+                isAssistantActive && lifecycleStatus === 'published'
+                  ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                  : lifecycleStatus === 'draft'
+                  ? 'bg-amber-50 text-amber-700 border-amber-200'
+                  : 'bg-slate-100 text-slate-600 border-slate-200'
+              }`}>
+                {lifecycleStatus === 'draft' ? '● Draft Changes' : isAssistantActive ? '● Published & Live' : '● Paused'}
+              </span>
+            </div>
+            <p className="text-xs sm:text-sm text-slate-500 mt-0.5">
+              Trained on {readyKnowledgeCount} knowledge sources · Voice tone: <strong className="capitalize">{currentCompany?.agent?.tone || 'Professional'}</strong>
+            </p>
+          </div>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-2.5">
+          <button
+            onClick={() => setCurrentTab('playground')}
+            className="px-3.5 py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 rounded-xl text-xs font-bold transition-colors flex items-center gap-1.5 cursor-pointer shadow-2xs"
+          >
+            <FlaskConical className="w-3.5 h-3.5" />
+            Test in Playground
+          </button>
+          <button
+            onClick={() => setCurrentTab('assistant')}
+            className="px-3.5 py-2 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 rounded-xl text-xs font-semibold transition-colors flex items-center gap-1.5 cursor-pointer shadow-2xs"
+          >
+            Edit Assistant
+          </button>
+          <button
+            onClick={() => setCurrentTab('deploy')}
+            className="px-3.5 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-bold transition-colors flex items-center gap-1.5 cursor-pointer shadow-xs"
+          >
+            <Globe className="w-3.5 h-3.5" />
+            Embed Widget
+          </button>
+        </div>
+      </div>
 
       {/* 2. Getting Started Checklist */}
       {completedCount < 4 && (
@@ -125,7 +183,7 @@ export const HomeView: React.FC = () => {
 
       {/* 3. Core Outcome Metrics */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3.5 sm:gap-4">
-        {/* Total Conversations */}
+        {/* Total Inquiries */}
         <div className="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200/80 shadow-xs flex flex-col justify-between">
           <div className="flex items-center justify-between text-slate-500">
             <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">Total Inquiries</span>
@@ -144,12 +202,29 @@ export const HomeView: React.FC = () => {
           <p className="text-[11px] text-slate-500 mt-1">Autonomous customer chats</p>
         </div>
 
+        {/* Questions Answered */}
+        <div className="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200/80 shadow-xs flex flex-col justify-between">
+          <div className="flex items-center justify-between text-slate-500">
+            <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">Answered by AI</span>
+            <div className="w-7 h-7 rounded-lg bg-slate-100 flex items-center justify-center text-slate-600 border border-slate-200/60">
+              <CheckCircle2 className="w-3.5 h-3.5" />
+            </div>
+          </div>
+          <div className="mt-3 flex items-baseline gap-2">
+            <span className="text-2xl sm:text-3xl font-bold text-emerald-600 tracking-tight">
+              {resolvedCount.toLocaleString()}
+            </span>
+            <span className="text-[11px] font-medium text-slate-400">Verified</span>
+          </div>
+          <p className="text-[11px] text-slate-500 mt-1">Answered from knowledge</p>
+        </div>
+
         {/* Resolution Rate */}
         <div className="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200/80 shadow-xs flex flex-col justify-between">
           <div className="flex items-center justify-between text-slate-500">
             <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">Resolution Rate</span>
             <div className="w-7 h-7 rounded-lg bg-slate-100 flex items-center justify-center text-slate-600 border border-slate-200/60">
-              <CheckCircle2 className="w-3.5 h-3.5" />
+              <Clock className="w-3.5 h-3.5" />
             </div>
           </div>
           <div className="mt-3 flex items-baseline gap-2">
@@ -159,34 +234,26 @@ export const HomeView: React.FC = () => {
           <p className="text-[11px] text-slate-500 mt-1">Resolved without staff</p>
         </div>
 
-        {/* Average Response Time */}
-        <div className="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200/80 shadow-xs flex flex-col justify-between">
+        {/* Unanswered Questions */}
+        <div 
+          onClick={() => setCurrentTab('conversations')}
+          className="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200/80 shadow-xs flex flex-col justify-between hover:border-amber-300 transition-colors cursor-pointer group"
+        >
           <div className="flex items-center justify-between text-slate-500">
-            <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">Avg Response Time</span>
-            <div className="w-7 h-7 rounded-lg bg-slate-100 flex items-center justify-center text-slate-600 border border-slate-200/60">
-              <Clock className="w-3.5 h-3.5" />
+            <span className="text-xs font-semibold uppercase tracking-wider text-slate-500 group-hover:text-amber-700 transition-colors">
+              Unanswered Questions
+            </span>
+            <div className="w-7 h-7 rounded-lg bg-amber-50 flex items-center justify-center text-amber-600 border border-amber-200/60">
+              <HelpCircle className="w-3.5 h-3.5" />
             </div>
           </div>
           <div className="mt-3 flex items-baseline gap-2">
-            <span className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight">1.4s</span>
-            <span className="text-[11px] text-emerald-600 font-semibold">Sub-second</span>
+            <span className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight">{unansweredCount}</span>
+            <span className="text-[11px] text-amber-700 font-semibold flex items-center gap-0.5">
+              Review <ArrowRight className="w-3 h-3" />
+            </span>
           </div>
-          <p className="text-[11px] text-slate-500 mt-1">First response latency</p>
-        </div>
-
-        {/* Human Escalations */}
-        <div className="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200/80 shadow-xs flex flex-col justify-between">
-          <div className="flex items-center justify-between text-slate-500">
-            <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">Escalations</span>
-            <div className="w-7 h-7 rounded-lg bg-slate-100 flex items-center justify-center text-slate-600 border border-slate-200/60">
-              <UserX className="w-3.5 h-3.5" />
-            </div>
-          </div>
-          <div className="mt-3 flex items-baseline gap-2">
-            <span className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight">{escalationRate}%</span>
-            <span className="text-[11px] text-slate-400 font-medium">Controlled</span>
-          </div>
-          <p className="text-[11px] text-slate-500 mt-1">Complex edge cases escalated</p>
+          <p className="text-[11px] text-slate-500 mt-1">Requires official answer</p>
         </div>
       </div>
 

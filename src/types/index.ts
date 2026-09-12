@@ -366,19 +366,20 @@ export type DeveloperNavigationTab =
   | 'dev-tools';
 
 export type NavigationTab = 
+  | 'overview'
   | 'home'
   | 'assistant'
-  | 'conversations' 
   | 'knowledge' 
-  | 'connections' 
+  | 'playground'
+  | 'conversations' 
   | 'deploy' 
+  | 'analytics'
   | 'insights' 
   | 'billing' 
   | 'settings'
-  | 'overview' 
+  | 'connections' 
   | 'actions' 
-  | 'channels' 
-  | 'analytics';
+  | 'channels';
 
 export interface AgentVersionItem {
   id: string;

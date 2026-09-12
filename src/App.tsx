@@ -9,6 +9,8 @@ import { KnowledgeView } from './components/dashboard/KnowledgeView';
 import { DeployView } from './components/dashboard/DeployView';
 import { InsightsView } from './components/dashboard/InsightsView';
 import { SettingsView } from './components/dashboard/SettingsView';
+import { PlaygroundView } from './components/dashboard/PlaygroundView';
+import { BillingView } from './components/dashboard/BillingView';
 import { AdminDashboard } from './components/admin/AdminDashboard';
 import { DeveloperConsole } from './components/developer/DeveloperConsole';
 import { TestAgentDrawer } from './components/common/TestAgentDrawer';
@@ -54,25 +56,28 @@ const DashboardContent: React.FC = () => {
   // 3. Customer Experience Workspace (Standard Sidebar + Header Layout)
   const renderCustomerView = () => {
     switch (currentTab) {
-      case 'home':
       case 'overview':
+      case 'home':
         return <HomeView />;
       case 'assistant':
         return <MyAssistantView />;
-      case 'conversations':
-        return <ConversationsView />;
       case 'knowledge':
         return <KnowledgeView />;
+      case 'playground':
+        return <PlaygroundView />;
+      case 'conversations':
+        return <ConversationsView />;
       case 'deploy':
       case 'channels':
       case 'connections':
       case 'actions':
         return <DeployView />;
-      case 'insights':
       case 'analytics':
+      case 'insights':
         return <InsightsView />;
-      case 'settings':
       case 'billing':
+        return <BillingView />;
+      case 'settings':
         return <SettingsView />;
       default:
         return <HomeView />;

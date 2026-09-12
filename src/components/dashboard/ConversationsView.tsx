@@ -17,7 +17,11 @@ import {
   FileText,
   CheckSquare,
   Square,
-  AlertTriangle
+  AlertTriangle,
+  Plus,
+  HelpCircle,
+  Sparkles,
+  BookOpen
 } from 'lucide-react';
 import { useApp } from '../../context';
 import { ConversationStatus, Conversation } from '../../types';
@@ -37,14 +41,64 @@ export const ConversationsView: React.FC = () => {
     deleteConversation,
     bulkArchiveConversations,
     bulkDeleteConversations,
+    addKnowledgeItem,
     showToast
   } = useApp();
 
+  const [inboxTab, setInboxTab] = useState<'all' | 'unanswered'>('all');
   const [filterStatus, setFilterStatus] = useState<ConversationStatus | 'all' | 'needs_attention'>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [operatorInput, setOperatorInput] = useState('');
   const [isNoteMode, setIsNoteMode] = useState(false);
   const [isMobileProfileOpen, setIsMobileProfileOpen] = useState(false);
+
+  // Teach / Answer Modal state
+  const [teachModalOpen, setTeachModalOpen] = useState(false);
+  const [teachQuestion, setTeachQuestion] = useState('');
+  const [teachAnswer, setTeachAnswer] = useState('');
+  const [teachCategory, setTeachCategory] = useState('Customer Inquiries');
+  const [teachConversationId, setTeachConversationId] = useState<string | null>(null);
+  const [isSavingAnswer, setIsSavingAnswer] = useState(false);
+
+  const unansweredList = (conversations || []).filter(
+    c => c.status === 'escalated_to_human' || c.status === 'flagged'
+  );
+
+  const handleOpenTeach = (conv: Conversation) => {
+    const userMessages = (conv.messages || []).filter(m => m.sender === 'user');
+    const q = userMessages.length > 0 ? userMessages[userMessages.length - 1].text : '';
+    setTeachQuestion(q);
+    setTeachAnswer('');
+    setTeachConversationId(conv.id);
+    setTeachModalOpen(true);
+  };
+
+  const handleSaveTeach = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!teachQuestion.trim() || !teachAnswer.trim()) return;
+    setIsSavingAnswer(true);
+    try {
+      await addKnowledgeItem({
+        type: 'faq',
+        title: `FAQ: ${teachQuestion.substring(0, 45)}...`,
+        category: teachCategory,
+        content: `Question: ${teachQuestion}\nAnswer: ${teachAnswer}`,
+        faqAnswer: teachAnswer
+      });
+      if (teachConversationId) {
+        resolveConversation(teachConversationId);
+      }
+      showToast('Knowledge Updated & Resolved', 'Official answer saved. The assistant can now answer this question.', 'success');
+      setTeachModalOpen(false);
+      setTeachQuestion('');
+      setTeachAnswer('');
+      setTeachConversationId(null);
+    } catch {
+      showToast('Error', 'Failed to save answer to knowledge.', 'error');
+    } finally {
+      setIsSavingAnswer(false);
+    }
+  };
 
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [convToDelete, setConvToDelete] = useState<Conversation | null>(null);
@@ -159,7 +213,7 @@ export const ConversationsView: React.FC = () => {
           <div>
             <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider">Grounding Context</h3>
             <p className="text-xs sm:text-sm text-slate-500 mt-2 leading-relaxed">
-              All replies in this thread are strictly referenced against <strong>{currentCompany.name}</strong> verified knowledge base chunks.
+              All replies in this thread are strictly referenced against <strong>{currentCompany.name}</strong> verified knowledge sources and company documents.
             </p>
           </div>
         </div>
@@ -179,13 +233,44 @@ export const ConversationsView: React.FC = () => {
       }`}>
         {/* Inbox Header */}
         <div className="p-4 border-b border-slate-200/90 space-y-3">
+          {/* Sub-tab Navigation */}
+          <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-xl text-xs font-semibold">
+            <button
+              onClick={() => setInboxTab('all')}
+              className={`flex-1 py-1.5 rounded-lg text-center transition-all cursor-pointer ${
+                inboxTab === 'all'
+                  ? 'bg-white text-slate-900 shadow-xs font-bold'
+                  : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              All Inquiries ({conversations.length})
+            </button>
+            <button
+              onClick={() => setInboxTab('unanswered')}
+              className={`flex-1 py-1.5 rounded-lg text-center transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
+                inboxTab === 'unanswered'
+                  ? 'bg-white text-amber-900 shadow-xs font-bold'
+                  : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              <span>Unanswered</span>
+              {unansweredList.length > 0 && (
+                <span className="px-1.5 py-0.2 bg-amber-100 text-amber-800 rounded-full text-[10px] font-bold">
+                  {unansweredList.length}
+                </span>
+              )}
+            </button>
+          </div>
+
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2.5">
-              <span className="w-2.5 h-2.5 rounded-full bg-emerald-500" />
-              <h2 className="text-base font-bold text-slate-900">Conversations Inbox</h2>
+              <span className={`w-2.5 h-2.5 rounded-full ${inboxTab === 'unanswered' ? 'bg-amber-500' : 'bg-emerald-500'}`} />
+              <h2 className="text-base font-bold text-slate-900">
+                {inboxTab === 'unanswered' ? 'Unanswered Questions' : 'Conversations Inbox'}
+              </h2>
             </div>
 
-            {filteredConversations.length > 0 && (
+            {inboxTab === 'all' && filteredConversations.length > 0 && (
               <button
                 type="button"
                 onClick={handleSelectAll}
@@ -284,7 +369,50 @@ export const ConversationsView: React.FC = () => {
 
         {/* Conversation List Items */}
         <div className="flex-1 overflow-y-auto divide-y divide-slate-100">
-          {filteredConversations.length === 0 ? (
+          {inboxTab === 'unanswered' ? (
+            unansweredList.length === 0 ? (
+              <div className="p-8 text-center text-slate-400 text-sm space-y-2">
+                <CheckCircle className="w-8 h-8 text-emerald-500 mx-auto opacity-70" />
+                <p className="font-semibold text-slate-700">All questions answered!</p>
+                <p className="text-xs text-slate-400">Your AI assistant resolved all customer inquiries with high confidence.</p>
+              </div>
+            ) : (
+              unansweredList.map(conv => {
+                const userMsgs = (conv.messages || []).filter(m => m.sender === 'user');
+                const lastQuestion = userMsgs.length > 0 ? userMsgs[userMsgs.length - 1].text : 'Unspecified inquiry';
+
+                return (
+                  <div key={conv.id} className="p-4 space-y-2.5 hover:bg-amber-50/40 transition-colors">
+                    <div className="flex items-center justify-between">
+                      <span className="font-bold text-xs text-slate-900 truncate">
+                        {conv.customerName || 'Visitor'}
+                      </span>
+                      <span className="text-[10px] font-mono text-amber-800 bg-amber-100 px-1.5 py-0.5 rounded font-semibold">
+                        Needs Answer
+                      </span>
+                    </div>
+
+                    <p className="text-xs font-semibold text-slate-800 line-clamp-2 bg-slate-50 p-2.5 rounded-lg border border-slate-200/70">
+                      "{lastQuestion}"
+                    </p>
+
+                    <div className="flex items-center justify-between pt-1">
+                      <span className="text-[11px] text-slate-400 font-mono capitalize">
+                        {conv.channel.replace('_', ' ')}
+                      </span>
+                      <button
+                        onClick={() => handleOpenTeach(conv)}
+                        className="px-2.5 py-1 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-bold transition-colors flex items-center gap-1 cursor-pointer shadow-xs"
+                      >
+                        <Plus className="w-3 h-3" />
+                        Teach Answer
+                      </button>
+                    </div>
+                  </div>
+                );
+              })
+            )
+          ) : filteredConversations.length === 0 ? (
             <div className="p-8 text-center text-slate-400 text-sm">
               No conversations in this filter.
             </div>
@@ -636,6 +764,94 @@ export const ConversationsView: React.FC = () => {
           'This action is irreversible and cannot be restored.'
         ]}
       />
+
+      {/* TEACH ANSWER MODAL */}
+      {teachModalOpen && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in duration-150">
+          <div className="bg-white rounded-2xl max-w-lg w-full shadow-2xl border border-slate-200 overflow-hidden">
+            <div className="px-6 py-4 border-b border-slate-100 bg-slate-50/80 flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-lg bg-indigo-600 text-white flex items-center justify-center font-bold">
+                  <BookOpen className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-slate-900">Add Answer to Knowledge</h3>
+                  <p className="text-xs text-slate-500">Teach your assistant how to resolve this customer question</p>
+                </div>
+              </div>
+              <button 
+                onClick={() => setTeachModalOpen(false)}
+                className="text-slate-400 hover:text-slate-700 p-1.5 rounded-lg hover:bg-slate-200/60 transition-colors cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveTeach} className="p-6 space-y-4">
+              <div>
+                <label className="block text-xs font-bold text-slate-900 mb-1.5">
+                  Customer Question *
+                </label>
+                <input
+                  type="text"
+                  value={teachQuestion}
+                  onChange={e => setTeachQuestion(e.target.value)}
+                  placeholder="e.g. Do you support international wire transfers?"
+                  required
+                  className="w-full px-3.5 py-2 bg-white border border-slate-200 rounded-xl text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-900 mb-1.5">
+                  Official Verified Answer *
+                </label>
+                <textarea
+                  rows={4}
+                  value={teachAnswer}
+                  onChange={e => setTeachAnswer(e.target.value)}
+                  placeholder="Enter the official approved answer..."
+                  required
+                  className="w-full px-3.5 py-2 bg-white border border-slate-200 rounded-xl text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-900 mb-1.5">
+                  Category
+                </label>
+                <select
+                  value={teachCategory}
+                  onChange={e => setTeachCategory(e.target.value)}
+                  className="w-full px-3.5 py-2 bg-white border border-slate-200 rounded-xl text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                >
+                  <option value="Customer Inquiries">Customer Inquiries</option>
+                  <option value="Product Knowledge">Product Knowledge</option>
+                  <option value="Pricing & Billing">Pricing & Billing</option>
+                  <option value="Policies & SLA">Policies & SLA</option>
+                </select>
+              </div>
+
+              <div className="pt-3 border-t border-slate-100 flex items-center justify-end gap-2.5">
+                <button
+                  type="button"
+                  onClick={() => setTeachModalOpen(false)}
+                  className="px-4 py-2 bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 hover:bg-slate-50 cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSavingAnswer || !teachQuestion.trim() || !teachAnswer.trim()}
+                  className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold transition-colors cursor-pointer shadow-xs disabled:opacity-50"
+                >
+                  {isSavingAnswer ? 'Saving & Resolving...' : 'Save & Resolve Inquiry'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

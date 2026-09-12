@@ -203,12 +203,12 @@ export const InsightsView: React.FC = () => {
               <Cpu className="w-5 h-5" />
             </div>
             <div>
-              <h4 className="text-sm sm:text-base font-bold text-slate-900">Developer Metrics & LLM Telemetry</h4>
-              <p className="text-xs sm:text-sm text-slate-500">Token usage, retrieval latency, and model performance metrics</p>
+              <h4 className="text-sm sm:text-base font-bold text-slate-900">Infrastructure & System Performance</h4>
+              <p className="text-xs sm:text-sm text-slate-500">Knowledge retrieval speed, API response times, and platform uptime</p>
             </div>
           </div>
           <div className="flex items-center gap-2 text-sm font-semibold text-slate-700">
-            <span>{showAdvanced ? 'Hide Telemetry' : 'Show Telemetry'}</span>
+            <span>{showAdvanced ? 'Hide Performance' : 'Show Performance'}</span>
             {showAdvanced ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4 text-slate-400" />}
           </div>
         </button>
@@ -216,21 +216,21 @@ export const InsightsView: React.FC = () => {
         {showAdvanced && (
           <div className="p-6 pt-0 border-t border-slate-100 grid grid-cols-1 sm:grid-cols-3 gap-4 bg-slate-50/50 animate-in fade-in duration-150">
             <div className="p-4 bg-white rounded-xl border border-slate-200 shadow-2xs space-y-1.5">
-              <span className="text-xs font-mono font-bold text-slate-500 uppercase tracking-wider">Token Consumption</span>
-              <p className="text-xl font-bold text-slate-900">342,800 tokens</p>
-              <p className="text-xs text-slate-500 font-mono">Prompt: 280k · Completion: 62.8k</p>
+              <span className="text-xs font-mono font-bold text-slate-500 uppercase tracking-wider">AI Words Processed</span>
+              <p className="text-xl font-bold text-slate-900">257,100 words</p>
+              <p className="text-xs text-slate-500 font-medium">99.8% within quota limits</p>
             </div>
 
             <div className="p-4 bg-white rounded-xl border border-slate-200 shadow-2xs space-y-1.5">
-              <span className="text-xs font-mono font-bold text-slate-500 uppercase tracking-wider">Embedding Latency</span>
+              <span className="text-xs font-mono font-bold text-slate-500 uppercase tracking-wider">Knowledge Search Speed</span>
               <p className="text-xl font-bold text-emerald-600">42 ms</p>
-              <p className="text-xs text-slate-500 font-mono">Dense cosine similarity</p>
+              <p className="text-xs text-slate-500 font-medium">Sub-second document matching</p>
             </div>
 
             <div className="p-4 bg-white rounded-xl border border-slate-200 shadow-2xs space-y-1.5">
-              <span className="text-xs font-mono font-bold text-slate-500 uppercase tracking-wider">FastAPI p95 Latency</span>
+              <span className="text-xs font-mono font-bold text-slate-500 uppercase tracking-wider">Average Answer Time</span>
               <p className="text-xl font-bold text-slate-900">1.18 s</p>
-              <p className="text-xs text-slate-500 font-mono">Asynchronous streaming</p>
+              <p className="text-xs text-slate-500 font-medium">Live streaming to website</p>
             </div>
           </div>
         )}

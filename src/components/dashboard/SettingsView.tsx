@@ -411,7 +411,7 @@ export const SettingsView: React.FC = () => {
                 <ShieldCheck className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5" />
                 <div>
                   <h5 className="font-bold text-sm text-slate-900">Row-Level Tenant Isolation</h5>
-                  <p className="text-xs text-slate-500 mt-0.5">Partitioned vector embeddings & tables</p>
+                  <p className="text-xs text-slate-500 mt-0.5">Partitioned knowledge stores & encrypted tables</p>
                 </div>
               </div>
 
