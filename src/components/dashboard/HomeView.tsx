@@ -8,9 +8,6 @@ import {
   ChevronRight,
   ArrowUpRight,
   ListTodo,
-  Sparkles,
-  FlaskConical,
-  Globe,
   HelpCircle
 } from 'lucide-react';
 import { useApp } from '../../context';
@@ -53,8 +50,6 @@ export const HomeView: React.FC = () => {
   const activeConnectionsCount = (integrations || []).filter(i => i?.connected).length;
   const readyKnowledgeCount = (knowledgeItems || []).filter(k => k?.status === 'indexed').length;
 
-  const isAssistantActive = currentCompany?.agent?.status === 'active';
-  const lifecycleStatus = currentCompany?.agent?.lifecycleStatus || 'published';
   const unansweredCount = pendingAttentionConversations.length;
 
   const checklistItems = [
@@ -68,56 +63,6 @@ export const HomeView: React.FC = () => {
 
   return (
     <div className="space-y-6 animate-in fade-in duration-150">
-      {/* 1. Top Assistant Status Banner */}
-      <div className="bg-white rounded-2xl p-5 sm:p-6 border border-slate-200/90 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div className="flex items-center gap-3.5">
-          <div className="w-11 h-11 rounded-xl bg-indigo-600 text-white flex items-center justify-center font-bold shadow-xs shrink-0">
-            <Sparkles className="w-5 h-5" />
-          </div>
-          <div>
-            <div className="flex items-center gap-2.5">
-              <h2 className="text-base sm:text-lg font-bold text-slate-900">
-                {currentCompany?.agent?.name || 'Company Assistant'}
-              </h2>
-              <span className={`text-[11px] font-bold px-2.5 py-0.5 rounded-full border ${
-                isAssistantActive && lifecycleStatus === 'published'
-                  ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                  : lifecycleStatus === 'draft'
-                  ? 'bg-amber-50 text-amber-700 border-amber-200'
-                  : 'bg-slate-100 text-slate-600 border-slate-200'
-              }`}>
-                {lifecycleStatus === 'draft' ? '● Draft Changes' : isAssistantActive ? '● Published & Live' : '● Paused'}
-              </span>
-            </div>
-            <p className="text-xs sm:text-sm text-slate-500 mt-0.5">
-              Trained on {readyKnowledgeCount} knowledge sources · Voice tone: <strong className="capitalize">{currentCompany?.agent?.tone || 'Professional'}</strong>
-            </p>
-          </div>
-        </div>
-
-        <div className="flex flex-wrap items-center gap-2.5">
-          <button
-            onClick={() => setCurrentTab('playground')}
-            className="px-3.5 py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 rounded-xl text-xs font-bold transition-colors flex items-center gap-1.5 cursor-pointer shadow-2xs"
-          >
-            <FlaskConical className="w-3.5 h-3.5" />
-            Test in Playground
-          </button>
-          <button
-            onClick={() => setCurrentTab('assistant')}
-            className="px-3.5 py-2 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 rounded-xl text-xs font-semibold transition-colors flex items-center gap-1.5 cursor-pointer shadow-2xs"
-          >
-            Edit Assistant
-          </button>
-          <button
-            onClick={() => setCurrentTab('deploy')}
-            className="px-3.5 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-bold transition-colors flex items-center gap-1.5 cursor-pointer shadow-xs"
-          >
-            <Globe className="w-3.5 h-3.5" />
-            Embed Widget
-          </button>
-        </div>
-      </div>
 
       {/* 2. Getting Started Checklist */}
       {completedCount < 4 && (
