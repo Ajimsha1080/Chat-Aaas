@@ -93,10 +93,10 @@ class LLMProvider:
                 continue
             title = "Verified Documentation"
             body = raw
-            if "): " in raw:
-                parts = raw.split("): ", 1)
-                title = parts[0].strip()
-                body = parts[1]
+            split_parts = re.split(r'\):\s*', raw, maxsplit=1)
+            if len(split_parts) == 2:
+                title = split_parts[0].strip()
+                body = split_parts[1]
                 doc_main_title = title
 
             lines = [l.strip() for l in body.split("\n") if l.strip()]
@@ -222,67 +222,70 @@ class LLMProvider:
         # Case 1: Standard Document / Policy / Guide / FAQ (e.g. Warranty, SLA, Technical Guide)
         if not is_sop_doc:
             md = [
-                f"Based on verified documentation (**{top['doc_title']}**):\n",
-                f"### 📋 {top['title']}\n",
+                f"### {top['title']}",
                 top["filtered_text"],
-                "\n💡 *Need more details? Feel free to ask any follow-up questions.*"
+                "Let me know if you need any further details or have follow-up questions!"
             ]
             return "\n\n".join(md)
 
         # Case 2: Specific SOP Procedure Match
-        is_general_query = len(meaningful_words) <= 2 or any(w in ["policy", "policies", "internal", "operations", "overview", "sop", "company"] for w in meaningful_words)
+        is_general_query = len(meaningful_words) <= 2 or any(w in ["policy", "policies", "internal", "operations", "overview", "sop", "company", "framework", "guidelines"] for w in meaningful_words)
         specific = top if (top["procedures"] or top["purpose"]) else None
 
         if specific and specific["score"] > 0 and not (is_general_query and len(parsed_chunks) > 1):
             md = []
-            md.append(f"Based on verified documentation (**{specific['doc_title']}**):\n")
-            title_header = f"### 📋 {specific['title']}"
+            title_header = f"### {specific['title']}"
             if specific['sop_id']:
                 title_header += f" (`{specific['sop_id']}`)"
             md.append(title_header)
 
-            meta = []
-            if specific['owner']: meta.append(f"**Owner**: {specific['owner']}")
-            if specific['applies_to']: meta.append(f"**Scope**: {specific['applies_to']}")
-            if specific['review']: meta.append(f"**Review**: {specific['review']}")
-            if meta:
-                md.append(" | ".join(meta))
-
             if specific['purpose']:
-                md.append(f"**🎯 Purpose:**\n{specific['purpose']}")
+                scope_text = f" *(Scope: {specific['applies_to']})*" if specific['applies_to'] else ""
+                md.append(f"{specific['purpose']}{scope_text}")
 
             if specific['procedures']:
-                md.append("**🛠️ Standard Operating Procedure:**\n" + "\n".join(specific['procedures']))
+                md.append("#### Standard Operating Procedure:\n" + "\n".join(specific['procedures']))
 
             if specific['records']:
-                md.append("**📑 Required Records & Evidence:**\n" + "\n".join([f"- {r}" for r in specific['records']]))
+                md.append("#### Required Records & Documentation:\n" + "\n".join([f"- {r}" for r in specific['records']]))
 
             if specific['escalations']:
-                md.append("**⚠️ Escalate When:**\n" + "\n".join([f"- {e}" for e in specific['escalations']]))
+                md.append("#### Escalation Guidelines:\n" + "\n".join([f"- {e}" for e in specific['escalations']]))
 
-            md.append("\n💡 *Need more details? Feel free to ask about related SOPs or specific escalation procedures.*")
+            md.append("Let me know if you would like more details or need assistance with any step!")
             return "\n\n".join(md)
 
-        # Case 3: SOP Executive Overview (GPT-level structured framework)
-        md = []
-        md.append(f"Based on the verified **{doc_main_title}**, here is an executive overview of the internal company policy and operational framework:\n")
+        # Case 3: Company Policy / SOP Framework Overview (Conversational, structured, natural)
+        clean_company = (
+            doc_main_title
+            .replace("Internal Company Operations SOP Premium", "")
+            .replace("Operations SOP Premium", "")
+            .replace("Internal Company Operations", "")
+            .replace(".pdf", "")
+            .replace(".docx", "")
+            .strip()
+        )
+        if clean_company and clean_company not in ["Verified Documentation", "Verified Company Knowledge Base", "Knowledge Document"]:
+            company_intro = f" for **{clean_company}**"
+        else:
+            company_intro = ""
 
-        md.append("### 📋 Governance & Scope\n"
-                  f"* **Document**: {doc_main_title}\n"
-                  "* **Owner & Authority**: Operations / Management\n"
-                  "* **Scope**: Mandatory for all employees, contractors, and authorized internal personnel.\n"
-                  "* **Core Objective**: Establishes a disciplined, accountable operating system for consistent and secure company execution.")
+        md = [
+            f"Here is an overview of the internal company policies and operational framework{company_intro}:\n\n"
+            "The operational framework establishes standard procedures across all departments to ensure consistent execution, accountability, data security, and compliance across all teams.",
 
-        md.append("### 🛡️ Core Operating Principles\n"
-                  "1. **Accountability** — Every recurring workflow has a designated owner.\n"
-                  "2. **Consistency** — Repeatable operational tasks follow authorized standard procedures.\n"
-                  "3. **Least Privilege** — Access to internal tools and confidential data is strictly restricted.\n"
-                  "4. **Traceability** — Significant decisions, approvals, and actions are recorded for audit.\n"
-                  "5. **Confidentiality** — Internal data is protected with strict information barriers.\n"
-                  "6. **Business Continuity** — Critical operations maintain verified recovery and backup paths.\n"
-                  "7. **Continuous Improvement** — Operational failures trigger root-cause analysis and SOP revisions.")
+            "### 🛡️ Core Operating Principles\n"
+            "1. **Accountability** — Every recurring workflow has a designated owner.\n"
+            "2. **Consistency** — Repeatable operational tasks follow authorized standard procedures.\n"
+            "3. **Least Privilege** — Access to internal tools and confidential data is strictly restricted.\n"
+            "4. **Traceability** — Significant decisions, approvals, and actions are recorded for audit.\n"
+            "5. **Confidentiality** — Internal data is protected with strict information barriers.\n"
+            "6. **Business Continuity** — Critical operations maintain verified recovery and backup paths.\n"
+            "7. **Continuous Improvement** — Operational failures trigger root-cause analysis and SOP revisions.",
 
-        md.append("### 📑 Key Policy Areas Covered\n")
+            "### 📑 Key Policy Areas Covered"
+        ]
+
         sop_highlights = []
         for p in parsed_chunks:
             if p['title'] and p['purpose'] and p['title'] != doc_main_title:
@@ -299,7 +302,7 @@ class LLMProvider:
             ]
 
         md.append("\n".join(sop_highlights[:6]))
-        md.append("\n---\n💡 *Tip: You can ask about any specific policy or procedure (e.g., 'What is the employee onboarding procedure?' or 'Explain the emergency escalation rules').*")
+        md.append("Feel free to ask if you would like more details on any specific policy, onboarding steps, or escalation workflows!")
 
         return "\n\n".join(md)
 

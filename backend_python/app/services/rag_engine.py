@@ -173,7 +173,7 @@ class RAGEngine:
             )
             answer = await LLMProvider.generate_response(prompt=query, system_instruction=sys_inst)
         except Exception:
-            answer = f"Based on verified company knowledge in '{getattr(chunks[0], 'title', 'Knowledge Base')}':\n\n{chunks[0].content}"
+            answer = f"### {getattr(chunks[0], 'title', 'Company Knowledge')}\n\n{chunks[0].content}"
 
         return {
             "success": True,
