@@ -7,7 +7,6 @@ import {
   Globe, 
   Settings, 
   Sparkles,
-  FlaskConical,
   CreditCard,
   X
 } from 'lucide-react';
@@ -47,8 +46,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isMobileOpen = false, onCloseM
       groupName: 'AI Assistant',
       items: [
         { id: 'assistant', label: 'Assistant', icon: Sparkles },
-        { id: 'knowledge', label: 'Knowledge', icon: BookOpen },
-        { id: 'playground', label: 'Playground', icon: FlaskConical }
+        { id: 'knowledge', label: 'Knowledge', icon: BookOpen }
       ]
     },
     {
