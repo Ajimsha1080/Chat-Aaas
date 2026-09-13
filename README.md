@@ -68,21 +68,20 @@ IMPROVE KNOWLEDGE
 
 ## ⚡ Key Platform Capabilities
 
-### 1. Simplified 9-Tab Enterprise Workspace
-- **Executive Overview**: High-impact KPI outcome cards (`Total Inquiries`, `Questions Answered`, `Resolution Rate %`, `Unanswered Questions`), real-time assistant status banner, and getting started checklist.
+### 1. Enterprise Workspace Navigation
+- **Executive Overview**: High-impact KPI outcome cards (`Total Inquiries`, `Questions Answered`, `Resolution Rate %`, `Unanswered Questions`), weekly throughput chart, attention queue, and getting started checklist.
 - **My Assistant**: Intuitive configuration of assistant identity, persona tone presets (Professional, Friendly, Empathetic, Direct), custom greetings, fallback responses, and simple lifecycle states (`Published`, `Draft changes pending`, `Paused`).
-- **Knowledge Base**: Simplified source ingestion for Websites, Documents (PDF/TXT/DOCX), and FAQs with clean business statuses (`✓ Ready`, `Processing...`, `⚠ Needs attention`).
-- **Dedicated Playground**: Split-screen workbench with live chat simulator, response source inspector citing verified knowledge, 👍 / 👎 feedback rating, and 1-click `[Teach New Answer]`.
-- **Conversations & Unanswered Questions**: Complete customer inbox with live staff takeover and an **Unanswered Questions** tab for continuous improvement.
+- **Knowledge Base**: Source ingestion for Websites, Documents (PDF/TXT/DOCX), and FAQs with clean business statuses (`✓ Ready`, `Processing...`, `⚠ Needs attention`).
+- **Conversations & Unanswered Questions**: Complete customer inbox with live staff takeover and an **Unanswered Questions** tab for continuous learning.
 - **Deploy**: Real-time website widget customizer (color, positioning, greeting), copy-paste `<script>` tag, React component embed, and REST API.
 - **Analytics & Insights**: Outcome-driven KPIs (autonomous resolution rate, inquiries handled, staff time saved, top customer inquiry topics).
 - **Billing & Plans**: Standalone subscription management, monthly usage meters (inquiries and documents), and tax invoices.
 - **Settings & Developer**: Consolidated company profile, team access control, security audit trail, and developer API credentials.
 
-### 2. Dedicated Side-by-Side Playground
-- **Live Simulator**: Test how the assistant answers customer questions before publishing changes.
-- **Source Inspection**: Inspect exact verified documents and citations referenced in every response.
-- **Continuous Calibration**: Rate responses with `[👍 Good answer]` or `[👎 Needs improvement]`, and use `[Teach New Answer]` to instantly store approved answers into the knowledge base.
+### 2. Conversational Q&A & Answer Synthesizer
+- **Natural, Human-Like Responses**: Eliminates robotic boilerplate openings (`"Based on verified documentation..."`) and raw database metadata dumps. Answers directly and conversationally with structured headings, numbered procedures, and clear bullet points.
+- **Grounded Source Attribution**: Synthesizes verified facts strictly from ingested company documents without hallucinating.
+- **Interactive Testing Drawer**: Accessible directly from the assistant workspace for testing and calibrating answers before publishing.
 
 ### 3. Multi-Tenant Knowledge Base & Grounded RAG
 - **5-Stage Telemetry Pipeline**: Real-time progress tracking through `UPLOADING` → `PARSING` → `CHUNKING` → `EMBEDDING` → `INDEXING` → `READY`.
@@ -161,12 +160,15 @@ docker-compose up -d --build
 
 ## 🧪 Testing & Verification
 
-### Run Backend Pytest Suite (67/67 tests passing):
+### Run Backend Pytest Suite (85/85 tests passing):
 ```powershell
 python -m pytest backend_python/app/tests/ -v
 ```
-Includes:
+Includes 85 automated unit and integration tests across 15 suites:
 - **Platform Super Admin & Security** (`test_super_admin.py`): Platform-level RBAC enforcement, rejection of anonymous access, non-admin forbidden access, role tampering attack defense, tenant suspension with immediate cross-channel block (JWT, API keys, chat widget), tenant re-activation, user management with Last Super Admin protection, audited impersonation sessions strictly barred from `/admin/*` endpoints, real infrastructure health probes (`SELECT 1`, Redis, pgvector), durable metrics reconciliation, emergency global AI killswitch enforcement across `/chat`, and tenant diagnostics inspection.
+- **Product-Level Hardening** (`test_product_level_fixes.py`): Production safeguards, input sanitization, error response contracts, and lifecycle invariants.
+- **Agent Lifecycle & Runtime** (`test_agent_lifecycle.py`, `test_agent_runtime.py`): State management (draft/publish/pause), version rollback, streaming execution, and confidence scoring.
+- **Tools & Risk Gates** (`test_tools_and_risk_gates.py`, `test_workers.py`): Idempotency key deduplication, background task claims, and risk gating.
 - **Round 2 Production Completion** (`test_round2_production_completion.py`): Authoritative SQL persistence across reloads (`load_from_database` / `flush_durable_storage`), cross-process distributed worker `JobQueue` backed by Redis & durable `BackgroundJob` table with atomic claims, strict eradication of unassociated tenant fallbacks in `AuthService`, dynamic tool execution without fake mock data, real integration network handshake latency measurement (`perf_counter`), protected specialized AI endpoints (`/v1/embeddings`, `/v1/rerank`, etc.), and live database/worker readiness checks.
 - **Production Features & Hardening** (`test_production_features.py`): Real SSE token streaming without simulated word splitting, 6-stage human handoff lifecycle (`ai_active` → `handoff_requested` → `assigned` → `human_active` → `resolved` → `closed`) with automated AI reply suppression during human operator sessions, tool idempotency key replay caching, multi-connection integrations with unique UUID IDs, and asynchronous queue workers with HMAC-SHA256 signature generation.
 - **Full End-to-End Fresh Customer Lifecycle** (`test_production_e2e_customer.py`): Starts from empty database to signup, clean workspace verification, honest refusal, document ingestion, RAG answer, draft publishing, deployment, chat persistence, trash/restore, and multi-tenant security isolation.
@@ -179,4 +181,4 @@ Includes:
 ```powershell
 npm run build
 ```
-Production build compiles with zero errors in ~1.6s with split vendor chunks and optimized public widget.
+Production build compiles with zero errors in ~2.1s with split vendor chunks and optimized public widget.
