@@ -103,6 +103,33 @@ export class AIAgentEngine {
     reasoning.push(`[Hierarchy 1: System Rules] Safety boundary enforced: Never hallucinate company data.`);
     reasoning.push(`[Hierarchy 2: Company Context] Agent "${company.agent.name}" tone=${company.agent.tone}, creativity=${company.agent.creativityLevel}`);
 
+    // Step 1.5: Conversational Greetings & Intent Handling
+    const cleanQuery = qLower.replace(/[^\w\s]/g, '').trim();
+    const greetings = ['hi', 'hello', 'hey', 'greetings', 'hi there', 'hello there', 'good morning', 'good afternoon', 'good evening', 'howdy'];
+    const gratitudes = ['thanks', 'thank you', 'thanks!', 'ty', 'great', 'awesome', 'perfect', 'thank you so much'];
+    const identityQueries = ['who are you', 'what can you do', 'what do you do', 'help'];
+
+    if (greetings.includes(cleanQuery) || greetings.some(g => cleanQuery.startsWith(g + ' '))) {
+      return {
+        message: company.agent.greetingMessage || `Hello! 👋 I'm ${company.agent.name}. How can I assist you with our services, pricing, or support today?`,
+        reasoningSteps: [`[Conversational Intent] Recognized greeting. Returning persona welcome message.`]
+      };
+    }
+
+    if (gratitudes.includes(cleanQuery)) {
+      return {
+        message: "You're very welcome! Let me know if you need anything else.",
+        reasoningSteps: [`[Conversational Intent] Recognized expression of gratitude.`]
+      };
+    }
+
+    if (identityQueries.includes(cleanQuery)) {
+      return {
+        message: `I'm **${company.agent.name}**, your official AI assistant! I can answer questions about our company products, documentation, policies, and process live requests.`,
+        reasoningSteps: [`[Conversational Intent] Recognized identity query.`]
+      };
+    }
+
     // Step 2: Check Escalation Keywords & Rules
     const escalation = company.agent.escalationSettings;
     if (escalation.enabled) {

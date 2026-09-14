@@ -126,6 +126,44 @@ class AgentRuntime:
                     session_id=request.session_id or "sess_live"
                 )
 
+        # 3.5 Conversational Greeting & Intent Detector (prevents RAG refusal on casual greetings)
+        clean_user_msg = re.sub(r'[^\w\s]', '', user_msg.lower()).strip()
+        greetings = ["hi", "hello", "hey", "greetings", "hi there", "hello there", "good morning", "good afternoon", "good evening", "howdy"]
+        gratitudes = ["thanks", "thank you", "thanks!", "ty", "great", "awesome", "perfect", "thank you so much"]
+        identity_queries = ["who are you", "what can you do", "what do you do", "help"]
+
+        agent_name = agent_config.get("name") or "Coar AI"
+        greeting_reply = agent_config.get("greetingMessage") or f"Hello! 👋 I'm {agent_name}. How can I assist you with our services, pricing, or policies today?"
+
+        if clean_user_msg in greetings or any(clean_user_msg.startswith(g + " ") for g in greetings):
+            reasoning_steps.append(ReasoningStep(
+                stage="Conversational Intent",
+                detail="Identified casual greeting. Replying with persona welcome message.",
+                timestamp=now_str
+            ))
+            return ChatResponse(
+                message=greeting_reply,
+                reasoning_steps=reasoning_steps,
+                confidence_score=1.0,
+                session_id=request.session_id or "sess_live"
+            )
+
+        if clean_user_msg in gratitudes:
+            return ChatResponse(
+                message="You're very welcome! Let me know if you need anything else.",
+                reasoning_steps=reasoning_steps,
+                confidence_score=1.0,
+                session_id=request.session_id or "sess_live"
+            )
+
+        if clean_user_msg in identity_queries:
+            return ChatResponse(
+                message=f"I'm **{agent_name}**, your official AI assistant! I can answer questions about our company products, documentation, policies, and process live requests.",
+                reasoning_steps=reasoning_steps,
+                confidence_score=1.0,
+                session_id=request.session_id or "sess_live"
+            )
+
         # 4. RAG Knowledge Search
         reasoning_steps.append(ReasoningStep(
             stage="RAG Knowledge Retrieval",
@@ -211,6 +249,32 @@ class AgentRuntime:
         escalation_keywords = ["human", "agent", "representative", "manager", "support person", "call me", "talk to human"]
         if any(kw in user_msg.lower() for kw in escalation_keywords):
             yield f"data: {json.dumps({'type': 'escalate', 'message': 'I am connecting you with a human support specialist right now.'})}\n\n"
+            yield "data: [DONE]\n\n"
+            return
+
+        # 2.5 Conversational Greeting & Intent Detector
+        import re
+        clean_user_msg = re.sub(r'[^\w\s]', '', user_msg.lower()).strip()
+        greetings = ["hi", "hello", "hey", "greetings", "hi there", "hello there", "good morning", "good afternoon", "good evening", "howdy"]
+        gratitudes = ["thanks", "thank you", "thanks!", "ty", "great", "awesome", "perfect", "thank you so much"]
+
+        agent_name = agent_config.get("name") or "Coar AI"
+        greeting_reply = agent_config.get("greetingMessage") or f"Hello! 👋 I'm {agent_name}. How can I assist you with our services, pricing, or policies today?"
+
+        if clean_user_msg in greetings or any(clean_user_msg.startswith(g + " ") for g in greetings):
+            conv_id = getattr(request, "conversation_id", None) or getattr(request, "session_id", None)
+            yield f"data: {json.dumps({'type': 'start', 'conversationId': conv_id, 'citations': [], 'confidenceScore': 1.0})}\n\n"
+            yield f"data: {json.dumps({'type': 'token', 'token': greeting_reply})}\n\n"
+            yield f"data: {json.dumps({'type': 'done', 'conversationId': conv_id, 'fullMessage': greeting_reply, 'tokensUsed': 15})}\n\n"
+            yield "data: [DONE]\n\n"
+            return
+
+        if clean_user_msg in gratitudes:
+            reply = "You're very welcome! Let me know if you need anything else."
+            conv_id = getattr(request, "conversation_id", None) or getattr(request, "session_id", None)
+            yield f"data: {json.dumps({'type': 'start', 'conversationId': conv_id, 'citations': [], 'confidenceScore': 1.0})}\n\n"
+            yield f"data: {json.dumps({'type': 'token', 'token': reply})}\n\n"
+            yield f"data: {json.dumps({'type': 'done', 'conversationId': conv_id, 'fullMessage': reply, 'tokensUsed': 10})}\n\n"
             yield "data: [DONE]\n\n"
             return
 
