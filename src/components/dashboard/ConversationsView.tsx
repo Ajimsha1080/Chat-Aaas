@@ -21,6 +21,7 @@ import {
   BookOpen
 } from 'lucide-react';
 import { useApp } from '../../context';
+import { renderFormattedMessage } from '../../utils/formatMessage';
 import { ConversationStatus, Conversation } from '../../types';
 import { GlobalActionMenu } from '../common/GlobalActionMenu';
 import { DeleteConfirmationModal } from '../common/DeleteConfirmationModal';
@@ -612,7 +613,7 @@ export const ConversationsView: React.FC = () => {
                             : 'bg-white text-slate-900 border border-slate-200/90 rounded-tl-xs shadow-xs'
                         }`}
                       >
-                        <p className="whitespace-pre-wrap">{msg.text}</p>
+                        <div>{renderFormattedMessage(msg.text)}</div>
                       </div>
                     </div>
                   </div>

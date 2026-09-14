@@ -12,6 +12,8 @@ import { Message, ToolExecutionTrace } from '../../types';
 import { AIAgentEngine } from '../../services/aiEngine';
 import { soundService } from '../../services/soundService';
 
+import { renderFormattedMessage } from '../../utils/formatMessage';
+
 const genId = (prefix: string) => `${prefix}-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
 
 export const TestAgentDrawer: React.FC = () => {
@@ -254,7 +256,7 @@ export const TestAgentDrawer: React.FC = () => {
                           : (isDarkMode ? 'border border-slate-800 shadow-xs rounded-bl-xs' : 'border border-slate-200/80 shadow-xs rounded-bl-xs')
                       }`}
                     >
-                      <div className="whitespace-pre-wrap">{msg.text}</div>
+                      <div>{renderFormattedMessage(msg.text)}</div>
                     </div>
 
                     {/* Pending Confirmation UI for High Risk Actions */}

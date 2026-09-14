@@ -12,6 +12,7 @@ import { useApp } from '../../context';
 import { Message, ToolExecutionTrace } from '../../types';
 import { AIAgentEngine } from '../../services/aiEngine';
 import { soundService } from '../../services/soundService';
+import { renderFormattedMessage } from '../../utils/formatMessage';
 
 interface ChatWidgetProps {
   isInlinePreview?: boolean;
@@ -221,7 +222,7 @@ export const ChatWidget: React.FC<ChatWidgetProps> = ({ isInlinePreview = false 
                           isUser ? 'rounded-br-xs shadow-xs' : (isDarkMode ? 'border border-slate-800 shadow-xs rounded-bl-xs' : 'border border-slate-200/80 shadow-xs rounded-bl-xs')
                         }`}
                       >
-                        <div className="whitespace-pre-wrap">{msg.text}</div>
+                        <div>{renderFormattedMessage(msg.text)}</div>
                       </div>
 
                       {/* Pending Confirmation Box */}

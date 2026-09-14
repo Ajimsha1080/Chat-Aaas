@@ -313,12 +313,27 @@
         }
       }
 
+      function parseWidgetMarkdown(text) {
+        if (!text) return '';
+        const cleanHeadingText = text.replace(/^#+\s*(.*?)$/gm, '**$1**');
+        let html = cleanHeadingText
+          .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+          .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+          .replace(/`(.*?)`/g, '<code style="background:rgba(0,0,0,0.06);padding:2px 5px;border-radius:4px;font-family:monospace;font-size:11px;">$1</code>')
+          .replace(/^[-•*]\s*(.*)$/gm, '<li style="margin-bottom:4px;list-style-type:disc;">$1</li>')
+          .replace(/\n\n/g, '<br/><br/>');
+        if (html.includes('<li')) {
+          html = html.replace(/(<li.*?<\/li>\s*)+/g, '<ul style="padding-left:18px;margin:6px 0;">$&</ul>');
+        }
+        return html;
+      }
+
       const data = await resp.json();
       typingIndicator.remove();
 
       const botMsg = document.createElement('div');
       botMsg.className = 'aaas-msg aaas-msg-bot';
-      botMsg.textContent = data.message || "Thank you for reaching out! How else can I assist you?";
+      botMsg.innerHTML = parseWidgetMarkdown(data.message || "Thank you for reaching out! How else can I assist you?");
       messagesEl.appendChild(botMsg);
       messagesEl.scrollTop = messagesEl.scrollHeight;
     } catch (err) {

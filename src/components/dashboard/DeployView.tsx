@@ -25,6 +25,7 @@ import {
   AlertTriangle
 } from 'lucide-react';
 import { useApp } from '../../context';
+import { renderFormattedMessage } from '../../utils/formatMessage';
 import { WidgetCustomization, DeploymentItem } from '../../types';
 import { soundService } from '../../services/soundService';
 import { GlobalActionMenu } from '../common/GlobalActionMenu';
@@ -1471,7 +1472,7 @@ export default function App() {
                             msg.sender === 'user' ? 'ml-auto border-transparent' : 'border border-white/5 text-left'
                           }`}
                         >
-                          {msg.text}
+                          {renderFormattedMessage(msg.text)}
                         </div>
                       ))}
 
