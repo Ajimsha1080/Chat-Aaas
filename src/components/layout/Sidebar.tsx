@@ -3,7 +3,6 @@ import {
   LayoutDashboard, 
   Sparkles, 
   BookOpen, 
-  PlayCircle, 
   Globe, 
   MessageSquare, 
   Settings, 
@@ -36,7 +35,6 @@ export const Sidebar: React.FC<SidebarProps> = ({ isMobileOpen = false, onCloseM
     { id: 'overview', label: 'Overview', icon: LayoutDashboard },
     { id: 'assistant', label: 'Assistant', icon: Sparkles },
     { id: 'knowledge', label: 'Knowledge', icon: BookOpen },
-    { id: 'test', label: 'Test', icon: PlayCircle },
     { id: 'deploy', label: 'Deploy', icon: Globe },
     { 
       id: 'conversations', 
@@ -79,7 +77,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isMobileOpen = false, onCloseM
       <div className="flex-1 overflow-y-auto px-3 py-4 space-y-1.5">
         {coreNavItems.map(item => {
           const Icon = item.icon;
-          const isActive = currentTab === item.id || (item.id === 'test' && currentTab === 'playground');
+          const isActive = currentTab === item.id;
           return (
             <button
               key={item.id}
