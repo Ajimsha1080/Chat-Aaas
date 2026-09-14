@@ -8,10 +8,7 @@ import {
   ChevronRight,
   ArrowUpRight,
   ListTodo,
-  HelpCircle,
-  Sparkles,
-  PlayCircle,
-  Globe
+  HelpCircle
 } from 'lucide-react';
 import { useApp } from '../../context';
 import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, CartesianGrid } from 'recharts';
@@ -63,59 +60,6 @@ export const HomeView: React.FC = () => {
   const maxConversations = currentPlan?.maxConversationsMonth ?? 5000;
   const usagePercent = Math.min(100, Math.round((messagesThisMonth / maxConversations) * 100));
 
-  // Determine State-Driven Primary Call To Action
-  let primaryCta = {
-    title: 'Your Assistant is Live & Answering Questions',
-    subtitle: `Handling autonomous conversations 24/7 with ${readyKnowledgeCount} verified knowledge sources.`,
-    buttonText: 'View Conversations Inbox',
-    action: () => setCurrentTab('conversations'),
-    badge: '● Live & Operational',
-    badgeColor: 'bg-emerald-50 text-emerald-700 border-emerald-200',
-    icon: MessageSquare
-  };
-
-  if (!currentCompany?.agent?.name || !currentCompany?.agent?.systemInstructions) {
-    primaryCta = {
-      title: 'Set Up Your AI Assistant',
-      subtitle: 'Define your assistant name, brand voice tone, and system instructions.',
-      buttonText: 'Configure Assistant',
-      action: () => setCurrentTab('assistant'),
-      badge: 'Step 1: Identity & Tone',
-      badgeColor: 'bg-indigo-50 text-indigo-700 border-indigo-200',
-      icon: Sparkles
-    };
-  } else if (readyKnowledgeCount === 0) {
-    primaryCta = {
-      title: 'Add Your Business Knowledge',
-      subtitle: 'Upload documents, add website URLs, or write FAQs to give your assistant accurate answers.',
-      buttonText: 'Add Knowledge Sources',
-      action: () => setCurrentTab('knowledge'),
-      badge: 'Step 2: Add Knowledge',
-      badgeColor: 'bg-amber-50 text-amber-700 border-amber-200',
-      icon: BookOpen
-    };
-  } else if (lifecycleStatus === 'draft') {
-    primaryCta = {
-      title: 'Draft Changes Pending — Ready for Testing',
-      subtitle: 'Test your updated assistant responses in the test workbench before publishing live.',
-      buttonText: 'Test in Workbench',
-      action: () => setCurrentTab('test'),
-      badge: 'Step 3: Test & Verify',
-      badgeColor: 'bg-indigo-50 text-indigo-700 border-indigo-200',
-      icon: PlayCircle
-    };
-  } else if (!isDeployed) {
-    primaryCta = {
-      title: 'Deploy Assistant to Your Website',
-      subtitle: 'Copy the lightweight embed script to launch the chat widget on your website.',
-      buttonText: 'Deploy Website Widget',
-      action: () => setCurrentTab('deploy'),
-      badge: 'Step 4: Go Live',
-      badgeColor: 'bg-purple-50 text-purple-700 border-purple-200',
-      icon: Globe
-    };
-  }
-
   const checklistItems = [
     { id: 1, title: 'Company profile and tone configured', completed: true, tab: 'assistant' },
     { id: 2, title: `Knowledge loaded (${readyKnowledgeCount} sources)`, completed: readyKnowledgeCount > 0, tab: 'knowledge' },
@@ -125,39 +69,9 @@ export const HomeView: React.FC = () => {
 
   const completedCount = checklistItems.filter(i => i.completed).length;
 
-  const CtaIcon = primaryCta.icon;
-
   return (
     <div className="space-y-6 animate-in fade-in duration-150">
-      {/* 1. Dynamic State-Driven Primary Action Banner */}
-      <div className="bg-gradient-to-r from-slate-900 via-slate-850 to-slate-900 rounded-2xl p-5 sm:p-6 border border-slate-800 text-white shadow-md flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div className="flex items-center gap-4">
-          <div className="w-12 h-12 rounded-xl bg-indigo-600/90 text-white flex items-center justify-center font-bold shadow-sm shrink-0 border border-indigo-400/30">
-            <CtaIcon className="w-6 h-6" />
-          </div>
-          <div>
-            <div className="flex items-center gap-2.5">
-              <h2 className="text-base sm:text-lg font-bold text-white tracking-tight">
-                {primaryCta.title}
-              </h2>
-              <span className={`text-[11px] font-bold px-2.5 py-0.5 rounded-full border ${primaryCta.badgeColor}`}>
-                {primaryCta.badge}
-              </span>
-            </div>
-            <p className="text-xs sm:text-sm text-slate-300 mt-1">
-              {primaryCta.subtitle}
-            </p>
-          </div>
-        </div>
-
-        <button
-          onClick={primaryCta.action}
-          className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs sm:text-sm font-bold transition-all flex items-center justify-center gap-2 cursor-pointer shadow-md shadow-indigo-600/20 shrink-0"
-        >
-          <span>{primaryCta.buttonText}</span>
-          <ArrowRight className="w-4 h-4" />
-        </button>
-      </div>
+      {/* Four Core Status Cards */}
 
       {/* 2. Four Core Status Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3.5 sm:gap-4">
