@@ -1,6 +1,7 @@
 import asyncio
 import json
 import httpx
+import re
 from typing import AsyncGenerator, Dict, Any, List, Optional
 from app.core.config import settings
 
@@ -63,6 +64,47 @@ class LLMProvider:
             return cls.synthesize_grounded_answer(prompt, system_instruction)
 
         return f"Regarding your inquiry about '{prompt}', our team is available to assist."
+
+    @classmethod
+    def format_chatgpt_style(cls, title: str, text: str, prompt: str) -> str:
+        """Formats raw extracted document text into a clean, structured ChatGPT-style response."""
+        clean_text = text.strip()
+
+        # Remove repetitive title prefix e.g. "Client Requirement & Scoping: "
+        if clean_text.lower().startswith(title.lower() + ":"):
+            clean_text = clean_text[len(title) + 1:].strip()
+        elif clean_text.lower().startswith(title.lower()):
+            clean_text = clean_text[len(title):].strip().lstrip(":-\n ")
+
+        # Remove leading Markdown hashes like "### Title" if present at top
+        clean_text = re.sub(r'^#+\s*.*?\n', '', clean_text).strip()
+
+        # Split into sentences or paragraphs
+        sentences = [s.strip() for s in re.split(r'(?<=[.?!])\s+', clean_text) if s.strip()]
+
+        formatted_blocks = []
+        for sentence in sentences:
+            # If sentence contains lists of items (e.g. "involves X, Y, Z, and W" or "includes X, Y, and Z")
+            if any(kw in sentence.lower() for kw in ["involves ", "includes ", "consists of ", "requires ", "features "]):
+                header_match = re.match(r'^(.*?(?:involves|includes|consists of|requires|features))\s*(.*)$', sentence, re.IGNORECASE)
+                if header_match:
+                    lead = header_match.group(1).strip()
+                    items_str = header_match.group(2).strip()
+                    raw_items = [item.strip().rstrip('.').lstrip('and ') for item in re.split(r',|\band\b', items_str) if item.strip()]
+                    
+                    bullet_list = [f"- **{item[0].upper() + item[1:]}**" for item in raw_items if len(item) > 2]
+                    if bullet_list:
+                        formatted_blocks.append(f"{lead}:\n" + "\n".join(bullet_list))
+                        continue
+
+            formatted_blocks.append(sentence)
+
+        result_body = "\n\n".join(formatted_blocks)
+        
+        # Clean title heading (avoid redundant titles like "Verified Documentation")
+        if title and len(title) > 3 and not title.lower().startswith("verified") and not title.lower().startswith("knowledge"):
+            return f"**{title}**\n\n{result_body}"
+        return result_body
 
     @classmethod
     def synthesize_grounded_answer(cls, prompt: str, system_instruction: str) -> str:
@@ -221,12 +263,7 @@ class LLMProvider:
 
         # Case 1: Standard Document / Policy / Guide / FAQ (e.g. Warranty, SLA, Technical Guide)
         if not is_sop_doc:
-            md = [
-                f"### {top['title']}",
-                top["filtered_text"],
-                "Let me know if you need any further details or have follow-up questions!"
-            ]
-            return "\n\n".join(md)
+            return cls.format_chatgpt_style(top['title'], top['filtered_text'], prompt)
 
         # Case 2: Specific SOP Procedure Match
         is_general_query = len(meaningful_words) <= 2 or any(w in ["policy", "policies", "internal", "operations", "overview", "sop", "company", "framework", "guidelines"] for w in meaningful_words)
@@ -234,7 +271,7 @@ class LLMProvider:
 
         if specific and specific["score"] > 0 and not (is_general_query and len(parsed_chunks) > 1):
             md = []
-            title_header = f"### {specific['title']}"
+            title_header = f"**{specific['title']}**"
             if specific['sop_id']:
                 title_header += f" (`{specific['sop_id']}`)"
             md.append(title_header)
@@ -244,15 +281,14 @@ class LLMProvider:
                 md.append(f"{specific['purpose']}{scope_text}")
 
             if specific['procedures']:
-                md.append("#### Standard Operating Procedure:\n" + "\n".join(specific['procedures']))
+                md.append("**Standard Operating Procedure:**\n" + "\n".join(specific['procedures']))
 
             if specific['records']:
-                md.append("#### Required Records & Documentation:\n" + "\n".join([f"- {r}" for r in specific['records']]))
+                md.append("**Required Records & Documentation:**\n" + "\n".join([f"- {r}" for r in specific['records']]))
 
             if specific['escalations']:
-                md.append("#### Escalation Guidelines:\n" + "\n".join([f"- {e}" for e in specific['escalations']]))
+                md.append("**Escalation Guidelines:**\n" + "\n".join([f"- {e}" for e in specific['escalations']]))
 
-            md.append("Let me know if you would like more details or need assistance with any step!")
             return "\n\n".join(md)
 
         # Case 3: Company Policy / SOP Framework Overview (Conversational, structured, natural)
