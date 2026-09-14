@@ -371,6 +371,7 @@ export type NavigationTab =
   | 'home'
   | 'assistant'
   | 'knowledge' 
+  | 'test'
   | 'playground'
   | 'conversations' 
   | 'deploy' 

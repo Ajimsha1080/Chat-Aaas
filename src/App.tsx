@@ -67,6 +67,7 @@ const DashboardContent: React.FC = () => {
         return <MyAssistantView />;
       case 'knowledge':
         return <KnowledgeView />;
+      case 'test':
       case 'playground':
         return <PlaygroundView />;
       case 'conversations':

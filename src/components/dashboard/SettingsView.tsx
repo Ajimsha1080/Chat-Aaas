@@ -39,7 +39,7 @@ export const SettingsView: React.FC = () => {
     showToast 
   } = useApp();
 
-  const [activeTab, setActiveTab] = useState<'profile' | 'assistant' | 'team' | 'billing' | 'developer'>('assistant');
+  const [activeTab, setActiveTab] = useState<'profile' | 'assistant' | 'team' | 'billing' | 'developer'>('profile');
   const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
   const [inviteName, setInviteName] = useState('');
   const [inviteEmail, setInviteEmail] = useState('');

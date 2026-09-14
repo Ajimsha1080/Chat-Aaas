@@ -216,7 +216,7 @@ export const PlaygroundView: React.FC = () => {
           </div>
           <div>
             <div className="flex items-center gap-2.5">
-              <h1 className="text-lg sm:text-xl font-bold text-slate-900 tracking-tight">Playground</h1>
+              <h1 className="text-lg sm:text-xl font-bold text-slate-900 tracking-tight">Test Workbench</h1>
               <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full border ${
                 isAssistantActive && lifecycleStatus === 'published'
                   ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
@@ -228,7 +228,7 @@ export const PlaygroundView: React.FC = () => {
               </span>
             </div>
             <p className="text-xs sm:text-sm text-slate-500 mt-0.5">
-              Test how your assistant responds to customer questions using your verified knowledge.
+              Ask questions, inspect source citations, and verify your knowledge before publishing to production.
             </p>
           </div>
         </div>

@@ -1,14 +1,13 @@
 import React from 'react';
 import { 
   LayoutDashboard, 
+  Sparkles, 
   BookOpen, 
-  MessageSquare, 
-  BarChart3, 
+  PlayCircle, 
   Globe, 
+  MessageSquare, 
   Settings, 
-  Sparkles,
-  CreditCard,
-  X
+  X 
 } from 'lucide-react';
 import { useApp } from '../../context';
 import { NavigationTab } from '../../types';
@@ -33,42 +32,22 @@ export const Sidebar: React.FC<SidebarProps> = ({ isMobileOpen = false, onCloseM
     if (onCloseMobile) onCloseMobile();
   };
 
-  const customerNavGroups: {
-    groupName?: string;
-    items: { id: NavigationTab; label: string; icon: any; badge?: string }[];
-  }[] = [
-    {
-      items: [
-        { id: 'overview', label: 'Overview', icon: LayoutDashboard }
-      ]
-    },
-    {
-      groupName: 'AI Assistant',
-      items: [
-        { id: 'assistant', label: 'Assistant', icon: Sparkles },
-        { id: 'knowledge', label: 'Knowledge', icon: BookOpen }
-      ]
-    },
-    {
-      groupName: 'Engagement & Channels',
-      items: [
-        { 
-          id: 'conversations', 
-          label: 'Conversations', 
-          icon: MessageSquare, 
-          badge: unreadConversationsCount > 0 ? `${unreadConversationsCount}` : undefined 
-        },
-        { id: 'deploy', label: 'Deploy', icon: Globe }
-      ]
-    },
-    {
-      groupName: 'Management',
-      items: [
-        { id: 'analytics', label: 'Analytics', icon: BarChart3 },
-        { id: 'billing', label: 'Billing', icon: CreditCard },
-        { id: 'settings', label: 'Settings', icon: Settings }
-      ]
+  const coreNavItems: { id: NavigationTab; label: string; icon: any; badge?: string }[] = [
+    { id: 'overview', label: 'Overview', icon: LayoutDashboard },
+    { id: 'assistant', label: 'Assistant', icon: Sparkles },
+    { id: 'knowledge', label: 'Knowledge', icon: BookOpen },
+    { id: 'test', label: 'Test', icon: PlayCircle },
+    { id: 'deploy', label: 'Deploy', icon: Globe },
+    { 
+      id: 'conversations', 
+      label: 'Conversations', 
+      icon: MessageSquare, 
+      badge: unreadConversationsCount > 0 ? `${unreadConversationsCount}` : undefined 
     }
+  ];
+
+  const secondaryNavItems: { id: NavigationTab; label: string; icon: any }[] = [
+    { id: 'settings', label: 'Settings', icon: Settings }
   ];
 
   const sidebarContent = (
@@ -97,45 +76,63 @@ export const Sidebar: React.FC<SidebarProps> = ({ isMobileOpen = false, onCloseM
       </div>
 
       {/* Primary Navigation Items */}
-      <div className="flex-1 overflow-y-auto px-3 py-3.5 space-y-3.5">
-        {customerNavGroups.map((group, gIdx) => (
-          <div key={gIdx} className="space-y-1">
-            {group.groupName && (
-              <div className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider px-3 pt-2 pb-1">
-                {group.groupName}
+      <div className="flex-1 overflow-y-auto px-3 py-4 space-y-1.5">
+        {coreNavItems.map(item => {
+          const Icon = item.icon;
+          const isActive = currentTab === item.id || (item.id === 'test' && currentTab === 'playground');
+          return (
+            <button
+              key={item.id}
+              onClick={() => handleSelectTab(item.id)}
+              className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-sm transition-all cursor-pointer ${
+                isActive
+                  ? 'bg-indigo-600/20 text-white font-semibold border-l-2 border-indigo-400 pl-2.5 shadow-xs'
+                  : 'text-slate-400 hover:bg-slate-900/90 hover:text-slate-200 font-medium'
+              }`}
+            >
+              <div className="flex items-center gap-2.5">
+                <Icon className={`w-4 h-4 transition-colors ${isActive ? 'text-indigo-400' : 'text-slate-400'}`} />
+                <span className="tracking-tight">{item.label}</span>
               </div>
-            )}
-            {group.items.map(item => {
-              const Icon = item.icon;
-              const isActive = currentTab === item.id;
-              return (
-                <button
-                  key={item.id}
-                  onClick={() => handleSelectTab(item.id)}
-                  className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm transition-all cursor-pointer ${
-                    isActive
-                      ? 'bg-indigo-600/20 text-white font-semibold border-l-2 border-indigo-400 pl-2.5 shadow-xs'
-                      : 'text-slate-400 hover:bg-slate-900/90 hover:text-slate-200 font-medium'
-                  }`}
-                >
-                  <div className="flex items-center gap-2.5">
-                    <Icon className={`w-4 h-4 transition-colors ${isActive ? 'text-indigo-400' : 'text-slate-400'}`} />
-                    <span className="tracking-tight text-sm">{item.label}</span>
-                  </div>
-                  {item.badge && (
-                    <span className={`text-[11px] px-2 py-0.5 rounded-full font-bold font-mono ${
-                      isActive 
-                        ? 'bg-indigo-500/30 text-indigo-200 border border-indigo-500/40' 
-                        : 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
-                    }`}>
-                      {item.badge}
-                    </span>
-                  )}
-                </button>
-              );
-            })}
-          </div>
-        ))}
+              {item.badge && (
+                <span className={`text-[11px] px-2 py-0.5 rounded-full font-bold font-mono ${
+                  isActive 
+                    ? 'bg-indigo-500/30 text-indigo-200 border border-indigo-500/40' 
+                    : 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
+                }`}>
+                  {item.badge}
+                </span>
+              )}
+            </button>
+          );
+        })}
+
+        {/* Visual Divider */}
+        <div className="pt-3 pb-2">
+          <div className="border-t border-slate-800/80" />
+        </div>
+
+        {/* Secondary Settings Item */}
+        {secondaryNavItems.map(item => {
+          const Icon = item.icon;
+          const isActive = currentTab === item.id;
+          return (
+            <button
+              key={item.id}
+              onClick={() => handleSelectTab(item.id)}
+              className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-sm transition-all cursor-pointer ${
+                isActive
+                  ? 'bg-indigo-600/20 text-white font-semibold border-l-2 border-indigo-400 pl-2.5 shadow-xs'
+                  : 'text-slate-400 hover:bg-slate-900/90 hover:text-slate-200 font-medium'
+              }`}
+            >
+              <div className="flex items-center gap-2.5">
+                <Icon className={`w-4 h-4 transition-colors ${isActive ? 'text-indigo-400' : 'text-slate-400'}`} />
+                <span className="tracking-tight">{item.label}</span>
+              </div>
+            </button>
+          );
+        })}
       </div>
 
       {/* User Identity Footer */}
