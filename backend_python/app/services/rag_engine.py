@@ -57,19 +57,28 @@ class RAGEngine:
         query: str, 
         company_id: str, 
         stored_chunks: List[Dict[str, Any]], 
-        threshold: float = 0.72, 
+        threshold: float = 0.25, 
         top_k: int = 3
     ) -> List[ChunkSearchResult]:
         """
         Retrieves relevant chunks strictly filtered by tenant company_id.
+        Applies stemming, stop-word filtering, and phrase boost.
         """
-        # Keyword-based & semantic similarity score calculation with stop-word filtering
         stop_words = {
             "what", "is", "the", "a", "an", "in", "on", "at", "for", "to", "of", "and", "or",
             "are", "how", "do", "does", "can", "tell", "me", "about", "our", "your", "this", "explain", "please"
         }
         all_query_words = set(re.findall(r'\w+', query.lower()))
-        meaningful_query_words = {w for w in all_query_words if w not in stop_words} or all_query_words
+        meaningful_query_words = {w for w in all_query_words if w not in stop_words and len(w) > 1} or all_query_words
+
+        def stem(w: str) -> str:
+            w = w.lower()
+            for suffix in ["ing", "ments", "ment", "tions", "tion", "ed", "es", "s"]:
+                if w.endswith(suffix) and len(w) - len(suffix) >= 3:
+                    return w[:-len(suffix)]
+            return w
+
+        stemmed_query_words = {stem(w) for w in meaningful_query_words}
         results: List[ChunkSearchResult] = []
 
         for chunk in stored_chunks:
@@ -81,17 +90,21 @@ class RAGEngine:
             content = chunk.get("content", "")
             title = chunk.get("metadata", {}).get("title") or chunk.get("title") or "Knowledge Base"
             section = chunk.get("sectionHeader") or ""
+            full_chunk_text = f"{content} {title} {section}".lower()
 
-            chunk_words = set(re.findall(r'\w+', f"{content} {title} {section}".lower()))
-            overlap = len(meaningful_query_words.intersection(chunk_words))
+            chunk_raw_words = set(re.findall(r'\w+', full_chunk_text))
+            chunk_stemmed_words = {stem(w) for w in chunk_raw_words}
+
+            overlap = len(stemmed_query_words.intersection(chunk_stemmed_words))
             
-            # Combined relevance metric
-            if overlap == 0:
+            if overlap == 0 and not any(w in full_chunk_text for w in stemmed_query_words if len(w) >= 3):
                 relevance = 0.0
             else:
-                relevance = min(1.0, (overlap / max(1, len(meaningful_query_words))) * 0.8 + 0.2)
-                if any(w in section.lower() or w in title.lower() for w in meaningful_query_words):
-                    relevance = min(1.0, relevance + 0.1)
+                relevance = min(1.0, (overlap / max(1, len(stemmed_query_words))) * 0.8 + 0.2)
+                if any(w in section.lower() or w in title.lower() for w in stemmed_query_words if len(w) >= 3):
+                    relevance = min(1.0, relevance + 0.15)
+                if query.lower().strip() in full_chunk_text:
+                    relevance = 1.0
 
             if relevance >= threshold:
                 results.append(ChunkSearchResult(
