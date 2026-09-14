@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { APIClient } from '../../api/apiClient';
 import { 
   Key, 
   Webhook, 
@@ -91,9 +92,24 @@ export const DeveloperConsole: React.FC = () => {
     setTestingWebhookId(null);
   };
 
-  const runSseSimulation = () => {
+  const runSseSimulation = async () => {
     setIsSseStreaming(true);
     setSseOutput([]);
+
+    try {
+      await APIClient.streamChatMessage(
+        'Explain how to scale deployment pods.',
+        (chunk: any) => {
+          setSseOutput(prev => [...prev, `data: ${JSON.stringify(chunk)}\n\n`]);
+        },
+        { isTestMode: true, conversationId: `conv-sse-live-${Date.now()}` }
+      );
+      setIsSseStreaming(false);
+      return;
+    } catch {
+      // Fallback local simulation if offline
+    }
+
     const chunks = [
       'data: {"id":"chat-1","object":"chat.completion.chunk","choices":[{"delta":{"role":"assistant"}}]}\n\n',
       'data: {"id":"chat-1","choices":[{"delta":{"content":"To scale your "}}]}\n\n',

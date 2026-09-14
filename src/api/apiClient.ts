@@ -296,6 +296,66 @@ export class APIClient {
     });
   }
 
+  public static async streamChatMessage(
+    message: string,
+    onChunk: (event: any) => void,
+    options?: {
+      conversationId?: string;
+      sessionId?: string;
+      isTestMode?: boolean;
+    }
+  ) {
+    const token = localStorage.getItem('auth_token') || 'demo_token_123';
+    const response = await fetch(`${this.baseUrl}/api/v1/chat/stream`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify({
+        message,
+        conversation_id: options?.conversationId,
+        session_id: options?.sessionId,
+        is_test_mode: options?.isTestMode ?? false
+      })
+    });
+
+    if (!response.ok) {
+      throw new Error(`SSE stream request failed with status ${response.status}`);
+    }
+
+    if (!response.body) {
+      throw new Error('Response body is null');
+    }
+
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder('utf-8');
+    let buffer = '';
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split('\n\n');
+      buffer = lines.pop() || '';
+      for (const line of lines) {
+        if (line.startsWith('data: ')) {
+          const rawData = line.replace('data: ', '').trim();
+          if (rawData === '[DONE]') {
+            onChunk({ type: 'done' });
+          } else {
+            try {
+              const parsed = JSON.parse(rawData);
+              onChunk(parsed);
+            } catch {
+              onChunk({ type: 'token', token: rawData });
+            }
+          }
+        }
+      }
+    }
+  }
+
   // ================= CONVERSATIONS ================= //
   public static async getConversations() {
     return this.request('/api/v1/conversations', 'GET');

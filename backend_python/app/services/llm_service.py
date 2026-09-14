@@ -339,10 +339,13 @@ class LLMProvider:
 
                 async with httpx.AsyncClient(timeout=30.0) as client:
                     async with client.stream("POST", custom_url, headers=headers, json=payload) as response:
-                        async for chunk in response.aiter_text():
-                            if chunk:
-                                yield chunk
-                        return
+                        if response.status_code == 200:
+                            async for chunk in response.aiter_text():
+                                if chunk:
+                                    yield chunk
+                            return
+                        else:
+                            print(f"[Custom LLM Stream Warning] Upstream returned status {response.status_code}. Falling back to grounded synthesizer.")
             except Exception as e:
                 print(f"[Custom LLM Stream Error] {e}")
 
