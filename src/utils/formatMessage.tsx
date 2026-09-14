@@ -1,56 +1,45 @@
 import React from 'react';
 
 /**
- * Formats inline markdown elements like **bold** and `code`.
+ * Formats inline text and strips any stray markdown asterisks (* or **) so no raw symbols ever show on screen.
  */
 export function formatInlineMarkdown(text: string): React.ReactNode {
   if (!text) return null;
-  const parts = text.split(/(\*\*.*?\*\*|`.*?`)/g);
-  return parts.map((part, idx) => {
-    if (part.startsWith('**') && part.endsWith('**') && part.length > 4) {
-      return (
-        <strong key={idx} className="font-bold text-current">
-          {part.slice(2, -2)}
-        </strong>
-      );
-    }
-    if (part.startsWith('`') && part.endsWith('`') && part.length > 2) {
-      return (
-        <code key={idx} className="px-1.5 py-0.5 rounded bg-slate-800/40 font-mono text-[11px] text-amber-300">
-          {part.slice(1, -1)}
-        </code>
-      );
-    }
-    return part;
-  });
+  const cleanText = text.replace(/\*\*/g, '').replace(/\*/g, '');
+  return <span>{cleanText}</span>;
 }
 
 /**
- * Renders structured markdown text into clean React nodes (paragraphs, bullet lists, bold text)
- * completely removing raw markdown syntax symbols like ** or ###.
+ * Renders structured markdown text into clean React nodes (paragraphs, bullet lists)
+ * completely removing raw markdown syntax symbols like * or ** or ###.
  */
 export function renderFormattedMessage(text: string): React.ReactNode {
   if (!text) return null;
 
-  // Clean raw markdown heading syntax e.g. "### Header" -> "**Header**"
-  const cleanHeadingText = text.replace(/^#+\s*(.*?)$/gm, '**$1**');
-  const paragraphs = cleanHeadingText.split(/\n\n+/);
+  // Clean raw markdown heading syntax & stray asterisks e.g. "### Header" -> "Header", "**Title**" -> "Title"
+  const cleanedText = text
+    .replace(/^#+\s*(.*?)$/gm, '$1')
+    .replace(/\*\*\*/g, '')
+    .replace(/\*\*/g, '')
+    .replace(/\*/g, '');
+
+  const paragraphs = cleanedText.split(/\n\n+/);
 
   return (
     <div className="space-y-2 leading-relaxed">
       {paragraphs.map((p, pIdx) => {
         const lines = p.split('\n').filter(Boolean);
-        const isList = lines.length > 0 && lines.every(l => l.trim().startsWith('-') || l.trim().startsWith('•') || l.trim().startsWith('*'));
+        const isList = lines.length > 0 && lines.every(l => l.trim().startsWith('-') || l.trim().startsWith('•'));
 
         if (isList) {
           return (
             <ul key={pIdx} className="space-y-1.5 my-1 pl-1">
               {lines.map((line, lIdx) => {
-                const cleanLine = line.trim().replace(/^[-•*]\s*/, '');
+                const cleanLine = line.trim().replace(/^[-•]\s*/, '');
                 return (
                   <li key={lIdx} className="flex items-start gap-2">
                     <span className="text-indigo-400 font-bold select-none shrink-0">•</span>
-                    <span className="flex-1">{formatInlineMarkdown(cleanLine)}</span>
+                    <span className="flex-1 font-medium">{cleanLine}</span>
                   </li>
                 );
               })}
@@ -58,12 +47,14 @@ export function renderFormattedMessage(text: string): React.ReactNode {
           );
         }
 
+        const isHeader = pIdx === 0 && lines.length === 1 && lines[0].length < 60 && !lines[0].endsWith('.');
+
         return (
-          <div key={pIdx}>
+          <div key={pIdx} className={isHeader ? "font-bold text-base text-current tracking-tight mb-1" : ""}>
             {lines.map((line, lIdx) => (
               <React.Fragment key={lIdx}>
                 {lIdx > 0 && <br />}
-                {formatInlineMarkdown(line)}
+                <span>{line}</span>
               </React.Fragment>
             ))}
           </div>

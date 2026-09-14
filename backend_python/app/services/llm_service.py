@@ -67,17 +67,23 @@ class LLMProvider:
 
     @classmethod
     def format_chatgpt_style(cls, title: str, text: str, prompt: str) -> str:
-        """Formats raw extracted document text into a clean, structured ChatGPT-style response."""
+        """Formats raw extracted document text into a clean, structured ChatGPT-style response without raw markdown symbols."""
         clean_text = text.strip()
 
-        # Remove repetitive title prefix e.g. "Client Requirement & Scoping: "
-        if clean_text.lower().startswith(title.lower() + ":"):
-            clean_text = clean_text[len(title) + 1:].strip()
-        elif clean_text.lower().startswith(title.lower()):
-            clean_text = clean_text[len(title):].strip().lstrip(":-\n ")
+        # Clean any stray markdown symbols from title
+        clean_title = re.sub(r'[*#\_~]', '', title).strip()
 
-        # Remove leading Markdown hashes like "### Title" if present at top
-        clean_text = re.sub(r'^#+\s*.*?\n', '', clean_text).strip()
+        # Remove repetitive title prefix e.g. "Client Requirement & Scoping: "
+        if clean_text.lower().startswith(clean_title.lower() + ":"):
+            clean_text = clean_text[len(clean_title) + 1:].strip()
+        elif clean_text.lower().startswith(clean_title.lower()):
+            clean_text = clean_text[len(clean_title):].strip().lstrip(":-\n ")
+
+        # Remove leading Markdown hashes or asterisks
+        clean_text = re.sub(r'^[*#\s]+', '', clean_text).strip()
+
+        # Clean all stray asterisks from raw text to avoid unclosed asterisk bugs
+        clean_text = clean_text.replace('***', '').replace('**', '').replace('*', '')
 
         # Split into sentences or paragraphs
         sentences = [s.strip() for s in re.split(r'(?<=[.?!])\s+', clean_text) if s.strip()]
@@ -90,9 +96,9 @@ class LLMProvider:
                 if header_match:
                     lead = header_match.group(1).strip()
                     items_str = header_match.group(2).strip()
-                    raw_items = [item.strip().rstrip('.').lstrip('and ') for item in re.split(r',|\band\b', items_str) if item.strip()]
+                    raw_items = [re.sub(r'[*#\_~]', '', item).strip().rstrip('.').lstrip('and ') for item in re.split(r',|\band\b', items_str) if item.strip()]
                     
-                    bullet_list = [f"- **{item[0].upper() + item[1:]}**" for item in raw_items if len(item) > 2]
+                    bullet_list = [f"- {item[0].upper() + item[1:]}" for item in raw_items if len(item) > 2]
                     if bullet_list:
                         formatted_blocks.append(f"{lead}:\n" + "\n".join(bullet_list))
                         continue
@@ -102,8 +108,8 @@ class LLMProvider:
         result_body = "\n\n".join(formatted_blocks)
         
         # Clean title heading (avoid redundant titles like "Verified Documentation")
-        if title and len(title) > 3 and not title.lower().startswith("verified") and not title.lower().startswith("knowledge"):
-            return f"**{title}**\n\n{result_body}"
+        if clean_title and len(clean_title) > 3 and not clean_title.lower().startswith("verified") and not clean_title.lower().startswith("knowledge"):
+            return f"{clean_title}\n\n{result_body}"
         return result_body
 
     @classmethod
