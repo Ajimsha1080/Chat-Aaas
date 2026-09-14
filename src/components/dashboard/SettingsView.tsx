@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { 
   Users, 
   User,
@@ -52,13 +52,6 @@ export const SettingsView: React.FC = () => {
   const [profileName, setProfileName] = useState(currentUserProfile?.fullName || 'Alex Morgan');
   const [profileAvatar, setProfileAvatar] = useState(currentUserProfile?.avatarUrl || '');
   const [isSavingProfile, setIsSavingProfile] = useState(false);
-
-  useEffect(() => {
-    if (currentUserProfile) {
-      setProfileName(currentUserProfile.fullName || '');
-      setProfileAvatar(currentUserProfile.avatarUrl || '');
-    }
-  }, [currentUserProfile]);
 
   const handleSaveProfile = async (e: React.FormEvent) => {
     e.preventDefault();
