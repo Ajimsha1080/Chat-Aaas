@@ -1,69 +1,155 @@
-import hashlib
-import hmac
-import time
-import json
+"""
+Security helpers for Chat-AaaS.
+
+JWT  — python-jose (HS256).  Never hand-roll token crypto.
+Passwords — passlib CryptContext with argon2 (bcrypt fallback for legacy hashes).
+Secrets  — base64 thin wrapper kept for API-key storage; swap for Fernet if you
+           need confidentiality guarantees beyond what the DB already provides.
+"""
+
 import base64
-from typing import Optional, Dict, Any
+import logging
 from datetime import timedelta
+from typing import Any, Dict, Optional
+
+from jose import JWTError, jwt
+from passlib.context import CryptContext
+
 from app.core.config import settings
 
+logger = logging.getLogger(__name__)
+
+# ---------------------------------------------------------------------------
+# Password hashing
+# Argon2 (preferred) when argon2-cffi is installed; bcrypt otherwise.
+# Both are supported by passlib and are safe choices.
+# ---------------------------------------------------------------------------
+
+try:
+    # passlib delays backend errors to hash() call time, so we must actually
+    # call hash() on a dummy value to confirm argon2-cffi is installed.
+    _test_ctx = CryptContext(schemes=["argon2"])
+    _test_ctx.hash("probe")
+    _primary_scheme = "argon2"
+    _extra_kwargs: dict = {
+        "argon2__time_cost": 3,
+        "argon2__memory_cost": 65536,
+        "argon2__parallelism": 2,
+    }
+    logger.info("Password hashing: using argon2")
+except Exception:
+    # argon2-cffi not installed (e.g. local dev).
+    # sha256_crypt is a pure-Python fallback — safe for dev, not for prod.
+    # Production Docker image must have argon2-cffi installed via requirements.txt.
+    _primary_scheme = "sha256_crypt"
+    _extra_kwargs = {"sha256_crypt__rounds": 656000}
+    logger.warning(
+        "[SECURITY] argon2-cffi is not available. Falling back to sha256_crypt. "
+        "This is acceptable for local development only — install argon2-cffi in production."
+    )
+
+# Build the scheme list: primary + sha256_crypt for legacy verify (unless sha256_crypt IS primary)
+_schemes = [_primary_scheme] if _primary_scheme == "sha256_crypt" else [_primary_scheme, "sha256_crypt"]
+_deprecated = [] if _primary_scheme == "sha256_crypt" else ["sha256_crypt"]
+
+_pwd_context = CryptContext(
+    schemes=_schemes,
+    deprecated=_deprecated,
+    **_extra_kwargs,
+)
+
+# Legacy bare-sha256 that was used before this refactor.
+# Only kept so existing stored hashes don't break on first login.
+import hashlib as _hashlib
+
+_LEGACY_SALT = "aaas_salt_sec_v2"
+
+
+def _is_legacy_hash(h: str) -> bool:
+    """64-char hex string → was produced by the old bare-SHA256 scheme."""
+    return len(h) == 64 and all(c in "0123456789abcdef" for c in h)
+
+
+def _legacy_hash(password: str) -> str:
+    return _hashlib.sha256((password + _LEGACY_SALT).encode()).hexdigest()
+
+
 def hash_password(password: str) -> str:
-    salt = "aaas_salt_sec_v2"
-    return hashlib.sha256((password + salt).encode('utf-8')).hexdigest()
+    """Hash a new password with argon2."""
+    return _pwd_context.hash(password)
+
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
-    return hash_password(plain_password) == hashed_password
+    """
+    Verify a password against its stored hash.
+    Transparently handles both argon2 hashes (new) and legacy bare-SHA256 (old).
+    """
+    if _is_legacy_hash(hashed_password):
+        return _legacy_hash(plain_password) == hashed_password
+    return _pwd_context.verify(plain_password, hashed_password)
 
-def create_jwt_token(user_id: str, company_id: str, role: str, expires_delta: Optional[timedelta] = None, extra_claims: Optional[Dict[str, Any]] = None) -> str:
-    payload = {
+
+# ---------------------------------------------------------------------------
+# JWT — python-jose
+# ---------------------------------------------------------------------------
+
+def create_jwt_token(
+    user_id: str,
+    company_id: str,
+    role: str,
+    expires_delta: Optional[timedelta] = None,
+    extra_claims: Optional[Dict[str, Any]] = None,
+) -> str:
+    """Issue a signed HS256 JWT."""
+    import time
+
+    expire_seconds = (
+        expires_delta.total_seconds()
+        if expires_delta
+        else settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60
+    )
+    payload: Dict[str, Any] = {
         "sub": user_id,
         "company_id": company_id,
         "role": role,
         "iat": int(time.time()),
-        "exp": int(time.time() + (expires_delta.total_seconds() if expires_delta else settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60))
+        "exp": int(time.time() + expire_seconds),
     }
     if extra_claims:
         payload.update(extra_claims)
-    header = base64.urlsafe_b64encode(b'{"alg":"HS256","typ":"JWT"}').decode('utf-8').rstrip("=")
-    payload_str = base64.urlsafe_b64encode(json.dumps(payload).encode('utf-8')).decode('utf-8').rstrip("=")
-    signature = hmac.new(
-        settings.JWT_SECRET.encode('utf-8'),
-        f"{header}.{payload_str}".encode('utf-8'),
-        hashlib.sha256
-    ).digest()
-    sig_str = base64.urlsafe_b64encode(signature).decode('utf-8').rstrip("=")
-    return f"{header}.{payload_str}.{sig_str}"
+
+    return jwt.encode(payload, settings.JWT_SECRET, algorithm=settings.JWT_ALGORITHM)
+
 
 def decode_jwt_token(token: str) -> Optional[Dict[str, Any]]:
+    """
+    Verify signature, algorithm, and expiry; return claims or None.
+    python-jose raises JWTError for any tampered / expired token.
+    """
     try:
-        parts = token.split(".")
-        if len(parts) != 3:
-            return None
-        header_b64, payload_b64, sig_b64 = parts
-        expected_sig = hmac.new(
-            settings.JWT_SECRET.encode('utf-8'),
-            f"{header_b64}.{payload_b64}".encode('utf-8'),
-            hashlib.sha256
-        ).digest()
-        expected_sig_b64 = base64.urlsafe_b64encode(expected_sig).decode('utf-8').rstrip("=")
-        if not hmac.compare_digest(sig_b64, expected_sig_b64):
-            return None
-        
-        rem = len(payload_b64) % 4
-        if rem > 0:
-            payload_b64 += "=" * (4 - rem)
-        payload = json.loads(base64.urlsafe_b64decode(payload_b64.encode('utf-8')).decode('utf-8'))
-        if payload.get("exp", 0) < time.time():
-            return None
+        payload = jwt.decode(
+            token,
+            settings.JWT_SECRET,
+            algorithms=[settings.JWT_ALGORITHM],   # explicit allowlist prevents alg=none attacks
+        )
         return payload
-    except Exception:
+    except JWTError as exc:
+        logger.debug("JWT decode failed: %s", exc)
         return None
 
+
+# ---------------------------------------------------------------------------
+# Thin secret store helpers (API keys stored in DB)
+# ---------------------------------------------------------------------------
+
 def encrypt_secret(plain_text: str) -> str:
-    return base64.b64encode(plain_text.encode('utf-8')).decode('utf-8')
+    """Base64-encode a plain-text secret before storing in the DB."""
+    return base64.b64encode(plain_text.encode("utf-8")).decode("utf-8")
+
 
 def decrypt_secret(cipher_text: str) -> str:
+    """Decode a base64-encoded secret retrieved from the DB."""
     try:
-        return base64.b64decode(cipher_text.encode('utf-8')).decode('utf-8')
+        return base64.b64decode(cipher_text.encode("utf-8")).decode("utf-8")
     except Exception:
         return cipher_text
