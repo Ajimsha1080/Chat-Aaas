@@ -266,7 +266,8 @@ export class AIAgentEngine {
       "what", "is", "the", "a", "an", "in", "on", "at", "for", "to", "of", "and", "or",
       "are", "how", "do", "does", "did", "can", "could", "would", "should", "will", "tell", "me",
       "about", "our", "your", "you", "know", "this", "that", "these", "those", "explain", "please",
-      "who", "where", "when", "why", "which", "have", "has", "had", "think", "with", "from"
+      "who", "where", "when", "why", "which", "have", "has", "had", "think", "with", "from",
+      "give", "information", "info", "details", "detail", "overview", "summary", "provide", "show", "list", "help"
     ]);
 
     const allQueryWords = qLower.split(/\s+/).filter(w => w.length > 1);

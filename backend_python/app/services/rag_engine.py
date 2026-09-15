@@ -68,7 +68,8 @@ class RAGEngine:
             "what", "is", "the", "a", "an", "in", "on", "at", "for", "to", "of", "and", "or",
             "are", "how", "do", "does", "did", "can", "could", "would", "should", "will", "tell", "me",
             "about", "our", "your", "you", "know", "this", "that", "these", "those", "explain", "please",
-            "who", "where", "when", "why", "which", "have", "has", "had", "think", "with", "from"
+            "who", "where", "when", "why", "which", "have", "has", "had", "think", "with", "from",
+            "give", "information", "info", "details", "detail", "overview", "summary", "provide", "show", "list", "help"
         }
         all_query_words = set(re.findall(r'\w+', query.lower()))
         meaningful_query_words = {w for w in all_query_words if w not in stop_words and len(w) > 1} or all_query_words
