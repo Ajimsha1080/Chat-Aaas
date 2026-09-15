@@ -57,8 +57,8 @@ echo "🏗️ Building and starting Docker containers..."
 $DOCKER_EXEC up -d --build
 
 # 7. Wait for health checks
-echo "⏳ Waiting for backend health check..."
-sleep 5
+echo "⏳ Waiting 10 seconds for services to initialize..."
+sleep 10
 
 $DOCKER_EXEC ps
 
