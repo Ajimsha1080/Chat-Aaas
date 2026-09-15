@@ -28,8 +28,7 @@ def create_jwt_token(user_id: str, company_id: str, role: str, expires_delta: Op
     payload_str = base64.urlsafe_b64encode(json.dumps(payload).encode('utf-8')).decode('utf-8').rstrip("=")
     signature = hmac.new(
         settings.JWT_SECRET.encode('utf-8'),
-        f"{
-            header}.{payload_str}".encode('utf-8'),
+        f"{header}.{payload_str}".encode('utf-8'),
         hashlib.sha256
     ).digest()
     sig_str = base64.urlsafe_b64encode(signature).decode('utf-8').rstrip("=")
