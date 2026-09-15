@@ -261,22 +261,36 @@ export class AIAgentEngine {
     // Step 4: Knowledge Base RAG Search (Semantic Chunk Matching)
     reasoning.push(`[Hierarchy 3: Company Knowledge] Performing semantic vector retrieval across ${knowledgeItems.length} indexed documents...`);
     
-    // Find best matching knowledge item
+    // Find best matching knowledge item with stop-word filtering
+    const stopWords = new Set([
+      "what", "is", "the", "a", "an", "in", "on", "at", "for", "to", "of", "and", "or",
+      "are", "how", "do", "does", "did", "can", "could", "would", "should", "will", "tell", "me",
+      "about", "our", "your", "you", "know", "this", "that", "these", "those", "explain", "please",
+      "who", "where", "when", "why", "which", "have", "has", "had", "think", "with", "from"
+    ]);
+
+    const allQueryWords = qLower.split(/\s+/).filter(w => w.length > 1);
+    const meaningfulQueryWords = allQueryWords.filter(w => !stopWords.has(w));
+    const targetWords = meaningfulQueryWords.length > 0 ? meaningfulQueryWords : allQueryWords;
+
     const matchedDocs: { item: KnowledgeItem; score: number }[] = [];
-    const queryWords = qLower.split(/\s+/).filter(w => w.length > 2);
 
     for (const item of knowledgeItems) {
       if (item.status !== 'indexed') continue;
       const combinedText = `${item.title} ${item.content} ${item.faqAnswer || ''} ${item.category || ''}`.toLowerCase();
       let matchCount = 0;
-      for (const word of queryWords) {
+      for (const word of targetWords) {
         if (combinedText.includes(word)) {
           matchCount++;
         }
       }
-      const score = queryWords.length > 0 ? (matchCount / queryWords.length) : 0;
-      if (score > 0.15 || combinedText.includes(qLower)) {
-        matchedDocs.push({ item, score: Math.max(score, 0.75) });
+
+      // Require at least one meaningful keyword match
+      if (matchCount === 0 && !combinedText.includes(qLower)) continue;
+
+      const score = targetWords.length > 0 ? (matchCount / targetWords.length) : 0;
+      if (score >= 0.35 || combinedText.includes(qLower)) {
+        matchedDocs.push({ item, score });
       }
     }
 
