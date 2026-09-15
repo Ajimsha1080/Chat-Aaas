@@ -315,7 +315,9 @@
 
       function parseWidgetMarkdown(text) {
         if (!text) return '';
-        const cleanHeadingText = text.replace(/^#+\s*(.*?)$/gm, '**$1**');
+        const cleanHeadingText = text
+          .replace(/\s*\(`?[A-Za-z0-9]+-[A-Za-z0-9]+-[A-Za-z0-9]+`?\)?/g, '')
+          .replace(/^#+\s*(.*?)$/gm, '**$1**');
         let html = cleanHeadingText
           .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
           .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')

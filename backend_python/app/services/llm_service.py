@@ -277,9 +277,9 @@ class LLMProvider:
 
         if specific and specific["score"] > 0 and not (is_general_query and len(parsed_chunks) > 1):
             md = []
+        if specific and specific["score"] > 0 and not (is_general_query and len(parsed_chunks) > 1):
+            md = []
             title_header = f"**{specific['title']}**"
-            if specific['sop_id']:
-                title_header += f" (`{specific['sop_id']}`)"
             md.append(title_header)
 
             if specific['purpose']:
@@ -331,16 +331,17 @@ class LLMProvider:
         sop_highlights = []
         for p in parsed_chunks:
             if p['title'] and p['purpose'] and p['title'] != doc_main_title:
-                sop_highlights.append(f"* **{p['title']}**" + (f" (`{p['sop_id']}`)" if p['sop_id'] else "") + f": {p['purpose']}")
+                clean_title = re.sub(r'\s*\(`?[A-Za-z0-9]+-[A-Za-z0-9]+-[A-Za-z0-9]+`?\)?', '', p['title']).strip()
+                sop_highlights.append(f"* **{clean_title}**: {p['purpose']}")
 
         if not sop_highlights:
             sop_highlights = [
-                "* **Employee Onboarding (`BFT-HR-011`)**: Structured onboarding, equipment issuance, access control, and policy sign-off.",
-                "* **Internal Training & Compliance (`BFT-HR-021`)**: Mandatory compliance training, policy acknowledgements, and tracking.",
-                "* **Confidentiality & Conflict of Interest (`BFT-OPS-022`)**: Non-disclosure safeguards, conflict reporting, and IP protection.",
-                "* **Business Continuity & Recovery (`BFT-OPS-018`)**: Critical system backups, alternative access, and recovery protocols.",
-                "* **Issue & Corrective Action (`BFT-OPS-019`)**: Incident containment, root-cause investigation, and corrective action tracking.",
-                "* **Emergency Escalation (`BFT-OPS-024`)**: Rapid-response channels for major outages, data breaches, or legal risks."
+                "* **Employee Onboarding**: Structured onboarding, equipment issuance, access control, and policy sign-off.",
+                "* **Internal Training & Compliance**: Mandatory compliance training, policy acknowledgements, and tracking.",
+                "* **Confidentiality & Conflict of Interest**: Non-disclosure safeguards, conflict reporting, and IP protection.",
+                "* **Business Continuity & Recovery**: Critical system backups, alternative access, and recovery protocols.",
+                "* **Issue & Corrective Action**: Incident containment, root-cause investigation, and corrective action tracking.",
+                "* **Emergency Escalation**: Rapid-response channels for major outages, data breaches, or legal risks."
             ]
 
         md.append("\n".join(sop_highlights[:6]))

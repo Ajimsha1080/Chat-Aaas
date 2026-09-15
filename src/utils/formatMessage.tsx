@@ -16,8 +16,9 @@ export function formatInlineMarkdown(text: string): React.ReactNode {
 export function renderFormattedMessage(text: string): React.ReactNode {
   if (!text) return null;
 
-  // Clean raw markdown heading syntax & stray asterisks e.g. "### Header" -> "Header", "**Title**" -> "Title"
+  // Clean raw markdown heading syntax, internal document codes & stray asterisks e.g. "### Header" -> "Header", "`BFT-HR-011`" -> ""
   const cleanedText = text
+    .replace(/\s*\(`?[A-Za-z0-9]+-[A-Za-z0-9]+-[A-Za-z0-9]+`?\)?/g, '')
     .replace(/^#+\s*(.*?)$/gm, '$1')
     .replace(/\*\*\*/g, '')
     .replace(/\*\*/g, '')
