@@ -17,9 +17,12 @@ if ! command -v docker &> /dev/null; then
     echo "✅ Docker installed successfully."
 fi
 
+# Ensure docker service is running
+sudo systemctl start docker || true
+
 # 2. Determine Docker Compose command variant
 COMPOSE_CMD="docker compose"
-if ! docker compose version &> /dev/null; then
+if ! sudo docker compose version &> /dev/null; then
     if command -v docker-compose &> /dev/null; then
         COMPOSE_CMD="docker-compose"
     else
@@ -29,7 +32,8 @@ if ! docker compose version &> /dev/null; then
     fi
 fi
 
-echo "✅ Using Compose runner: $COMPOSE_CMD"
+DOCKER_EXEC="sudo $COMPOSE_CMD"
+echo "✅ Using Compose runner: $DOCKER_EXEC"
 
 # 3. Check for .env file
 if [ ! -f .env ]; then
@@ -46,17 +50,17 @@ fi
 
 # 5. Stop existing containers and clean unused resources
 echo "🧹 Stopping old containers..."
-$COMPOSE_CMD down --remove-orphans || true
+$DOCKER_EXEC down --remove-orphans || true
 
 # 6. Build and launch services in detached mode
 echo "🏗️ Building and starting Docker containers..."
-$COMPOSE_CMD up -d --build
+$DOCKER_EXEC up -d --build
 
 # 7. Wait for health checks
 echo "⏳ Waiting for backend health check..."
 sleep 5
 
-$COMPOSE_CMD ps
+$DOCKER_EXEC ps
 
 echo "======================================================================"
 echo "🎉 DEPLOYMENT COMPLETE!"
