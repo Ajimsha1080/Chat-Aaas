@@ -21,10 +21,12 @@ export class APIClient {
   private static token: string | null = null;
   private static adminToken: string | null = null;
   private static currentCompanyId = 'comp-techflow';
-  private static baseUrl = (typeof import.meta !== 'undefined' && import.meta.env?.VITE_API_BASE_URL) 
-    || (typeof window !== 'undefined' && (window.location.port === '5173' || window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
-        ? '' 
-        : (typeof window !== 'undefined' ? window.location.origin : 'http://127.0.0.1:8001'));
+  private static baseUrl = (typeof import.meta !== 'undefined' && import.meta.env?.VITE_API_BASE_URL)
+    || (typeof window !== 'undefined'
+        ? (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+            ? ''
+            : `http://${window.location.hostname}:8000`)
+        : '');
 
   public static setAuth(token: string | null, companyId: string): void {
     this.token = token;
