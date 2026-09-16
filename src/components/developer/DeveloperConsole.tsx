@@ -113,10 +113,9 @@ export const DeveloperConsole: React.FC = () => {
     const chunks = [
       'data: {"id":"chat-1","object":"chat.completion.chunk","choices":[{"delta":{"role":"assistant"}}]}\n\n',
       'data: {"id":"chat-1","choices":[{"delta":{"content":"To scale your "}}]}\n\n',
-      'data: {"id":"chat-1","choices":[{"delta":{"content":"Kubernetes cluster pods in "}}]}\n\n',
-      'data: {"id":"chat-1","choices":[{"delta":{"content":"TechFlow Cloud, you can use "}}]}\n\n',
-      'data: {"id":"chat-1","choices":[{"delta":{"content":"kubectl scale deployment or "}}]}\n\n',
-      'data: {"id":"chat-1","choices":[{"delta":{"content":"enable Horizontal Pod Autoscaling (HPA)."}}]}\n\n',
+      'data: {"id":"chat-1","choices":[{"delta":{"content":"your enterprise workspace, you can use "}}]}\n\n',
+      'data: {"id":"chat-1","choices":[{"delta":{"content":"the CoarAI streaming API or "}}]}\n\n',
+      'data: {"id":"chat-1","choices":[{"delta":{"content":"custom webhook integration triggers."}}]}\n\n',
       'data: [DONE]\n\n'
     ];
     let idx = 0;

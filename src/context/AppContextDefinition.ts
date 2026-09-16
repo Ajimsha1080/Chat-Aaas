@@ -102,7 +102,7 @@ export const normalizeCompany = (c: any): Company => {
 export const normalizeConversation = (c: any): Conversation => {
   if (!c) return {
     id: 'conv-default',
-    companyId: 'comp-techflow',
+    companyId: '',
     customerName: 'Website Visitor',
     channel: 'website_widget',
     startedAt: new Date().toISOString(),
@@ -111,7 +111,7 @@ export const normalizeConversation = (c: any): Conversation => {
     messages: [],
     sentiment: 'neutral',
     tags: ['Live Session'],
-    totalTokensUsed: 100
+    totalTokensUsed: 0
   };
 
   return {

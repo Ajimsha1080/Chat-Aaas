@@ -100,7 +100,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   });
 
   const [currentCompanyId, setCurrentCompanyId] = useState<string>(() => {
-    return companies[0]?.id || 'comp-techflow';
+    return companies[0]?.id || '';
   });
 
   const [allPlans, setAllPlans] = useState<SubscriptionPlan[]>(() => {
@@ -185,22 +185,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const [teamMembersMap, setTeamMembersMap] = useState<Record<string, TeamMember[]>>(() => {
     const saved = localStorage.getItem(`${LOCAL_STORAGE_KEY}_teams`);
-    return saved ? JSON.parse(saved) : { [INITIAL_COMPANIES[0].id]: INITIAL_TEAM };
+    return saved ? JSON.parse(saved) : {};
   });
 
   useEffect(() => {
     localStorage.setItem(`${LOCAL_STORAGE_KEY}_teams`, JSON.stringify(teamMembersMap));
   }, [teamMembersMap]);
 
-  const teamMembers = teamMembersMap[currentCompanyId] || INITIAL_TEAM;
+  const teamMembers = teamMembersMap[currentCompanyId] || [];
 
-  const [currentUserProfile, setCurrentUserProfile] = useState<{ id: string; fullName: string; email: string; role: string; avatarUrl?: string } | null>({
-    id: 'usr-alex',
-    fullName: 'Alex Morgan',
-    email: 'alex@techflow.io',
-    role: 'owner',
-    avatarUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80'
-  });
+  const [currentUserProfile, setCurrentUserProfile] = useState<{ id: string; fullName: string; email: string; role: string; avatarUrl?: string } | null>(null);
 
   useEffect(() => {
     APIClient.getCurrentUserProfile()

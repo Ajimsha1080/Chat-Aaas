@@ -164,7 +164,7 @@ export class AIAgentEngine {
     if (checkQuotaAction && (qLower.includes('quota') || qLower.includes('cluster') || qLower.includes('spend') || qLower.includes('status') || qLower.includes('nodes') || qLower.includes('order') || qLower.includes('report'))) {
       // Extract cluster or entity ID if present
       const clusterMatch = userQuery.match(/(cls-[a-z0-9-]+|ord-[0-9]+|rep-[0-9]+)/i);
-      const targetId = clusterMatch ? clusterMatch[0] : (company.slug === 'techflow' ? 'cls-prod-9941' : 'ORD-88421');
+      const targetId = clusterMatch ? clusterMatch[0] : (checkQuotaAction.code === 'check_order_status' ? 'ORD-88421' : 'REF-10021');
 
       reasoning.push(`[Hierarchy 4: Data Integration] Target entity extracted: ${targetId}`);
       reasoning.push(`[Hierarchy 5: Approved Actions] Matched tool: ${checkQuotaAction.name} (${checkQuotaAction.code})`);
@@ -174,22 +174,14 @@ export class AIAgentEngine {
         arguments: { targetId },
         result: {
           id: targetId,
-          status: 'Healthy / Active',
-          utilization: '64% Compute Load',
-          metrics: { cpu: '62%', memory: '58%', activeInstances: 14, currentCycleCost: '$389.20' }
+          status: 'Active / Verified',
+          details: `Processed via ${company.name} integration pipeline.`
         },
         status: 'executed',
         executedAt: new Date().toISOString()
       };
 
-      let responseText = '';
-      if (company.slug === 'techflow') {
-        responseText = `I accessed the live telemetry through the TechFlow Cluster Analytics DB. Cluster **${targetId}** is healthy, operating with 14 active nodes (62% CPU, 58% RAM). Current month-to-date compute cost is **$389.20**.`;
-      } else if (company.slug === 'apexhealth') {
-        responseText = `Your diagnostic report **${targetId}** has been processed and signed off by Chief Pathologist Dr. V. Rao. You can view the report or request SMS delivery.`;
-      } else {
-        responseText = `Order **${targetId}** has been packed and dispatched via Bluedart Express (Tracking: BLU-992144). Estimated arrival: Tomorrow by 4:00 PM.`;
-      }
+      const responseText = `I processed your request using **${checkQuotaAction.name}** for reference **${targetId}**. Status: Active / Verified.`;
 
       return {
         message: responseText,

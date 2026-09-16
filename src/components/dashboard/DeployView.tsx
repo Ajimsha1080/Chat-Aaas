@@ -720,7 +720,7 @@ export default function App() {
                         setBrandName(e.target.value);
                         updateCompany({ name: e.target.value });
                       }}
-                      placeholder="e.g. TechFlow Cloud Infrastructure"
+                      placeholder="e.g. Acme Corporation"
                       className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm font-semibold text-slate-900 focus:bg-white focus:ring-1 focus:ring-slate-900 focus:outline-hidden"
                     />
                   </div>

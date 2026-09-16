@@ -77,10 +77,10 @@ export const MyAssistantView: React.FC = () => {
           if (res.dependencies.apiKeys) {
             res.dependencies.apiKeys.forEach((k: any) => list.push(`API Key: ${k.name}`));
           }
-          setDependencies(list.length > 0 ? list : ['Production Website Widget (https://techflow.io)', 'Mobile App REST API Integration', 'Active Customer Chat Sessions']);
+          setDependencies(list);
         }
       } catch {
-        setDependencies(['Production Website Widget (https://techflow.io)', 'Mobile App REST API Integration', 'Active Customer Chat Sessions']);
+        setDependencies([]);
       }
     };
     fetchDeps();

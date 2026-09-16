@@ -183,7 +183,8 @@ export const SettingsView: React.FC = () => {
                 <label className="font-semibold text-slate-800 block mb-1.5">Email Address</label>
                 <input
                   type="email"
-                  value={currentUserProfile?.email || 'alex@techflow.io'}
+                  value={currentUserProfile?.email || ''}
+                  placeholder="admin@yourcompany.com"
                   disabled
                   className="w-full px-3.5 py-2.5 bg-slate-100 border border-slate-200 rounded-xl font-medium text-slate-500 cursor-not-allowed"
                 />

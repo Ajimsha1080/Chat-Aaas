@@ -20,7 +20,7 @@ export interface TestResult {
 export class APIClient {
   private static token: string | null = null;
   private static adminToken: string | null = null;
-  private static currentCompanyId = 'comp-techflow';
+  private static currentCompanyId = '';
   private static baseUrl = (typeof import.meta !== 'undefined' && import.meta.env?.VITE_API_BASE_URL) || '';
 
   public static setAuth(token: string | null, companyId: string): void {
@@ -727,7 +727,7 @@ export class APIClient {
   public static clearImpersonation(): void {
     if (this.adminToken) {
       this.token = this.adminToken;
-      this.currentCompanyId = 'comp-techflow';
+      this.currentCompanyId = '';
     }
   }
 
