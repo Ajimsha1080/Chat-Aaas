@@ -243,7 +243,7 @@ def update_user_role(
         db.memberships[mem_id] = {
             "id": mem_id,
             "userId": user_id,
-            "companyId": req.companyId or "comp-techflow",
+            "companyId": req.companyId or "comp-platform",
             "role": req.role,
             "status": "active",
             "createdAt": time.strftime("%Y-%m-%dT%H:%M:%SZ")

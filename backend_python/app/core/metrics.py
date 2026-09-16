@@ -86,7 +86,7 @@ class MetricsCollector:
             "# TYPE llm_tokens_consumed_total counter"
         ])
         if not self.tokens_consumed:
-            lines.append('llm_tokens_consumed_total{model="gpt-4o",company_id="comp-techflow"} 0')
+            lines.append('llm_tokens_consumed_total{model="automatic",company_id="platform"} 0')
         else:
             for k, count in self.tokens_consumed.items():
                 model, cid = k.split(":")
