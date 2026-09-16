@@ -68,9 +68,8 @@ class Settings(BaseSettings):
 
     INTERNAL_SERVICE_SECRET: str = _require_secret("PYTHON_AI_INTERNAL_SECRET", min_length=32)
 
-    # ENCRYPTION_KEY must be a 64-char hex string (32 bytes).  The helper
-    # enforces minimum length so a short/absent value is caught early.
-    ENCRYPTION_KEY: str = _require_secret("ENCRYPTION_KEY", min_length=64)
+    # ENCRYPTION_KEY must be at least 32 characters (256-bit).
+    ENCRYPTION_KEY: str = _require_secret("ENCRYPTION_KEY", min_length=32)
 
     ALLOWED_ORIGINS: List[str] = [
         origin.strip()
