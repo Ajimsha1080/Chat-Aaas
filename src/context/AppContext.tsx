@@ -395,7 +395,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // Derived current tenant data
   const rawCompany = companies.find(c => c.id === currentCompanyId) || companies[0];
   const currentCompany = normalizeCompany(rawCompany);
-  const currentPlan = allPlans.find(p => p.id === currentCompany.planId) || allPlans[1];
+  const currentPlan = allPlans.find(p => p.id === currentCompany?.planId) || allPlans[1] || allPlans[0];
   const knowledgeItems = knowledgeMap[currentCompanyId] || [];
   const deployments = deploymentsMap[currentCompanyId] || [];
   const apiKeys = apiKeysMap[currentCompanyId] || [];

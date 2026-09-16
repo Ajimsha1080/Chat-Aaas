@@ -78,30 +78,8 @@ export const KnowledgeView: React.FC = () => {
   const [showInfoTooltip, setShowInfoTooltip] = useState(false);
 
   // Collections & Gaps State
-  const [collections, setCollections] = useState<KnowledgeCollection[]>([
-    { id: 'col-tf-1', name: 'Customer Support & SLA', description: 'Uptime guarantees, escalation paths, and SLAs', icon: 'Shield', color: 'indigo', sourceCount: 2 },
-    { id: 'col-tf-2', name: 'Pricing & Billing', description: 'Plans, invoice cycles, and cancellation policies', icon: 'Folder', color: 'emerald', sourceCount: 2 },
-    { id: 'col-tf-3', name: 'Security & Compliance', description: 'SOC2, GDPR, and data retention policies', icon: 'Shield', color: 'purple', sourceCount: 1 }
-  ]);
-
-  const [knowledgeGaps, setKnowledgeGaps] = useState<KnowledgeGap[]>([
-    {
-      id: 'gap-1',
-      query: 'Do you offer on-premise air-gapped deployments?',
-      occurrences: 8,
-      lastAskedAt: '10 mins ago',
-      status: 'unresolved',
-      suggestedCategory: 'Enterprise Deployment'
-    },
-    {
-      id: 'gap-2',
-      query: 'What is the refund turnaround time for international wire transfers?',
-      occurrences: 4,
-      lastAskedAt: '1 hour ago',
-      status: 'unresolved',
-      suggestedCategory: 'Billing & Refunds'
-    }
-  ]);
+  const [collections, setCollections] = useState<KnowledgeCollection[]>([]);
+  const [knowledgeGaps, setKnowledgeGaps] = useState<KnowledgeGap[]>([]);
 
   const [newColName, setNewColName] = useState('');
   const [newColDesc, setNewColDesc] = useState('');

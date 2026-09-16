@@ -30,7 +30,7 @@ export const HomeView: React.FC = () => {
   const resolvedCount = allConvs.length > 0 
     ? allConvs.filter(c => c.status === 'resolved' || c.status === 'active').length 
     : (currentCompany?.stats?.resolvedConversations || 0);
-  const resolutionRate = totalCount > 0 ? Math.round((resolvedCount / totalCount) * 100) : 100;
+  const resolutionRate = totalCount > 0 ? Math.round((resolvedCount / totalCount) * 100) : 0;
 
   // Real-time weekly throughput aggregation from live conversation timestamps
   const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
@@ -54,16 +54,23 @@ export const HomeView: React.FC = () => {
   const unansweredCount = pendingAttentionConversations.length;
   const isAssistantActive = currentCompany?.agent?.status === 'active';
   const lifecycleStatus = currentCompany?.agent?.lifecycleStatus || 'published';
-  const isDeployed = activeConnectionsCount > 0 || !!currentCompany?.domain;
+  const isDeployed = activeConnectionsCount > 0 || (Boolean(currentCompany?.domain) && currentCompany?.domain !== 'example.com');
 
-  const messagesThisMonth = currentCompany?.stats?.messagesThisMonth ?? allConvs.length;
+  const messagesThisMonth = allConvs.length > 0 ? allConvs.length : (currentCompany?.stats?.messagesThisMonth ?? 0);
   const maxConversations = currentPlan?.maxConversationsMonth ?? 5000;
   const usagePercent = Math.min(100, Math.round((messagesThisMonth / maxConversations) * 100));
 
+  const isAgentCustomized = Boolean(
+    currentCompany?.agent?.name && 
+    currentCompany.agent.name !== 'AI Assistant' && 
+    (currentCompany.agent.systemInstructions?.length > 30 || currentCompany.agent.businessInstructions?.length > 10)
+  );
+  const hasTested = allConvs.length > 0;
+
   const checklistItems = [
-    { id: 1, title: 'Company profile and tone configured', completed: true, tab: 'assistant' },
+    { id: 1, title: 'Company profile and tone configured', completed: isAgentCustomized, tab: 'assistant' },
     { id: 2, title: `Knowledge loaded (${readyKnowledgeCount} sources)`, completed: readyKnowledgeCount > 0, tab: 'knowledge' },
-    { id: 3, title: 'Test inquiries in Workbench', completed: true, tab: 'test' },
+    { id: 3, title: 'Test inquiries in Workbench', completed: hasTested, tab: 'test' },
     { id: 4, title: 'Embed widget on website', completed: isDeployed, tab: 'deploy' }
   ];
 
@@ -240,9 +247,11 @@ export const HomeView: React.FC = () => {
             <span className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight">
               {totalCount.toLocaleString()}
             </span>
-            <span className="text-[11px] font-semibold text-emerald-600 flex items-center">
-              +14% <ArrowUpRight className="w-3 h-3" />
-            </span>
+            {totalCount > 0 && (
+              <span className="text-[11px] font-semibold text-emerald-600 flex items-center">
+                +14% <ArrowUpRight className="w-3 h-3" />
+              </span>
+            )}
           </div>
           <p className="text-[11px] text-slate-500 mt-1">Autonomous customer chats</p>
         </div>
@@ -427,47 +436,55 @@ export const HomeView: React.FC = () => {
         </div>
 
         <div className="divide-y divide-slate-100">
-          {(conversations || []).slice(0, 4).map(c => {
-            const lastMsg = c.messages && c.messages.length > 0 ? c.messages[c.messages.length - 1] : null;
-            return (
-              <div 
-                key={c.id}
-                onClick={() => {
-                  setCurrentTab('conversations');
-                  setActiveConversationId(c.id);
-                }}
-                className="py-3.5 flex items-center justify-between hover:bg-slate-50 px-3 rounded-xl transition-colors cursor-pointer gap-4"
-              >
-                <div className="flex items-center gap-3.5 min-w-0">
-                  <div className="w-9 h-9 rounded-xl bg-slate-100 flex items-center justify-center font-bold text-slate-700 text-sm shrink-0 border border-slate-200">
-                    {c.customerName.charAt(0)}
-                  </div>
-                  <div className="min-w-0">
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm font-bold text-slate-900 truncate">{c.customerName}</span>
-                      <span className="text-xs text-slate-500 font-mono">· {c.channel.replace('_', ' ')}</span>
+          {(conversations || []).length === 0 ? (
+            <div className="py-8 text-center text-slate-400">
+              <MessageSquare className="w-8 h-8 mx-auto mb-2 text-slate-300" />
+              <p className="text-sm font-semibold text-slate-600">No conversations yet</p>
+              <p className="text-xs text-slate-400 mt-0.5">Customer inquiries from your website widget or API will appear here in real-time.</p>
+            </div>
+          ) : (
+            (conversations || []).slice(0, 4).map(c => {
+              const lastMsg = c.messages && c.messages.length > 0 ? c.messages[c.messages.length - 1] : null;
+              return (
+                <div 
+                  key={c.id}
+                  onClick={() => {
+                    setCurrentTab('conversations');
+                    setActiveConversationId(c.id);
+                  }}
+                  className="py-3.5 flex items-center justify-between hover:bg-slate-50 px-3 rounded-xl transition-colors cursor-pointer gap-4"
+                >
+                  <div className="flex items-center gap-3.5 min-w-0">
+                    <div className="w-9 h-9 rounded-xl bg-slate-100 flex items-center justify-center font-bold text-slate-700 text-sm shrink-0 border border-slate-200">
+                      {c.customerName.charAt(0)}
                     </div>
-                    <p className="text-sm text-slate-600 truncate max-w-md mt-0.5">
-                      {lastMsg ? lastMsg.text : 'Conversation started'}
-                    </p>
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-bold text-slate-900 truncate">{c.customerName}</span>
+                        <span className="text-xs text-slate-500 font-mono">· {c.channel.replace('_', ' ')}</span>
+                      </div>
+                      <p className="text-sm text-slate-600 truncate max-w-md mt-0.5">
+                        {lastMsg ? lastMsg.text : 'Conversation started'}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-3 shrink-0">
+                    <span className={`text-xs px-2.5 py-1 rounded-md font-semibold ${
+                      c.status === 'resolved'
+                        ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                        : c.status === 'escalated_to_human'
+                        ? 'bg-amber-50 text-amber-700 border border-amber-200'
+                        : 'bg-slate-100 text-slate-700 border border-slate-200'
+                    }`}>
+                      {c.status === 'resolved' ? 'Resolved' : c.status === 'escalated_to_human' ? 'Staff Needed' : 'In Progress'}
+                    </span>
+                    <ChevronRight className="w-4 h-4 text-slate-400" />
                   </div>
                 </div>
-
-                <div className="flex items-center gap-3 shrink-0">
-                  <span className={`text-xs px-2.5 py-1 rounded-md font-semibold ${
-                    c.status === 'resolved'
-                      ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                      : c.status === 'escalated_to_human'
-                      ? 'bg-amber-50 text-amber-700 border border-amber-200'
-                      : 'bg-slate-100 text-slate-700 border border-slate-200'
-                  }`}>
-                    {c.status === 'resolved' ? 'Resolved' : c.status === 'escalated_to_human' ? 'Staff Needed' : 'In Progress'}
-                  </span>
-                  <ChevronRight className="w-4 h-4 text-slate-400" />
-                </div>
-              </div>
-            );
-          })}
+              );
+            })
+          )}
         </div>
       </div>
     </div>

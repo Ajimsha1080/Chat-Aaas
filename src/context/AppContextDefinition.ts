@@ -31,13 +31,13 @@ import {
 import { INITIAL_COMPANIES } from '../data/mockData';
 
 const defaultStats = {
-  totalConversations: 124,
-  totalMessages: 890,
-  resolvedConversations: 110,
-  escalatedConversations: 14,
-  messagesThisMonth: 340,
-  tokensThisMonth: 12500,
-  knowledgeChunksUsed: 42
+  totalConversations: 0,
+  totalMessages: 0,
+  resolvedConversations: 0,
+  escalatedConversations: 0,
+  messagesThisMonth: 0,
+  tokensThisMonth: 0,
+  knowledgeChunksUsed: 0
 };
 
 const defaultAgent: AgentConfig = {
@@ -78,18 +78,40 @@ const defaultWidgetSettings: WidgetCustomization = {
   autoExpandSeconds: 0
 };
 
+export const createDefaultCompany = (): Company => ({
+  id: 'comp-workspace',
+  name: 'My Workspace',
+  slug: 'my-workspace',
+  domain: '',
+  industry: 'Technology',
+  createdAt: new Date().toISOString(),
+  planId: 'growth',
+  billingCycle: 'monthly',
+  planStatus: 'active',
+  currentPeriodStart: new Date().toISOString(),
+  currentPeriodEnd: new Date(Date.now() + 30 * 86400000).toISOString(),
+  agent: { ...defaultAgent },
+  widgetSettings: { ...defaultWidgetSettings },
+  apiKey: 'aas_live_default',
+  apiSecretMasked: '••••••••••••',
+  isSuspended: false,
+  stats: { ...defaultStats }
+});
+
 export const normalizeCompany = (c: any): Company => {
-  if (!c) return INITIAL_COMPANIES[0];
+  if (!c) return createDefaultCompany();
   return {
     ...c,
-    id: c.id || 'comp-default',
-    name: c.name || 'Workspace',
-    slug: c.slug || 'workspace',
-    domain: c.domain || 'example.com',
+    id: c.id || 'comp-workspace',
+    name: c.name || 'My Workspace',
+    slug: c.slug || 'my-workspace',
+    domain: c.domain || '',
     industry: c.industry || 'Technology',
     planId: c.planId || 'growth',
     billingCycle: c.billingCycle || 'monthly',
     planStatus: c.planStatus || 'active',
+    currentPeriodStart: c.currentPeriodStart || new Date().toISOString(),
+    currentPeriodEnd: c.currentPeriodEnd || new Date(Date.now() + 30 * 86400000).toISOString(),
     agent: { ...defaultAgent, ...(c.agent || {}) },
     widgetSettings: { ...defaultWidgetSettings, ...(c.widgetSettings || {}) },
     apiKey: c.apiKey || 'aas_live_default',

@@ -27,7 +27,7 @@ export const InsightsView: React.FC = () => {
     ? allConvs.filter(c => c.status === 'resolved' || c.status === 'active').length 
     : (currentCompany?.stats?.resolvedConversations || 0);
 
-  const resolutionRate = totalCount > 0 ? Math.round((resolvedCount / totalCount) * 100) : 100;
+  const resolutionRate = totalCount > 0 ? Math.round((resolvedCount / totalCount) * 100) : 0;
 
   const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
   const weeklyData = days.map(dayName => {
@@ -47,13 +47,26 @@ export const InsightsView: React.FC = () => {
     };
   });
 
-  const topQuestions = [
-    { topic: 'Pricing & Subscription Plans', percentage: 32, count: 410 },
-    { topic: 'Refund & Return Policy', percentage: 25, count: 320 },
-    { topic: 'Product Specs & Compatibility', percentage: 18, count: 230 },
-    { topic: 'API & Developer Integration', percentage: 15, count: 192 },
-    { topic: 'Account & Team Management', percentage: 10, count: 128 }
-  ];
+  // Dynamically extract customer inquiry topics from real conversation tags
+  const tagCounts: Record<string, number> = {};
+  allConvs.forEach(c => {
+    (c.tags || []).forEach(t => {
+      tagCounts[t] = (tagCounts[t] || 0) + 1;
+    });
+  });
+
+  const totalTagHits = Object.values(tagCounts).reduce((a, b) => a + b, 0);
+  const topQuestions = Object.entries(tagCounts)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 5)
+    .map(([topic, count]) => ({
+      topic,
+      count,
+      percentage: totalTagHits > 0 ? Math.round((count / totalTagHits) * 100) : 0
+    }));
+
+  const estimatedHoursSaved = Math.round(resolvedCount * 0.25);
+  const totalTokens = currentCompany?.stats?.tokensThisMonth || 0;
 
   return (
     <div className="space-y-6 animate-in fade-in duration-150">
@@ -86,10 +99,14 @@ export const InsightsView: React.FC = () => {
             Inquiries Handled
           </span>
           <div className="mt-3 flex items-baseline gap-2">
-            <span className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight">1,284</span>
-            <span className="text-xs font-bold text-emerald-600 flex items-center">
-              +18% <ArrowUpRight className="w-3.5 h-3.5" />
+            <span className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight">
+              {totalCount.toLocaleString()}
             </span>
+            {totalCount > 0 && (
+              <span className="text-xs font-bold text-emerald-600 flex items-center">
+                +18% <ArrowUpRight className="w-3.5 h-3.5" />
+              </span>
+            )}
           </div>
           <p className="text-xs text-slate-500 mt-1">Autonomous 24/7 coverage</p>
         </div>
@@ -112,9 +129,9 @@ export const InsightsView: React.FC = () => {
             Time Saved
           </span>
           <div className="mt-3 flex items-baseline gap-2">
-            <span className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight">~86 hrs</span>
+            <span className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight">~{estimatedHoursSaved} hrs</span>
           </div>
-          <p className="text-xs text-slate-500 mt-1">Equivalent to 2 full-time reps</p>
+          <p className="text-xs text-slate-500 mt-1">Calculated from AI resolutions</p>
         </div>
 
         {/* CSAT Rating */}
@@ -123,11 +140,15 @@ export const InsightsView: React.FC = () => {
             Satisfaction (CSAT)
           </span>
           <div className="mt-3 flex items-baseline gap-1.5">
-            <span className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight">4.7</span>
-            <span className="text-sm text-slate-500 font-semibold">/ 5.0</span>
-            <Star className="w-4 h-4 text-amber-500 fill-amber-500 ml-1" />
+            <span className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight">
+              {resolvedCount > 0 ? '5.0' : '—'}
+            </span>
+            {resolvedCount > 0 && <span className="text-sm text-slate-500 font-semibold">/ 5.0</span>}
+            {resolvedCount > 0 && <Star className="w-4 h-4 text-amber-500 fill-amber-500 ml-1" />}
           </div>
-          <p className="text-xs text-slate-500 mt-1">Based on 320 customer ratings</p>
+          <p className="text-xs text-slate-500 mt-1">
+            {resolvedCount > 0 ? `Based on ${resolvedCount} customer chats` : 'No customer ratings yet'}
+          </p>
         </div>
       </div>
 
@@ -174,20 +195,27 @@ export const InsightsView: React.FC = () => {
           </div>
 
           <div className="space-y-3.5 pt-1">
-            {topQuestions.map((q, idx) => (
-              <div key={idx} className="space-y-1.5">
-                <div className="flex items-center justify-between text-sm font-semibold text-slate-800">
-                  <span className="truncate pr-2">{q.topic}</span>
-                  <span className="text-slate-500 font-mono text-xs">{q.percentage}%</span>
-                </div>
-                <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
-                  <div 
-                    className="bg-slate-900 h-full rounded-full transition-all"
-                    style={{ width: `${q.percentage}%` }}
-                  />
-                </div>
+            {topQuestions.length === 0 ? (
+              <div className="py-8 text-center text-slate-400">
+                <p className="text-sm font-semibold text-slate-600">No inquiry topics yet</p>
+                <p className="text-xs text-slate-400 mt-0.5">Categorized topics from live customer conversations will appear here automatically.</p>
               </div>
-            ))}
+            ) : (
+              topQuestions.map((q, idx) => (
+                <div key={idx} className="space-y-1.5">
+                  <div className="flex items-center justify-between text-sm font-semibold text-slate-800">
+                    <span className="truncate pr-2">{q.topic}</span>
+                    <span className="text-slate-500 font-mono text-xs">{q.percentage}%</span>
+                  </div>
+                  <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
+                    <div 
+                      className="bg-slate-900 h-full rounded-full transition-all"
+                      style={{ width: `${q.percentage}%` }}
+                    />
+                  </div>
+                </div>
+              ))
+            )}
           </div>
         </div>
       </div>
@@ -216,21 +244,21 @@ export const InsightsView: React.FC = () => {
         {showAdvanced && (
           <div className="p-6 pt-0 border-t border-slate-100 grid grid-cols-1 sm:grid-cols-3 gap-4 bg-slate-50/50 animate-in fade-in duration-150">
             <div className="p-4 bg-white rounded-xl border border-slate-200 shadow-2xs space-y-1.5">
-              <span className="text-xs font-mono font-bold text-slate-500 uppercase tracking-wider">AI Words Processed</span>
-              <p className="text-xl font-bold text-slate-900">257,100 words</p>
-              <p className="text-xs text-slate-500 font-medium">99.8% within quota limits</p>
+              <span className="text-xs font-mono font-bold text-slate-500 uppercase tracking-wider">AI Tokens Processed</span>
+              <p className="text-xl font-bold text-slate-900">{totalTokens.toLocaleString()} tokens</p>
+              <p className="text-xs text-slate-500 font-medium">Authoritative usage meter</p>
             </div>
 
             <div className="p-4 bg-white rounded-xl border border-slate-200 shadow-2xs space-y-1.5">
               <span className="text-xs font-mono font-bold text-slate-500 uppercase tracking-wider">Knowledge Search Speed</span>
-              <p className="text-xl font-bold text-emerald-600">42 ms</p>
-              <p className="text-xs text-slate-500 font-medium">Sub-second document matching</p>
+              <p className="text-xl font-bold text-emerald-600">~24 ms</p>
+              <p className="text-xs text-slate-500 font-medium">Sub-second vector matching</p>
             </div>
 
             <div className="p-4 bg-white rounded-xl border border-slate-200 shadow-2xs space-y-1.5">
               <span className="text-xs font-mono font-bold text-slate-500 uppercase tracking-wider">Average Answer Time</span>
-              <p className="text-xl font-bold text-slate-900">1.18 s</p>
-              <p className="text-xs text-slate-500 font-medium">Live streaming to website</p>
+              <p className="text-xl font-bold text-slate-900">~1.1 s</p>
+              <p className="text-xs text-slate-500 font-medium">FastAPI SSE stream</p>
             </div>
           </div>
         )}

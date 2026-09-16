@@ -52,7 +52,7 @@ export const MyAssistantView: React.FC = () => {
 
   const isLive = currentCompany?.agent?.status === 'active';
   const lifecycle = currentCompany?.agent?.lifecycleStatus || 'published';
-  const publishedVer = currentCompany?.agent?.publishedVersionNumber || 12;
+  const publishedVer = currentCompany?.agent?.publishedVersionNumber || 1;
   const draftVer = currentCompany?.agent?.draftVersionNumber || (publishedVer + 1);
   const hasUnpublishedChanges = lifecycle === 'draft' || draftVer > publishedVer;
 

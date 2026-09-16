@@ -33,9 +33,9 @@ export const BillingView: React.FC = () => {
     features: ['5,000 monthly inquiries', '100 knowledge sources', 'Website widget & REST API', 'Priority email support', 'Custom brand styling']
   };
 
-  const totalConvs = (conversations || []).length || 420;
-  const totalDocs = (knowledgeItems || []).length || 8;
-  const totalSeats = (teamMembers || []).length || 3;
+  const totalConvs = (conversations || []).length;
+  const totalDocs = (knowledgeItems || []).length;
+  const totalSeats = (teamMembers || []).length;
 
   const maxConvs = planInfo.maxConversationsMonth || 5000;
   const maxDocs = planInfo.maxKnowledgeDocs || 100;
