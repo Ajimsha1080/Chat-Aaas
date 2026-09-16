@@ -133,3 +133,127 @@ def get_current_user(ctx: TenantContext = Depends(get_tenant_context)):
             "role": ctx.role
         }
     }
+
+# ----------------- Enterprise Single Sign-On (SSO) -----------------
+
+class SSODiscoverRequest(BaseModel):
+    email: str
+
+class SAMLInitiateRequest(BaseModel):
+    companyId: str
+    relayState: Optional[str] = "/dashboard"
+
+class SAMLCallbackRequest(BaseModel):
+    companyId: str
+    samlResponse: str
+
+class OIDCCallbackRequest(BaseModel):
+    companyId: str
+    claims: dict
+
+@router.post("/sso/discover")
+def discover_sso(req: SSODiscoverRequest):
+    """Home Realm Discovery (HRD): Detects if user's enterprise email uses SSO."""
+    from app.services.sso_service import SSOService
+    config = SSOService.discover_tenant_by_email(req.email)
+    if not config or not config.get("enabled"):
+        return {"status": 200, "data": {"ssoAvailable": False}}
+    return {
+        "status": 200,
+        "data": {
+            "ssoAvailable": True,
+            "companyId": config["companyId"],
+            "providerType": config["providerType"],
+            "idpName": config["idpName"],
+            "entrypointUrl": config["entrypointUrl"]
+        }
+    }
+
+@router.post("/sso/saml/initiate")
+def initiate_saml(req: SAMLInitiateRequest):
+    """Generates SP-Initiated SAML AuthnRequest."""
+    from app.services.sso_service import SSOService
+    try:
+        res = SSOService.generate_saml_authn_request(req.companyId, req.relayState)
+        return {"status": 200, "data": res}
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+
+@router.post("/sso/saml/callback")
+def saml_callback(req: SAMLCallbackRequest):
+    """Processes SAML Response assertion and issues a signed JWT session."""
+    from app.services.sso_service import SSOService
+    from app.services.auth_service import AuthService
+    from app.core.security import create_jwt_token, create_refresh_token
+    from app.db.database import db
+
+    try:
+        user_info = SSOService.process_saml_response(req.companyId, req.samlResponse)
+        # Find or provision user
+        user = next((u for u in db.users.values() if u.get("email", "").lower() == user_info["email"]), None)
+        if not user:
+            user_id = f"usr_{uuid.uuid4().hex[:12]}"
+            user = {
+                "id": user_id,
+                "companyId": req.companyId,
+                "email": user_info["email"],
+                "fullName": user_info["name"],
+                "role": user_info["role"],
+                "isEmailVerified": True,
+                "createdAt": time.strftime("%Y-%m-%dT%H:%M:%SZ")
+            }
+            db.users[user_id] = user
+            db.flush_durable_storage()
+
+        access_token = create_jwt_token(user["id"], user["companyId"], user.get("role", "member"))
+        refresh_token = create_refresh_token(user["id"], user["companyId"], user.get("role", "member"))
+
+        return {
+            "status": 200,
+            "data": {
+                "user": user,
+                "token": access_token,
+                "refreshToken": refresh_token
+            }
+        }
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=f"SAML Authentication failed: {str(e)}")
+
+@router.post("/sso/oidc/callback")
+def oidc_callback(req: OIDCCallbackRequest):
+    """Processes validated OIDC ID Token and issues a signed JWT session."""
+    from app.services.sso_service import SSOService
+    from app.core.security import create_jwt_token, create_refresh_token
+    from app.db.database import db
+
+    try:
+        user_info = SSOService.process_oidc_token(req.companyId, req.claims)
+        user = next((u for u in db.users.values() if u.get("email", "").lower() == user_info["email"]), None)
+        if not user:
+            user_id = f"usr_{uuid.uuid4().hex[:12]}"
+            user = {
+                "id": user_id,
+                "companyId": req.companyId,
+                "email": user_info["email"],
+                "fullName": user_info["name"],
+                "role": user_info["role"],
+                "isEmailVerified": True,
+                "createdAt": time.strftime("%Y-%m-%dT%H:%M:%SZ")
+            }
+            db.users[user_id] = user
+            db.flush_durable_storage()
+
+        access_token = create_jwt_token(user["id"], user["companyId"], user.get("role", "member"))
+        refresh_token = create_refresh_token(user["id"], user["companyId"], user.get("role", "member"))
+
+        return {
+            "status": 200,
+            "data": {
+                "user": user,
+                "token": access_token,
+                "refreshToken": refresh_token
+            }
+        }
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=f"OIDC Authentication failed: {str(e)}")
+

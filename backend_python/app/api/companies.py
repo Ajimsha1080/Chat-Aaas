@@ -198,3 +198,54 @@ def update_company_by_id(company_id: str, req: UpdateCompanyRequest, ctx: Tenant
     if agent:
         c["agent"] = agent
     return {"status": 200, "data": {"company": c}}
+
+# ----------------- SOC2 Audit Trail & DR Backup Endpoints -----------------
+
+@router.get("/{company_id}/audit-trail")
+def get_company_audit_trail(company_id: str, ctx: TenantContext = Depends(get_tenant_context)):
+    """Fetches tamper-evident SOC2 audit trail for tenant."""
+    if ctx.role not in ["super_admin", "platform_super_admin"] and ctx.company_id != company_id:
+        raise HTTPException(status_code=403, detail="Forbidden")
+    from app.services.audit_service import AuditService
+    logs = AuditService.get_logs_for_company(company_id)
+    return {"status": 200, "data": {"logs": logs, "total": len(logs)}}
+
+@router.get("/{company_id}/audit-trail/verify")
+def verify_company_audit_chain(company_id: str, ctx: TenantContext = Depends(get_tenant_context)):
+    """Cryptographically verifies tenant audit hash chain."""
+    if ctx.role not in ["super_admin", "platform_super_admin"] and ctx.company_id != company_id:
+        raise HTTPException(status_code=403, detail="Forbidden")
+    from app.services.audit_service import AuditService
+    is_valid, reason = AuditService.verify_audit_chain(company_id)
+    return {"status": 200, "data": {"isValid": is_valid, "message": reason}}
+
+@router.get("/{company_id}/audit-trail/export")
+def export_company_audit_trail(company_id: str, ctx: TenantContext = Depends(get_tenant_context)):
+    """Exports cryptographically sealed SOC2 compliance bundle."""
+    if ctx.role not in ["super_admin", "platform_super_admin"] and ctx.company_id != company_id:
+        raise HTTPException(status_code=403, detail="Forbidden")
+    from app.services.audit_service import AuditService
+    bundle = AuditService.export_audit_trail(company_id)
+    return {"status": 200, "data": bundle}
+
+@router.post("/{company_id}/backup/export")
+def export_company_backup(company_id: str, ctx: TenantContext = Depends(get_tenant_context)):
+    """Creates point-in-time compressed, encrypted snapshot for tenant."""
+    if ctx.role not in ["super_admin", "platform_super_admin"] and ctx.company_id != company_id:
+        raise HTTPException(status_code=403, detail="Forbidden")
+    from app.services.backup_service import BackupService
+    backup_meta = BackupService.export_tenant_snapshot(company_id)
+    return {"status": 200, "data": backup_meta}
+
+class RestoreBackupRequest(BaseModel):
+    snapshotJsonGzBase64: str
+
+@router.post("/{company_id}/backup/restore")
+def restore_company_backup(company_id: str, req: RestoreBackupRequest, ctx: TenantContext = Depends(get_tenant_context)):
+    """Restores tenant workspace from encrypted point-in-time snapshot."""
+    if ctx.role not in ["super_admin", "platform_super_admin"] and ctx.company_id != company_id:
+        raise HTTPException(status_code=403, detail="Forbidden")
+    from app.services.backup_service import BackupService
+    result = BackupService.restore_tenant_snapshot(company_id, req.snapshotJsonGzBase64)
+    return {"status": 200, "data": result}
+
