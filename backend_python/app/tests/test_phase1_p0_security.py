@@ -178,7 +178,7 @@ def test_razorpay_checkout_and_webhook_lifecycle():
     # Forged signature is rejected (400)
     forged_res = client.post(
         "/api/v1/billing/webhook",
-        data=webhook_payload,
+        content=webhook_payload,
         headers={"X-Razorpay-Signature": "fake_forged_signature", "Content-Type": "application/json"}
     )
     assert forged_res.status_code == 400
@@ -186,7 +186,7 @@ def test_razorpay_checkout_and_webhook_lifecycle():
     # Valid signature activates subscription
     activated_res = client.post(
         "/api/v1/billing/webhook",
-        data=webhook_payload,
+        content=webhook_payload,
         headers={"X-Razorpay-Signature": valid_signature, "Content-Type": "application/json"}
     )
     assert activated_res.status_code == 200
@@ -213,7 +213,7 @@ def test_razorpay_checkout_and_webhook_lifecycle():
     charge_sig = hmac.new(secret.encode("utf-8"), charge_payload, hashlib.sha256).hexdigest()
     charge_res = client.post(
         "/api/v1/billing/webhook",
-        data=charge_payload,
+        content=charge_payload,
         headers={"X-Razorpay-Signature": charge_sig, "Content-Type": "application/json"}
     )
     assert charge_res.status_code == 200
@@ -240,7 +240,7 @@ def test_razorpay_checkout_and_webhook_lifecycle():
     cancel_sig = hmac.new(secret.encode("utf-8"), cancel_payload, hashlib.sha256).hexdigest()
     cancel_res = client.post(
         "/api/v1/billing/webhook",
-        data=cancel_payload,
+        content=cancel_payload,
         headers={"X-Razorpay-Signature": cancel_sig, "Content-Type": "application/json"}
     )
     assert cancel_res.status_code == 200
