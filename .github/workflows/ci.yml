@@ -1,0 +1,90 @@
+name: CoarAI Enterprise CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  security-and-lint:
+    name: Secret Scanning & Code Lint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Secret Scanning (Gitleaks)
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        continue-on-error: false
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install Frontend Dependencies
+        run: npm ci
+
+      - name: TypeScript Validation
+        run: npx tsc --noEmit
+
+  backend-tests:
+    name: Backend Pytest & Multi-Tenant Invariants
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+          cache-dependency-path: backend_python/requirements.txt
+
+      - name: Install Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r backend_python/requirements.txt
+
+      - name: Run Pytest Suite
+        env:
+          ENVIRONMENT: development
+          JWT_SECRET: ci-test-token-secret-must-be-at-least-32-chars-long
+          PYTHON_AI_INTERNAL_SECRET: ci-test-internal-secret-must-be-at-least-32-chars
+          ENCRYPTION_KEY: ci-test-encryption-key-must-be-at-least-32-chars-length
+          DATABASE_URL: sqlite:///./ci_test.db
+        run: |
+          python -m pytest backend_python/app/tests -v
+
+  docker-build:
+    name: Docker Production Build Check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build Frontend Image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./Dockerfile
+          push: false
+          tags: coarai-frontend:test
+
+      - name: Build Backend Image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./backend_python
+          file: ./backend_python/Dockerfile
+          push: false
+          tags: coarai-backend:test

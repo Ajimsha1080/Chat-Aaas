@@ -71,7 +71,7 @@ class Settings(BaseSettings):
     # ENCRYPTION_KEY must be at least 32 characters (256-bit).
     ENCRYPTION_KEY: str = _require_secret("ENCRYPTION_KEY", min_length=32)
 
-    ALLOWED_ORIGINS: List[str] = [
+    _raw_origins = [
         origin.strip()
         for origin in os.getenv(
             "CORS_ORIGINS",
@@ -79,6 +79,11 @@ class Settings(BaseSettings):
         ).split(",")
         if origin.strip()
     ]
+    if _ENVIRONMENT == "production":
+        if "*" in _raw_origins:
+            raise RuntimeError("[SECURITY] Wildcard '*' CORS origin is strictly forbidden in production.")
+
+    ALLOWED_ORIGINS: List[str] = _raw_origins
 
     OPENAI_API_KEY: Optional[str] = os.getenv("OPENAI_API_KEY") or None
     ANTHROPIC_API_KEY: Optional[str] = os.getenv("ANTHROPIC_API_KEY") or None
@@ -94,14 +99,15 @@ class Settings(BaseSettings):
     )
     DEFAULT_LLM_MODEL: str = os.getenv("DEFAULT_LLM_MODEL", "sarvam-2b")
 
-    # Demo / Seed Data (enabled by default in development)
-    SEED_DEMO_DATA: bool = (
-        os.getenv(
-            "SEED_DEMO_DATA",
-            "true" if _ENVIRONMENT != "production" else "false",
-        ).lower()
-        == "true"
-    )
+    # Demo / Seed Data (Must NEVER be enabled in production)
+    _seed_env: bool = os.getenv("SEED_DEMO_DATA", "false").lower() == "true"
+    if _ENVIRONMENT == "production" and _seed_env:
+        raise RuntimeError(
+            "[SECURITY] SEED_DEMO_DATA cannot be set to true in production. "
+            "Production environments must not boot with mock/demo seed data."
+        )
+
+    SEED_DEMO_DATA: bool = _seed_env
 
 
 settings = Settings()

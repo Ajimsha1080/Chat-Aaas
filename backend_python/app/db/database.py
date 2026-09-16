@@ -59,8 +59,11 @@ class DatabaseStore:
 
         try:
             self.engine = create_engine(db_url, connect_args={"check_same_thread": False} if "sqlite" in db_url else {})
-            Base.metadata.create_all(bind=self.engine)
+            if settings.ENVIRONMENT != "production":
+                Base.metadata.create_all(bind=self.engine)
         except Exception as e:
+            if settings.ENVIRONMENT == "production":
+                raise RuntimeError(f"[DATABASE] Authoritative database connection failed: {e}")
             # Fallback to local SQLite if PostgreSQL is unreachable in dev
             self.engine = create_engine(f"sqlite:///{self.sqlite_path}", connect_args={"check_same_thread": False})
             Base.metadata.create_all(bind=self.engine)

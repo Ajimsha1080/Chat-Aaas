@@ -1,3 +1,4 @@
+import os
 import time
 import uuid
 from fastapi import APIRouter, HTTPException, Depends, status, Query, UploadFile, File, Form
@@ -7,6 +8,8 @@ from app.db.database import db
 from app.services.crawler_service import CrawlerService
 from app.services.rag_engine import RAGEngine
 from app.services.document_ai import DocumentAIService
+from app.services.storage_service import StorageService
+from app.services.rate_limiter import RateLimiter
 from app.schemas import DocumentProcessRequest
 from app.core.tenant import TenantContext, get_tenant_context
 from app.core.permissions import has_permission
@@ -289,6 +292,7 @@ def ingest_file_document(req: IngestFileRequest, ctx: TenantContext = Depends(ge
     if not has_permission(ctx.role, "knowledge:write"):
         raise HTTPException(status_code=403, detail="Forbidden: Insufficient role permissions to ingest knowledge.")
 
+    RateLimiter.check_upload_rate_limit(ctx.company_id)
     _check_knowledge_quota(ctx.company_id, ctx.role)
 
     if not req.content or not req.content.strip():
@@ -303,8 +307,17 @@ def ingest_file_document(req: IngestFileRequest, ctx: TenantContext = Depends(ge
     )
     res = DocumentAIService.process_document(doc_req)
 
-    # 2. Create Knowledge Source Record
+    # 2. Persist Raw Document to Durable Storage (S3 / Local Object Storage)
     src_id = f"ks-{ctx.company_id}-{uuid.uuid4().hex[:8]}"
+    storage_res = StorageService.upload_bytes(
+        company_id=ctx.company_id,
+        document_id=src_id,
+        filename=req.fileName or f"{req.title}.{req.docType or 'pdf'}",
+        data=req.content.encode('utf-8'),
+        content_type=f"application/{req.docType or 'pdf'}"
+    )
+
+    # 3. Create Knowledge Source Record
     new_source = {
         "id": src_id,
         "companyId": ctx.company_id,
@@ -320,6 +333,8 @@ def ingest_file_document(req: IngestFileRequest, ctx: TenantContext = Depends(ge
         "lifecycleState": "active",
         "processingStage": "indexed",
         "retentionDays": 30,
+        "storageKey": storage_res.get("key"),
+        "downloadUrl": storage_res.get("presigned_url"),
         "lastIndexedAt": time.strftime("%Y-%m-%dT%H:%M:%S.000Z", time.gmtime()),
         "chunkCount": len(res.chunks),
         "totalTokens": res.total_tokens,
@@ -383,6 +398,7 @@ async def upload_real_file_document(
     if not has_permission(ctx.role, "knowledge:write"):
         raise HTTPException(status_code=403, detail="Forbidden: Insufficient permissions.")
 
+    RateLimiter.check_upload_rate_limit(ctx.company_id)
     _check_knowledge_quota(ctx.company_id, ctx.role)
 
     content_bytes = await file.read()
@@ -484,6 +500,7 @@ async def crawl_and_ingest_website(req: IngestWebsiteRequest, ctx: TenantContext
     if not has_permission(ctx.role, "knowledge:write"):
         raise HTTPException(status_code=403, detail="Forbidden: Insufficient role permissions.")
 
+    RateLimiter.check_crawler_rate_limit(ctx.company_id)
     _check_knowledge_quota(ctx.company_id, ctx.role)
 
     safe, reason = CrawlerService.validate_url_safety(req.url)
@@ -756,5 +773,41 @@ def semantic_search_test(req: SemanticTestRequest, ctx: TenantContext = Depends(
 @router.get("/health")
 def get_knowledge_health(ctx: TenantContext = Depends(get_tenant_context)):
     """Returns dynamic knowledge health score and operational metrics."""
-    health_data = db.get_knowledge_health_for_tenant(ctx.company_id)
-    return {"status": 200, "data": health_data}
+    sources = db.get_knowledge_sources_for_tenant(ctx.company_id, lifecycle_state="active")
+    chunks = db.get_document_chunks_for_tenant(ctx.company_id, only_active=True)
+    gaps = [g for g in db.knowledge_gaps.values() if g.get("companyId") == ctx.company_id]
+    
+    total_docs = len(sources)
+    total_chunks = len(chunks)
+    active_gaps = len([g for g in gaps if g.get("status") == "unresolved"])
+    
+    health_score = max(20, min(100, int(100 - (active_gaps * 5) + (total_chunks * 2))))
+    
+    return {
+        "status": 200,
+        "data": {
+            "healthScore": health_score,
+            "totalSources": total_docs,
+            "totalChunks": total_chunks,
+            "activeGaps": active_gaps,
+            "status": "Healthy" if health_score >= 70 else "Needs Attention"
+        }
+    }
+
+@router.get("/files/download")
+def download_knowledge_file(key: str = Query(...), ctx: TenantContext = Depends(get_tenant_context)):
+    """Serves or redirects to a tenant-isolated document in storage."""
+    if not key.startswith(f"{ctx.company_id}/"):
+        raise HTTPException(status_code=403, detail="Forbidden: Cross-tenant storage access denied.")
+
+    local_file = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../data/uploads", key))
+    if os.path.exists(local_file):
+        from fastapi.responses import FileResponse
+        return FileResponse(local_file)
+
+    presigned = StorageService.generate_presigned_url(ctx.company_id, key)
+    if not presigned or presigned.startswith("/api/v1/knowledge/files/download"):
+        raise HTTPException(status_code=404, detail="Requested document not found in storage.")
+
+    from fastapi.responses import RedirectResponse
+    return RedirectResponse(url=presigned)

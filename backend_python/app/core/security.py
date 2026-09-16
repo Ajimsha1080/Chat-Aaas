@@ -90,8 +90,28 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
 
 
 # ---------------------------------------------------------------------------
-# JWT — python-jose
 # ---------------------------------------------------------------------------
+# JWT & Server-Side Session Invalidation
+# ---------------------------------------------------------------------------
+
+_REVOKED_TOKENS: set = set()
+_REVOKED_USERS: Dict[str, float] = {}
+_REVOKED_TENANTS: Dict[str, float] = {}
+
+def revoke_token(jti: str) -> None:
+    """Revokes a specific token by its unique JWT ID."""
+    if jti:
+        _REVOKED_TOKENS.add(jti)
+
+def revoke_user_sessions(user_id: str) -> None:
+    """Immediately invalidates all active sessions issued for a user."""
+    import time
+    _REVOKED_USERS[user_id] = time.time()
+
+def revoke_tenant_sessions(company_id: str) -> None:
+    """Immediately invalidates all active sessions issued for an entire tenant."""
+    import time
+    _REVOKED_TENANTS[company_id] = time.time()
 
 def create_jwt_token(
     user_id: str,
@@ -100,8 +120,9 @@ def create_jwt_token(
     expires_delta: Optional[timedelta] = None,
     extra_claims: Optional[Dict[str, Any]] = None,
 ) -> str:
-    """Issue a signed HS256 JWT."""
+    """Issue a signed HS256 JWT access token with unique JTI."""
     import time
+    import uuid
 
     expire_seconds = (
         expires_delta.total_seconds()
@@ -109,9 +130,11 @@ def create_jwt_token(
         else settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60
     )
     payload: Dict[str, Any] = {
+        "jti": f"jwt_{uuid.uuid4().hex}",
         "sub": user_id,
         "company_id": company_id,
         "role": role,
+        "token_type": "access",
         "iat": int(time.time()),
         "exp": int(time.time() + expire_seconds),
     }
@@ -120,18 +143,59 @@ def create_jwt_token(
 
     return jwt.encode(payload, settings.JWT_SECRET, algorithm=settings.JWT_ALGORITHM)
 
+def create_refresh_token(
+    user_id: str,
+    company_id: str,
+    role: str,
+    expires_delta: Optional[timedelta] = None,
+) -> str:
+    """Issue a signed refresh token with 7-day default expiry."""
+    import time
+    import uuid
+
+    expire_seconds = (
+        expires_delta.total_seconds()
+        if expires_delta
+        else 7 * 24 * 3600
+    )
+    payload: Dict[str, Any] = {
+        "jti": f"ref_{uuid.uuid4().hex}",
+        "sub": user_id,
+        "company_id": company_id,
+        "role": role,
+        "token_type": "refresh",
+        "iat": int(time.time()),
+        "exp": int(time.time() + expire_seconds),
+    }
+    return jwt.encode(payload, settings.JWT_SECRET, algorithm=settings.JWT_ALGORITHM)
 
 def decode_jwt_token(token: str) -> Optional[Dict[str, Any]]:
     """
-    Verify signature, algorithm, and expiry; return claims or None.
-    python-jose raises JWTError for any tampered / expired token.
+    Verify signature, algorithm, and expiry; check revocation registry; return claims or None.
     """
     try:
         payload = jwt.decode(
             token,
             settings.JWT_SECRET,
-            algorithms=[settings.JWT_ALGORITHM],   # explicit allowlist prevents alg=none attacks
+            algorithms=[settings.JWT_ALGORITHM],
         )
+        jti = payload.get("jti")
+        if jti and jti in _REVOKED_TOKENS:
+            logger.debug("JWT rejected: token JTI is revoked")
+            return None
+
+        user_id = payload.get("sub")
+        company_id = payload.get("company_id")
+        iat = payload.get("iat", 0)
+
+        if user_id and iat <= _REVOKED_USERS.get(user_id, 0):
+            logger.debug(f"JWT rejected: user {user_id} sessions were revoked after issuance")
+            return None
+
+        if company_id and iat <= _REVOKED_TENANTS.get(company_id, 0):
+            logger.debug(f"JWT rejected: tenant {company_id} sessions were revoked after issuance")
+            return None
+
         return payload
     except JWTError as exc:
         logger.debug("JWT decode failed: %s", exc)

@@ -86,6 +86,11 @@ async def add_security_and_timing_headers(request: Request, call_next):
     
     response.headers["x-response-time-ms"] = str(duration_ms)
     response.headers["x-ai-service"] = "CoarAI-Enterprise-FastAPI-v2"
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["X-Frame-Options"] = "SAMEORIGIN"
+    response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+    if settings.ENVIRONMENT == "production":
+        response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains; preload"
     return response
 
 # ----------------- Mount Modular Enterprise Routers -----------------

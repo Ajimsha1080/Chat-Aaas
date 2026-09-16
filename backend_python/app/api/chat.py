@@ -74,7 +74,8 @@ def _persist_chat_turn(company_id: str, req: ChatRequest, bot_reply: str, tokens
 @router.post("/message", response_model=ChatResponse)
 async def process_chat_message(
     req: ChatRequest,
-    ctx: TenantContext = Depends(get_tenant_context)
+    ctx: TenantContext = Depends(get_tenant_context),
+    origin: Optional[str] = Header(None)
 ):
     """
     Direct synchronous AI agent execution with RAG retrieval, anti-spam rate limiting, quota checks, and tool gates.
@@ -87,6 +88,11 @@ async def process_chat_message(
         )
 
     company_id = ctx.company_id
+    company = db.companies.get(company_id, {})
+
+    # Validate origin domain if configured
+    if origin and company.get("allowedDomains"):
+        RateLimiter.validate_widget_origin(origin, company.get("allowedDomains"))
 
     # 1. Agent Active / Maintenance Gate
     agent = db.get_agent_for_company(company_id) or {"name": "Coar AI", "model": "gpt-4o-mini", "status": "active"}
@@ -152,7 +158,8 @@ async def process_chat_message(
 @router.post("/stream")
 async def stream_chat_tokens(
     req: ChatRequest,
-    ctx: TenantContext = Depends(get_tenant_context)
+    ctx: TenantContext = Depends(get_tenant_context),
+    origin: Optional[str] = Header(None)
 ):
     """
     Real SSE Token Streaming endpoint for React chat widgets and web dashboards.
@@ -166,6 +173,20 @@ async def stream_chat_tokens(
         )
 
     company_id = ctx.company_id
+    company = db.companies.get(company_id, {})
+
+    # Validate origin domain if configured
+    if origin and company.get("allowedDomains"):
+        RateLimiter.validate_widget_origin(origin, company.get("allowedDomains"))
+
+    # Subscription Plan Monthly Quota Check
+    if ctx.role not in ["super_admin", "platform_super_admin"]:
+        quota = UsageService.check_monthly_quota(company_id)
+        if quota.get("isExceeded"):
+            raise HTTPException(
+                status_code=402,
+                detail=f"Monthly conversation limit ({quota.get('monthlyLimit')}) exceeded for your active subscription. Please upgrade to continue."
+            )
     
     # 1. Anti-spam & Cost Protection: Max 20 requests/minute per tenant session
     client_key = f"{company_id}_{req.conversation_id or req.session_id or 'anon'}"

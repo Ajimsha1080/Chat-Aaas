@@ -27,17 +27,33 @@ class UpdateCompanyRequest(BaseModel):
     widgetSettings: Optional[Dict[str, Any]] = None
     settings: Optional[Dict[str, Any]] = None
 
+def _sanitize_company(company: Dict[str, Any]) -> Dict[str, Any]:
+    c = dict(company)
+    c.pop("apiSecretEncrypted", None)
+    c.pop("api_secret_encrypted", None)
+    return c
+
 @router.get("")
-def list_companies():
-    """Lists all registered company workspaces."""
-    comp_list = []
-    for comp in db.companies.values():
-        c = dict(comp)
-        agent = db.get_agent_for_company(c["id"])
-        if agent:
-            c["agent"] = agent
-        comp_list.append(c)
-    return {"status": 200, "data": {"companies": comp_list}}
+def list_companies(ctx: TenantContext = Depends(get_tenant_context)):
+    """Lists company workspaces scoped to the authorized tenant (or all for super admin)."""
+    if ctx.role in ["super_admin", "platform_super_admin"]:
+        comp_list = []
+        for comp in db.companies.values():
+            c = _sanitize_company(comp)
+            agent = db.get_agent_for_company(c["id"])
+            if agent:
+                c["agent"] = agent
+            comp_list.append(c)
+        return {"status": 200, "data": {"companies": comp_list}}
+
+    comp = db.companies.get(ctx.company_id)
+    if not comp:
+        raise HTTPException(status_code=404, detail="Company not found")
+    c = _sanitize_company(comp)
+    agent = db.get_agent_for_company(ctx.company_id)
+    if agent:
+        c["agent"] = agent
+    return {"status": 200, "data": {"companies": [c]}}
 
 @router.post("")
 def create_company(req: CreateCompanyRequest):
@@ -124,7 +140,7 @@ def get_current_company(ctx: TenantContext = Depends(get_tenant_context)):
     comp = db.companies.get(ctx.company_id)
     if not comp:
         raise HTTPException(status_code=404, detail="Company not found")
-    c = dict(comp)
+    c = _sanitize_company(comp)
     agent = db.get_agent_for_company(ctx.company_id)
     if agent:
         c["agent"] = agent
@@ -141,7 +157,7 @@ def get_company_by_id(company_id: str, ctx: TenantContext = Depends(get_tenant_c
     comp = db.companies.get(company_id)
     if not comp:
         raise HTTPException(status_code=404, detail="Company not found")
-    c = dict(comp)
+    c = _sanitize_company(comp)
     agent = db.get_agent_for_company(company_id)
     if agent:
         c["agent"] = agent
@@ -177,7 +193,7 @@ def update_company_by_id(company_id: str, req: UpdateCompanyRequest, ctx: Tenant
             agent["updatedAt"] = time.strftime("%Y-%m-%dT%H:%M:%SZ")
 
     comp["updatedAt"] = time.strftime("%Y-%m-%dT%H:%M:%SZ")
-    c = dict(comp)
+    c = _sanitize_company(comp)
     agent = db.get_agent_for_company(company_id)
     if agent:
         c["agent"] = agent

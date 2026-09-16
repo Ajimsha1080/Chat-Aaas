@@ -7,13 +7,26 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..',
 
 from app.db.database import db
 
+from app.core.security import _REVOKED_TOKENS, _REVOKED_USERS, _REVOKED_TENANTS
+from app.services.rate_limiter import RateLimiter
+from app.services.email_service import EmailService
+
 @pytest.fixture(autouse=True)
 def setup_test_db(request):
+    _REVOKED_TOKENS.clear()
+    _REVOKED_USERS.clear()
+    _REVOKED_TENANTS.clear()
+    RateLimiter.reset()
+    EmailService.reset_tokens()
     if 'clean_db' in request.keywords:
         db.clear()
     else:
-        if "comp-techflow" not in db.companies:
-            db.seed_demo_data()
+        db.seed_demo_data()
     yield
+    _REVOKED_TOKENS.clear()
+    _REVOKED_USERS.clear()
+    _REVOKED_TENANTS.clear()
+    RateLimiter.reset()
+    EmailService.reset_tokens()
     if 'clean_db' in request.keywords:
         db.seed_demo_data()

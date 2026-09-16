@@ -1,7 +1,7 @@
 import time
 from typing import Dict, Any, Optional
 from app.db.database import db
-from app.core.security import hash_password, verify_password, create_jwt_token
+from app.core.security import hash_password, verify_password, create_jwt_token, create_refresh_token, decode_jwt_token, revoke_token, revoke_user_sessions
 
 class AuthService:
     @staticmethod
@@ -9,6 +9,10 @@ class AuthService:
         user = next((u for u in db.users.values() if u.get("email", "").lower() == email.lower()), None)
         if not user or not verify_password(password, user.get("passwordHash", "")):
             return None
+
+        if user.get("isSuspended"):
+            from fastapi import HTTPException, status
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="User account is suspended.")
 
         membership = next((m for m in db.memberships.values() if m.get("userId") == user["id"]), None)
         if not membership:
@@ -20,6 +24,7 @@ class AuthService:
         company_id = membership["companyId"]
         role = membership.get("role", "member")
         token = create_jwt_token(user["id"], company_id, role)
+        refresh_token = create_refresh_token(user["id"], company_id, role)
 
         return {
             "user": {
@@ -30,8 +35,44 @@ class AuthService:
             },
             "companyId": company_id,
             "role": role,
-            "token": token
+            "token": token,
+            "refreshToken": refresh_token,
+            "tokenType": "Bearer",
+            "expiresIn": 900
         }
+
+    @staticmethod
+    def refresh_session(refresh_token: str) -> Dict[str, Any]:
+        payload = decode_jwt_token(refresh_token)
+        if not payload or payload.get("token_type") != "refresh":
+            from fastapi import HTTPException, status
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid or expired refresh token.")
+
+        user_id = payload["sub"]
+        company_id = payload["company_id"]
+        role = payload.get("role", "member")
+
+        # Rotate refresh token: revoke old one, issue new pair
+        old_jti = payload.get("jti")
+        if old_jti:
+            revoke_token(old_jti)
+
+        new_access = create_jwt_token(user_id, company_id, role)
+        new_refresh = create_refresh_token(user_id, company_id, role)
+
+        return {
+            "token": new_access,
+            "refreshToken": new_refresh,
+            "tokenType": "Bearer",
+            "expiresIn": 900
+        }
+
+    @staticmethod
+    def logout(jti: Optional[str], user_id: Optional[str] = None) -> None:
+        if jti:
+            revoke_token(jti)
+        if user_id:
+            revoke_user_sessions(user_id)
 
     @staticmethod
     def signup(full_name: str, email: str, password: str, company_name: str, industry: str, plan_id: str = "starter") -> Dict[str, Any]:
@@ -115,9 +156,13 @@ class AuthService:
         }
 
         token = create_jwt_token(user_id, company_id, "owner")
+        refresh_token = create_refresh_token(user_id, company_id, "owner")
         return {
             "user": new_user,
             "company": new_company,
             "agent": new_agent,
-            "token": token
+            "token": token,
+            "refreshToken": refresh_token,
+            "tokenType": "Bearer",
+            "expiresIn": 900
         }
