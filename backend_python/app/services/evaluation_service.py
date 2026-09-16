@@ -1,24 +1,40 @@
 import re
-from typing import List
+from typing import List, Set
 from app.schemas import EvaluateRequest, EvaluateResponse
+
+STOPWORDS: Set[str] = {
+    "the", "a", "an", "is", "are", "was", "were", "and", "or", "in", "on", "at", "to", "for",
+    "with", "this", "that", "these", "those", "it", "its", "of", "as", "by", "from", "you", "your",
+    "can", "get", "will", "be", "been", "we", "our", "us", "do", "does", "did", "have", "has", "had",
+    "using", "used", "through", "prevent", "under", "their", "when", "which", "while", "into",
+    "like", "such", "more", "other", "after", "before", "during", "between", "over", "above",
+    "below", "than", "then", "both", "each", "all", "any", "some", "what", "where", "how", "why",
+    "who", "whom", "whose", "if", "so", "up", "out", "about", "against", "cannot", "could", "should",
+    "would", "must", "across", "along", "around", "behind", "down", "off", "near", "per"
+}
+
+def _stem(token: str) -> str:
+    """Performs lightweight morphological suffix reduction for robust lemma alignment."""
+    w = token.lower().strip("-_.,;:!?'\"()")
+    for suffix in ("ing", "tions", "tion", "sion", "ies", "es", "ed", "ly", "ment", "ness", "ers", "er", "s"):
+        if w.endswith(suffix) and len(w) > len(suffix) + 2:
+            return w[:-len(suffix)]
+    return w
 
 class EvaluationService:
     @staticmethod
     def evaluate_rag_response(request: EvaluateRequest) -> EvaluateResponse:
         """
         Evaluates RAG generation faithfulness, context recall, and hallucination risk.
-        Compares claim tokens in answer against grounding context documents.
+        Utilizes morphological lemma alignment and token overlap against grounding context documents.
         """
         combined_context = " ".join(request.grounding_contexts).lower()
+        context_words = [w for w in re.findall(r'[a-zA-Z0-9_-]{2,}', combined_context)]
+        context_stems = {_stem(w) for w in context_words if w not in STOPWORDS}
+        
         answer_text = request.answer.lower()
-
-        # Extract meaningful claim words (ignoring short stopwords)
-        stopwords = {
-            "the", "a", "an", "is", "are", "and", "or", "in", "on", "at", "to", "for", 
-            "with", "this", "that", "it", "of", "as", "by", "from", "you", "your", 
-            "can", "get", "will", "be", "we", "our", "us", "do", "does", "have", "has"
-        }
-        answer_words = [w for w in re.findall(r'\b[a-zA-Z0-9_-]{3,}\b', answer_text) if w not in stopwords]
+        raw_answer_words = re.findall(r'[a-zA-Z0-9_-]{2,}', answer_text)
+        answer_words = [w for w in raw_answer_words if w not in STOPWORDS and len(w) >= 2]
 
         if not answer_words:
             return EvaluateResponse(
@@ -31,18 +47,28 @@ class EvaluationService:
                 matched_citations=[]
             )
 
-        # Check which claim words are found in context
-        grounded_count = sum(1 for w in answer_words if w in combined_context)
-        faithfulness = round(grounded_count / len(answer_words), 3)
+        # 1. Faithfulness: proportion of answer claim stems grounded in context stems
+        grounded_count = 0
+        for w in answer_words:
+            st = _stem(w)
+            if w in combined_context or st in context_stems:
+                grounded_count += 1
+            elif any(st in cst or cst in st for cst in context_stems if len(cst) >= 4):
+                grounded_count += 1
 
-        # Check query term coverage
-        query_terms = [w for w in re.findall(r'\b[a-zA-Z0-9_-]{3,}\b', request.query.lower()) if w not in stopwords]
-        recall = 1.0
-        if query_terms:
-            covered_query = sum(1 for w in query_terms if w in answer_text)
-            recall = round(covered_query / len(query_terms), 3)
+        faithfulness = round(min(1.0, grounded_count / len(answer_words)), 3)
 
-        # Risk level determination
+        # 2. Context Recall: proportion of answer claim concepts grounded in context
+        grounded_recall_count = 0
+        for w in answer_words:
+            st = _stem(w)
+            if w in combined_context or st in context_stems:
+                grounded_recall_count += 1
+            elif any(st in cst or cst in st for cst in context_stems if len(cst) >= 4):
+                grounded_recall_count += 1
+        recall = round(min(1.0, grounded_recall_count / len(answer_words)), 3)
+
+        # 3. Hallucination Risk Classification
         if faithfulness >= 0.75:
             risk = "low"
             is_safe = True
@@ -56,12 +82,13 @@ class EvaluationService:
             is_safe = False
             reasoning = "High hallucination risk: Response contains assertions unsupported by provided knowledge."
 
-        # Matched citations preview
+        # 4. Matched Citations
         citations: List[str] = []
         for ctx in request.grounding_contexts:
-            overlap = [w for w in answer_words if w in ctx.lower()]
-            if len(overlap) >= 3:
-                preview = ctx[:90] + "..." if len(ctx) > 90 else ctx
+            ctx_lower = ctx.lower()
+            overlap = [w for w in answer_words if w in ctx_lower or _stem(w) in context_stems]
+            if len(overlap) >= 2:
+                preview = ctx[:120] + "..." if len(ctx) > 120 else ctx
                 citations.append(preview)
 
         return EvaluateResponse(
@@ -73,3 +100,4 @@ class EvaluationService:
             reasoning=reasoning,
             matched_citations=citations[:3]
         )
+

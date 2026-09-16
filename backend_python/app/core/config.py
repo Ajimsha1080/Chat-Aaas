@@ -109,5 +109,12 @@ class Settings(BaseSettings):
 
     SEED_DEMO_DATA: bool = _seed_env
 
+    # Indian GST Statutory Settings
+    SUPPLIER_GSTIN: str = os.getenv("SUPPLIER_GSTIN", "29AABCU9603R1ZM")
+    SUPPLIER_LEGAL_NAME: str = os.getenv("SUPPLIER_LEGAL_NAME", "CoarAI Technologies Private Limited")
+    SUPPLIER_STATE_CODE: str = os.getenv("SUPPLIER_STATE_CODE", "29")  # Karnataka
+    SUPPLIER_ADDRESS: str = os.getenv("SUPPLIER_ADDRESS", "Brigade Tech Park, Whitefield, Bengaluru, Karnataka 560066")
+    DEFAULT_SAC_CODE: str = os.getenv("DEFAULT_SAC_CODE", "998313")  # Information technology software services
+
 
 settings = Settings()

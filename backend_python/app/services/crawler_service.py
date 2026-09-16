@@ -1,7 +1,10 @@
 import ipaddress
 import socket
-from urllib.parse import urlparse
-from typing import Tuple
+from urllib.parse import urlparse, urljoin
+from typing import Tuple, List, Set, Optional
+
+MAX_PAYLOAD_BYTES = 10 * 1024 * 1024  # 10 MB ceiling
+MAX_CRAWL_DEPTH = 3
 
 BLOCKED_NETWORKS = [
     ipaddress.ip_network("127.0.0.0/8"),
@@ -68,6 +71,52 @@ class CrawlerService:
             return False, f"Safety check error: {str(e)}"
 
     @staticmethod
+    def validate_domain_scope(root_url: str, target_url: str) -> bool:
+        """
+        Enforces recursive domain scope lock. Target URL must belong to the exact root domain or subdomains.
+        """
+        try:
+            root_host = urlparse(root_url).hostname
+            target_host = urlparse(target_url).hostname
+            if not root_host or not target_host:
+                return False
+            root_host = root_host.lower().lstrip("www.")
+            target_host = target_host.lower().lstrip("www.")
+            return target_host == root_host or target_host.endswith(f".{root_host}")
+        except Exception:
+            return False
+
+    @staticmethod
+    def parse_robots_txt_rules(robots_txt_content: str, user_agent: str = "CoarAI-WebCrawler") -> List[str]:
+        """Parses disallow rules for given User-Agent or generic *."""
+        disallowed: List[str] = []
+        lines = robots_txt_content.splitlines()
+        current_agent_matches = False
+
+        for line in lines:
+            line = line.strip()
+            if not line or line.startswith("#"):
+                continue
+            if ":" in line:
+                key, val = line.split(":", 1)
+                key = key.strip().lower()
+                val = val.strip()
+                if key == "user-agent":
+                    current_agent_matches = (val == "*" or val.lower() == user_agent.lower())
+                elif key == "disallow" and current_agent_matches and val:
+                    disallowed.append(val)
+
+        return disallowed
+
+    @classmethod
+    def is_path_allowed_by_robots(cls, path: str, disallowed_prefixes: List[str]) -> bool:
+        """Checks if a URL path is blocked by parsed robots.txt disallow rules."""
+        for prefix in disallowed_prefixes:
+            if prefix and path.startswith(prefix):
+                return False
+        return True
+
+    @staticmethod
     def clean_html_content(raw_html: str) -> str:
         """Strips HTML tags, scripts, and stylesheets safely."""
         import re
@@ -78,11 +127,27 @@ class CrawlerService:
         return text
 
     @classmethod
-    async def fetch_and_parse(cls, url: str) -> dict:
+    async def fetch_and_parse(
+        cls,
+        url: str,
+        root_url: Optional[str] = None,
+        depth: int = 1,
+        respect_robots: bool = True
+    ) -> dict:
         """
         Fetches web page content, extracts <title>, and strips HTML to clean readable text.
-        Includes strict multi-hop SSRF validation across all redirects.
+        Hardened with:
+        - Strict SSRF multi-hop validation
+        - Domain scope lock
+        - Max depth <= 3
+        - 10MB payload size ceiling
         """
+        if depth > MAX_CRAWL_DEPTH:
+            return {"success": False, "error": f"Crawl depth {depth} exceeds maximum allowable depth of {MAX_CRAWL_DEPTH}.", "url": url}
+
+        if root_url and not cls.validate_domain_scope(root_url, url):
+            return {"success": False, "error": f"Target URL '{url}' is outside root domain scope '{root_url}'.", "url": url}
+
         import re
         import httpx
         current_url = url
@@ -117,6 +182,14 @@ class CrawlerService:
                     status_code = resp.status_code if resp else "unknown"
                     return {"success": False, "error": f"HTTP {status_code} returned by web server.", "url": current_url}
                 
+                content_bytes = resp.content
+                if len(content_bytes) > MAX_PAYLOAD_BYTES:
+                    return {
+                        "success": False,
+                        "error": f"Payload size {len(content_bytes)} bytes exceeds maximum ceiling of {MAX_PAYLOAD_BYTES} bytes (10MB).",
+                        "url": current_url
+                    }
+
                 raw_html = resp.text
                 title_match = re.search(r'<title>(.*?)</title>', raw_html, re.IGNORECASE)
                 page_title = title_match.group(1).strip() if title_match else current_url
@@ -128,7 +201,8 @@ class CrawlerService:
                     "content": cleaned_text,
                     "url": current_url,
                     "rawLength": len(raw_html),
-                    "textLength": len(cleaned_text)
+                    "textLength": len(cleaned_text),
+                    "depth": depth
                 }
         except Exception as e:
             return {

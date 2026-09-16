@@ -148,8 +148,50 @@ class JobQueue:
             db.background_jobs[job_id]["result"] = result
             db.background_jobs[job_id]["completedAt"] = now
 
-    async def fail_job(self, job_id: str, error: str, retry: bool = True):
-        """Records job failure and determines whether to re-queue for retry."""
+    async def move_to_dlq(self, job_id: str, error: str, stack_trace: Optional[str] = None) -> Dict[str, Any]:
+        """Routes unrecoverable or exhausted job to Dead Letter Queue (DLQ)."""
+        now = time.strftime("%Y-%m-%dT%H:%M:%SZ")
+        dlq_error = f"{error}\n{stack_trace}" if stack_trace else error
+
+        with db.get_session() as session:
+            job = session.query(BackgroundJob).filter_by(id=job_id).first()
+            if job:
+                job.status = "dlq"
+                job.error = dlq_error
+                job.completed_at = now
+                job.updated_at = now
+                session.commit()
+
+        if job_id in db.background_jobs:
+            rec = db.background_jobs[job_id]
+            rec["status"] = "dlq"
+            rec["error"] = dlq_error
+            rec["completedAt"] = now
+
+        redis = await self._get_redis()
+        if redis:
+            try:
+                await redis.rpush("coarai:queue:dlq", job_id)
+            except Exception:
+                pass
+
+        logger.error(f"[DLQ] Job {job_id} isolated into Dead Letter Queue: {error}")
+        return db.background_jobs.get(job_id, {"id": job_id, "status": "dlq", "error": dlq_error})
+
+    @staticmethod
+    def calculate_backoff_delay(attempt: int, base_seconds: float = 1.0, max_seconds: float = 30.0) -> float:
+        """Calculates exponential backoff delay with jitter."""
+        delay = min(base_seconds * (2 ** max(0, attempt - 1)), max_seconds)
+        # 10% jitter
+        import random
+        jitter = delay * 0.1 * random.random()
+        return round(delay + jitter, 2)
+
+    async def fail_job(self, job_id: str, error: str, retry: bool = True, is_poison_pill: bool = False, stack_trace: Optional[str] = None):
+        """Records job failure with automatic retry backoff or DLQ isolation."""
+        if is_poison_pill:
+            return await self.move_to_dlq(job_id, f"Poison Pill Defended: {error}", stack_trace)
+
         now = time.strftime("%Y-%m-%dT%H:%M:%SZ")
         with db.get_session() as session:
             job = session.query(BackgroundJob).filter_by(id=job_id).first()
@@ -166,7 +208,7 @@ class JobQueue:
                         except Exception:
                             pass
                 else:
-                    job.status = "failed"
+                    job.status = "dlq"
                     job.completed_at = now
                     session.commit()
 
@@ -176,7 +218,7 @@ class JobQueue:
             if retry and rec.get("attempts", 0) < rec.get("maxAttempts", 3):
                 rec["status"] = "queued"
             else:
-                rec["status"] = "failed"
+                rec["status"] = "dlq"
                 rec["completedAt"] = now
 
     def get_job_status(self, job_id: str) -> Optional[Dict[str, Any]]:
@@ -202,6 +244,40 @@ class JobQueue:
                 "createdAt": job.created_at,
                 "completedAt": job.completed_at
             }
+
+    def get_dlq_jobs(self, company_id: Optional[str] = None) -> List[Dict[str, Any]]:
+        """Lists all dead-lettered jobs isolated from processing."""
+        results = [j for j in db.background_jobs.values() if j.get("status") == "dlq"]
+        if company_id:
+            results = [j for j in results if j.get("companyId") == company_id]
+        return results
+
+    async def replay_dlq_job(self, job_id: str) -> bool:
+        """Re-enqueues a job from the DLQ for re-processing."""
+        if job_id not in db.background_jobs:
+            return False
+        rec = db.background_jobs[job_id]
+        if rec.get("status") != "dlq":
+            return False
+        rec["status"] = "queued"
+        rec["attempts"] = 0
+        rec["error"] = None
+        
+        with db.get_session() as session:
+            job = session.query(BackgroundJob).filter_by(id=job_id).first()
+            if job:
+                job.status = "queued"
+                job.attempts = 0
+                job.error = None
+                session.commit()
+
+        redis = await self._get_redis()
+        if redis:
+            try:
+                await redis.rpush(f"coarai:queue:{self.queue_name}", job_id)
+            except Exception:
+                pass
+        return True
 
     async def claim(self, worker_id: str = "worker_default", poll_timeout: float = 0.5) -> Optional[Dict[str, Any]]:
         return await self.claim_job(worker_id, poll_timeout)

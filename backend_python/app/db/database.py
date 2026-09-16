@@ -229,10 +229,16 @@ class DatabaseStore:
             }
 
     @contextmanager
-    def get_session(self):
-        """Transactional session context manager."""
+    def get_session(self, company_id: Optional[str] = None, is_super_admin: bool = False):
+        """Transactional session context manager with PostgreSQL RLS support."""
         session = self.SessionLocal()
         try:
+            if self.engine.dialect.name == "postgresql":
+                if is_super_admin:
+                    session.execute(text("SET LOCAL app.is_super_admin = 'true'"))
+                elif company_id:
+                    session.execute(text("SET LOCAL app.current_tenant_id = :cid"), {"cid": company_id})
+                    session.execute(text("SET LOCAL app.is_super_admin = 'false'"))
             yield session
             session.commit()
         except Exception:
