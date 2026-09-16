@@ -409,13 +409,13 @@ export default function App() {
                 onClick={() => setActiveMainTab(tab.id as any)}
                 className={`pb-3 font-semibold text-sm transition-all relative cursor-pointer whitespace-nowrap ${
                   activeMainTab === tab.id
-                    ? 'text-pink-600 font-bold'
+                    ? 'text-indigo-600 font-bold'
                     : 'text-slate-500 hover:text-slate-900'
                 }`}
               >
                 {tab.label}
                 {activeMainTab === tab.id && (
-                  <span className="absolute bottom-[-1px] left-0 right-0 h-0.5 bg-pink-500 rounded-full" />
+                  <span className="absolute bottom-[-1px] left-0 right-0 h-0.5 bg-indigo-600 rounded-full" />
                 )}
               </button>
             ))}
@@ -453,7 +453,7 @@ export default function App() {
                         icon: Globe,
                         desc: 'Floating bubble widget embeddable via single script tag.',
                         badge: 'Popular',
-                        status: (deployments || []).find(d => d.channel === 'website_widget')?.status || 'active'
+                        status: (deployments || []).find(d => d.channel === 'website_widget')?.status || 'inactive'
                       },
                       {
                         channel: 'react_iframe',
@@ -461,7 +461,7 @@ export default function App() {
                         icon: Code,
                         desc: 'Inline component or responsive iframe modal for web apps.',
                         badge: 'Flexible',
-                        status: (deployments || []).find(d => d.channel === 'react_iframe')?.status || 'active'
+                        status: (deployments || []).find(d => d.channel === 'react_iframe')?.status || 'inactive'
                       },
                       {
                         channel: 'rest_api',
@@ -469,7 +469,7 @@ export default function App() {
                         icon: Server,
                         desc: 'Direct programmatic headless access via authenticated /chat endpoint.',
                         badge: 'Headless',
-                        status: (deployments || []).find(d => d.channel === 'rest_api')?.status || 'active'
+                        status: (deployments || []).find(d => d.channel === 'rest_api')?.status || 'inactive'
                       },
                       {
                         channel: 'mobile_sdk',
@@ -477,7 +477,7 @@ export default function App() {
                         icon: Smartphone,
                         desc: 'Native iOS & Android SDKs with turnkey conversational UI.',
                         badge: 'Native',
-                        status: (deployments || []).find(d => d.channel === 'mobile_sdk')?.status || 'active'
+                        status: (deployments || []).find(d => d.channel === 'mobile_sdk')?.status || 'inactive'
                       }
                     ].map(ch => {
                       const Icon = ch.icon;
@@ -488,22 +488,22 @@ export default function App() {
                           className={`p-4 rounded-2xl border transition-all ${
                             isChannelActive 
                               ? 'bg-slate-50/70 border-slate-200' 
-                              : 'bg-amber-50/40 border-amber-200/80'
+                              : 'bg-white border-slate-200/80 shadow-2xs'
                           }`}
                         >
                           <div className="flex items-start justify-between">
                             <div className="flex items-center gap-2.5">
                               <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${
-                                isChannelActive ? 'bg-white text-slate-800 shadow-2xs border border-slate-200' : 'bg-amber-100 text-amber-700'
+                                isChannelActive ? 'bg-white text-slate-800 shadow-2xs border border-slate-200' : 'bg-slate-100 text-slate-500 border border-slate-200/60'
                               }`}>
                                 <Icon className="w-4.5 h-4.5" />
                               </div>
                               <div>
                                 <h4 className="font-bold text-slate-900 text-xs sm:text-sm">{ch.name}</h4>
                                 <span className={`text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-sm ${
-                                  isChannelActive ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'
+                                  isChannelActive ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-600'
                                 }`}>
-                                  {isChannelActive ? 'Active' : 'Disabled'}
+                                  {isChannelActive ? 'Active' : 'Not Configured'}
                                 </span>
                               </div>
                             </div>
@@ -537,109 +537,127 @@ export default function App() {
                   </div>
 
                   <div className="space-y-3">
-                    {(deployments || []).map(dep => {
-                      const isActive = dep.status === 'active';
-                      const channelIcon = dep.channel === 'website_widget' ? Globe :
-                                          dep.channel === 'react_iframe' ? Code :
-                                          dep.channel === 'rest_api' ? Server : Smartphone;
-                      const ChannelIcon = channelIcon;
-
-                      return (
-                        <div 
-                          key={dep.id}
-                          className={`p-4 sm:p-5 rounded-2xl border transition-all ${
-                            isActive 
-                              ? 'bg-white border-slate-200 shadow-2xs' 
-                              : 'bg-amber-50/30 border-amber-200/80 shadow-2xs'
-                          }`}
+                    {(deployments || []).length === 0 ? (
+                      <div className="p-8 text-center rounded-2xl bg-slate-50 border border-slate-200/80 space-y-3">
+                        <Globe className="w-8 h-8 text-slate-400 mx-auto" />
+                        <div>
+                          <p className="font-semibold text-slate-800 text-sm">No active deployments</p>
+                          <p className="text-xs text-slate-500 mt-0.5">Create your first website widget or API deployment to start receiving customer traffic.</p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setIsCreateDeploymentOpen(true)}
+                          className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold transition-colors inline-flex items-center gap-1.5 cursor-pointer shadow-xs"
                         >
-                          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                            <div className="flex items-start gap-3.5 min-w-0">
-                              <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${
-                                isActive ? 'bg-slate-100 text-slate-700' : 'bg-amber-100 text-amber-800'
-                              }`}>
-                                <ChannelIcon className="w-5 h-5" />
-                              </div>
+                          <Plus className="w-3.5 h-3.5" />
+                          <span>Create Deployment</span>
+                        </button>
+                      </div>
+                    ) : (
+                      (deployments || []).map(dep => {
+                        const isActive = dep.status === 'active';
+                        const channelIcon = dep.channel === 'website_widget' ? Globe :
+                                            dep.channel === 'react_iframe' ? Code :
+                                            dep.channel === 'rest_api' ? Server : Smartphone;
+                        const ChannelIcon = channelIcon;
 
-                              <div className="min-w-0 space-y-1">
-                                <div className="flex items-center gap-2 flex-wrap">
-                                  <h4 className="font-bold text-slate-900 text-sm">{dep.name}</h4>
-                                  <span className={`px-2 py-0.5 rounded-full text-[11px] font-bold ${
-                                    isActive 
-                                      ? 'bg-emerald-100 text-emerald-800' 
-                                      : 'bg-amber-100 text-amber-800'
-                                  }`}>
-                                    {isActive ? 'Active' : 'Disabled'}
-                                  </span>
-                                  <span className="text-xs text-slate-400 font-mono bg-slate-100 px-2 py-0.5 rounded-md">
-                                    {dep.channel.replace('_', ' ')}
-                                  </span>
+                        return (
+                          <div 
+                            key={dep.id}
+                            className={`p-4 sm:p-5 rounded-2xl border transition-all ${
+                              isActive 
+                                ? 'bg-white border-slate-200 shadow-2xs' 
+                                : 'bg-amber-50/30 border-amber-200/80 shadow-2xs'
+                            }`}
+                          >
+                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                              <div className="flex items-start gap-3.5 min-w-0">
+                                <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${
+                                  isActive ? 'bg-slate-100 text-slate-700' : 'bg-amber-100 text-amber-800'
+                                }`}>
+                                  <ChannelIcon className="w-5 h-5" />
                                 </div>
 
-                                <div className="flex items-center gap-4 text-xs text-slate-500 flex-wrap">
-                                  <span>Domain: <strong className="font-mono text-slate-700">{dep.targetDomain || dep.domain || '* (Any Origin)'}</strong></span>
-                                  <span>•</span>
-                                  <span>Sessions: <strong className="font-mono text-slate-700">{(dep.totalSessions ?? (dep.config as any)?.totalSessions ?? 0).toLocaleString()}</strong></span>
-                                  <span>•</span>
-                                  <span>Created: <span className="font-mono">{new Date(dep.createdAt).toLocaleDateString()}</span></span>
+                                <div className="min-w-0 space-y-1">
+                                  <div className="flex items-center gap-2 flex-wrap">
+                                    <h4 className="font-bold text-slate-900 text-sm">{dep.name}</h4>
+                                    <span className={`px-2 py-0.5 rounded-full text-[11px] font-bold ${
+                                      isActive 
+                                        ? 'bg-emerald-100 text-emerald-800' 
+                                        : 'bg-amber-100 text-amber-800'
+                                    }`}>
+                                      {isActive ? 'Active' : 'Disabled'}
+                                    </span>
+                                    <span className="text-xs text-slate-400 font-mono bg-slate-100 px-2 py-0.5 rounded-md">
+                                      {dep.channel.replace('_', ' ')}
+                                    </span>
+                                  </div>
+
+                                  <div className="flex items-center gap-4 text-xs text-slate-500 flex-wrap">
+                                    <span>Domain: <strong className="font-mono text-slate-700">{dep.targetDomain || dep.domain || '* (Any Origin)'}</strong></span>
+                                    <span>•</span>
+                                    <span>Sessions: <strong className="font-mono text-slate-700">{(dep.totalSessions ?? (dep.config as any)?.totalSessions ?? 0).toLocaleString()}</strong></span>
+                                    <span>•</span>
+                                    <span>Created: <span className="font-mono">{new Date(dep.createdAt).toLocaleDateString()}</span></span>
+                                  </div>
                                 </div>
                               </div>
-                            </div>
 
-                            {/* Actions & Toggle */}
-                            <div className="flex items-center gap-2 self-end sm:self-center shrink-0">
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  if (isActive) {
-                                    disableDeployment(dep.id);
-                                  } else {
-                                    enableDeployment(dep.id);
-                                  }
-                                }}
-                                className={`px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer border ${
-                                  isActive
-                                    ? 'bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100'
-                                    : 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100'
-                                }`}
-                              >
-                                <Power className="w-3.5 h-3.5" />
-                                <span>{isActive ? 'Disable' : 'Enable'}</span>
-                              </button>
+                              {/* Actions & Toggle */}
+                              <div className="flex items-center gap-2 self-end sm:self-center shrink-0">
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    if (isActive) {
+                                      disableDeployment(dep.id);
+                                    } else {
+                                      enableDeployment(dep.id);
+                                    }
+                                  }}
+                                  className={`px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer border ${
+                                    isActive
+                                      ? 'bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100'
+                                      : 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100'
+                                  }`}
+                                >
+                                  <Power className="w-3.5 h-3.5" />
+                                  <span>{isActive ? 'Disable' : 'Enable'}</span>
+                                </button>
 
-                              <GlobalActionMenu
-                                items={[
-                                  {
-                                    label: 'View Embed Snippet',
-                                    icon: Code,
-                                    onClick: () => {
-                                      setActiveMainTab('install');
-                                      if (dep.channel === 'website_widget') setActiveSnippetTab('script');
-                                      else if (dep.channel === 'react_iframe') setActiveSnippetTab('react');
-                                      else if (dep.channel === 'rest_api') setActiveSnippetTab('api');
+                                <GlobalActionMenu
+                                  items={[
+                                    {
+                                      label: 'View Embed Snippet',
+                                      icon: Code,
+                                      onClick: () => {
+                                        setActiveMainTab('install');
+                                        if (dep.channel === 'website_widget') setActiveSnippetTab('script');
+                                        else if (dep.channel === 'react_iframe') setActiveSnippetTab('react');
+                                        else if (dep.channel === 'rest_api') setActiveSnippetTab('api');
+                                      }
+                                    },
+                                    {
+                                      label: isActive ? 'Disable Channel' : 'Enable Channel',
+                                      icon: Power,
+                                      onClick: () => {
+                                        if (isActive) disableDeployment(dep.id);
+                                        else enableDeployment(dep.id);
+                                      }
+                                    },
+                                    {
+                                      label: 'Remove Deployment',
+                                      icon: Trash2,
+                                      variant: 'destructive',
+                                      onClick: () => setDeploymentToDelete(dep)
                                     }
-                                  },
-                                  {
-                                    label: isActive ? 'Disable Channel' : 'Enable Channel',
-                                    icon: Power,
-                                    onClick: () => {
-                                      if (isActive) disableDeployment(dep.id);
-                                      else enableDeployment(dep.id);
-                                    }
-                                  },
-                                  {
-                                    label: 'Remove Deployment',
-                                    icon: Trash2,
-                                    variant: 'destructive',
-                                    onClick: () => setDeploymentToDelete(dep)
-                                  }
-                                ]}
-                              />
+                                  ]}
+                                />
+                              </div>
                             </div>
                           </div>
-                        </div>
-                      );
-                    })}
+                        );
+                      })
+                    )}
                   </div>
                 </div>
               </div>
