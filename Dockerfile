@@ -1,14 +1,22 @@
 # =================================================================
-# PRODUCTION FRONTEND DOCKERFILE: AGENT-AS-A-SERVICE (AaaS)
+# FAST PRODUCTION FRONTEND DOCKERFILE: AGENT-AS-A-SERVICE (AaaS)
 # =================================================================
 
 # ----------------- Stage 1: Build Frontend Assets -----------------
 FROM node:20-alpine AS builder
 
 WORKDIR /app
+
+# Cache package installation
 COPY package*.json ./
-RUN npm ci
-COPY . .
+RUN --mount=type=cache,target=/root/.npm npm ci --prefer-offline
+
+# Copy application source only
+COPY tsconfig*.json vite.config.ts index.html ./
+COPY src/ ./src/
+COPY public/ ./public/
+
+# Build optimized production bundle
 RUN npm run build
 
 # ----------------- Stage 2: Nginx Static Server -----------------
