@@ -53,8 +53,8 @@ export const MyAssistantView: React.FC = () => {
   const isLive = currentCompany?.agent?.status === 'active';
   const lifecycle = currentCompany?.agent?.lifecycleStatus || 'published';
   const publishedVer = currentCompany?.agent?.publishedVersionNumber || 1;
-  const draftVer = currentCompany?.agent?.draftVersionNumber || (publishedVer + 1);
-  const hasUnpublishedChanges = lifecycle === 'draft' || draftVer > publishedVer;
+  const draftVer = currentCompany?.agent?.draftVersionNumber || publishedVer;
+  const hasUnpublishedChanges = lifecycle === 'draft' || (Boolean(currentCompany?.agent?.draftVersionNumber) && (currentCompany?.agent?.draftVersionNumber || 1) > publishedVer);
 
   if (editingCompanyId !== currentCompany?.id) {
     setEditingCompanyId(currentCompany?.id);

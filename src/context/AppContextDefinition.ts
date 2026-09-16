@@ -43,6 +43,9 @@ const defaultStats = {
 const defaultAgent: AgentConfig = {
   name: 'AI Assistant',
   status: 'active',
+  lifecycleStatus: 'published',
+  publishedVersionNumber: 1,
+  draftVersionNumber: 1,
   avatarUrl: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe',
   description: 'AI Support Specialist',
   tone: 'professional',
