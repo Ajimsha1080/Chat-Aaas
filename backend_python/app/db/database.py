@@ -111,18 +111,6 @@ class DatabaseStore:
             self.seed_demo_data()
             self.flush_durable_storage()
 
-        if len(self.agent_tools) == 0 and "comp-techflow" in self.companies:
-            self.seed_agent_tools()
-            self.flush_durable_storage()
-
-        if len(self.agent_versions) == 0 and "agent-tf-1" in self.agents:
-            self.seed_agent_versions()
-            self.flush_durable_storage()
-
-        if "ks-tf-3" not in self.knowledge_sources and "comp-techflow" in self.companies:
-            self.seed_deployment_guide()
-            self.flush_durable_storage()
-
         if "usr-root-admin" not in self.users:
             self.users["usr-root-admin"] = {
                 "id": "usr-root-admin",
@@ -136,7 +124,7 @@ class DatabaseStore:
             self.memberships["mem-root-admin"] = {
                 "id": "mem-root-admin",
                 "userId": "usr-root-admin",
-                "companyId": "comp-techflow",
+                "companyId": "comp-platform",
                 "role": "super_admin",
                 "status": "active"
             }

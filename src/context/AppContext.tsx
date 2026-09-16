@@ -52,7 +52,18 @@ import { AIAgentEngine } from '../services/aiEngine';
 import { APIClient } from '../api/apiClient';
 import { AppContext, normalizeCompany, normalizeConversation, normalizeKnowledgeItem } from './AppContextDefinition';
 
-const LOCAL_STORAGE_KEY = 'coarai_platform_state_v6';
+const LOCAL_STORAGE_KEY = 'coarai_platform_state_v7';
+
+// Auto-cleanup legacy cached mock states from browser localStorage
+if (typeof window !== 'undefined' && window.localStorage) {
+  try {
+    Object.keys(localStorage).forEach(key => {
+      if (key.startsWith('coarai_platform_state_v') && !key.startsWith('coarai_platform_state_v7')) {
+        localStorage.removeItem(key);
+      }
+    });
+  } catch {}
+}
 
 const genId = (prefix: string) => `${prefix}-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
 
