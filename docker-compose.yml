@@ -51,6 +51,8 @@ services:
       - backend
       - postgres
       - redis
+    healthcheck:
+      disable: true
     networks:
       - aaas-network
 
