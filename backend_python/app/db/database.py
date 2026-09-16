@@ -57,8 +57,16 @@ class DatabaseStore:
         if not db_url or "localhost" in db_url or "127.0.0.1" in db_url:
             db_url = f"sqlite:///{self.sqlite_path}"
 
+        engine_kwargs = {"connect_args": {"check_same_thread": False}} if "sqlite" in db_url else {
+            "pool_size": settings.DB_POOL_SIZE,
+            "max_overflow": settings.DB_MAX_OVERFLOW,
+            "pool_timeout": settings.DB_POOL_TIMEOUT,
+            "pool_recycle": settings.DB_POOL_RECYCLE,
+            "pool_pre_ping": True
+        }
+
         try:
-            self.engine = create_engine(db_url, connect_args={"check_same_thread": False} if "sqlite" in db_url else {})
+            self.engine = create_engine(db_url, **engine_kwargs)
             if settings.ENVIRONMENT != "production":
                 Base.metadata.create_all(bind=self.engine)
         except Exception as e:
@@ -68,6 +76,20 @@ class DatabaseStore:
             self.engine = create_engine(f"sqlite:///{self.sqlite_path}", connect_args={"check_same_thread": False})
             Base.metadata.create_all(bind=self.engine)
 
+        # Read Replica Engine
+        read_url = settings.DATABASE_READ_REPLICA_URL or db_url
+        read_kwargs = {"connect_args": {"check_same_thread": False}} if "sqlite" in read_url else {
+            "pool_size": settings.DB_POOL_SIZE,
+            "max_overflow": settings.DB_MAX_OVERFLOW,
+            "pool_timeout": settings.DB_POOL_TIMEOUT,
+            "pool_recycle": settings.DB_POOL_RECYCLE,
+            "pool_pre_ping": True
+        }
+        try:
+            self.read_engine = create_engine(read_url, **read_kwargs)
+        except Exception:
+            self.read_engine = self.engine
+
         try:
             with self.engine.begin() as conn:
                 conn.execute(text("ALTER TABLE users ADD COLUMN is_suspended BOOLEAN DEFAULT 0"))
@@ -75,6 +97,7 @@ class DatabaseStore:
             pass
 
         self.SessionLocal = sessionmaker(bind=self.engine, autocommit=False, autoflush=False)
+        self.ReadSessionLocal = sessionmaker(bind=self.read_engine, autocommit=False, autoflush=False)
 
         # Primary load: query authoritative SQL database
         restored = self.load_from_database()
@@ -246,6 +269,36 @@ class DatabaseStore:
             raise
         finally:
             session.close()
+
+    @contextmanager
+    def get_read_session(self, company_id: Optional[str] = None, is_super_admin: bool = False):
+        """Read-only session context manager routed to read replica when available."""
+        session = self.ReadSessionLocal()
+        try:
+            if self.read_engine.dialect.name == "postgresql":
+                if is_super_admin:
+                    session.execute(text("SET LOCAL app.is_super_admin = 'true'"))
+                elif company_id:
+                    session.execute(text("SET LOCAL app.current_tenant_id = :cid"), {"cid": company_id})
+                    session.execute(text("SET LOCAL app.is_super_admin = 'false'"))
+            yield session
+        except Exception:
+            session.rollback()
+            raise
+        finally:
+            session.close()
+
+    def get_pool_status(self) -> Dict[str, Any]:
+        """Returns connection pool utilization metrics for observability."""
+        pool = getattr(self.engine, "pool", None)
+        if not pool:
+            return {"status": "unsupported"}
+        return {
+            "size": pool.size() if hasattr(pool, "size") else 0,
+            "checkedin": pool.checkedin() if hasattr(pool, "checkedin") else 0,
+            "checkedout": pool.checkedout() if hasattr(pool, "checkedout") else 0,
+            "overflow": pool.overflow() if hasattr(pool, "overflow") else 0
+        }
 
     def record_audit_log(
         self,

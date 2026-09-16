@@ -59,6 +59,12 @@ class Settings(BaseSettings):
         "DATABASE_URL",
         "postgresql+asyncpg://postgres:postgres@localhost:5432/chat_aaas",
     )
+    DATABASE_READ_REPLICA_URL: Optional[str] = os.getenv("DATABASE_READ_REPLICA_URL") or None
+    DB_POOL_SIZE: int = int(os.getenv("DB_POOL_SIZE", "20"))
+    DB_MAX_OVERFLOW: int = int(os.getenv("DB_MAX_OVERFLOW", "10"))
+    DB_POOL_TIMEOUT: int = int(os.getenv("DB_POOL_TIMEOUT", "30"))
+    DB_POOL_RECYCLE: int = int(os.getenv("DB_POOL_RECYCLE", "1800"))
+
     REDIS_URL: str = os.getenv("REDIS_URL", "redis://localhost:6379/0")
 
     # --- Secrets: required in production, auto-generated (with warning) in dev ---
@@ -115,6 +121,11 @@ class Settings(BaseSettings):
     SUPPLIER_STATE_CODE: str = os.getenv("SUPPLIER_STATE_CODE", "29")  # Karnataka
     SUPPLIER_ADDRESS: str = os.getenv("SUPPLIER_ADDRESS", "Brigade Tech Park, Whitefield, Bengaluru, Karnataka 560066")
     DEFAULT_SAC_CODE: str = os.getenv("DEFAULT_SAC_CODE", "998313")  # Information technology software services
+
+    # Disaster Recovery & Automated Snapshot Backup
+    BACKUP_S3_BUCKET: Optional[str] = os.getenv("BACKUP_S3_BUCKET", "coarai-dr-backups")
+    BACKUP_S3_REGION: str = os.getenv("BACKUP_S3_REGION", "ap-south-1")
+    BACKUP_SCHEDULE_HOURS: int = int(os.getenv("BACKUP_SCHEDULE_HOURS", "24"))
 
 
 settings = Settings()

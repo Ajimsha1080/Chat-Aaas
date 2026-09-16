@@ -78,12 +78,23 @@ app.add_middleware(
     expose_headers=["*"],
 )
 
+from app.core.metrics import metrics_collector
+
 @app.middleware("http")
 async def add_security_and_timing_headers(request: Request, call_next):
     start_time = time.time()
     response = await call_next(request)
-    duration_ms = int((time.time() - start_time) * 1000)
+    duration_s = time.time() - start_time
+    duration_ms = int(duration_s * 1000)
     
+    # Record Prometheus APM metric
+    metrics_collector.record_request(
+        method=request.method,
+        endpoint=request.url.path,
+        status_code=response.status_code,
+        duration_seconds=duration_s
+    )
+
     response.headers["x-response-time-ms"] = str(duration_ms)
     response.headers["x-ai-service"] = "CoarAI-Enterprise-FastAPI-v2"
     response.headers["X-Content-Type-Options"] = "nosniff"
@@ -92,6 +103,13 @@ async def add_security_and_timing_headers(request: Request, call_next):
     if settings.ENVIRONMENT == "production":
         response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains; preload"
     return response
+
+@app.get("/metrics", response_class=Response)
+@app.get("/api/v1/metrics", response_class=Response)
+async def get_prometheus_metrics():
+    """Prometheus APM metrics scraping endpoint."""
+    output = metrics_collector.generate_prometheus_output()
+    return Response(content=output, media_type="text/plain; version=0.0.4; charset=utf-8")
 
 # ----------------- Mount Modular Enterprise Routers -----------------
 app.include_router(auth_router, prefix="/api/v1")
