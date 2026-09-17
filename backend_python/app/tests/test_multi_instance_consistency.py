@@ -1,4 +1,7 @@
 import uuid
+import sys
+import subprocess
+import json
 import pytest
 from fastapi.testclient import TestClient
 from app.main import app
@@ -30,9 +33,15 @@ def test_cross_instance_user_signup_and_login():
     signup_res = client_a.post("/api/v1/auth/signup", json=signup_payload)
     assert signup_res.status_code == 201, signup_res.text
     company_id = signup_res.json()["data"]["company"]["id"]
+    user_id = signup_res.json()["data"]["user"]["id"]
 
-    # Simulate Instance B having a separate / unpopulated in-memory dictionary
-    # by directly querying via Instance B's login endpoint
+    # Evict from in-memory cache on Instance B to simulate independent worker memory
+    if user_id in db.users:
+        del db.users[user_id]
+    if company_id in db.companies:
+        del db.companies[company_id]
+
+    # Instance B logs in: must query SQL directly
     login_res = client_b.post("/api/v1/auth/login", json={"email": email, "password": password})
     assert login_res.status_code == 200, login_res.text
     auth_data = login_res.json()["data"]
@@ -68,8 +77,12 @@ def test_cross_instance_chat_turn_and_inbox_synchronization():
     )
     assert chat_res.status_code == 200, chat_res.text
 
-    # Instance B: Support team checks inbox for conversations
-    # Clear local dictionary on secondary store simulation to guarantee authoritative DB query
+    # Simulate Instance B receiving the inbox request without in-memory state from Instance A
+    # Clear in-memory dict for this conversation and its messages
+    if conv_id in db.conversations:
+        del db.conversations[conv_id]
+    db.messages = {k: v for k, v in db.messages.items() if v.get("conversationId") != conv_id}
+
     token_b = token_a  # Shared valid tenant token
     inbox_res = client_b.get(
         "/api/v1/conversations",
@@ -119,6 +132,10 @@ def test_cross_instance_human_takeover_synchronization():
     assert takeover_res.status_code == 200, takeover_res.text
     assert takeover_res.json()["data"]["conversation"]["status"] == "human_active"
 
+    # Simulate Instance B evicting memory cache
+    if conv_id in db.conversations:
+        del db.conversations[conv_id]
+
     # 3. Instance B queries whether AI is suppressed
     assert ConversationService.is_ai_suppressed(conv_id, company_id) is True
 
@@ -130,3 +147,74 @@ def test_cross_instance_human_takeover_synchronization():
     assert details_res.status_code == 200
     assert details_res.json()["data"]["conversation"]["status"] == "human_active"
     assert details_res.json()["data"]["conversation"]["assignedOperator"] == "Senior Support Specialist"
+
+
+def test_cross_process_subprocess_consistency():
+    """Verify that an independent OS subprocess writing to the database is immediately readable in this process."""
+    sub_suffix = uuid.uuid4().hex[:6]
+    test_user_id = f"usr-subproc-{sub_suffix}"
+    test_email = f"subproc_{sub_suffix}@isolated.process"
+    test_conv_id = f"conv-subproc-{sub_suffix}"
+    test_msg_id = f"msg-subproc-{sub_suffix}"
+    company_id = "comp-techflow"
+
+    # Python code executed in a completely separate OS process with its own separate memory heap
+    worker_script = f"""
+import sys, time
+from app.db.database import db
+from app.core.security import hash_password
+
+db.save_user({{
+    "id": "{test_user_id}",
+    "email": "{test_email}",
+    "passwordHash": hash_password("SubProcPassword123!"),
+    "fullName": "Subprocess Worker User",
+    "isEmailVerified": True,
+    "createdAt": time.strftime("%Y-%m-%dT%H:%M:%SZ")
+}})
+
+db.save_conversation({{
+    "id": "{test_conv_id}",
+    "companyId": "{company_id}",
+    "customerSessionId": "sess_subproc",
+    "customerName": "Subproc Customer",
+    "customerEmail": "{test_email}",
+    "channel": "rest_api",
+    "status": "active",
+    "sentiment": "neutral",
+    "tags": ["SubprocessTest"],
+    "startedAt": time.strftime("%Y-%m-%dT%H:%M:%SZ"),
+    "lastMessageAt": time.strftime("%Y-%m-%dT%H:%M:%SZ")
+}})
+
+db.save_message({{
+    "id": "{test_msg_id}",
+    "conversationId": "{test_conv_id}",
+    "companyId": "{company_id}",
+    "sender": "user",
+    "text": "Hello from separate subprocess!",
+    "createdAt": time.strftime("%Y-%m-%dT%H:%M:%SZ")
+}})
+"""
+
+    result = subprocess.run(
+        [sys.executable, "-c", worker_script],
+        capture_output=True,
+        text=True
+    )
+    assert result.returncode == 0, f"Subprocess failed with stderr: {result.stderr}"
+
+    # Confirm the current process can read the new user, conversation, and message from SQL
+    user = db.get_user_by_email(test_email)
+    assert user is not None, "User saved by separate OS process must be readable in main process"
+    assert user["id"] == test_user_id
+
+    conv = db.get_conversation_by_id(test_conv_id, company_id)
+    assert conv is not None, "Conversation saved by separate OS process must be readable in main process"
+    assert conv["id"] == test_conv_id
+
+    messages = db.get_messages_for_conversation(test_conv_id, company_id)
+    assert len(messages) == 1, "Messages saved by separate OS process must be readable in main process"
+    assert messages[0]["id"] == test_msg_id
+    assert messages[0]["text"] == "Hello from separate subprocess!"
+

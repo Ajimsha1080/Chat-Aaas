@@ -1610,6 +1610,38 @@ class DatabaseStore:
         }
 
     def get_messages_for_conversation(self, conversation_id: str, company_id: str) -> List[Dict[str, Any]]:
+        try:
+            with self.engine.connect() as conn:
+                rows = conn.execute(
+                    Base.metadata.tables["messages"].select().where(
+                        Base.metadata.tables["messages"].c.conversation_id == conversation_id,
+                        Base.metadata.tables["messages"].c.company_id == company_id
+                    ).order_by(Base.metadata.tables["messages"].c.created_at.asc())
+                ).mappings().all()
+                if rows:
+                    msgs = []
+                    for r in rows:
+                        msg = {
+                            "id": r["id"],
+                            "conversationId": r["conversation_id"],
+                            "companyId": r["company_id"],
+                            "sender": r["sender_type"],
+                            "senderType": r["sender_type"],
+                            "senderId": r["sender_id"],
+                            "senderName": r["sender_name"],
+                            "text": r["content"],
+                            "content": r["content"],
+                            "citations": r["citations"] or [],
+                            "toolTraces": r["tool_traces"] or [],
+                            "tokensUsed": r["tokens_consumed"] or 0,
+                            "tokensConsumed": r["tokens_consumed"] or 0,
+                            "createdAt": r["created_at"]
+                        }
+                        self.messages[r["id"]] = msg
+                        msgs.append(msg)
+                    return msgs
+        except Exception:
+            pass
         return [m for m in self.messages.values() if m.get("conversationId") == conversation_id and m.get("companyId") == company_id]
 
     def get_document_chunks_for_tenant(self, company_id: str, only_active: bool = True) -> List[Dict[str, Any]]:

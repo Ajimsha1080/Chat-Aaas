@@ -2,7 +2,7 @@ import json
 import time
 import uuid
 import logging
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, List
 from app.core.config import settings
 from app.db.database import db
 from app.db.models import BackgroundJob
