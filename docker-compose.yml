@@ -10,11 +10,11 @@ services:
     environment:
       - PORT=8000
       - ENVIRONMENT=production
-      - DATABASE_URL=postgresql+asyncpg://aaas_admin:${POSTGRES_PASSWORD:-secret_password}@postgres:5432/aaas_production
+      - DATABASE_URL=postgresql://aaas_admin:${POSTGRES_PASSWORD:-secret_password}@postgres:5432/aaas_production
       - REDIS_URL=redis://redis:6379/0
-      - JWT_SECRET=${JWT_SECRET}
-      - PYTHON_AI_INTERNAL_SECRET=${PYTHON_AI_INTERNAL_SECRET}
-      - ENCRYPTION_KEY=${ENCRYPTION_KEY}
+      - JWT_SECRET=${JWT_SECRET:-insecure_default_dev_jwt_secret_must_be_32_bytes_long}
+      - PYTHON_AI_INTERNAL_SECRET=${PYTHON_AI_INTERNAL_SECRET:-insecure_default_dev_internal_secret_32_bytes}
+      - ENCRYPTION_KEY=${ENCRYPTION_KEY:-insecure_default_dev_encryption_key_32_bytes_len}
       - CORS_ORIGINS=http://localhost,http://localhost:80,http://localhost:5173,http://localhost:3000,http://${SERVER_HOST:-127.0.0.1},https://${SERVER_HOST:-127.0.0.1}
       - OPENAI_API_KEY=${OPENAI_API_KEY:-}
       - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
@@ -26,9 +26,10 @@ services:
         condition: service_healthy
     healthcheck:
       test: ['CMD-SHELL', 'curl -f http://127.0.0.1:8000/health || exit 1']
-      interval: 15s
+      interval: 5s
       timeout: 5s
-      retries: 5
+      retries: 10
+      start_period: 10s
     networks:
       - aaas-network
 
@@ -41,15 +42,18 @@ services:
     command: ["python", "-m", "app.workers.worker_runner"]
     environment:
       - ENVIRONMENT=production
-      - DATABASE_URL=postgresql+asyncpg://aaas_admin:${POSTGRES_PASSWORD:-secret_password}@postgres:5432/aaas_production
+      - DATABASE_URL=postgresql://aaas_admin:${POSTGRES_PASSWORD:-secret_password}@postgres:5432/aaas_production
       - REDIS_URL=redis://redis:6379/0
-      - JWT_SECRET=${JWT_SECRET}
-      - PYTHON_AI_INTERNAL_SECRET=${PYTHON_AI_INTERNAL_SECRET}
-      - ENCRYPTION_KEY=${ENCRYPTION_KEY}
+      - JWT_SECRET=${JWT_SECRET:-insecure_default_dev_jwt_secret_must_be_32_bytes_long}
+      - PYTHON_AI_INTERNAL_SECRET=${PYTHON_AI_INTERNAL_SECRET:-insecure_default_dev_internal_secret_32_bytes}
+      - ENCRYPTION_KEY=${ENCRYPTION_KEY:-insecure_default_dev_encryption_key_32_bytes_len}
     depends_on:
-      - backend
-      - postgres
-      - redis
+      backend:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
     healthcheck:
       disable: true
     networks:

@@ -169,6 +169,10 @@ Run the complete 5-service production stack (PostgreSQL + pgvector, Redis, FastA
 docker-compose up -d --build
 ```
 
+> [!IMPORTANT]
+> **Database Migrations on Startup**: `alembic upgrade head` runs automatically on container start via `entrypoint.sh` before the FastAPI server begins listening. Background workers wait for the backend container health check to pass before processing jobs.
+> Schema changes going forward must be created via `alembic revision --autogenerate -m "description"` and tested with `alembic check`, never by editing models and hoping `create_all` catches it.
+
 ---
 
 ## 🧪 Testing & Verification

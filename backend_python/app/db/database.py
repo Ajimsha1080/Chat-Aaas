@@ -54,6 +54,8 @@ class DatabaseStore:
         self.storage_file = os.path.join(self.db_dir, "chat_aaas_state.json")
 
         db_url = settings.DATABASE_URL
+        if db_url.startswith("postgresql+asyncpg://"):
+            db_url = db_url.replace("postgresql+asyncpg://", "postgresql+psycopg2://")
         if not db_url or "localhost" in db_url or "127.0.0.1" in db_url:
             db_url = f"sqlite:///{self.sqlite_path}"
 
@@ -75,6 +77,8 @@ class DatabaseStore:
 
         # Read Replica Engine
         read_url = settings.DATABASE_READ_REPLICA_URL or db_url
+        if read_url.startswith("postgresql+asyncpg://"):
+            read_url = read_url.replace("postgresql+asyncpg://", "postgresql+psycopg2://")
         read_kwargs = {"connect_args": {"check_same_thread": False}} if "sqlite" in read_url else {
             "pool_size": settings.DB_POOL_SIZE,
             "max_overflow": settings.DB_MAX_OVERFLOW,
