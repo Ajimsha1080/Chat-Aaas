@@ -1,5 +1,4 @@
 import os
-import hmac
 import hashlib
 import json
 import time
@@ -32,7 +31,7 @@ class EmailService:
         """
         raw_token = f"tok_{uuid.uuid4().hex}_{int(time.time())}"
         token_hash = hashlib.sha256(raw_token.encode("utf-8")).hexdigest()
-        
+
         _EMAIL_TOKENS[token_hash] = {
             "token": raw_token,
             "userId": user_id,
@@ -51,7 +50,7 @@ class EmailService:
         """
         token_hash = hashlib.sha256(raw_token.encode("utf-8")).hexdigest()
         record = _EMAIL_TOKENS.get(token_hash)
-        
+
         if not record:
             return None
         if record.get("isConsumed"):
@@ -71,7 +70,7 @@ class EmailService:
         """
         from_email = os.getenv("EMAIL_FROM", "support@coarai.com")
         resend_key = os.getenv("RESEND_API_KEY")
-        
+
         # Provider 1: Resend API
         if resend_key and not resend_key.startswith("mock_"):
             try:
@@ -83,7 +82,7 @@ class EmailService:
                     "text": body_text,
                     "html": body_html or f"<p>{body_text}</p>"
                 }).encode("utf-8")
-                
+
                 req = urllib.request.Request(
                     "https://api.resend.com/emails",
                     data=payload,
@@ -134,7 +133,7 @@ class EmailService:
         user["passwordHash"] = hash_password(new_password)
         user["updatedAt"] = time.strftime("%Y-%m-%dT%H:%M:%SZ")
         db.save_user(user)
-        
+
         # Invalidate all active user sessions for security
         revoke_user_sessions(user_id)
         db.flush_durable_storage()

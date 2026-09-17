@@ -103,7 +103,7 @@ def run_migration() -> Dict[str, Any]:
         try:
             # Decode legacy base64 secret or fallback to raw
             plaintext = decrypt_secret(raw_encrypted)
-            
+
             # Re-encrypt with tenant envelope encryption
             new_encrypted = EnvelopeEncryption.encrypt_for_tenant(
                 company_id=company_id,

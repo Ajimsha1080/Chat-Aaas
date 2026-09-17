@@ -41,7 +41,7 @@ class EmbeddingService:
         # Seeded deterministic pseudo-dense vector computation
         h = hashlib.sha256(text.encode('utf-8')).hexdigest()
         seed = int(h[:16], 16)
-        
+
         vec: List[float] = []
         cur = seed
         for i in range(dimensions):

@@ -3,15 +3,12 @@ SQLAlchemy 2.0 Declarative Models for PostgreSQL + pgvector
 Complete multi-tenant entity schema for CoarAI Enterprise Platform
 """
 
-import time
-from typing import Optional, List
 from sqlalchemy import (
     Column,
     String,
     Boolean,
     Integer,
     Float,
-    DateTime,
     Text,
     JSON,
     ForeignKey,

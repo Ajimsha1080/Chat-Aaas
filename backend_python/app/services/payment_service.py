@@ -4,11 +4,11 @@ import hashlib
 import json
 import time
 import logging
-from typing import Dict, Any, Optional, List
+from typing import Dict, Any, Optional
 from app.db.database import db
 from app.services.billing_service import BillingService
 
-from app.core.config import settings, _require_secret
+from app.core.config import settings
 from app.core.security import _get_redis_client
 
 logger = logging.getLogger(__name__)
@@ -171,7 +171,7 @@ class PaymentService:
         pricing = BillingService.calculate_gst_invoice(base_price_inr)
 
         sub_id = f"sub_rzp_{company_id[:8]}_{int(time.time())}"
-        
+
         return {
             "subscriptionId": sub_id,
             "keyId": cls.get_razorpay_key_id(),
@@ -200,7 +200,7 @@ class PaymentService:
         event_id = event_data.get("id") or event_data.get("event_id")
         event_type = event_data.get("event")
         payload = event_data.get("payload", {})
-        
+
         if not event_id:
             # Derive fallback ID from payment or subscription entity
             ent_id = payload.get("payment", {}).get("entity", {}).get("id") or payload.get("subscription", {}).get("entity", {}).get("id")
@@ -252,7 +252,7 @@ class PaymentService:
         payment = payload.get("payment", {}).get("entity", {})
         subscription = payload.get("subscription", {}).get("entity", {})
         notes = payment.get("notes", {}) or subscription.get("notes", {})
-        
+
         company_id = notes.get("companyId")
         plan_id = notes.get("planId", "starter")
         amount_paisa = payment.get("amount", 0)

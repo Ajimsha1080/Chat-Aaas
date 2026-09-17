@@ -1,20 +1,10 @@
 import time
-import uuid
-from fastapi import FastAPI, Header, HTTPException, Request, Response, Depends
+from fastapi import FastAPI, Request, Response, Depends
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import StreamingResponse, JSONResponse
-from typing import Optional, List, Dict, Any
 from app.core.tenant import TenantContext, get_tenant_context
 
 from app.core.config import settings
 from app.schemas import (
-    ChatRequest, 
-    ChatResponse, 
-    AgentPublishRequest, 
-    AgentRollbackRequest, 
-    KnowledgeIngestRequest,
-    ToolExecutionRequest,
-    ROIAnalyticsResponse,
     EmbeddingRequest,
     EmbeddingResponse,
     RerankRequest,
@@ -30,10 +20,6 @@ from app.schemas import (
 )
 
 # Specialized AI Services
-from app.services.agent_runtime import AgentRuntime
-from app.services.crawler_service import CrawlerService
-from app.services.rag_engine import RAGEngine
-from app.services.tool_registry import ToolRegistry
 from app.services.embedding_service import EmbeddingService
 from app.services.reranking_service import RerankingService
 from app.services.evaluation_service import EvaluationService
@@ -58,6 +44,20 @@ from app.api.admin import router as admin_router
 from app.api.developer import router as developer_router
 
 APP_START_TIME = time.time()
+
+# Real-Time Production Error Tracking via Sentry
+if settings.SENTRY_DSN:
+    try:
+        import sentry_sdk
+        sentry_sdk.init(
+            dsn=settings.SENTRY_DSN,
+            environment=settings.ENVIRONMENT,
+            traces_sample_rate=0.1 if settings.ENVIRONMENT == "production" else 1.0,
+            profiles_sample_rate=0.1 if settings.ENVIRONMENT == "production" else 1.0,
+        )
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).warning(f"Sentry SDK initialization failed: {e}")
 
 app = FastAPI(
     title=settings.PROJECT_NAME,
@@ -86,7 +86,7 @@ async def add_security_and_timing_headers(request: Request, call_next):
     response = await call_next(request)
     duration_s = time.time() - start_time
     duration_ms = int(duration_s * 1000)
-    
+
     # Record Prometheus APM metric
     metrics_collector.record_request(
         method=request.method,
@@ -133,7 +133,6 @@ app.include_router(developer_router, prefix="/api/v1")
 @app.get("/health", response_model=HealthResponse)
 @app.get("/api/v1/health")
 async def health_check():
-    from app.db.database import db
     return HealthResponse(
         status="healthy",
         service="CoarAI Python Enterprise & AI Specialized Runtime",
@@ -145,10 +144,10 @@ async def health_check():
 @app.get("/ready", response_model=ReadinessResponse)
 @app.get("/api/v1/ready")
 async def readiness_check():
-    from app.db.database import db, engine
+    from app.db.database import engine
     from sqlalchemy import text
     checks = {}
-    
+
     # 1. Authoritative SQL Database Connectivity
     try:
         with engine.connect() as conn:

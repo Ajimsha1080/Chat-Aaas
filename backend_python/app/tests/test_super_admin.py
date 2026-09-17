@@ -1,5 +1,4 @@
 import pytest
-import time
 from fastapi.testclient import TestClient
 from app.main import app
 from app.db.database import db

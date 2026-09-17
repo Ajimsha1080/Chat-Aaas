@@ -2,8 +2,7 @@ import json
 import time
 import gzip
 import logging
-from typing import Dict, Any, Optional
-from app.core.config import settings
+from typing import Dict, Any
 from app.db.database import db
 from app.services.storage_service import StorageService
 

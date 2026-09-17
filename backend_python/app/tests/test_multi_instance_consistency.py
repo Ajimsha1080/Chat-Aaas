@@ -1,11 +1,10 @@
+import os
 import uuid
 import sys
 import subprocess
-import json
-import pytest
 from fastapi.testclient import TestClient
 from app.main import app
-from app.db.database import DatabaseStore, db
+from app.db.database import db
 from app.services.conversation_service import ConversationService
 
 # Client A (simulating replica / uvicorn worker 1)
@@ -203,10 +202,13 @@ db.save_message({{
 }})
 """
 
+    backend_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
     result = subprocess.run(
         [sys.executable, "-c", worker_script],
         capture_output=True,
-        text=True
+        text=True,
+        cwd=backend_dir,
+        env={**os.environ, "PYTHONPATH": backend_dir}
     )
     assert result.returncode == 0, f"Subprocess failed with stderr: {result.stderr}"
 

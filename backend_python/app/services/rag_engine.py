@@ -1,6 +1,6 @@
 import math
 import re
-from typing import List, Dict, Any, Optional, Tuple
+from typing import List, Dict, Any, Tuple
 from app.schemas import ChunkSearchResult
 
 class RAGEngine:
@@ -53,11 +53,11 @@ class RAGEngine:
 
     @classmethod
     def search_chunks(
-        cls, 
-        query: str, 
-        company_id: str, 
-        stored_chunks: List[Dict[str, Any]], 
-        threshold: float = 0.25, 
+        cls,
+        query: str,
+        company_id: str,
+        stored_chunks: List[Dict[str, Any]],
+        threshold: float = 0.25,
         top_k: int = 3
     ) -> List[ChunkSearchResult]:
         """
@@ -99,7 +99,7 @@ class RAGEngine:
             chunk_stemmed_words = {stem(w) for w in chunk_raw_words}
 
             overlap = len(stemmed_query_words.intersection(chunk_stemmed_words))
-            
+
             if overlap == 0 and not any(w in full_chunk_text for w in stemmed_query_words if len(w) >= 3):
                 relevance = 0.0
             else:

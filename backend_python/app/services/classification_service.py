@@ -9,7 +9,7 @@ class ClassificationService:
         Performs intent classification, sentiment analysis, and action suggestion.
         """
         text = request.text.lower()
-        
+
         # 1. Intent Detection
         if any(w in text for w in ["order", "tracking", "status", "shipment", "package"]):
             intent = "order_inquiry"

@@ -54,7 +54,7 @@ class UsageService:
         """
         company = db.companies.get(company_id, {})
         plan_id = company.get("planId", "starter")
-        
+
         # Monthly limits
         plan_limits = {
             "starter": 1000,
@@ -62,7 +62,7 @@ class UsageService:
             "business": 25000
         }
         max_allowed = plan_limits.get(plan_id, 1000)
-        
+
         # Count tenant conversations in current billing period (calendar month YYYY-MM)
         current_period = billing_period or time.strftime("%Y-%m")
         tenant_convs = []
@@ -77,7 +77,7 @@ class UsageService:
                 # If timestamp is absent (legacy/unseeded mock), default to current period
                 tenant_convs.append(c)
         used_count = len(tenant_convs)
-        
+
         is_exceeded = used_count >= max_allowed
         usage_percent = round((used_count / max_allowed) * 100, 1) if max_allowed > 0 else 100.0
 

@@ -6,8 +6,6 @@ Generates short-lived presigned download/upload URLs.
 """
 
 import os
-import time
-import uuid
 import logging
 from typing import Optional, Dict, Any
 

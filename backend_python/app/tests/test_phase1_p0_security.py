@@ -3,7 +3,6 @@ import pytest
 from fastapi.testclient import TestClient
 from app.main import app
 from app.core.security import create_jwt_token, create_refresh_token
-from app.core.config import Settings, _require_secret
 
 client = TestClient(app)
 
@@ -112,7 +111,7 @@ def test_widget_origin_domain_validation():
     """Confirms widget origin header validation rejects unauthorized domains."""
     from app.db.database import db
     token = create_jwt_token("usr-alex", "comp-techflow", "owner")
-    
+
     # Configure allowed domains
     db.companies["comp-techflow"]["allowedDomains"] = ["techflow.io", "app.techflow.io"]
 

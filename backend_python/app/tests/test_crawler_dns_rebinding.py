@@ -1,5 +1,4 @@
 import pytest
-import asyncio
 import socket
 from unittest.mock import patch, AsyncMock, MagicMock
 from app.services.crawler_service import CrawlerService
@@ -8,7 +7,7 @@ from app.services.crawler_service import CrawlerService
 async def test_dns_rebinding_connects_only_to_validated_ip():
     public_ip = "93.184.216.34"
     target_url = "http://rebind-test.com/v1/data"
-    
+
     fake_addr_info = [(socket.AF_INET, socket.SOCK_STREAM, 6, "", (public_ip, 80))]
 
     with patch("socket.getaddrinfo", return_value=fake_addr_info):
@@ -25,7 +24,7 @@ async def test_dns_rebinding_connects_only_to_validated_ip():
             assert result["success"] is True
             assert result["title"] == "Safe Page"
             assert mock_send.called
-            
+
             sent_req = mock_send.call_args[0][0]
             assert sent_req.url.host == public_ip
             assert sent_req.headers.get("Host") == "rebind-test.com"

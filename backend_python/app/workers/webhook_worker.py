@@ -18,10 +18,10 @@ class WebhookWorker:
 
     @classmethod
     async def enqueue_event(
-        cls, 
-        target_url: str, 
-        event_type: str, 
-        payload: Dict[str, Any], 
+        cls,
+        target_url: str,
+        event_type: str,
+        payload: Dict[str, Any],
         secret: Optional[str] = None
     ) -> str:
         """Enqueues a webhook delivery task and returns its delivery ID."""
@@ -48,9 +48,9 @@ class WebhookWorker:
 
     @staticmethod
     async def dispatch_event(
-        target_url: str, 
-        event_type: str, 
-        payload: Dict[str, Any], 
+        target_url: str,
+        event_type: str,
+        payload: Dict[str, Any],
         secret: Optional[str] = None,
         max_retries: int = 3,
         timeout: float = 5.0

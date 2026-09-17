@@ -1,6 +1,5 @@
 ﻿import asyncio
 import signal
-import sys
 import logging
 from app.workers.document_worker import DocumentWorker
 from app.workers.webhook_worker import WebhookWorker
@@ -18,7 +17,7 @@ def signal_handler(sig, frame):
 
 async def main():
     logger.info("Starting Chat-AaaS Unified Background Workers (Document Ingestion & Webhooks)...")
-    
+
     # Register signal handlers where supported
     try:
         signal.signal(signal.SIGINT, signal_handler)
@@ -32,7 +31,7 @@ async def main():
 
     logger.info("Workers are active and listening for queued jobs.")
     await stop_event.wait()
-    
+
     logger.info("Awaiting worker tasks completion...")
     await asyncio.gather(doc_task, webhook_task, return_exceptions=True)
     logger.info("All background workers have shut down cleanly.")

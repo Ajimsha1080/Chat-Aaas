@@ -1,4 +1,3 @@
-import json
 import time
 import uuid
 import logging
@@ -262,7 +261,7 @@ class JobQueue:
         rec["status"] = "queued"
         rec["attempts"] = 0
         rec["error"] = None
-        
+
         with db.get_session() as session:
             job = session.query(BackgroundJob).filter_by(id=job_id).first()
             if job:

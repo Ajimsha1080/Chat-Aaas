@@ -3,7 +3,7 @@ import time
 import uuid
 from fastapi import APIRouter, HTTPException, Depends, status, Query, UploadFile, File, Form
 from pydantic import BaseModel, Field
-from typing import Optional, Dict, Any, List
+from typing import Optional, List
 from app.db.database import db
 from app.services.crawler_service import CrawlerService
 from app.services.rag_engine import RAGEngine
@@ -118,7 +118,7 @@ def get_knowledge_source_details(source_id: str, ctx: TenantContext = Depends(ge
     source = db.knowledge_sources.get(source_id)
     if not source or source.get("companyId") != ctx.company_id:
         raise HTTPException(status_code=404, detail="Knowledge source not found.")
-    
+
     source_chunks = [c for c in db.document_chunks.values() if (c.get("knowledgeSourceId") == source_id or c.get("knowledge_source_id") == source_id) and c.get("companyId") == ctx.company_id]
     return {
         "status": 200,
@@ -776,13 +776,13 @@ def get_knowledge_health(ctx: TenantContext = Depends(get_tenant_context)):
     sources = db.get_knowledge_sources_for_tenant(ctx.company_id, lifecycle_state="active")
     chunks = db.get_document_chunks_for_tenant(ctx.company_id, only_active=True)
     gaps = [g for g in db.knowledge_gaps.values() if g.get("companyId") == ctx.company_id]
-    
+
     total_docs = len(sources)
     total_chunks = len(chunks)
     active_gaps = len([g for g in gaps if g.get("status") == "unresolved"])
-    
+
     health_score = max(20, min(100, int(100 - (active_gaps * 5) + (total_chunks * 2))))
-    
+
     return {
         "status": 200,
         "data": {

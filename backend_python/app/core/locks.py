@@ -2,7 +2,6 @@ import asyncio
 import time
 import uuid
 import logging
-from typing import Optional
 from contextlib import asynccontextmanager
 from app.core.config import settings
 
@@ -92,7 +91,7 @@ class DistributedLock:
                 return bool(res)
             except Exception:
                 pass
-        
+
         # Local fallback release
         if hasattr(DistributedLock, "_local_locks"):
             existing = DistributedLock._local_locks.get(self.key)

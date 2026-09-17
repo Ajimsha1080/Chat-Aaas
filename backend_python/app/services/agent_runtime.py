@@ -8,10 +8,10 @@ from app.services.tool_registry import ToolRegistry
 class AgentRuntime:
     @classmethod
     async def process_message(
-        cls, 
-        request: ChatRequest, 
-        company_id: str, 
-        agent_config: Dict[str, Any], 
+        cls,
+        request: ChatRequest,
+        company_id: str,
+        agent_config: Dict[str, Any],
         stored_chunks: List[Dict[str, Any]]
     ) -> ChatResponse:
         """
@@ -216,7 +216,7 @@ class AgentRuntime:
             model=model_name,
             temperature=float(agent_config.get('creativityLevel', 0.3)) if isinstance(agent_config.get('creativityLevel'), (int, float)) else 0.3
         )
-        
+
         prompt_tokens = LLMProvider.count_tokens(user_msg + "\n" + sys_instruction, model=model_name)
         completion_tokens = LLMProvider.count_tokens(llm_response, model=model_name)
         total_tokens = prompt_tokens + completion_tokens

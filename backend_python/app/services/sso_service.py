@@ -1,11 +1,8 @@
 import base64
-import hashlib
-import hmac
-import json
 import time
 import uuid
 import urllib.parse
-from typing import Dict, Any, List, Optional, Tuple
+from typing import Dict, Any, List, Optional
 from app.db.database import db
 
 class SSOService:
@@ -29,7 +26,7 @@ class SSOService:
         """Registers or updates enterprise SSO configuration for a company tenant."""
         existing = SSOService.get_sso_config(company_id)
         config_id = existing["id"] if existing else f"sso_{uuid.uuid4().hex[:12]}"
-        
+
         normalized_domains = [d.lower().strip() for d in domains if d.strip()]
 
         sso_record = {
@@ -49,7 +46,7 @@ class SSOService:
         # Save to database
         if not hasattr(db, "sso_configs"):
             db.sso_configs = []
-        
+
         # Upsert
         db.sso_configs = [c for c in db.sso_configs if c.get("companyId") != company_id]
         db.sso_configs.append(sso_record)
@@ -85,7 +82,7 @@ class SSOService:
         domain = email.split("@")[1].strip().lower()
         if not hasattr(db, "sso_configs"):
             db.sso_configs = []
-            
+
         for config in db.sso_configs:
             if config.get("enabled") and domain in config.get("domains", []):
                 return config

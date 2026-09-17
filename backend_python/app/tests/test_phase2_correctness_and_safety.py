@@ -1,5 +1,4 @@
 import pytest
-import time
 from app.db.database import db
 from app.services.billing_service import BillingService
 from app.services.crawler_service import CrawlerService
@@ -64,7 +63,7 @@ def test_audited_gst_tax_split_and_sequential_numbering():
 async def test_worker_queue_dlq_and_poison_pill_defense():
     """Verifies Dead-Letter Queue (DLQ) routing, exponential backoff, and poison-pill isolation."""
     queue = JobQueue(queue_name="test_worker_queue")
-    
+
     # 1. Backoff delay calculation
     delay_1 = queue.calculate_backoff_delay(attempt=1, base_seconds=1.0)
     delay_2 = queue.calculate_backoff_delay(attempt=2, base_seconds=1.0)
@@ -80,7 +79,7 @@ async def test_worker_queue_dlq_and_poison_pill_defense():
         payload={"corrupt_file": True},
         max_attempts=3
     )
-    
+
     await queue.fail_job(
         job_id=job_id,
         error="Fatal syntax error in malicious PDF header",

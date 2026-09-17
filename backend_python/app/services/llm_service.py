@@ -1,8 +1,7 @@
 import asyncio
-import json
 import httpx
 import re
-from typing import AsyncGenerator, Dict, Any, List, Optional
+from typing import AsyncGenerator, Dict, List, Optional
 from app.core.config import settings
 
 class LLMProvider:
@@ -112,7 +111,7 @@ class LLMProvider:
                     lead = header_match.group(1).strip()
                     items_str = header_match.group(2).strip()
                     raw_items = [re.sub(r'[*#\_~]', '', item).strip().rstrip('.').lstrip('and ') for item in re.split(r',|\band\b', items_str) if item.strip()]
-                    
+
                     bullet_list = [f"- {item[0].upper() + item[1:]}" for item in raw_items if len(item) > 2]
                     if bullet_list:
                         formatted_blocks.append(f"{lead}:\n" + "\n".join(bullet_list))
@@ -121,7 +120,7 @@ class LLMProvider:
             formatted_blocks.append(sentence)
 
         result_body = "\n\n".join(formatted_blocks)
-        
+
         # Clean title heading (avoid redundant titles like "Verified Documentation")
         if clean_title and len(clean_title) > 3 and not clean_title.lower().startswith("verified") and not clean_title.lower().startswith("knowledge"):
             return f"{clean_title}\n\n{result_body}"
@@ -140,7 +139,7 @@ class LLMProvider:
 
         context_body = system_instruction.split("Verified Knowledge Context:")[1].strip()
         raw_sources = context_body.split("Source (")
-        
+
         stop_words = {
             "what", "is", "the", "a", "an", "in", "on", "at", "for", "to", "of", "and", "or",
             "are", "how", "do", "does", "can", "tell", "me", "about", "our", "your", "this", "explain", "policy", "please"

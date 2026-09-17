@@ -1,5 +1,5 @@
 import re
-from typing import Dict, Any, List, Tuple, Optional
+from typing import Dict, List, Tuple, Optional
 
 # Indian Aadhaar Verhoeff algorithm lookup tables for validation
 _VERHOEFF_D = [

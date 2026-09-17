@@ -96,7 +96,7 @@ def forgot_password(req: ForgotPasswordRequest, request: Request):
     """
     client_ip = RateLimiter.get_client_ip(request)
     RateLimiter.check_auth_rate_limit(client_ip)
-    
+
     from app.db.database import db
     from app.services.email_service import EmailService
     from app.core.config import settings
@@ -105,7 +105,7 @@ def forgot_password(req: ForgotPasswordRequest, request: Request):
     token = None
     if user:
         token = EmailService.send_password_reset_email(user["id"], user["email"], user.get("fullName", "User"))
-    
+
     resp_data = {
         "message": "If that email is registered, password reset instructions have been sent to your registered email address."
     }
@@ -123,7 +123,7 @@ def reset_password(req: ResetPasswordRequest, request: Request):
     """Sets a new password using a validated single-use token and invalidates previous sessions."""
     client_ip = RateLimiter.get_client_ip(request)
     RateLimiter.check_auth_rate_limit(client_ip)
-    
+
     from app.services.email_service import EmailService
     success = EmailService.reset_password_with_token(req.token, req.newPassword)
     if not success:
@@ -225,7 +225,6 @@ def saml_callback(req: SAMLCallbackRequest):
     import uuid
     import time
     from app.services.sso_service import SSOService
-    from app.services.auth_service import AuthService
     from app.core.security import create_jwt_token, create_refresh_token
     from app.db.database import db
 

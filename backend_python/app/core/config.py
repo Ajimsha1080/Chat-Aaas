@@ -131,5 +131,8 @@ class Settings(BaseSettings):
     BACKUP_S3_REGION: str = os.getenv("BACKUP_S3_REGION", "ap-south-1")
     BACKUP_SCHEDULE_HOURS: int = int(os.getenv("BACKUP_SCHEDULE_HOURS", "24"))
 
+    # Observability & Real-Time Error Tracking
+    SENTRY_DSN: Optional[str] = os.getenv("SENTRY_DSN", None)
+
 
 settings = Settings()

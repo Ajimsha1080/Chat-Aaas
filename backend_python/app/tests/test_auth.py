@@ -1,6 +1,5 @@
 import os
 import sys
-import pytest
 from fastapi.testclient import TestClient
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")))
@@ -69,12 +68,12 @@ def test_forgot_password_never_leaks_token_in_production():
         assert res.status_code == 200
         body_str = res.text
         data = res.json().get("data", {})
-        
+
         # Verify no token field exists
         assert "resetToken" not in data
         assert "token" not in data
         assert "_debugToken" not in data
-        
+
         # Verify no token pattern (tok_...) exists anywhere in raw response
         assert "tok_" not in body_str
     finally:

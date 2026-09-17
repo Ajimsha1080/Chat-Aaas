@@ -14,9 +14,9 @@ def test_golden_rag_benchmark_ground_truth(item):
         answer=item["expected_answer"],
         grounding_contexts=[item["grounding_context"]]
     )
-    
+
     result = EvaluationService.evaluate_rag_response(eval_req)
-    
+
     assert result.success is True
     assert result.faithfulness_score >= item["min_faithfulness"], (
         f"Faithfulness score {result.faithfulness_score} fell below minimum required {item['min_faithfulness']} "
@@ -36,7 +36,7 @@ def test_golden_rag_suite_aggregate_metrics():
     """
     faithfulness_scores = []
     recall_scores = []
-    
+
     for item in GOLDEN_RAG_BENCHMARK:
         eval_req = EvaluateRequest(
             query=item["query"],
@@ -46,9 +46,9 @@ def test_golden_rag_suite_aggregate_metrics():
         res = EvaluationService.evaluate_rag_response(eval_req)
         faithfulness_scores.append(res.faithfulness_score)
         recall_scores.append(res.context_recall_score)
-        
+
     avg_faithfulness = sum(faithfulness_scores) / len(faithfulness_scores)
     avg_recall = sum(recall_scores) / len(recall_scores)
-    
+
     assert avg_faithfulness >= 0.85, f"Average faithfulness {avg_faithfulness} is below 85% threshold."
     assert avg_recall >= 0.85, f"Average recall {avg_recall} is below 85% threshold."

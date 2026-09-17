@@ -138,7 +138,7 @@ def get_tenant_context(
                 is_impersonated=is_impersonation,
                 impersonator_user_id=impersonator_id
             )
-        
+
         # If not a valid JWT, check if Bearer token is a valid API Key (e.g., widget.js, cURL)
         try:
             return _resolve_api_key_context(token, header_comp, correlation_id)

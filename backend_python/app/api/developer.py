@@ -33,7 +33,7 @@ def create_api_key(req: CreateApiKeyRequest, ctx: TenantContext = Depends(get_te
     key_id = f"key-{int(time.time() * 1000)}"
     raw_secret = f"aas_live_sec_{uuid.uuid4().hex[:16]}_{int(time.time())}"
     secret_masked = f"{raw_secret[:12]}••••••••{raw_secret[-4:]}"
-    
+
     new_key = {
         "id": key_id,
         "companyId": ctx.company_id,
@@ -46,10 +46,10 @@ def create_api_key(req: CreateApiKeyRequest, ctx: TenantContext = Depends(get_te
         "createdAt": time.strftime("%Y-%m-%dT%H:%M:%SZ")
     }
     db.api_keys[key_id] = new_key
-    
+
     # Return raw secret ONCE upon creation
     return {
-        "status": 201, 
+        "status": 201,
         "data": {
             **new_key,
             "rawSecret": raw_secret,

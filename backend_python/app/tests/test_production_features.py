@@ -2,13 +2,11 @@
 import sys
 import json
 import asyncio
-import pytest
 from fastapi.testclient import TestClient
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")))
 from app.main import app
 from app.core.security import create_jwt_token
-from app.db.database import db
 from app.workers.document_worker import DocumentWorker
 from app.workers.webhook_worker import WebhookWorker
 

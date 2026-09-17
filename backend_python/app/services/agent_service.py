@@ -1,5 +1,5 @@
 import time
-from typing import Dict, Any, Optional, List
+from typing import Dict, Any, Optional
 from app.db.database import db
 
 class AgentService:

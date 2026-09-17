@@ -129,16 +129,29 @@ cp .env.example .env
 cp .env.example backend_python/.env
 ```
 
-### 2. Start Python Backend
+### 2. Database Migrations (Alembic Source of Truth)
+Alembic is the single authoritative source of truth for all PostgreSQL schema migrations. Run migrations before starting the API server:
+```powershell
+cd backend_python
+alembic upgrade head
+```
+To generate a new migration after updating models:
+```powershell
+alembic revision --autogenerate -m "describe_schema_change"
+alembic check
+```
+
+### 3. Start Python Backend
 ```powershell
 cd backend_python
 python -m venv venv
 venv\Scripts\activate
 pip install -r requirements.txt
+alembic upgrade head
 python -m uvicorn app.main:app --reload --port 8001
 ```
 
-### 3. Start React Frontend
+### 4. Start React Frontend
 ```powershell
 npm install
 npm run dev
@@ -150,7 +163,7 @@ Visit the dashboard at `http://localhost:5173`.
 
 ## 🐳 Docker Deployment
 
-Run the complete 5-service production stack (PostgreSQL + pgvector, Redis, FastAPI Backend, Async Worker, Nginx SPA):
+Run the complete 5-service production stack (PostgreSQL + pgvector, Redis, FastAPI Backend with automatic Alembic migrations, Async Worker, Nginx SPA):
 
 ```powershell
 docker-compose up -d --build
@@ -160,18 +173,41 @@ docker-compose up -d --build
 
 ## 🧪 Testing & Verification
 
-### Run Backend Pytest Suite (85/85 tests passing):
+### Run Complete Test Suite:
 ```powershell
-python -m pytest backend_python/app/tests/ -v
+# Run frontend unit & integration tests (Vitest)
+npm test
+
+# Run backend test suite (Pytest - 183 tests)
+npm run test:backend
+
+# Run all tests (Frontend + Backend)
+npm run test:all
 ```
-Includes 85 automated unit and integration tests across 15 suites:
+
+### Run Static Analysis, Type Checking & Security Audits:
+```powershell
+# Python code linting
+cd backend_python && ruff check .
+
+# Python static type checking
+cd backend_python && mypy app
+
+# Python dependency vulnerability scanning
+pip-audit -r backend_python/requirements.txt --ignore-vuln PYSEC-2026-1325
+
+# Frontend dependency security audit
+npm audit --audit-level=high
+```
+
+### Backend Pytest Suite Highlights (183/183 tests passing):
 - **Platform Super Admin & Security** (`test_super_admin.py`): Platform-level RBAC enforcement, rejection of anonymous access, non-admin forbidden access, role tampering attack defense, tenant suspension with immediate cross-channel block (JWT, API keys, chat widget), tenant re-activation, user management with Last Super Admin protection, audited impersonation sessions strictly barred from `/admin/*` endpoints, real infrastructure health probes (`SELECT 1`, Redis, pgvector), durable metrics reconciliation, emergency global AI killswitch enforcement across `/chat`, and tenant diagnostics inspection.
 - **Product-Level Hardening** (`test_product_level_fixes.py`): Production safeguards, input sanitization, error response contracts, and lifecycle invariants.
 - **Agent Lifecycle & Runtime** (`test_agent_lifecycle.py`, `test_agent_runtime.py`): State management (draft/publish/pause), version rollback, streaming execution, and confidence scoring.
 - **Tools & Risk Gates** (`test_tools_and_risk_gates.py`, `test_workers.py`): Idempotency key deduplication, background task claims, and risk gating.
 - **Round 2 Production Completion** (`test_round2_production_completion.py`): Authoritative SQL persistence across reloads (`load_from_database` / `flush_durable_storage`), cross-process distributed worker `JobQueue` backed by Redis & durable `BackgroundJob` table with atomic claims, strict eradication of unassociated tenant fallbacks in `AuthService`, dynamic tool execution without fake mock data, real integration network handshake latency measurement (`perf_counter`), protected specialized AI endpoints (`/v1/embeddings`, `/v1/rerank`, etc.), and live database/worker readiness checks.
 - **Production Features & Hardening** (`test_production_features.py`): Real SSE token streaming without simulated word splitting, 6-stage human handoff lifecycle (`ai_active` → `handoff_requested` → `assigned` → `human_active` → `resolved` → `closed`) with automated AI reply suppression during human operator sessions, tool idempotency key replay caching, multi-connection integrations with unique UUID IDs, and asynchronous queue workers with HMAC-SHA256 signature generation.
-- **Full End-to-End Fresh Customer Lifecycle** (`test_production_e2e_customer.py`): Starts from empty database to signup, clean workspace verification, honest refusal, document ingestion, RAG answer, draft publishing, deployment, chat persistence, trash/restore, and multi-tenant security isolation.
+- **Full End-to-End Fresh Customer Lifecycle** (`test_e2e_platform.py`): Starts from empty database to signup, clean workspace verification, honest refusal, document ingestion, RAG answer, draft publishing, deployment, chat persistence, trash/restore, and multi-tenant security isolation.
 - **SSRF Multi-Hop Redirect Defense** (`test_rag_and_ssrf.py`): Verifies that direct targets and multi-hop HTTP 301/302 redirects to cloud metadata (`169.254.169.254`), loopback (`127.0.0.1`), and RFC1918 private subnets are strictly intercepted and blocked.
 - **Tenant Billing & GST Invoicing** (`test_billing_and_gst.py`): Verifies plan catalog, Indian GST (18%) intra/inter-state tax breakdown, upgrade generation, and multi-tenant invoice isolation (`GET /api/v1/billing/invoices`).
 - **Resource Lifecycles & 1:1 Schema Constraint** (`test_resource_lifecycle.py`, `models.py`): Enforces 1 AI assistant per company invariant, version draft/publish/rollback, API keys, webhooks, and tool risk gates.

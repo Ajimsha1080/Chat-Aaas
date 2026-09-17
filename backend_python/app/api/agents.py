@@ -1,6 +1,6 @@
-from fastapi import APIRouter, HTTPException, Depends, status
+from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel
-from typing import Optional, Dict, Any
+from typing import Optional
 from app.services.agent_service import AgentService
 from app.core.tenant import TenantContext, get_tenant_context
 from app.core.permissions import has_permission

@@ -1,7 +1,6 @@
 import pytest
 import time
 import base64
-import json
 import uuid
 from app.services.audit_service import AuditService, GENESIS_HASH
 from app.services.sso_service import SSOService
@@ -90,7 +89,7 @@ class TestPhase4EnterpriseSSO:
         assert "SAMLRequest=" in authn["redirectUrl"]
 
         # Synthetic SAML assertion
-        sample_xml = f"""
+        sample_xml = """
         <samlp:Response xmlns:samlp="urn:oasis:names:tc:SAML:2.0:protocol" xmlns:saml="urn:oasis:names:tc:SAML:2.0:assertion">
             <saml:Issuer>https://sts.windows.net/azure-tenant-id/</saml:Issuer>
             <saml:Assertion>

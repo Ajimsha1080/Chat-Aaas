@@ -1,4 +1,4 @@
-from typing import Dict, Any, Tuple, Optional
+from typing import Dict, Any
 from app.schemas import ToolExecutionResponse
 
 class ToolRegistry:
@@ -43,10 +43,10 @@ class ToolRegistry:
 
     @classmethod
     def execute_tool(
-        cls, 
-        tool_name: str, 
-        params: Dict[str, Any], 
-        company_id: str, 
+        cls,
+        tool_name: str,
+        params: Dict[str, Any],
+        company_id: str,
         user_confirmed: bool = False
     ) -> ToolExecutionResponse:
         """

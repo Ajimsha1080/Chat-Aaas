@@ -13,7 +13,7 @@ def setup_test_workspace():
     """Sets up a test company, developer API key, and memberships."""
     comp_id = f"comp-scope-test-{int(time.time() * 1000)}"
     company_api_key = f"aas_live_scope_{uuid.uuid4().hex[:12]}"
-    
+
     # 1. Company
     db.companies[comp_id] = {
         "id": comp_id,
@@ -26,7 +26,7 @@ def setup_test_workspace():
         "apiKey": company_api_key,
         "createdAt": time.strftime("%Y-%m-%dT%H:%M:%SZ")
     }
-    
+
     # 2. Scoped API Key (chat only)
     chat_key_id = f"key-chat-{int(time.time() * 1000)}"
     chat_key_secret = f"aas_live_sec_chat_{uuid.uuid4().hex[:16]}"
@@ -120,7 +120,7 @@ def test_company_api_key_resolves_to_api_client_not_owner(setup_test_workspace):
 def test_team_scoped_api_key_can_invite_editor_but_not_owner(setup_test_workspace):
     """An API key with team:manage can invite normal roles (agent_editor), but cannot invite owner."""
     ws = setup_test_workspace
-    
+
     # 1. Invite agent_editor -> Allowed
     res1 = client.post(
         "/api/v1/users/team/invite",

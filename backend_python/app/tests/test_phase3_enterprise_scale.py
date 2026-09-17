@@ -1,5 +1,4 @@
 import pytest
-import asyncio
 from fastapi.testclient import TestClient
 from app.main import app
 from app.db.database import db
@@ -14,7 +13,7 @@ def test_database_connection_pool_and_read_replica():
     """Verifies connection pool configuration and read replica session routing."""
     status = db.get_pool_status()
     assert isinstance(status, dict)
-    
+
     # Read session manager works
     with db.get_read_session(company_id="comp-techflow") as session:
         assert session is not None

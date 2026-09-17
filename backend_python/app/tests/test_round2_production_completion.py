@@ -10,8 +10,6 @@ from app.db.database import db
 from app.core.security import create_jwt_token
 from app.core.queue import JobQueue
 from app.services.auth_service import AuthService
-from app.services.tool_registry import ToolRegistry
-from app.services.tool_service import ToolService
 
 client = TestClient(app)
 

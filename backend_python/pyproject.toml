@@ -1,0 +1,42 @@
+[tool.ruff]
+target-version = "py311"
+line-length = 120
+
+[tool.ruff.lint]
+select = [
+    "E",   # pycodestyle errors
+    "W",   # pycodestyle warnings
+    "F",   # pyflakes
+]
+ignore = [
+    "E501",  # line too long
+    "E402",  # module level import not at top of file
+    "E741",  # ambiguous variable name
+    "F403",  # star imports in tests
+    "F405",  # star import names
+    "F841",  # local variable unused
+    "W291",  # trailing whitespace
+    "W293",  # blank line contains whitespace
+]
+
+[tool.mypy]
+python_version = "3.11"
+ignore_missing_imports = true
+follow_imports = "silent"
+warn_unused_ignores = false
+check_untyped_defs = false
+disallow_untyped_defs = false
+disable_error_code = [
+    "assignment",
+    "arg-type",
+    "union-attr",
+    "attr-defined",
+    "misc",
+    "return-value",
+    "var-annotated",
+    "annotation-unchecked",
+    "valid-type",
+    "operator",
+    "call-overload",
+    "dict-item"
+]

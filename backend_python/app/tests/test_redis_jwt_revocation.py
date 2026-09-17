@@ -2,7 +2,6 @@ import time
 import pytest
 from app.core.security import (
     create_jwt_token,
-    create_refresh_token,
     decode_jwt_token,
     revoke_token,
     revoke_user_sessions,

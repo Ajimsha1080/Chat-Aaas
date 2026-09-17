@@ -9,11 +9,9 @@ from app.core.security import hash_password, verify_password
 from app.core.config import settings
 from app.db.models import (
     Base, Conversation, Message, Company, User, Membership, Agent, AgentVersion,
-    KnowledgeCollection, KnowledgeSource, DocumentChunk,
-    KnowledgeGap, KnowledgeFeedback, KnowledgeJob, AgentTool,
-    Integration, Subscription, Invoice, AuditLog, ApiKey,
-    Webhook, Deployment, ActionExecution, BackgroundJob, HandoffSession,
-    TenantKeyMetadata
+    KnowledgeSource, DocumentChunk,
+    AgentTool,
+    Integration, Subscription, Invoice, AuditLog, Webhook, ActionExecution, TenantKeyMetadata
 )
 
 class DatabaseStore:
@@ -69,14 +67,11 @@ class DatabaseStore:
 
         try:
             self.engine = create_engine(db_url, **engine_kwargs)
-            if settings.ENVIRONMENT != "production":
-                Base.metadata.create_all(bind=self.engine)
         except Exception as e:
             if settings.ENVIRONMENT == "production":
                 raise RuntimeError(f"[DATABASE] Authoritative database connection failed: {e}")
             # Fallback to local SQLite if PostgreSQL is unreachable in dev
             self.engine = create_engine(f"sqlite:///{self.sqlite_path}", connect_args={"check_same_thread": False})
-            Base.metadata.create_all(bind=self.engine)
 
         # Read Replica Engine
         read_url = settings.DATABASE_READ_REPLICA_URL or db_url
@@ -91,12 +86,6 @@ class DatabaseStore:
             self.read_engine = create_engine(read_url, **read_kwargs)
         except Exception:
             self.read_engine = self.engine
-
-        try:
-            with self.engine.begin() as conn:
-                conn.execute(text("ALTER TABLE users ADD COLUMN is_suspended BOOLEAN DEFAULT 0"))
-        except Exception:
-            pass
 
         self.SessionLocal = sessionmaker(bind=self.engine, autocommit=False, autoflush=False)
         self.ReadSessionLocal = sessionmaker(bind=self.read_engine, autocommit=False, autoflush=False)
@@ -1948,7 +1937,7 @@ class DatabaseStore:
                 and s.get("status") not in ["disabled", "trash", "archived"]
             }
             chunks = [
-                c for c in chunks 
+                c for c in chunks
                 if (c.get("knowledgeSourceId") or c.get("knowledge_source_id")) in active_source_ids
             ]
         return chunks
@@ -1957,8 +1946,8 @@ class DatabaseStore:
         return [c for c in self.knowledge_collections.values() if c.get("companyId") == company_id]
 
     def get_knowledge_sources_for_tenant(
-        self, 
-        company_id: str, 
+        self,
+        company_id: str,
         collection_id: Optional[str] = None,
         source_type: Optional[str] = None,
         status: Optional[str] = None,
@@ -1966,7 +1955,7 @@ class DatabaseStore:
         lifecycle_state: Optional[str] = "active"
     ) -> List[Dict[str, Any]]:
         sources = [s for s in self.knowledge_sources.values() if s.get("companyId") == company_id]
-        
+
         # Lifecycle state filtering: by default, show 'active' items. 'all' returns everything, 'trash' returns trash.
         if lifecycle_state and lifecycle_state != "all":
             sources = [s for s in sources if s.get("lifecycleState", "active") == lifecycle_state]
@@ -1988,8 +1977,8 @@ class DatabaseStore:
             del self.knowledge_sources[source_id]
 
         chunk_ids_to_del = [
-            cid for cid, c in self.document_chunks.items() 
-            if (c.get("knowledgeSourceId") == source_id or c.get("knowledge_source_id") == source_id) 
+            cid for cid, c in self.document_chunks.items()
+            if (c.get("knowledgeSourceId") == source_id or c.get("knowledge_source_id") == source_id)
             and c.get("companyId") == company_id
         ]
         for cid in chunk_ids_to_del:

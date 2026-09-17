@@ -86,7 +86,7 @@ class BillingService:
                         last_sequence INTEGER NOT NULL
                     )
                 """))
-                
+
                 query_sql = "SELECT last_sequence FROM invoice_sequences WHERE id = :id FOR UPDATE" if db.engine.dialect.name == "postgresql" else "SELECT last_sequence FROM invoice_sequences WHERE id = :id"
                 row = conn.execute(text(query_sql), {"id": f"seq_{month_str}"}).fetchone()
 
@@ -131,20 +131,20 @@ class BillingService:
             db.subscription_plans = {p["id"]: dict(p) for p in PLANS_CATALOG}
         if plan_id not in db.subscription_plans:
             raise ValueError(f"Plan '{plan_id}' not found.")
-        
+
         plan = db.subscription_plans[plan_id]
         plan["priceMonthlyINR"] = price_monthly_inr
         if price_annual_inr is not None:
             plan["priceAnnualINR"] = price_annual_inr
         else:
             plan["priceAnnualINR"] = price_monthly_inr * 10
-        
+
         for p in PLANS_CATALOG:
             if p["id"] == plan_id:
                 p["priceMonthlyINR"] = plan["priceMonthlyINR"]
                 p["priceAnnualINR"] = plan["priceAnnualINR"]
                 break
-        
+
         db.save_state()
         return plan
 
@@ -162,7 +162,7 @@ class BillingService:
         - Correctly formats SAC code, GSTINs, and tax breakdown.
         """
         supplier_state = getattr(settings, "SUPPLIER_STATE_CODE", "29")
-        
+
         # If buyer state code provided or inferable from buyer GSTIN
         if not buyer_state_code and buyer_gstin:
             buyer_state_code = BillingService.extract_state_code(buyer_gstin)
@@ -240,7 +240,7 @@ class BillingService:
             raise ValueError(f"Plan {plan_id} not recognized")
 
         base_price = plan["priceMonthlyINR"] if billing_cycle == "monthly" else plan["priceAnnualINR"]
-        
+
         # Determine buyer GSTIN from argument or company settings
         company_settings = company.get("settings", {})
         effective_gstin = buyer_gstin or company_settings.get("gstin")
@@ -253,7 +253,7 @@ class BillingService:
         # Generate Invoice record
         invoice_id = f"inv-{company_id}-{int(time.time() * 1000)}"
         invoice_number = BillingService.generate_invoice_number()
-        
+
         new_invoice = {
             "id": invoice_id,
             "companyId": company_id,

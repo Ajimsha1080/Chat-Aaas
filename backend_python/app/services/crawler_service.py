@@ -1,7 +1,7 @@
 import ipaddress
 import socket
-from urllib.parse import urlparse, urljoin
-from typing import Tuple, List, Set, Optional, Union
+from urllib.parse import urlparse
+from typing import Tuple, List, Optional, Union
 
 MAX_PAYLOAD_BYTES = 10 * 1024 * 1024  # 10 MB ceiling
 MAX_CRAWL_DEPTH = 3
@@ -60,11 +60,11 @@ class CrawlerService:
             scheme = parsed.scheme
             if scheme not in ["http", "https"]:
                 return False, f"Invalid scheme {scheme}: Only http/https supported.", None, None, None, None, None
-            
+
             hostname = parsed.hostname
             if not hostname:
                 return False, "Invalid URL: Hostname missing.", None, None, None, None, None
-                
+
             hostname_lower = hostname.lower()
             if hostname_lower in BLOCKED_HOSTNAMES or hostname_lower.endswith(".internal") or hostname_lower.endswith(".local"):
                 return False, f"SSRF Attack Blocked: Target '{hostname}' is a restricted local/metadata address.", None, None, None, None, None
@@ -243,7 +243,7 @@ class CrawlerService:
                 if not resp or resp.status_code >= 400:
                     status_code = resp.status_code if resp else "unknown"
                     return {"success": False, "error": f"HTTP {status_code} returned by web server.", "url": current_url}
-                
+
                 content_bytes = resp.content
                 if len(content_bytes) > MAX_PAYLOAD_BYTES:
                     return {

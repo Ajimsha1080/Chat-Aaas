@@ -31,7 +31,7 @@ def test_starter_tier_rate_limit_per_session():
     headers = {"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
 
     session_id = "sess-starter-01"
-    
+
     # Send 20 requests -> all 20 should pass (200 OK)
     for i in range(20):
         res = client.post("/api/v1/chat", headers=headers, json={"message": f"Hello {i}", "session_id": session_id})
@@ -114,7 +114,7 @@ def test_admin_list_all_tenants_masks_api_key():
     admin_token = create_jwt_token("usr-super-admin", "comp-platform", "super_admin")
     res = client.get("/api/v1/admin/tenants", headers={"Authorization": f"Bearer {admin_token}"})
     assert res.status_code == 200
-    
+
     tenants = res.json()["data"]["companies"]
     target = next((t for t in tenants if t["id"] == comp_id), None)
     assert target is not None

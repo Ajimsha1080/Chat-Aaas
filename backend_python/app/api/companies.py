@@ -2,7 +2,7 @@ import time
 import uuid
 from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel
-from typing import Optional, Dict, Any, List
+from typing import Optional, Dict, Any
 from app.db.database import db
 from app.core.tenant import TenantContext, get_tenant_context
 from app.core.permissions import has_permission
@@ -60,7 +60,7 @@ def create_company(req: CreateCompanyRequest):
     """Creates a new company workspace with isolated agent and default parameters."""
     slug = req.name.lower().replace(" ", "-").replace(".", "").replace("/", "")
     comp_id = f"comp-{slug}-{int(time.time() % 10000)}"
-    
+
     new_company = {
         "id": comp_id,
         "name": req.name,

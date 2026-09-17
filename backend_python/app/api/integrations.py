@@ -3,7 +3,7 @@ import time
 import uuid
 from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel
-from typing import Optional, Dict, Any, List
+from typing import Optional, Dict, Any
 from app.db.database import db
 from app.core.tenant import TenantContext, get_tenant_context
 from app.core.permissions import has_permission
@@ -20,7 +20,7 @@ class ConnectIntegrationRequest(BaseModel):
 @router.get("")
 def list_integrations(ctx: TenantContext = Depends(get_tenant_context)):
     integrations = db.get_integrations_for_company(ctx.company_id)
-    
+
     # Return masked representation
     masked = []
     for item in integrations:

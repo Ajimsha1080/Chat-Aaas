@@ -31,7 +31,7 @@ class EvaluationService:
         combined_context = " ".join(request.grounding_contexts).lower()
         context_words = [w for w in re.findall(r'[a-zA-Z0-9_-]{2,}', combined_context)]
         context_stems = {_stem(w) for w in context_words if w not in STOPWORDS}
-        
+
         answer_text = request.answer.lower()
         raw_answer_words = re.findall(r'[a-zA-Z0-9_-]{2,}', answer_text)
         answer_words = [w for w in raw_answer_words if w not in STOPWORDS and len(w) >= 2]

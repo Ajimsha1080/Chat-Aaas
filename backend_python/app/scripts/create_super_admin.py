@@ -24,8 +24,7 @@ if backend_root not in sys.path:
     sys.path.insert(0, backend_root)
 
 from app.db.database import db
-from app.core.security import hash_password, revoke_user_sessions
-from app.core.config import settings
+from app.core.security import hash_password
 
 logging.basicConfig(level=logging.INFO, format="[%(levelname)s] %(message)s")
 logger = logging.getLogger("create_super_admin")
@@ -101,7 +100,7 @@ def main():
     logger.info(f"User ID  : {user_id}")
     logger.info(f"Email    : {email}")
     logger.info(f"Full Name: {args.name}")
-    logger.info(f"Role     : super_admin")
+    logger.info("Role     : super_admin")
     if generated:
         logger.info(f"Generated Password: {password}")
         logger.info("PLEASE SAVE THIS PASSWORD IN A SECURE PASSWORD MANAGER IMMEDIATELY.")

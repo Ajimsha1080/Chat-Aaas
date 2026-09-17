@@ -1,7 +1,6 @@
 import os
 import sys
 import asyncio
-import pytest
 from fastapi.testclient import TestClient
 
 # Ensure UTF-8 output on Windows consoles
@@ -15,8 +14,7 @@ if sys.platform == 'win32':
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")))
 
 from app.main import app
-from app.core.security import create_jwt_token, hash_password
-from app.db.database import db
+from app.core.security import create_jwt_token
 from app.services.billing_service import BillingService
 from app.services.crawler_service import CrawlerService
 from app.workers.document_worker import DocumentWorker

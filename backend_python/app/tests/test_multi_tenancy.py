@@ -1,12 +1,10 @@
 import os
 import sys
-import pytest
 from fastapi.testclient import TestClient
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")))
 from app.main import app
 from app.core.security import create_jwt_token
-from app.db.database import db
 
 client = TestClient(app)
 
@@ -24,7 +22,7 @@ def test_tenant_agent_isolation():
 
 def test_tenant_cannot_access_other_tenant_conversations():
     token_b = create_jwt_token("usr-apex-1", "comp-apex-health", "owner")
-    
+
     # Try to access conversation belonging to comp-techflow
     res = client.get("/api/v1/conversations/conv-tf-101", headers={"Authorization": f"Bearer {token_b}"})
     assert res.status_code == 404

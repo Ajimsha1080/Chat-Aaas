@@ -1,10 +1,9 @@
 import time
 from fastapi import APIRouter, HTTPException, Depends, status
 from pydantic import BaseModel
-from typing import Optional, Dict, Any
+from typing import Optional
 from app.db.database import db
 from app.core.tenant import TenantContext, get_tenant_context
-from app.core.config import settings
 
 router = APIRouter(prefix="/deployments", tags=["Deployments & Web Widget"])
 

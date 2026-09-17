@@ -1,6 +1,5 @@
 import os
 import sys
-import pytest
 from fastapi.testclient import TestClient
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")))
@@ -72,7 +71,7 @@ def test_billing_upgrade_and_invoices_tenant_isolation():
     assert "subscriptionId" in up_data
     assert up_data["planId"] == "growth"
     assert "invoice" not in up_data
-    
+
     # Confirm company plan is STILL starter (not upgraded for free)
     assert db.companies["comp-tenant-a"]["planId"] == "starter"
 
@@ -158,7 +157,7 @@ def test_webhook_replay_protection():
 
     PaymentService.reset_processed_events()
     secret = PaymentService.get_webhook_secret()
-    
+
     event_payload = json.dumps({
         "id": "evt_replay_test_999",
         "event": "subscription.activated",

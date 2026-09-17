@@ -1,4 +1,3 @@
-import time
 from typing import Dict, List
 from collections import defaultdict
 from app.db.database import db

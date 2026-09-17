@@ -1,10 +1,7 @@
-import asyncio
-import json
 import time
 from fastapi import APIRouter, HTTPException, Depends, Header
 from fastapi.responses import StreamingResponse
-from pydantic import BaseModel
-from typing import Optional, List, Dict, Any
+from typing import Optional
 
 from app.schemas import ChatRequest, ChatResponse
 from app.core.tenant import TenantContext, get_tenant_context
@@ -113,7 +110,7 @@ async def process_chat_message(
                 status_code=402,
                 detail=f"Monthly conversation limit ({quota.get('monthlyLimit')}) exceeded for your active subscription. Please upgrade to continue."
             )
-    
+
     # 3. Anti-spam & Cost Protection: Plan-based session and tenant-level aggregate rate limits
     session_id = req.conversation_id or req.session_id or "anon"
     RateLimiter.check_chat_rate_limits(company_id, session_id)
@@ -190,7 +187,7 @@ async def stream_chat_tokens(
                 status_code=402,
                 detail=f"Monthly conversation limit ({quota.get('monthlyLimit')}) exceeded for your active subscription. Please upgrade to continue."
             )
-    
+
     # 1. Anti-spam & Cost Protection: Plan-based session and tenant-level aggregate rate limits
     session_id = req.conversation_id or req.session_id or "anon"
     RateLimiter.check_chat_rate_limits(company_id, session_id)

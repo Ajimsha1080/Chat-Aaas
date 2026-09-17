@@ -1,6 +1,5 @@
 import os
 import sys
-import asyncio
 
 # Ensure UTF-8 output on Windows consoles
 if sys.platform == 'win32':
@@ -22,12 +21,12 @@ from app.services.evaluation_service import EvaluationService
 from app.services.document_ai import DocumentAIService
 from app.services.classification_service import ClassificationService
 from app.schemas import (
-    ChatRequest, 
-    EmbeddingRequest, 
-    RerankRequest, 
-    RerankCandidate, 
-    EvaluateRequest, 
-    DocumentProcessRequest, 
+    ChatRequest,
+    EmbeddingRequest,
+    RerankRequest,
+    RerankCandidate,
+    EvaluateRequest,
+    DocumentProcessRequest,
     ClassificationRequest
 )
 

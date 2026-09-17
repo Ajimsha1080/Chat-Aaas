@@ -44,7 +44,7 @@ class AuditService:
 
         now_str = time.strftime("%Y-%m-%dT%H:%M:%SZ")
         log_id = f"aud_{int(time.time() * 1000)}_{len(db.audit_logs) + 1}"
-        
+
         current_hash = AuditService._compute_hash(
             prev_hash=prev_hash,
             log_id=log_id,
@@ -129,7 +129,7 @@ class AuditService:
         """Generates a SOC2 compliance audit export bundle with cryptographic seal."""
         logs = [l for l in db.audit_logs if l.get("companyId") == company_id]
         is_valid, reason = AuditService.verify_audit_chain(company_id)
-        
+
         canonical_json = json.dumps(logs, sort_keys=True, ensure_ascii=False)
         bundle_digest = hashlib.sha256(canonical_json.encode("utf-8")).hexdigest()
 

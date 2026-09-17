@@ -1,6 +1,6 @@
 import time
 from datetime import timedelta
-from typing import Optional, List, Dict, Any
+from typing import Optional
 from fastapi import APIRouter, HTTPException, Depends, Query, status
 from pydantic import BaseModel, Field
 from sqlalchemy import text
@@ -192,8 +192,8 @@ def list_platform_users(
             continue
         if search:
             s = search.lower()
-            if (s not in user.get("email", "").lower() and 
-                s not in user.get("fullName", "").lower() and 
+            if (s not in user.get("email", "").lower() and
+                s not in user.get("fullName", "").lower() and
                 s not in uid.lower()):
                 continue
 
@@ -552,7 +552,7 @@ def get_platform_metrics(ctx: TenantContext = Depends(require_super_admin)):
     active_tenants = len([c for c in db.companies.values() if not c.get("isSuspended")])
     suspended_tenants = len([c for c in db.companies.values() if c.get("isSuspended")])
     active_agents = len([a for a in db.agents.values() if a.get("status") == "active"])
-    
+
     total_messages = sum(e.get("quantity", 1) for e in db.usage_events if e.get("eventType") == "message")
     total_chunks = len(db.document_chunks)
     total_conversations = len(db.conversations)
@@ -665,7 +665,7 @@ def run_tenant_diagnostic(
     )
 
     return {"status": 200, "data": output}
- 
+
 # ================= SUBSCRIPTION PLANS MANAGEMENT ================= #
 
 @router.get("/plans")

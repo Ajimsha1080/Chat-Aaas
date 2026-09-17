@@ -1,7 +1,7 @@
 import time
 from fastapi import APIRouter, HTTPException, Depends, status
 from pydantic import BaseModel, EmailStr
-from typing import Optional, List, Dict, Any
+from typing import Optional
 from app.db.database import db
 from app.services.audit_service import AuditService
 from app.core.tenant import TenantContext, get_tenant_context

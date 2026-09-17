@@ -45,7 +45,7 @@ class ConversationService:
                     all_convs = [c for c in all_convs if c.get("status") == "escalated_to_human"]
                 else:
                     all_convs = [c for c in all_convs if c.get("status") == status_filter]
-        
+
         result = []
         for c in all_convs:
             cd = dict(c)
