@@ -41,6 +41,12 @@ def test_cross_instance_user_signup_and_login():
     if company_id in db.companies:
         del db.companies[company_id]
 
+    # Simulate email verification flow
+    from app.services.email_service import _EMAIL_TOKENS
+    v_token = [rec["token"] for rec in _EMAIL_TOKENS.values() if rec.get("userId") == user_id and rec.get("tokenType") == "verify_email"][-1]
+    verify_res = client_b.post("/api/v1/auth/verify-email", json={"token": v_token})
+    assert verify_res.status_code == 200
+
     # Instance B logs in: must query SQL directly
     login_res = client_b.post("/api/v1/auth/login", json={"email": email, "password": password})
     assert login_res.status_code == 200, login_res.text

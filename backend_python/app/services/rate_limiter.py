@@ -13,12 +13,14 @@ class RateLimiter:
     Protects API, Authentication, Uploads, Crawler, and LLM surface against denial-of-wallet attacks.
     """
     _in_memory_requests: Dict[str, List[float]] = {}
+    _account_failed_attempts: Dict[str, List[float]] = {}
     _redis_client = None
 
     @classmethod
     def reset(cls):
         """Clears in-memory request store for test isolation."""
         cls._in_memory_requests.clear()
+        cls._account_failed_attempts.clear()
 
     @classmethod
     def _get_redis(cls):
@@ -135,3 +137,59 @@ class RateLimiter:
         if forwarded:
             return forwarded.split(",")[0].strip()
         return request.client.host if request.client else "127.0.0.1"
+
+    @classmethod
+    def is_account_locked(cls, email: str, max_failures: int = 5, lock_seconds: float = 900.0) -> bool:
+        """
+        Checks whether an account has had max_failures consecutive login failures within lock_seconds (15 min).
+        Protects against credential stuffing and brute force independent of source IP.
+        """
+        norm_email = email.lower().strip()
+        r = cls._get_redis()
+        now = time.time()
+        if r:
+            try:
+                key = f"failed_logins:{norm_email}"
+                count = r.zcount(key, now - lock_seconds, "+inf")
+                return count >= max_failures
+            except Exception as e:
+                logger.error(f"Redis check account lock error: {e}")
+
+        # In-memory fallback
+        attempts = [ts for ts in cls._account_failed_attempts.get(norm_email, []) if ts > (now - lock_seconds)]
+        cls._account_failed_attempts[norm_email] = attempts
+        return len(attempts) >= max_failures
+
+    @classmethod
+    def record_failed_login(cls, email: str, lock_seconds: float = 900.0) -> None:
+        """Records a failed authentication attempt for this account."""
+        norm_email = email.lower().strip()
+        r = cls._get_redis()
+        now = time.time()
+        if r:
+            try:
+                key = f"failed_logins:{norm_email}"
+                pipeline = r.pipeline()
+                pipeline.zremrangebyscore(key, 0, now - lock_seconds)
+                pipeline.zadd(key, {str(now): now})
+                pipeline.expire(key, int(lock_seconds) + 1)
+                pipeline.execute()
+                return
+            except Exception as e:
+                logger.error(f"Redis record failed login error: {e}")
+
+        attempts = [ts for ts in cls._account_failed_attempts.get(norm_email, []) if ts > (now - lock_seconds)]
+        attempts.append(now)
+        cls._account_failed_attempts[norm_email] = attempts
+
+    @classmethod
+    def clear_failed_logins(cls, email: str) -> None:
+        """Resets failed login attempt counter upon successful user authentication."""
+        norm_email = email.lower().strip()
+        r = cls._get_redis()
+        if r:
+            try:
+                r.delete(f"failed_logins:{norm_email}")
+            except Exception as e:
+                logger.error(f"Redis clear failed logins error: {e}")
+        cls._account_failed_attempts.pop(norm_email, None)

@@ -72,7 +72,7 @@ def create_company(req: CreateCompanyRequest):
         "planStatus": "active",
         "isSuspended": False,
         "apiKey": f"aas_live_{slug[:4]}_{uuid.uuid4().hex[:12]}",
-        "apiSecretEncrypted": f"enc_kms_sec_{slug}_prod",
+        # Note: 'apiSecretEncrypted' is deprecated; real credentials use EnvelopeEncryption with CMEK in tenant_keys
         "createdAt": time.strftime("%Y-%m-%dT%H:%M:%SZ"),
         "updatedAt": time.strftime("%Y-%m-%dT%H:%M:%SZ"),
         "stats": {

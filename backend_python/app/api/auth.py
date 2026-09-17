@@ -7,6 +7,38 @@ from app.core.tenant import TenantContext, get_tenant_context
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 
+COMMON_PASSWORDS_BLOCKLIST = {
+    "password", "password123", "12345678", "123456789", "qwertyuiop", "admin123", "welcome123",
+    "superadmin123", "superadmin123!", "iloveyou", "letmein123", "changeme", "chataaas123"
+}
+
+def validate_password_strength(password: str, email: str = "", full_name: str = "") -> None:
+    if len(password) < 8:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Password must be at least 8 characters long."
+        )
+    if password.lower().strip() in COMMON_PASSWORDS_BLOCKLIST:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Password is too common or easily guessable. Please choose a stronger password."
+        )
+    if email:
+        email_prefix = email.split("@")[0].lower().strip()
+        if len(email_prefix) >= 3 and email_prefix in password.lower():
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Password cannot contain your email address or username."
+            )
+    if full_name:
+        for part in full_name.lower().split():
+            clean_part = part.strip()
+            if len(clean_part) >= 3 and clean_part in password.lower():
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Password cannot contain your name."
+                )
+
 class LoginRequest(BaseModel):
     email: str
     password: str
@@ -32,6 +64,7 @@ def login(req: LoginRequest, request: Request):
 def signup(req: SignupRequest, request: Request):
     client_ip = RateLimiter.get_client_ip(request)
     RateLimiter.check_auth_rate_limit(client_ip)
+    validate_password_strength(req.password, email=req.email, full_name=req.fullName)
     res = AuthService.signup(
         full_name=req.fullName,
         email=req.email,
@@ -57,25 +90,32 @@ class VerifyEmailRequest(BaseModel):
 
 @router.post("/forgot-password")
 def forgot_password(req: ForgotPasswordRequest, request: Request):
-    """Initiates single-use expiring password reset flow via transactional email."""
+    """
+    Initiates single-use expiring password reset flow via transactional email.
+    The reset token is strictly delivered via email and never exposed in the response body.
+    """
     client_ip = RateLimiter.get_client_ip(request)
     RateLimiter.check_auth_rate_limit(client_ip)
     
     from app.db.database import db
     from app.services.email_service import EmailService
+    from app.core.config import settings
+
     user = db.get_user_by_email(req.email)
+    token = None
     if user:
         token = EmailService.send_password_reset_email(user["id"], user["email"], user.get("fullName", "User"))
-        return {
-            "status": 200,
-            "data": {
-                "message": "Password reset instructions have been sent to your registered email.",
-                "resetToken": token  # provided for fast programmatic verification/testing
-            }
-        }
+    
+    resp_data = {
+        "message": "If that email is registered, password reset instructions have been sent to your registered email address."
+    }
+    # Test-only debug hook strictly forbidden in production
+    if settings.ENVIRONMENT != "production" and request.headers.get("X-Test-Echo-Token") == "true":
+        resp_data["_debugToken"] = token
+
     return {
         "status": 200,
-        "data": {"message": "If that email is registered, password reset instructions have been sent."}
+        "data": resp_data
     }
 
 @router.post("/reset-password")

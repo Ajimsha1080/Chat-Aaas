@@ -127,7 +127,7 @@ class EmailService:
             return False
 
         user_id = record["userId"]
-        user = db.users.get(user_id)
+        user = db.users.get(user_id) or db.get_user_by_id(user_id)
         if not user:
             return False
 
@@ -147,7 +147,7 @@ class EmailService:
             return False
 
         user_id = record["userId"]
-        user = db.users.get(user_id)
+        user = db.users.get(user_id) or db.get_user_by_id(user_id)
         if not user:
             return False
 

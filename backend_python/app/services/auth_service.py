@@ -1,26 +1,54 @@
 import time
+import uuid
 from typing import Dict, Any, Optional
 from app.db.database import db
 from app.core.security import hash_password, verify_password, create_jwt_token, create_refresh_token, decode_jwt_token, revoke_token, revoke_user_sessions
+from app.services.rate_limiter import RateLimiter
+from app.services.email_service import EmailService
 
 class AuthService:
     @staticmethod
     def login(email: str, password: str) -> Optional[Dict[str, Any]]:
-        user = db.get_user_by_email(email)
+        norm_email = email.lower().strip()
+        from fastapi import HTTPException, status
+
+        # 1. Account-Level Lockout Defense: Check consecutive failures for this account
+        if RateLimiter.is_account_locked(norm_email, max_failures=5):
+            raise HTTPException(
+                status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                detail="Account temporarily locked due to 5 consecutive failed login attempts. Please wait 15 minutes or reset your password."
+            )
+
+        user = db.get_user_by_email(norm_email)
         if not user or not verify_password(password, user.get("passwordHash", "")):
+            RateLimiter.record_failed_login(norm_email)
+            if RateLimiter.is_account_locked(norm_email, max_failures=5):
+                raise HTTPException(
+                    status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                    detail="Account temporarily locked due to 5 consecutive failed login attempts. Please wait 15 minutes or reset your password."
+                )
             return None
 
         if user.get("isSuspended"):
-            from fastapi import HTTPException, status
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="User account is suspended.")
+
+        # 2. Email Verification Enforcement
+        if user.get("isEmailVerified") is False:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Email address not verified. Please verify your email via the confirmation link sent to your inbox before logging in."
+            )
 
         membership = db.get_membership_for_user(user["id"])
         if not membership:
-            from fastapi import HTTPException, status
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="User account is not linked to an active workspace company."
             )
+
+        # Successful authentication: Clear account failure counter
+        RateLimiter.clear_failed_logins(norm_email)
+
         company_id = membership["companyId"]
         role = membership.get("role", "member")
         token = create_jwt_token(user["id"], company_id, role)
@@ -31,7 +59,8 @@ class AuthService:
                 "id": user["id"],
                 "email": user["email"],
                 "fullName": user["fullName"],
-                "avatarUrl": user.get("avatarUrl")
+                "avatarUrl": user.get("avatarUrl"),
+                "isEmailVerified": user.get("isEmailVerified", True)
             },
             "companyId": company_id,
             "role": role,
@@ -76,30 +105,32 @@ class AuthService:
 
     @staticmethod
     def signup(full_name: str, email: str, password: str, company_name: str, industry: str, plan_id: str = "starter") -> Dict[str, Any]:
-        user_id = f"usr-{int(time.time() * 1000)}"
-        company_id = f"comp-{int(time.time() * 1000)}"
+        # Unpredictable Cryptographically Random IDs & API Keys
+        user_id = f"usr-{uuid.uuid4().hex[:12]}"
+        company_id = f"comp-{uuid.uuid4().hex[:12]}"
+        slug = company_name.lower().strip().replace(" ", "-")
+        api_key = f"aas_live_{slug[:4]}_{uuid.uuid4().hex[:12]}"
 
         new_user = {
             "id": user_id,
-            "email": email,
+            "email": email.lower().strip(),
             "passwordHash": hash_password(password),
-            "fullName": full_name,
-            "isEmailVerified": True,
+            "fullName": full_name.strip(),
+            "isEmailVerified": False,
             "createdAt": time.strftime("%Y-%m-%dT%H:%M:%SZ")
         }
 
         new_company = {
             "id": company_id,
-            "name": company_name,
-            "slug": company_name.lower().replace(" ", "-"),
-            "domain": f"{company_name.lower().replace(' ', '')}.com",
+            "name": company_name.strip(),
+            "slug": slug,
+            "domain": f"{slug.replace('-', '')}.com",
             "industry": industry,
             "planId": plan_id,
             "billingCycle": "monthly",
             "planStatus": "active",
             "isSuspended": False,
-            "apiKey": f"aas_live_{company_id}",
-            "apiSecretEncrypted": f"enc_kms_sec_{company_id}",
+            "apiKey": api_key,
             "createdAt": time.strftime("%Y-%m-%dT%H:%M:%SZ")
         }
 
@@ -158,6 +189,9 @@ class AuthService:
         db.save_membership(mem)
         db.save_agent(new_agent)
         db.save_agent_version(new_version)
+
+        # Dispatch account verification email
+        EmailService.send_verification_email(user_id, new_user["email"], new_user["fullName"])
 
         token = create_jwt_token(user_id, company_id, "owner")
         refresh_token = create_refresh_token(user_id, company_id, "owner")

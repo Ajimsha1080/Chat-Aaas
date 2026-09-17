@@ -97,13 +97,13 @@ def test_rate_limiting_auth_returns_429():
     from app.services.rate_limiter import RateLimiter
     RateLimiter.reset()
 
-    # First 10 requests succeed or fail with 401 (not rate limited)
-    for _ in range(10):
-        res = client.post("/api/v1/auth/login", json={"email": "wrong@creds.com", "password": "badpassword"})
+    # First 10 requests from same IP succeed or fail with 401 (not rate limited)
+    for i in range(10):
+        res = client.post("/api/v1/auth/login", json={"email": f"ip_rate_{i}@creds.com", "password": "badpassword"})
         assert res.status_code == 401
 
     # 11th request within 60s window must trigger HTTP 429
-    rate_limited_res = client.post("/api/v1/auth/login", json={"email": "wrong@creds.com", "password": "badpassword"})
+    rate_limited_res = client.post("/api/v1/auth/login", json={"email": "ip_rate_11@creds.com", "password": "badpassword"})
     assert rate_limited_res.status_code == 429
     assert "Retry-After" in rate_limited_res.headers
     assert "Too many requests" in rate_limited_res.json()["detail"] or "Rate limit exceeded" in rate_limited_res.json()["detail"]
@@ -284,10 +284,19 @@ def test_transactional_email_and_password_reset_flow():
     from app.core.security import hash_password
 
     try:
-        # 1. Forgot password request
+        # 1. Forgot password request (Production response format: NO token exposed)
         forgot_res = client.post("/api/v1/auth/forgot-password", json={"email": "alex@techflow.io"})
         assert forgot_res.status_code == 200
-        reset_token = forgot_res.json()["data"]["resetToken"]
+        assert "resetToken" not in forgot_res.json()["data"]
+        assert "token" not in str(forgot_res.json()["data"]).lower()
+
+        # In dev/test explicitly requesting echo header for programmatic verification
+        debug_res = client.post(
+            "/api/v1/auth/forgot-password",
+            headers={"X-Test-Echo-Token": "true"},
+            json={"email": "alex@techflow.io"}
+        )
+        reset_token = debug_res.json()["data"]["_debugToken"]
         assert reset_token is not None
 
         # 2. Reset password with token
