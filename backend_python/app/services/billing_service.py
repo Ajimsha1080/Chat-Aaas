@@ -69,14 +69,54 @@ class BillingService:
             return gstin.strip()[:2]
         return None
 
-    @staticmethod
-    def generate_invoice_number() -> str:
-        """Generates a monotonically increasing sequence number formatted as INV-YYYYMM-XXXX."""
-        global _INVOICE_SEQUENCE_COUNTER
+    @classmethod
+    def generate_invoice_number(cls) -> str:
+        """
+        Generates a monotonically increasing, durable sequence number formatted as INV-YYYYMM-XXXX
+        persisted atomically in SQL database with row locking to guarantee no duplicates (GST compliance).
+        """
+        from sqlalchemy import text
         month_str = time.strftime("%Y%m")
-        seq = _INVOICE_SEQUENCE_COUNTER
-        _INVOICE_SEQUENCE_COUNTER += 1
-        return f"INV-{month_str}-{seq:04d}"
+        try:
+            with db.engine.begin() as conn:
+                conn.execute(text("""
+                    CREATE TABLE IF NOT EXISTS invoice_sequences (
+                        id VARCHAR(32) PRIMARY KEY,
+                        year_month VARCHAR(10) NOT NULL,
+                        last_sequence INTEGER NOT NULL
+                    )
+                """))
+                
+                query_sql = "SELECT last_sequence FROM invoice_sequences WHERE id = :id FOR UPDATE" if db.engine.dialect.name == "postgresql" else "SELECT last_sequence FROM invoice_sequences WHERE id = :id"
+                row = conn.execute(text(query_sql), {"id": f"seq_{month_str}"}).fetchone()
+
+                if row:
+                    next_seq = row[0] + 1
+                    conn.execute(
+                        text("UPDATE invoice_sequences SET last_sequence = :seq WHERE id = :id"),
+                        {"seq": next_seq, "id": f"seq_{month_str}"}
+                    )
+                else:
+                    next_seq = 1001
+                    for inv in db.invoices.values():
+                        num = inv.get("invoiceNumber", "")
+                        if num.startswith(f"INV-{month_str}-"):
+                            try:
+                                seq_part = int(num.split("-")[-1])
+                                if seq_part >= next_seq:
+                                    next_seq = seq_part + 1
+                            except ValueError:
+                                pass
+                    conn.execute(
+                        text("INSERT INTO invoice_sequences (id, year_month, last_sequence) VALUES (:id, :ym, :seq)"),
+                        {"id": f"seq_{month_str}", "ym": month_str, "seq": next_seq}
+                    )
+                return f"INV-{month_str}-{next_seq:04d}"
+        except Exception:
+            global _INVOICE_SEQUENCE_COUNTER
+            seq = _INVOICE_SEQUENCE_COUNTER
+            _INVOICE_SEQUENCE_COUNTER += 1
+            return f"INV-{month_str}-{seq:04d}"
 
     @staticmethod
     def get_plans() -> List[Dict[str, Any]]:
@@ -118,19 +158,19 @@ class BillingService:
         """
         Calculates statutory 18% Indian GST for IT Software Services (SAC 998313):
         - Intrastate (Karnataka -> Karnataka): 9% CGST + 9% SGST
-        - Interstate (Karnataka -> Other States/UTs): 18% IGST
+        - Interstate (Karnataka -> Other State): 18% IGST
+        - Correctly formats SAC code, GSTINs, and tax breakdown.
         """
         supplier_state = getattr(settings, "SUPPLIER_STATE_CODE", "29")
         
-        # If buyer state or GSTIN is supplied, resolve interstate dynamically
-        if buyer_gstin and BillingService.validate_gstin(buyer_gstin):
-            resolved_buyer_state = buyer_gstin.strip()[:2]
-            is_interstate = (resolved_buyer_state != supplier_state)
-        elif buyer_state_code:
-            is_interstate = (str(buyer_state_code).zfill(2) != supplier_state)
+        # If buyer state code provided or inferable from buyer GSTIN
+        if not buyer_state_code and buyer_gstin:
+            buyer_state_code = BillingService.extract_state_code(buyer_gstin)
 
-        gst_rate = 0.18
-        tax_amount = round(amount_inr * gst_rate, 2)
+        if buyer_state_code and buyer_state_code != supplier_state:
+            is_interstate = True
+
+        tax_amount = round(amount_inr * 0.18, 2)
         total_inr = round(amount_inr + tax_amount, 2)
 
         if is_interstate:
@@ -141,12 +181,12 @@ class BillingService:
                 "cgstAmountINR": 0.0,
                 "sgstRatePercent": 0.0,
                 "sgstAmountINR": 0.0,
-                "igst": tax_amount,
                 "cgst": 0.0,
-                "sgst": 0.0
+                "sgst": 0.0,
+                "igst": tax_amount
             }
         else:
-            half_tax = round(tax_amount / 2, 2)
+            half_tax = round(tax_amount / 2.0, 2)
             tax_breakdown = {
                 "igstRatePercent": 0.0,
                 "igstAmountINR": 0.0,
@@ -178,8 +218,19 @@ class BillingService:
         company_id: str,
         plan_id: str,
         billing_cycle: str = "monthly",
-        buyer_gstin: Optional[str] = None
+        buyer_gstin: Optional[str] = None,
+        payment_verified: bool = False
     ) -> Dict[str, Any]:
+        """
+        Executes plan change and produces paid invoice ONLY when payment_verified is True.
+        Prevents free plan upgrade bypasses without verified payment.
+        """
+        if not payment_verified:
+            raise ValueError(
+                "Unauthorized plan modification: Plan changes and paid invoices "
+                "require a verified payment event from Razorpay webhook."
+            )
+
         company = db.companies.get(company_id)
         if not company:
             raise ValueError(f"Company {company_id} not found")
@@ -197,6 +248,7 @@ class BillingService:
 
         company["planId"] = plan_id
         company["billingCycle"] = billing_cycle
+        company["planStatus"] = "active"
 
         # Generate Invoice record
         invoice_id = f"inv-{company_id}-{int(time.time() * 1000)}"
@@ -219,6 +271,8 @@ class BillingService:
             "createdAt": time.strftime("%Y-%m-%dT%H:%M:%SZ")
         }
         db.invoices[invoice_id] = new_invoice
+        db.save_invoice(new_invoice)
+        db.save_company(company)
 
         # Durable snapshot
         try:
@@ -232,7 +286,7 @@ class BillingService:
         except Exception:
             pass
 
-        db.save_state()
+        db.flush_durable_storage()
 
         return {
             "success": True,

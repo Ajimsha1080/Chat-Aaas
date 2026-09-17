@@ -8,7 +8,12 @@ from typing import Dict, Any, Optional, List
 from app.db.database import db
 from app.services.billing_service import BillingService
 
+from app.core.config import settings, _require_secret
+from app.core.security import _get_redis_client
+
 logger = logging.getLogger(__name__)
+
+_PROCESSED_WEBHOOK_EVENTS = set()
 
 PLAN_ENTITLEMENTS = {
     "starter": {
@@ -49,18 +54,79 @@ PLAN_ENTITLEMENTS = {
     }
 }
 
+_CACHED_DEV_SECRETS = {}
+
+def _get_stable_secret(env_var: str, min_length: int = 16) -> str:
+    val = os.getenv(env_var)
+    _KNOWN_INSECURE = {
+        "coarai_razorpay_secret_123",
+        "mock_secret",
+        "rzp_test_mock_secret",
+        "rzp_test_mock_key",
+        "secret",
+        "changeme",
+        "",
+    }
+    if val and val not in _KNOWN_INSECURE and len(val) >= min_length:
+        return val
+    if settings.ENVIRONMENT == "production":
+        raise RuntimeError(
+            f"[SECURITY] Environment variable '{env_var}' is missing or insecure in production."
+        )
+    if env_var not in _CACHED_DEV_SECRETS:
+        import secrets
+        _CACHED_DEV_SECRETS[env_var] = secrets.token_hex(min_length)
+    return _CACHED_DEV_SECRETS[env_var]
+
 class PaymentService:
     @staticmethod
     def get_razorpay_key_id() -> str:
-        return os.getenv("RAZORPAY_KEY_ID", "rzp_test_mock_key")
+        key_id = os.getenv("RAZORPAY_KEY_ID", "")
+        if key_id and key_id not in ["rzp_test_mock_key", "mock_key", ""]:
+            return key_id
+        if settings.ENVIRONMENT == "production":
+            raise RuntimeError(
+                "[SECURITY] RAZORPAY_KEY_ID is missing or insecure. Set a valid Razorpay Key ID in production."
+            )
+        return key_id or "rzp_test_mock_key"
 
     @staticmethod
     def get_razorpay_key_secret() -> str:
-        return os.getenv("RAZORPAY_KEY_SECRET", "mock_secret")
+        return _get_stable_secret("RAZORPAY_KEY_SECRET", min_length=16)
 
     @staticmethod
     def get_webhook_secret() -> str:
-        return os.getenv("RAZORPAY_WEBHOOK_SECRET", "coarai_razorpay_secret_123")
+        return _get_stable_secret("RAZORPAY_WEBHOOK_SECRET", min_length=16)
+
+    @classmethod
+    def is_event_processed(cls, event_id: str) -> bool:
+        if not event_id:
+            return False
+        r = _get_redis_client()
+        if r:
+            try:
+                if r.get(f"webhook:processed:{event_id}"):
+                    return True
+            except Exception:
+                pass
+        return event_id in _PROCESSED_WEBHOOK_EVENTS
+
+    @classmethod
+    def mark_event_processed(cls, event_id: str, ttl_seconds: int = 86400 * 7):
+        if not event_id:
+            return
+        _PROCESSED_WEBHOOK_EVENTS.add(event_id)
+        r = _get_redis_client()
+        if r:
+            try:
+                r.set(f"webhook:processed:{event_id}", "1", ex=ttl_seconds)
+            except Exception:
+                pass
+
+    @classmethod
+    def reset_processed_events(cls):
+        """Clears in-memory processed webhook cache for tests."""
+        _PROCESSED_WEBHOOK_EVENTS.clear()
 
     @classmethod
     def verify_webhook_signature(cls, payload_bytes: bytes, signature: str) -> bool:
@@ -125,10 +191,25 @@ class PaymentService:
             raise ValueError("Invalid Razorpay webhook signature.")
 
         event_data = json.loads(payload_bytes.decode("utf-8"))
+        event_id = event_data.get("id") or event_data.get("event_id")
         event_type = event_data.get("event")
         payload = event_data.get("payload", {})
         
-        logger.info(f"Processing Razorpay webhook event: {event_type}")
+        if not event_id:
+            # Derive fallback ID from payment or subscription entity
+            ent_id = payload.get("payment", {}).get("entity", {}).get("id") or payload.get("subscription", {}).get("entity", {}).get("id")
+            if ent_id:
+                event_id = f"{event_type}:{ent_id}"
+
+        # Replay / Idempotency protection
+        if event_id and cls.is_event_processed(event_id):
+            logger.info(f"Ignored duplicate/replayed Razorpay webhook event: {event_id}")
+            return {"status": "ignored", "reason": "duplicate_event", "eventId": event_id}
+
+        if event_id:
+            cls.mark_event_processed(event_id)
+
+        logger.info(f"Processing Razorpay webhook event: {event_type} (ID: {event_id})")
 
         if event_type in ["subscription.authenticated", "subscription.activated"]:
             return cls._handle_subscription_activated(payload)
@@ -155,6 +236,7 @@ class PaymentService:
             company["billingCycle"] = billing_cycle
             company["planStatus"] = "active"
             company["subscriptionId"] = subscription.get("id")
+            db.save_company(company)
             db.flush_durable_storage()
             return {"status": "success", "action": "subscription_activated", "companyId": company_id, "planId": plan_id}
 
@@ -174,13 +256,16 @@ class PaymentService:
         if company_id and company_id in db.companies:
             company = db.companies[company_id]
             company["planStatus"] = "active"
+            company["planId"] = plan_id
+            db.save_company(company)
 
             gst_details = BillingService.calculate_gst_invoice(amount_inr / 1.18)
-            invoice_id = f"inv-rzp-{company_id}-{int(time.time())}"
+            invoice_id = f"inv-rzp-{company_id}-{int(time.time() * 1000)}"
+            invoice_number = BillingService.generate_invoice_number()
             invoice = {
                 "id": invoice_id,
                 "companyId": company_id,
-                "invoiceNumber": f"INV-{time.strftime('%Y%m')}-{int(time.time()) % 10000}",
+                "invoiceNumber": invoice_number,
                 "date": time.strftime("%Y-%m-%d"),
                 "planName": f"{plan_id.capitalize()} Plan",
                 "subtotalINR": gst_details["subtotalINR"],
@@ -193,8 +278,11 @@ class PaymentService:
                 "createdAt": time.strftime("%Y-%m-%dT%H:%M:%SZ")
             }
             db.invoices[invoice_id] = invoice
+            db.save_invoice(invoice)
             db.flush_durable_storage()
             return {"status": "success", "action": "invoice_generated", "invoiceId": invoice_id}
+
+        return {"status": "company_not_found", "companyId": company_id}
 
         return {"status": "company_not_found", "companyId": company_id}
 

@@ -71,15 +71,22 @@ def upgrade_plan(req: UpgradePlanRequest, ctx: TenantContext = Depends(get_tenan
     if not has_permission(ctx.role, "billing:manage"):
         raise HTTPException(status_code=403, detail="Forbidden: Only owners/admins can change subscriptions.")
 
-    res = BillingService.change_plan(ctx.company_id, req.planId, req.billingCycle or "monthly")
-    AuditService.log(
-        company_id=ctx.company_id,
-        actor=ctx.user_id,
-        actor_role=ctx.role,
-        action="SUBSCRIPTION_UPGRADED",
-        details=f"Upgraded plan to {req.planId.upper()} ({req.billingCycle})"
-    )
-    return {"status": 200, "data": res}
+    try:
+        checkout_order = PaymentService.create_subscription_order(
+            company_id=ctx.company_id,
+            plan_id=req.planId,
+            billing_cycle=req.billingCycle or "monthly"
+        )
+        AuditService.log(
+            company_id=ctx.company_id,
+            actor=ctx.user_id,
+            actor_role=ctx.role,
+            action="SUBSCRIPTION_CHECKOUT_INITIATED",
+            details=f"Initiated checkout for {req.planId.upper()} ({req.billingCycle})"
+        )
+        return {"status": 200, "data": checkout_order}
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
 @router.get("/usage")
 def get_usage(ctx: TenantContext = Depends(get_tenant_context)):

@@ -43,22 +43,6 @@ export class APIClient {
     return res;
   }
 
-  public static async ensureSuperAdminAuth(): Promise<boolean> {
-    if (this.adminToken) {
-      return true;
-    }
-    try {
-      const res = await this.login('admin@chataaas.internal', 'SuperAdmin123!');
-      if (res && res.token) {
-        this.adminToken = res.token;
-        return true;
-      }
-    } catch (e) {
-      console.warn('[APIClient] Could not acquire Super Admin token:', e);
-    }
-    return false;
-  }
-
   private static async request(path: string, method: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE' = 'GET', body?: any) {
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
@@ -642,17 +626,14 @@ export class APIClient {
     if (params?.page) query.append('page', params.page.toString());
     if (params?.limit) query.append('limit', params.limit.toString());
     const qs = query.toString() ? `?${query.toString()}` : '';
-    await this.ensureSuperAdminAuth();
     return this.request(`/api/v1/admin/tenants${qs}`, 'GET');
   }
 
   public static async suspendTenant(companyId: string, reason?: string) {
-    await this.ensureSuperAdminAuth();
     return this.request(`/api/v1/admin/tenants/${companyId}/suspend`, 'POST', { reason });
   }
 
   public static async activateTenant(companyId: string) {
-    await this.ensureSuperAdminAuth();
     return this.request(`/api/v1/admin/tenants/${companyId}/activate`, 'POST');
   }
 
@@ -662,27 +643,22 @@ export class APIClient {
     if (params?.role) query.append('role', params.role);
     if (params?.companyId) query.append('company_id', params.companyId);
     const qs = query.toString() ? `?${query.toString()}` : '';
-    await this.ensureSuperAdminAuth();
     return this.request(`/api/v1/admin/users${qs}`, 'GET');
   }
 
   public static async updateUserRole(userId: string, role: string, companyId?: string) {
-    await this.ensureSuperAdminAuth();
     return this.request(`/api/v1/admin/users/${userId}/role`, 'PATCH', { role, companyId });
   }
 
   public static async suspendUser(userId: string) {
-    await this.ensureSuperAdminAuth();
     return this.request(`/api/v1/admin/users/${userId}/suspend`, 'POST');
   }
 
   public static async activateUser(userId: string) {
-    await this.ensureSuperAdminAuth();
     return this.request(`/api/v1/admin/users/${userId}/activate`, 'POST');
   }
 
   public static async impersonateTenant(companyId: string, userId?: string) {
-    await this.ensureSuperAdminAuth();
     return this.request('/api/v1/admin/impersonate', 'POST', { companyId, userId });
   }
 
@@ -695,32 +671,26 @@ export class APIClient {
     if (params?.page) query.append('page', params.page.toString());
     if (params?.limit) query.append('limit', params.limit.toString());
     const qs = query.toString() ? `?${query.toString()}` : '';
-    await this.ensureSuperAdminAuth();
     return this.request(`/api/v1/admin/audit-logs${qs}`, 'GET');
   }
 
   public static async getAdminHealth() {
-    await this.ensureSuperAdminAuth();
     return this.request('/api/v1/admin/health', 'GET');
   }
 
   public static async getAdminMetrics() {
-    await this.ensureSuperAdminAuth();
     return this.request('/api/v1/admin/metrics', 'GET');
   }
 
   public static async getKillswitchStatus() {
-    await this.ensureSuperAdminAuth();
     return this.request('/api/v1/admin/killswitch', 'GET');
   }
 
   public static async toggleKillswitch(active: boolean, reason?: string) {
-    await this.ensureSuperAdminAuth();
     return this.request('/api/v1/admin/killswitch', 'POST', { active, reason });
   }
 
   public static async runTenantDiagnostic(companyId: string) {
-    await this.ensureSuperAdminAuth();
     return this.request(`/api/v1/admin/diagnostics/${companyId}`, 'POST');
   }
 
@@ -732,12 +702,10 @@ export class APIClient {
   }
 
   public static async getAdminPlans() {
-    await this.ensureSuperAdminAuth();
     return this.request('/api/v1/admin/plans', 'GET');
   }
 
   public static async updateAdminPlanPrice(planId: string, priceMonthlyINR: number, priceAnnualINR?: number) {
-    await this.ensureSuperAdminAuth();
     return this.request(`/api/v1/admin/plans/${planId}`, 'PATCH', { priceMonthlyINR, priceAnnualINR });
   }
 }

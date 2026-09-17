@@ -5,14 +5,15 @@ from typing import Dict, Any, List, Optional
 from contextlib import contextmanager
 from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker
-from app.core.security import hash_password
+from app.core.security import hash_password, verify_password
 from app.core.config import settings
 from app.db.models import (
-    Base, Company, User, Membership, Agent, AgentVersion,
+    Base, Conversation, Message, Company, User, Membership, Agent, AgentVersion,
     KnowledgeCollection, KnowledgeSource, DocumentChunk,
     KnowledgeGap, KnowledgeFeedback, KnowledgeJob, AgentTool,
     Integration, Subscription, Invoice, AuditLog, ApiKey,
-    Webhook, Deployment, ActionExecution, BackgroundJob, HandoffSession
+    Webhook, Deployment, ActionExecution, BackgroundJob, HandoffSession,
+    TenantKeyMetadata
 )
 
 class DatabaseStore:
@@ -43,6 +44,7 @@ class DatabaseStore:
         self.background_jobs: Dict[str, Dict[str, Any]] = {}
         self.handoff_sessions: Dict[str, Dict[str, Any]] = {}
         self.subscription_plans: Dict[str, Dict[str, Any]] = {}
+        self.tenant_keys: Dict[str, Dict[str, Any]] = {}
         self.global_killswitch_active: bool = False
         self.global_killswitch_reason: str = ""
         self.global_killswitch_updated_at: str = ""
@@ -107,28 +109,51 @@ class DatabaseStore:
             if restored:
                 self.flush_durable_storage()
 
-        if not restored and settings.SEED_DEMO_DATA:
+        if not restored and settings.SEED_DEMO_DATA and settings.ENVIRONMENT != "production":
             self.seed_demo_data()
             self.flush_durable_storage()
 
-        if "usr-root-admin" not in self.users:
-            self.users["usr-root-admin"] = {
-                "id": "usr-root-admin",
-                "email": "admin@chataaas.internal",
-                "passwordHash": hash_password("SuperAdmin123!"),
-                "fullName": "Platform Super Administrator",
-                "isEmailVerified": True,
-                "isSuspended": False,
-                "createdAt": "2026-08-01T00:00:00.000Z"
-            }
-            self.memberships["mem-root-admin"] = {
-                "id": "mem-root-admin",
-                "userId": "usr-root-admin",
-                "companyId": "comp-platform",
-                "role": "super_admin",
-                "status": "active"
-            }
-            self.flush_durable_storage()
+        # In non-production environments with SEED_DEMO_DATA enabled, seed demo super-admin for local dev/testing
+        if settings.ENVIRONMENT != "production" and settings.SEED_DEMO_DATA:
+            if "usr-root-admin" not in self.users:
+                self.users["usr-root-admin"] = {
+                    "id": "usr-root-admin",
+                    "email": "admin@chataaas.internal",
+                    "passwordHash": hash_password("SuperAdmin123!"),
+                    "fullName": "Platform Super Administrator",
+                    "isEmailVerified": True,
+                    "isSuspended": False,
+                    "createdAt": "2026-08-01T00:00:00.000Z"
+                }
+                self.memberships["mem-root-admin"] = {
+                    "id": "mem-root-admin",
+                    "userId": "usr-root-admin",
+                    "companyId": "comp-platform",
+                    "role": "super_admin",
+                    "status": "active"
+                }
+                self.flush_durable_storage()
+
+        # Enforce production security check: refuse to boot if default admin with hardcoded credentials exists
+        if settings.ENVIRONMENT == "production":
+            self.enforce_production_security_checks()
+
+    def enforce_production_security_checks(self):
+        """
+        Refuses to boot in production if the default demo admin account
+        with known hardcoded credentials still exists in the database.
+        """
+        if settings.ENVIRONMENT != "production":
+            return
+        for u in self.users.values():
+            if u.get("email", "").strip().lower() == "admin@chataaas.internal":
+                pwd_hash = u.get("passwordHash") or u.get("password_hash") or ""
+                if verify_password("SuperAdmin123!", pwd_hash):
+                    raise RuntimeError(
+                        "CRITICAL SECURITY FAILURE: Default super-admin account (admin@chataaas.internal) "
+                        "with hardcoded credentials detected in production environment! "
+                        "Startup aborted. You must remove this default account or rotate its password before starting in production."
+                    )
 
     def seed_agent_versions(self):
         if "ver-tf-v1" not in self.agent_versions:
@@ -347,6 +372,289 @@ class DatabaseStore:
 
         return log_entry
 
+    def save_user(self, user: Dict[str, Any]):
+        """Targeted write: persists a single user to SQL and memory."""
+        uid = user["id"]
+        self.users[uid] = user
+        try:
+            with self.get_session() as session:
+                session.merge(User(
+                    id=uid,
+                    email=user.get("email"),
+                    password_hash=user.get("passwordHash", ""),
+                    full_name=user.get("fullName", "User"),
+                    avatar_url=user.get("avatarUrl"),
+                    is_email_verified=bool(user.get("isEmailVerified", False)),
+                    is_suspended=bool(user.get("isSuspended", False)),
+                    created_at=user.get("createdAt", time.strftime("%Y-%m-%dT%H:%M:%SZ"))
+                ))
+        except Exception:
+            pass
+
+    def save_company(self, comp: Dict[str, Any]):
+        """Targeted write: persists a single company to SQL and memory."""
+        cid = comp["id"]
+        self.companies[cid] = comp
+        try:
+            with self.get_session() as session:
+                session.merge(Company(
+                    id=cid,
+                    name=comp.get("name", "Company"),
+                    slug=comp.get("slug", cid),
+                    domain=comp.get("domain"),
+                    industry=comp.get("industry"),
+                    plan_id=comp.get("planId", "starter"),
+                    billing_cycle=comp.get("billingCycle", "monthly"),
+                    plan_status=comp.get("planStatus", "active"),
+                    is_suspended=bool(comp.get("isSuspended", False)),
+                    api_key=comp.get("apiKey"),
+                    api_secret_encrypted=comp.get("apiSecretEncrypted"),
+                    settings=comp.get("settings", {}),
+                    created_at=comp.get("createdAt", time.strftime("%Y-%m-%dT%H:%M:%SZ"))
+                ))
+        except Exception:
+            pass
+
+    def save_membership(self, mem: Dict[str, Any]):
+        """Targeted write: persists a single membership to SQL and memory."""
+        mid = mem["id"]
+        self.memberships[mid] = mem
+        try:
+            with self.get_session() as session:
+                session.merge(Membership(
+                    id=mid,
+                    user_id=mem.get("userId"),
+                    company_id=mem.get("companyId"),
+                    role=mem.get("role", "viewer"),
+                    status=mem.get("status", "active"),
+                    created_at=mem.get("createdAt", time.strftime("%Y-%m-%dT%H:%M:%SZ"))
+                ))
+        except Exception:
+            pass
+
+    def save_conversation(self, conv: Dict[str, Any]):
+        """Targeted write: persists a single conversation to SQL and memory."""
+        conv_id = conv["id"]
+        self.conversations[conv_id] = conv
+        try:
+            with self.get_session() as session:
+                session.merge(Conversation(
+                    id=conv_id,
+                    company_id=conv.get("companyId"),
+                    customer_session_id=conv.get("customerSessionId"),
+                    customer_name=conv.get("customerName", "Website Visitor"),
+                    customer_email=conv.get("customerEmail"),
+                    channel=conv.get("channel", "website_widget"),
+                    status=conv.get("status", "active"),
+                    sentiment=conv.get("sentiment", "neutral"),
+                    assigned_human_id=conv.get("assignedHumanId") or conv.get("assignedOperator"),
+                    internal_notes=conv.get("internalNotes") or conv.get("handoffReason"),
+                    tags=conv.get("tags", []),
+                    total_tokens_used=conv.get("totalTokensUsed", 0),
+                    started_at=conv.get("startedAt", time.strftime("%Y-%m-%dT%H:%M:%SZ")),
+                    last_message_at=conv.get("lastMessageAt", time.strftime("%Y-%m-%dT%H:%M:%SZ"))
+                ))
+        except Exception:
+            pass
+
+    def save_message(self, msg: Dict[str, Any]):
+        """Targeted write: persists a single message to SQL and memory."""
+        msg_id = msg["id"]
+        self.messages[msg_id] = msg
+        try:
+            with self.get_session() as session:
+                session.merge(Message(
+                    id=msg_id,
+                    conversation_id=msg.get("conversationId"),
+                    company_id=msg.get("companyId"),
+                    sender_type=msg.get("sender") or msg.get("senderType", "user"),
+                    sender_id=msg.get("senderId"),
+                    sender_name=msg.get("senderName"),
+                    content=msg.get("text") or msg.get("content", ""),
+                    citations=msg.get("citations", []),
+                    tool_traces=msg.get("toolTraces", []),
+                    tokens_consumed=msg.get("tokensUsed") or msg.get("tokensConsumed", 0),
+                    created_at=msg.get("createdAt", time.strftime("%Y-%m-%dT%H:%M:%SZ"))
+                ))
+        except Exception:
+            pass
+
+    def save_invoice(self, inv: Dict[str, Any]):
+        """Targeted write: persists a single invoice to SQL and memory."""
+        inv_id = inv["id"]
+        self.invoices[inv_id] = inv
+        try:
+            with self.get_session() as session:
+                session.merge(Invoice(
+                    id=inv_id,
+                    company_id=inv.get("companyId"),
+                    invoice_number=inv.get("invoiceNumber", f"INV-{inv_id}"),
+                    date=inv.get("date", time.strftime("%Y-%m-%d")),
+                    plan_name=inv.get("planName", "Subscription Plan"),
+                    subtotal_inr=float(inv.get("subtotalINR") or inv.get("subtotal_inr", 0.0)),
+                    tax_rate_percent=float(inv.get("taxRatePercent") or inv.get("tax_rate_percent", 18.0)),
+                    tax_amount_inr=float(inv.get("taxAmountINR") or inv.get("tax_amount_inr", 0.0)),
+                    total_amount_inr=float(inv.get("amountINR") or inv.get("totalINR") or inv.get("total_amount_inr", 0.0)),
+                    tax_breakdown=inv.get("taxBreakdown") or inv.get("tax_breakdown", {}),
+                    status=inv.get("status", "paid"),
+                    pdf_url=inv.get("pdfUrl") or inv.get("pdf_url"),
+                    created_at=inv.get("createdAt", time.strftime("%Y-%m-%dT%H:%M:%SZ"))
+                ))
+        except Exception:
+            pass
+
+    def get_user_by_email(self, email: str) -> Optional[Dict[str, Any]]:
+        """Authoritative read: retrieves user by email from SQL, syncing memory cache."""
+        if not email:
+            return None
+        low_email = email.lower().strip()
+        try:
+            with self.engine.connect() as conn:
+                row = conn.execute(
+                    Base.metadata.tables["users"].select().where(
+                        text("lower(email) = :email")
+                    ),
+                    {"email": low_email}
+                ).mappings().first()
+                if row:
+                    u = {
+                        "id": row["id"],
+                        "email": row["email"],
+                        "passwordHash": row["password_hash"],
+                        "fullName": row["full_name"],
+                        "avatarUrl": row["avatar_url"],
+                        "isEmailVerified": bool(row["is_email_verified"]),
+                        "isSuspended": bool(row.get("is_suspended", False)),
+                        "createdAt": row["created_at"]
+                    }
+                    self.users[row["id"]] = u
+                    return u
+        except Exception:
+            pass
+        return next((u for u in self.users.values() if u.get("email", "").lower() == low_email), None)
+
+    def get_user_by_id(self, user_id: str) -> Optional[Dict[str, Any]]:
+        if not user_id:
+            return None
+        try:
+            with self.engine.connect() as conn:
+                row = conn.execute(
+                    Base.metadata.tables["users"].select().where(
+                        Base.metadata.tables["users"].c.id == user_id
+                    )
+                ).mappings().first()
+                if row:
+                    u = {
+                        "id": row["id"],
+                        "email": row["email"],
+                        "passwordHash": row["password_hash"],
+                        "fullName": row["full_name"],
+                        "avatarUrl": row["avatar_url"],
+                        "isEmailVerified": bool(row["is_email_verified"]),
+                        "isSuspended": bool(row.get("is_suspended", False)),
+                        "createdAt": row["created_at"]
+                    }
+                    self.users[user_id] = u
+                    return u
+        except Exception:
+            pass
+        return self.users.get(user_id)
+
+    def get_membership_for_user(self, user_id: str, company_id: Optional[str] = None) -> Optional[Dict[str, Any]]:
+        if not user_id:
+            return None
+        try:
+            with self.engine.connect() as conn:
+                stmt = Base.metadata.tables["memberships"].select().where(
+                    Base.metadata.tables["memberships"].c.user_id == user_id
+                )
+                if company_id:
+                    stmt = stmt.where(Base.metadata.tables["memberships"].c.company_id == company_id)
+                row = conn.execute(stmt).mappings().first()
+                if row:
+                    m = {
+                        "id": row["id"],
+                        "userId": row["user_id"],
+                        "companyId": row["company_id"],
+                        "role": row["role"],
+                        "status": row["status"],
+                        "createdAt": row["created_at"]
+                    }
+                    self.memberships[row["id"]] = m
+                    return m
+        except Exception:
+            pass
+        return next((m for m in self.memberships.values() if m.get("userId") == user_id and (not company_id or m.get("companyId") == company_id)), None)
+
+    def get_company_by_id(self, company_id: str) -> Optional[Dict[str, Any]]:
+        if not company_id:
+            return None
+        try:
+            with self.engine.connect() as conn:
+                row = conn.execute(
+                    Base.metadata.tables["companies"].select().where(
+                        Base.metadata.tables["companies"].c.id == company_id
+                    )
+                ).mappings().first()
+                if row:
+                    c = {
+                        "id": row["id"],
+                        "name": row["name"],
+                        "slug": row["slug"],
+                        "domain": row["domain"],
+                        "industry": row["industry"],
+                        "planId": row["plan_id"],
+                        "billingCycle": row["billing_cycle"],
+                        "planStatus": row["plan_status"],
+                        "isSuspended": bool(row["is_suspended"]),
+                        "apiKey": row["api_key"],
+                        "apiSecretEncrypted": row["api_secret_encrypted"],
+                        "settings": row["settings"] or {},
+                        "createdAt": row["created_at"]
+                    }
+                    self.companies[company_id] = c
+                    return c
+        except Exception:
+            pass
+        return self.companies.get(company_id)
+
+    def get_conversation_by_id(self, conversation_id: str, company_id: Optional[str] = None) -> Optional[Dict[str, Any]]:
+        if not conversation_id:
+            return None
+        try:
+            with self.engine.connect() as conn:
+                stmt = Base.metadata.tables["conversations"].select().where(
+                    Base.metadata.tables["conversations"].c.id == conversation_id
+                )
+                if company_id:
+                    stmt = stmt.where(Base.metadata.tables["conversations"].c.company_id == company_id)
+                row = conn.execute(stmt).mappings().first()
+                if row:
+                    conv = {
+                        "id": row["id"],
+                        "companyId": row["company_id"],
+                        "customerSessionId": row["customer_session_id"],
+                        "customerName": row["customer_name"],
+                        "customerEmail": row["customer_email"],
+                        "channel": row["channel"],
+                        "status": row["status"],
+                        "sentiment": row["sentiment"],
+                        "assignedOperator": row["assigned_human_id"],
+                        "handoffReason": row["internal_notes"],
+                        "tags": row["tags"] or [],
+                        "totalTokensUsed": row["total_tokens_used"],
+                        "startedAt": row["started_at"],
+                        "lastMessageAt": row["last_message_at"]
+                    }
+                    self.conversations[conversation_id] = conv
+                    return conv
+        except Exception:
+            pass
+        conv = self.conversations.get(conversation_id)
+        if conv and (not company_id or conv.get("companyId") == company_id):
+            return conv
+        return None
+
     def save_state(self):
         """Alias for flush_durable_storage."""
         self.flush_durable_storage()
@@ -526,6 +834,17 @@ class DatabaseStore:
                         metadata_json=log.get("metadata", {}),
                         created_at=log.get("createdAt") or log.get("timestamp", time.strftime("%Y-%m-%dT%H:%M:%SZ"))
                     ))
+
+                for cid, tk in self.tenant_keys.items():
+                    session.merge(TenantKeyMetadata(
+                        company_id=cid,
+                        wrapped_dek=tk.get("wrapped_dek", ""),
+                        nonce=tk.get("nonce", ""),
+                        algorithm=tk.get("algorithm", "AES-256-GCM"),
+                        version=tk.get("version", 1),
+                        created_at=tk.get("created_at", time.strftime("%Y-%m-%dT%H:%M:%SZ")),
+                        rotated_at=tk.get("rotated_at")
+                    ))
         except Exception as e:
             print("FLUSH ERROR:", e)
 
@@ -554,7 +873,8 @@ class DatabaseStore:
                 "action_executions": self.action_executions,
                 "background_jobs": self.background_jobs,
                 "handoff_sessions": self.handoff_sessions,
-                "subscription_plans": self.subscription_plans
+                "subscription_plans": self.subscription_plans,
+                "tenant_keys": self.tenant_keys
             }
             tmp_path = self.storage_file + ".tmp"
             with open(tmp_path, "w", encoding="utf-8") as f:
@@ -753,6 +1073,19 @@ class DatabaseStore:
                         "details": meta.get("details", r["action"])
                     })
 
+                if "tenant_key_metadata" in Base.metadata.tables:
+                    tk_rows = conn.execute(Base.metadata.tables["tenant_key_metadata"].select()).mappings().all()
+                    for r in tk_rows:
+                        self.tenant_keys[r["company_id"]] = {
+                            "company_id": r["company_id"],
+                            "wrapped_dek": r["wrapped_dek"],
+                            "nonce": r["nonce"],
+                            "algorithm": r["algorithm"],
+                            "version": r["version"],
+                            "created_at": r["created_at"],
+                            "rotated_at": r["rotated_at"]
+                        }
+
                 return len(self.companies) > 0
         except Exception:
             return False
@@ -789,6 +1122,7 @@ class DatabaseStore:
             self.background_jobs = data.get("background_jobs", {})
             self.handoff_sessions = data.get("handoff_sessions", {})
             self.subscription_plans = data.get("subscription_plans", {})
+            self.tenant_keys = data.get("tenant_keys", {})
             return len(self.companies) > 0
         except Exception:
             return False
@@ -820,6 +1154,7 @@ class DatabaseStore:
         self.action_executions.clear()
         self.background_jobs.clear()
         self.handoff_sessions.clear()
+        self.tenant_keys.clear()
         if os.path.exists(self.storage_file):
             try:
                 os.remove(self.storage_file)
@@ -1424,6 +1759,52 @@ class DatabaseStore:
         if action_id in self.action_executions:
             self.action_executions[action_id].update(updates)
             self.flush_durable_storage()
+
+    def get_tenant_key(self, company_id: str) -> Optional[Dict[str, Any]]:
+        """Retrieves persisted tenant DEK metadata from in-memory cache or direct DB query."""
+        if company_id in self.tenant_keys:
+            return self.tenant_keys[company_id]
+        try:
+            with self.engine.connect() as conn:
+                row = conn.execute(
+                    Base.metadata.tables["tenant_key_metadata"].select().where(
+                        Base.metadata.tables["tenant_key_metadata"].c.company_id == company_id
+                    )
+                ).mappings().first()
+                if row:
+                    meta = {
+                        "company_id": row["company_id"],
+                        "wrapped_dek": row["wrapped_dek"],
+                        "nonce": row["nonce"],
+                        "algorithm": row["algorithm"],
+                        "version": row["version"],
+                        "created_at": row["created_at"],
+                        "rotated_at": row["rotated_at"]
+                    }
+                    self.tenant_keys[company_id] = meta
+                    return meta
+        except Exception:
+            pass
+        return None
+
+    def save_tenant_key(self, meta: Dict[str, Any]):
+        """Persists tenant DEK metadata to memory and durable SQL database."""
+        cid = meta["company_id"]
+        self.tenant_keys[cid] = meta
+        try:
+            with self.get_session() as session:
+                session.merge(TenantKeyMetadata(
+                    company_id=cid,
+                    wrapped_dek=meta["wrapped_dek"],
+                    nonce=meta["nonce"],
+                    algorithm=meta.get("algorithm", "AES-256-GCM"),
+                    version=meta.get("version", 1),
+                    created_at=meta.get("created_at", time.strftime("%Y-%m-%dT%H:%M:%SZ")),
+                    rotated_at=meta.get("rotated_at")
+                ))
+        except Exception:
+            pass
+        self.save_state()
 
 db = DatabaseStore()
 engine = db.engine
