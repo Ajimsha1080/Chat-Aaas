@@ -1,4 +1,5 @@
 import time
+from datetime import timedelta
 from typing import Optional, List, Dict, Any
 from fastapi import APIRouter, HTTPException, Depends, Query, status
 from pydantic import BaseModel, Field
@@ -365,16 +366,18 @@ def impersonate_tenant(
         )
 
     if not target_membership:
-        target_user_id = f"usr-{req.companyId}-owner"
-        target_role = "owner"
-    else:
-        target_user_id = target_membership["userId"]
-        target_role = target_membership.get("role", "owner")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Cannot impersonate company '{req.companyId}': No active member accounts exist for this tenant."
+        )
+    target_user_id = target_membership["userId"]
+    target_role = target_membership.get("role", "owner")
 
     scoped_token = create_jwt_token(
         user_id=target_user_id,
         company_id=req.companyId,
         role=target_role,
+        expires_delta=timedelta(minutes=15),
         extra_claims={
             "is_impersonation": True,
             "impersonator_user_id": ctx.user_id,

@@ -139,7 +139,7 @@ async def send_message(req: SendMessageRequest, ctx: TenantContext = Depends(get
     db.save_message(user_msg)
     db.save_message(agent_msg)
     UsageService.record_event(company_id, "message", 2, "count", conv_id)
-    UsageService.record_event(company_id, "token_consumption", 350, "tokens", conv_id)
+    UsageService.record_event(company_id, "token_consumption", runtime_res.tokens_used, "tokens", conv_id)
 
     return {
         "status": 200,

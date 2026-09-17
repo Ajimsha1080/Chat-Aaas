@@ -1511,6 +1511,40 @@ class DatabaseStore:
             "status": "active"
         }
 
+        self.users["usr-urban-owner"] = {
+            "id": "usr-urban-owner",
+            "email": "owner@urbancraft.in",
+            "passwordHash": hash_password("Password123!"),
+            "fullName": "UrbanCraft Admin",
+            "isEmailVerified": True,
+            "isSuspended": False,
+            "createdAt": "2026-08-05T00:00:00.000Z"
+        }
+        self.memberships["mem-urban-owner"] = {
+            "id": "mem-urban-owner",
+            "userId": "usr-urban-owner",
+            "companyId": "comp-urbancraft",
+            "role": "owner",
+            "status": "active"
+        }
+
+        self.users["usr-fin-owner"] = {
+            "id": "usr-fin-owner",
+            "email": "owner@finscale.io",
+            "passwordHash": hash_password("Password123!"),
+            "fullName": "FinScale Admin",
+            "isEmailVerified": True,
+            "isSuspended": False,
+            "createdAt": "2026-08-10T00:00:00.000Z"
+        }
+        self.memberships["mem-fin-owner"] = {
+            "id": "mem-fin-owner",
+            "userId": "usr-fin-owner",
+            "companyId": "comp-finscale",
+            "role": "owner",
+            "status": "active"
+        }
+
         self.agents["agent-tf-1"] = {
             "id": "agent-tf-1",
             "companyId": "comp-techflow",

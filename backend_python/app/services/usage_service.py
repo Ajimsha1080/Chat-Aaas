@@ -47,7 +47,7 @@ class UsageService:
         return [e for e in db.usage_events if e.get("companyId") == company_id]
 
     @staticmethod
-    def check_monthly_quota(company_id: str) -> Dict[str, Any]:
+    def check_monthly_quota(company_id: str, billing_period: str = None) -> Dict[str, Any]:
         """
         Validates monthly conversation usage against the active subscription tier.
         Protects platform margins against excessive token burn and runaway loops.
@@ -63,8 +63,17 @@ class UsageService:
         }
         max_allowed = plan_limits.get(plan_id, 1000)
         
-        # Count tenant conversations in current billing period
-        tenant_convs = [c for c in db.conversations.values() if c.get("companyId") == company_id]
+        # Count tenant conversations in current billing period (calendar month YYYY-MM)
+        current_period = billing_period or time.strftime("%Y-%m")
+        tenant_convs = [
+            c for c in db.conversations.values()
+            if c.get("companyId") == company_id
+            and (
+                str(c.get("createdAt", "")).startswith(current_period)
+                or str(c.get("startedAt", "")).startswith(current_period)
+                or (not c.get("createdAt") and not c.get("startedAt"))
+            )
+        ]
         used_count = len(tenant_convs)
         
         is_exceeded = used_count >= max_allowed
@@ -77,6 +86,7 @@ class UsageService:
             "conversationsUsed": used_count,
             "usagePercent": usage_percent,
             "isExceeded": is_exceeded,
-            "overageRateINR": 0.50  # ₹0.50 per additional conversation
+            "overageRateINR": 0.50,  # ₹0.50 per additional conversation
+            "billingPeriod": current_period
         }
 

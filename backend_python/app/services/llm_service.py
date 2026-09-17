@@ -15,6 +15,21 @@ class LLMProvider:
     """
 
     @classmethod
+    def count_tokens(cls, text: str, model: str = "gpt-4o") -> int:
+        """Accurately calculates real token counts using tiktoken with deterministic fallback."""
+        if not text:
+            return 0
+        try:
+            import tiktoken
+            try:
+                enc = tiktoken.encoding_for_model(model)
+            except Exception:
+                enc = tiktoken.get_encoding("cl100k_base")
+            return len(enc.encode(text))
+        except Exception:
+            return max(1, (len(text) + 3) // 4)
+
+    @classmethod
     async def generate_response(
         cls,
         prompt: str,

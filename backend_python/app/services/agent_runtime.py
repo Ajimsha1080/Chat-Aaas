@@ -127,6 +127,7 @@ class AgentRuntime:
                 )
 
         # 3.5 Conversational Greeting & Intent Detector (prevents RAG refusal on casual greetings)
+        from app.services.llm_service import LLMProvider
         clean_user_msg = re.sub(r'[^\w\s]', '', user_msg.lower()).strip()
         greetings = ["hi", "hello", "hey", "greetings", "hi there", "hello there", "good morning", "good afternoon", "good evening", "howdy"]
         gratitudes = ["thanks", "thank you", "thanks!", "ty", "great", "awesome", "perfect", "thank you so much"]
@@ -141,26 +142,34 @@ class AgentRuntime:
                 detail="Identified casual greeting. Replying with persona welcome message.",
                 timestamp=now_str
             ))
+            t_count = LLMProvider.count_tokens(user_msg + "\n" + greeting_reply)
             return ChatResponse(
                 message=greeting_reply,
                 reasoning_steps=reasoning_steps,
                 confidence_score=1.0,
+                tokens_used=t_count,
                 session_id=request.session_id or "sess_live"
             )
 
         if clean_user_msg in gratitudes:
+            reply = "You're very welcome! Let me know if you need anything else."
+            t_count = LLMProvider.count_tokens(user_msg + "\n" + reply)
             return ChatResponse(
-                message="You're very welcome! Let me know if you need anything else.",
+                message=reply,
                 reasoning_steps=reasoning_steps,
                 confidence_score=1.0,
+                tokens_used=t_count,
                 session_id=request.session_id or "sess_live"
             )
 
         if clean_user_msg in identity_queries:
+            reply = f"I'm **{agent_name}**, your official AI assistant! I can answer questions about our company products, documentation, policies, and process live requests."
+            t_count = LLMProvider.count_tokens(user_msg + "\n" + reply)
             return ChatResponse(
-                message=f"I'm **{agent_name}**, your official AI assistant! I can answer questions about our company products, documentation, policies, and process live requests.",
+                message=reply,
                 reasoning_steps=reasoning_steps,
                 confidence_score=1.0,
+                tokens_used=t_count,
                 session_id=request.session_id or "sess_live"
             )
 
@@ -180,16 +189,19 @@ class AgentRuntime:
         ))
 
         if not is_grounded:
+            refusal_msg = "I don't have enough verified information in our company knowledge base to answer that accurately. I can connect you with our team if you'd like!"
+            t_count = LLMProvider.count_tokens(user_msg + "\n" + refusal_msg)
             return ChatResponse(
-                message="I don't have enough verified information in our company knowledge base to answer that accurately. I can connect you with our team if you'd like!",
+                message=refusal_msg,
                 reasoning_steps=reasoning_steps,
                 confidence_score=0.35,
                 is_refusal=True,
+                tokens_used=t_count,
                 session_id=request.session_id or "sess_live"
             )
 
         # 5. Synthesize Grounded Response using Real-Time Sarvam AI LLM
-        from app.services.llm_service import LLMProvider
+        model_name = agent_config.get('modelTier', 'sarvam-2b')
         context_str = "\n\n".join([f"Source ({getattr(c, 'title', 'Knowledge Base')}): {c.content}" for c in chunks[:3]])
         sys_instruction = (
             f"You are the official AI Q&A assistant for company {company_id}. "
@@ -201,14 +213,19 @@ class AgentRuntime:
         llm_response = await LLMProvider.generate_response(
             prompt=user_msg,
             system_instruction=sys_instruction,
-            model=agent_config.get('modelTier', 'sarvam-2b'),
+            model=model_name,
             temperature=float(agent_config.get('creativityLevel', 0.3)) if isinstance(agent_config.get('creativityLevel'), (int, float)) else 0.3
         )
         
+        prompt_tokens = LLMProvider.count_tokens(user_msg + "\n" + sys_instruction, model=model_name)
+        completion_tokens = LLMProvider.count_tokens(llm_response, model=model_name)
+        total_tokens = prompt_tokens + completion_tokens
+
         return ChatResponse(
             message=llm_response,
             reasoning_steps=reasoning_steps,
             confidence_score=chunks[0].similarity_score,
+            tokens_used=total_tokens,
             session_id=request.session_id or "sess_live"
         )
 
@@ -316,11 +333,15 @@ class AgentRuntime:
             yield f"data: {json.dumps({'type': 'token', 'token': token})}\n\n"
 
         full_msg = ''.join(full_acc)
-        tokens_est = max(1, len(full_msg.split()) + len(user_msg.split()))
+        model_name = agent_config.get("modelTier", "sarvam-2b")
+        prompt_tokens = LLMProvider.count_tokens(user_msg + "\n" + sys_instruction, model=model_name)
+        completion_tokens = LLMProvider.count_tokens(full_msg, model=model_name)
+        total_tokens = prompt_tokens + completion_tokens
+
         from app.services.usage_service import UsageService
         UsageService.record_event(company_id, "message", 1, "messages", conv_id)
-        UsageService.record_event(company_id, "llm_tokens", tokens_est, "tokens", conv_id)
+        UsageService.record_event(company_id, "llm_tokens", total_tokens, "tokens", conv_id)
 
-        yield f"data: {json.dumps({'type': 'done', 'conversationId': conv_id, 'fullMessage': full_msg, 'tokensUsed': tokens_est})}\n\n"
+        yield f"data: {json.dumps({'type': 'done', 'conversationId': conv_id, 'fullMessage': full_msg, 'tokensUsed': total_tokens})}\n\n"
         yield "data: [DONE]\n\n"
 
