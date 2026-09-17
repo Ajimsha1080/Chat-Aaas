@@ -109,7 +109,7 @@ def suspend_tenant(
     reason = (req.reason if req else None) or "Administrative policy enforcement"
     company["isSuspended"] = True
     company["planStatus"] = "suspended"
-    db.save_state()
+    db.save_company(company)
 
     # Immutable audit logging
     db.record_audit_log(
@@ -141,7 +141,7 @@ def activate_tenant(
 
     company["isSuspended"] = False
     company["planStatus"] = "active"
-    db.save_state()
+    db.save_company(company)
 
     # Immutable audit logging
     db.record_audit_log(
@@ -238,9 +238,10 @@ def update_user_role(
 
     if membership:
         membership["role"] = req.role
+        db.save_membership(membership)
     else:
         mem_id = f"mem-{int(time.time() * 1000)}"
-        db.memberships[mem_id] = {
+        mem_data = {
             "id": mem_id,
             "userId": user_id,
             "companyId": req.companyId or "comp-platform",
@@ -248,8 +249,7 @@ def update_user_role(
             "status": "active",
             "createdAt": time.strftime("%Y-%m-%dT%H:%M:%SZ")
         }
-
-    db.save_state()
+        db.save_membership(mem_data)
 
     db.record_audit_log(
         company_id=membership.get("companyId", "platform") if membership else "platform",
@@ -292,7 +292,7 @@ def suspend_user(
             )
 
     user["isSuspended"] = True
-    db.save_state()
+    db.save_user(user)
 
     db.record_audit_log(
         company_id=membership.get("companyId", "platform") if membership else "platform",
@@ -317,7 +317,7 @@ def activate_user(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"User '{user_id}' not found.")
 
     user["isSuspended"] = False
-    db.save_state()
+    db.save_user(user)
 
     membership = next((m for m in db.memberships.values() if m.get("userId") == user_id), None)
     db.record_audit_log(

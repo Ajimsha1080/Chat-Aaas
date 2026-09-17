@@ -53,7 +53,12 @@ class SSOService:
         # Upsert
         db.sso_configs = [c for c in db.sso_configs if c.get("companyId") != company_id]
         db.sso_configs.append(sso_record)
-        db.flush_durable_storage()
+        comp = db.get_company_by_id(company_id)
+        if comp:
+            if "settings" not in comp:
+                comp["settings"] = {}
+            comp["settings"]["ssoConfig"] = sso_record
+            db.save_company(comp)
         return sso_record
 
     @staticmethod
@@ -64,6 +69,9 @@ class SSOService:
         for c in db.sso_configs:
             if c.get("companyId") == company_id:
                 return c
+        comp = db.get_company_by_id(company_id)
+        if comp and comp.get("settings", {}).get("ssoConfig"):
+            return comp["settings"]["ssoConfig"]
         return None
 
     @staticmethod

@@ -19,7 +19,7 @@ class ConnectIntegrationRequest(BaseModel):
 
 @router.get("")
 def list_integrations(ctx: TenantContext = Depends(get_tenant_context)):
-    integrations = [i for i in db.integrations.values() if i.get("companyId") == ctx.company_id]
+    integrations = db.get_integrations_for_company(ctx.company_id)
     
     # Return masked representation
     masked = []
@@ -27,7 +27,7 @@ def list_integrations(ctx: TenantContext = Depends(get_tenant_context)):
         masked.append({
             "id": item["id"],
             "provider": item["provider"],
-            "name": item["name"],
+            "name": item.get("name", item["provider"].title()),
             "status": item.get("status", "connected"),
             "config": item.get("config", {}),
             "connectedAt": item.get("connectedAt"),
@@ -59,8 +59,7 @@ def connect_integration(req: ConnectIntegrationRequest, ctx: TenantContext = Dep
         "connectedAt": time.strftime("%Y-%m-%dT%H:%M:%SZ"),
         "createdAt": time.strftime("%Y-%m-%dT%H:%M:%SZ")
     }
-    db.integrations[int_id] = record
-    db.save_state()
+    db.save_integration(record)
 
     return {
         "status": 200,
@@ -141,7 +140,6 @@ def disconnect_integration(integration_id: str, ctx: TenantContext = Depends(get
     if not item or item.get("companyId") != ctx.company_id:
         raise HTTPException(status_code=404, detail="Integration not found")
 
-    del db.integrations[integration_id]
-    db.save_state()
+    db.delete_integration(integration_id, ctx.company_id)
     return {"status": 200, "data": {"message": f"Integration {integration_id} successfully disconnected."}}
 

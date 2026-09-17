@@ -63,7 +63,7 @@ def forgot_password(req: ForgotPasswordRequest, request: Request):
     
     from app.db.database import db
     from app.services.email_service import EmailService
-    user = next((u for u in db.users.values() if u.get("email", "").lower() == req.email.lower()), None)
+    user = db.get_user_by_email(req.email)
     if user:
         token = EmailService.send_password_reset_email(user["id"], user["email"], user.get("fullName", "User"))
         return {
@@ -182,6 +182,8 @@ def initiate_saml(req: SAMLInitiateRequest):
 @router.post("/sso/saml/callback")
 def saml_callback(req: SAMLCallbackRequest):
     """Processes SAML Response assertion and issues a signed JWT session."""
+    import uuid
+    import time
     from app.services.sso_service import SSOService
     from app.services.auth_service import AuthService
     from app.core.security import create_jwt_token, create_refresh_token
@@ -190,7 +192,7 @@ def saml_callback(req: SAMLCallbackRequest):
     try:
         user_info = SSOService.process_saml_response(req.companyId, req.samlResponse)
         # Find or provision user
-        user = next((u for u in db.users.values() if u.get("email", "").lower() == user_info["email"]), None)
+        user = db.get_user_by_email(user_info["email"])
         if not user:
             user_id = f"usr_{uuid.uuid4().hex[:12]}"
             user = {
@@ -202,11 +204,10 @@ def saml_callback(req: SAMLCallbackRequest):
                 "isEmailVerified": True,
                 "createdAt": time.strftime("%Y-%m-%dT%H:%M:%SZ")
             }
-            db.users[user_id] = user
-            db.flush_durable_storage()
+            db.save_user(user)
 
-        access_token = create_jwt_token(user["id"], user["companyId"], user.get("role", "member"))
-        refresh_token = create_refresh_token(user["id"], user["companyId"], user.get("role", "member"))
+        access_token = create_jwt_token(user["id"], user.get("companyId", req.companyId), user.get("role", "member"))
+        refresh_token = create_refresh_token(user["id"], user.get("companyId", req.companyId), user.get("role", "member"))
 
         return {
             "status": 200,
@@ -222,13 +223,15 @@ def saml_callback(req: SAMLCallbackRequest):
 @router.post("/sso/oidc/callback")
 def oidc_callback(req: OIDCCallbackRequest):
     """Processes validated OIDC ID Token and issues a signed JWT session."""
+    import uuid
+    import time
     from app.services.sso_service import SSOService
     from app.core.security import create_jwt_token, create_refresh_token
     from app.db.database import db
 
     try:
         user_info = SSOService.process_oidc_token(req.companyId, req.claims)
-        user = next((u for u in db.users.values() if u.get("email", "").lower() == user_info["email"]), None)
+        user = db.get_user_by_email(user_info["email"])
         if not user:
             user_id = f"usr_{uuid.uuid4().hex[:12]}"
             user = {
@@ -240,11 +243,10 @@ def oidc_callback(req: OIDCCallbackRequest):
                 "isEmailVerified": True,
                 "createdAt": time.strftime("%Y-%m-%dT%H:%M:%SZ")
             }
-            db.users[user_id] = user
-            db.flush_durable_storage()
+            db.save_user(user)
 
-        access_token = create_jwt_token(user["id"], user["companyId"], user.get("role", "member"))
-        refresh_token = create_refresh_token(user["id"], user["companyId"], user.get("role", "member"))
+        access_token = create_jwt_token(user["id"], user.get("companyId", req.companyId), user.get("role", "member"))
+        refresh_token = create_refresh_token(user["id"], user.get("companyId", req.companyId), user.get("role", "member"))
 
         return {
             "status": 200,

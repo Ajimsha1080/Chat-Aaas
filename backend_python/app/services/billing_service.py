@@ -270,7 +270,6 @@ class BillingService:
             "taxBreakdown": invoice_calc["taxBreakdown"],
             "createdAt": time.strftime("%Y-%m-%dT%H:%M:%SZ")
         }
-        db.invoices[invoice_id] = new_invoice
         db.save_invoice(new_invoice)
         db.save_company(company)
 
@@ -286,8 +285,6 @@ class BillingService:
         except Exception:
             pass
 
-        db.flush_durable_storage()
-
         return {
             "success": True,
             "company": company,
@@ -298,6 +295,38 @@ class BillingService:
     @staticmethod
     def get_invoices_for_company(company_id: str) -> List[Dict[str, Any]]:
         """Returns all invoices associated with a tenant company, sorted newest first."""
+        try:
+            from app.db.models import Base
+            with db.engine.connect() as conn:
+                rows = conn.execute(
+                    Base.metadata.tables["invoices"].select().where(
+                        Base.metadata.tables["invoices"].c.company_id == company_id
+                    ).order_by(Base.metadata.tables["invoices"].c.created_at.desc())
+                ).mappings().all()
+                if rows:
+                    invs = []
+                    for r in rows:
+                        inv = {
+                            "id": r["id"],
+                            "companyId": r["company_id"],
+                            "invoiceNumber": r["invoice_number"],
+                            "date": r["date"],
+                            "planName": r["plan_name"],
+                            "subtotalINR": r["subtotal_inr"],
+                            "taxRatePercent": r["tax_rate_percent"],
+                            "taxAmountINR": r["tax_amount_inr"],
+                            "amountINR": r["total_amount_inr"],
+                            "totalINR": r["total_amount_inr"],
+                            "taxBreakdown": r["tax_breakdown"] or {},
+                            "status": r["status"],
+                            "pdfUrl": r["pdf_url"],
+                            "createdAt": r["created_at"]
+                        }
+                        db.invoices[r["id"]] = inv
+                        invs.append(inv)
+                    return invs
+        except Exception:
+            pass
         invoices = [inv for inv in db.invoices.values() if inv.get("companyId") == company_id]
         invoices.sort(key=lambda x: x.get("createdAt", ""), reverse=True)
         return invoices

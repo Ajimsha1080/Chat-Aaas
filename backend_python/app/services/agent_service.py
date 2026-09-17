@@ -47,6 +47,7 @@ class AgentService:
                 draft[key] = value
 
         draft["updatedAt"] = time.strftime("%Y-%m-%dT%H:%M:%SZ")
+        db.save_agent_version(draft)
         return draft
 
     @staticmethod
@@ -74,14 +75,14 @@ class AgentService:
             "createdAt": time.strftime("%Y-%m-%dT%H:%M:%SZ")
         }
 
-        db.agent_versions[new_version_id] = published_version
         agent["activeVersionId"] = new_version_id
         agent["draftVersionId"] = new_version_id
         agent["lifecycleStatus"] = "published"
         agent["publishedVersionNumber"] = next_ver_num
         agent["lastPublishedAt"] = time.strftime("%Y-%m-%dT%H:%M:%SZ")
         agent["status"] = "active"
-        db.save_state()
+        db.save_agent_version(published_version)
+        db.save_agent(agent)
         return published_version
 
     @staticmethod
@@ -97,7 +98,7 @@ class AgentService:
         agent["activeVersionId"] = target_version_id
         agent["draftVersionId"] = target_version_id
         agent["lifecycleStatus"] = "published"
-        db.save_state()
+        db.save_agent(agent)
         return target_ver
 
     @staticmethod
@@ -134,6 +135,7 @@ class AgentService:
 
         agent["lifecycleStatus"] = "ready"
         agent["updatedAt"] = time.strftime("%Y-%m-%dT%H:%M:%SZ")
+        db.save_agent(agent)
         return agent
 
     @staticmethod
@@ -145,6 +147,7 @@ class AgentService:
         agent["status"] = "paused"
         agent["lifecycleStatus"] = "disabled"
         agent["updatedAt"] = time.strftime("%Y-%m-%dT%H:%M:%SZ")
+        db.save_agent(agent)
         return agent
 
     @staticmethod
@@ -156,6 +159,7 @@ class AgentService:
         agent["status"] = "active"
         agent["lifecycleStatus"] = "published"
         agent["updatedAt"] = time.strftime("%Y-%m-%dT%H:%M:%SZ")
+        db.save_agent(agent)
         return agent
 
     @staticmethod
@@ -167,6 +171,7 @@ class AgentService:
         agent["status"] = "paused"
         agent["lifecycleStatus"] = "archived"
         agent["updatedAt"] = time.strftime("%Y-%m-%dT%H:%M:%SZ")
+        db.save_agent(agent)
         return agent
 
     @staticmethod
@@ -178,4 +183,5 @@ class AgentService:
         agent["status"] = "paused"
         agent["lifecycleStatus"] = "deleted"
         agent["updatedAt"] = time.strftime("%Y-%m-%dT%H:%M:%SZ")
+        db.save_agent(agent)
         return agent

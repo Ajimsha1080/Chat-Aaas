@@ -101,15 +101,38 @@ class WebhookService:
             "status": "active",
             "createdAt": time.strftime("%Y-%m-%dT%H:%M:%SZ")
         }
-        db.webhook_endpoints.append(record)
-        db.flush_durable_storage()
+        db.webhooks[endpoint_id] = record
+        db.save_webhook(record)
         return record
 
     @staticmethod
     def get_endpoints(company_id: str) -> List[Dict[str, Any]]:
-        if not hasattr(db, "webhook_endpoints"):
-            db.webhook_endpoints = []
-        return [ep for ep in db.webhook_endpoints if ep.get("companyId") == company_id]
+        try:
+            from app.db.models import Base
+            with db.engine.connect() as conn:
+                rows = conn.execute(
+                    Base.metadata.tables["webhooks"].select().where(
+                        Base.metadata.tables["webhooks"].c.company_id == company_id
+                    )
+                ).mappings().all()
+                if rows:
+                    items = []
+                    for r in rows:
+                        wh = {
+                            "id": r["id"],
+                            "companyId": r["company_id"],
+                            "targetUrl": r["target_url"],
+                            "events": r["events"] or [],
+                            "secret": r["secret_encrypted"],
+                            "status": r["status"],
+                            "createdAt": r["created_at"]
+                        }
+                        db.webhooks[r["id"]] = wh
+                        items.append(wh)
+                    return items
+        except Exception:
+            pass
+        return [w for w in db.webhooks.values() if w.get("companyId") == company_id]
 
     @staticmethod
     def compute_signature(payload_bytes: bytes, secret: str, timestamp: int) -> str:

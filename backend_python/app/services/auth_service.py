@@ -156,21 +156,8 @@ class AuthService:
         db.save_user(new_user)
         db.save_company(new_company)
         db.save_membership(mem)
-        db.agents[agent_id] = new_agent
-        db.agent_versions[version_id] = new_version
-        db.flush_durable_storage()
-
-        token = create_jwt_token(user_id, company_id, "owner")
-        refresh_token = create_refresh_token(user_id, company_id, "owner")
-        return {
-            "user": new_user,
-            "company": new_company,
-            "agent": new_agent,
-            "token": token,
-            "refreshToken": refresh_token,
-            "tokenType": "Bearer",
-            "expiresIn": 900
-        }
+        db.save_agent(new_agent)
+        db.save_agent_version(new_version)
 
         token = create_jwt_token(user_id, company_id, "owner")
         refresh_token = create_refresh_token(user_id, company_id, "owner")

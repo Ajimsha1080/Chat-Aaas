@@ -23,7 +23,7 @@ class UpdateRoleRequest(BaseModel):
 
 @router.get("/me")
 def get_current_user_profile(ctx: TenantContext = Depends(get_tenant_context)):
-    user = db.users.get(ctx.user_id)
+    user = db.get_user_by_id(ctx.user_id)
     if not user:
         return {
             "status": 200,
@@ -49,13 +49,14 @@ def get_current_user_profile(ctx: TenantContext = Depends(get_tenant_context)):
 
 @router.put("/me")
 def update_current_user_profile(req: UpdateProfileRequest, ctx: TenantContext = Depends(get_tenant_context)):
-    user = db.users.get(ctx.user_id)
+    user = db.get_user_by_id(ctx.user_id)
     if user:
         if req.fullName:
             user["fullName"] = req.fullName
         if req.avatarUrl:
             user["avatarUrl"] = req.avatarUrl
         user["updatedAt"] = time.strftime("%Y-%m-%dT%H:%M:%SZ")
+        db.save_user(user)
     return {"status": 200, "data": {"user": user or {"fullName": req.fullName}}}
 
 @router.get("/team")
@@ -63,7 +64,7 @@ def get_team_members(ctx: TenantContext = Depends(get_tenant_context)):
     memberships = [m for m in db.memberships.values() if m.get("companyId") == ctx.company_id]
     team = []
     for m in memberships:
-        u = db.users.get(m.get("userId", ""))
+        u = db.get_user_by_id(m.get("userId", ""))
         team.append({
             "membershipId": m["id"],
             "userId": m.get("userId"),
@@ -83,7 +84,7 @@ def invite_team_member(req: InviteMemberRequest, ctx: TenantContext = Depends(ge
     new_user_id = f"usr-{int(time.time() * 1000)}"
     new_mem_id = f"mem-{new_user_id}"
 
-    db.users[new_user_id] = {
+    new_user = {
         "id": new_user_id,
         "email": req.email,
         "fullName": req.fullName,
@@ -92,7 +93,7 @@ def invite_team_member(req: InviteMemberRequest, ctx: TenantContext = Depends(ge
         "createdAt": time.strftime("%Y-%m-%dT%H:%M:%SZ")
     }
 
-    db.memberships[new_mem_id] = {
+    new_mem = {
         "id": new_mem_id,
         "userId": new_user_id,
         "companyId": ctx.company_id,
@@ -100,6 +101,9 @@ def invite_team_member(req: InviteMemberRequest, ctx: TenantContext = Depends(ge
         "status": "invited",
         "createdAt": time.strftime("%Y-%m-%dT%H:%M:%SZ")
     }
+
+    db.save_user(new_user)
+    db.save_membership(new_mem)
 
     return {
         "status": 201,
@@ -138,7 +142,7 @@ def update_team_member_role(
 
     membership["role"] = req.role
     membership["updatedAt"] = time.strftime("%Y-%m-%dT%H:%M:%SZ")
-    db.flush_durable_storage()
+    db.save_membership(membership)
 
     AuditService.log(
         company_id=ctx.company_id,
@@ -179,8 +183,7 @@ def remove_team_member(
             raise HTTPException(status_code=400, detail="Cannot remove the sole workspace owner.")
 
     user_id = membership.get("userId")
-    del db.memberships[membership_id]
-    db.flush_durable_storage()
+    db.delete_membership(membership_id, ctx.company_id)
 
     AuditService.log(
         company_id=ctx.company_id,

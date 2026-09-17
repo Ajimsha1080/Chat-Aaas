@@ -432,6 +432,21 @@ class DatabaseStore:
         except Exception:
             pass
 
+    def delete_membership(self, membership_id: str, company_id: Optional[str] = None):
+        """Targeted delete: removes a membership from SQL and memory."""
+        if membership_id in self.memberships:
+            del self.memberships[membership_id]
+        try:
+            with self.get_session() as session:
+                stmt = Base.metadata.tables["memberships"].delete().where(
+                    Base.metadata.tables["memberships"].c.id == membership_id
+                )
+                if company_id:
+                    stmt = stmt.where(Base.metadata.tables["memberships"].c.company_id == company_id)
+                session.execute(stmt)
+        except Exception:
+            pass
+
     def save_conversation(self, conv: Dict[str, Any]):
         """Targeted write: persists a single conversation to SQL and memory."""
         conv_id = conv["id"]
@@ -499,6 +514,251 @@ class DatabaseStore:
                     status=inv.get("status", "paid"),
                     pdf_url=inv.get("pdfUrl") or inv.get("pdf_url"),
                     created_at=inv.get("createdAt", time.strftime("%Y-%m-%dT%H:%M:%SZ"))
+                ))
+        except Exception:
+            pass
+
+    def save_agent(self, agent: Dict[str, Any]):
+        """Targeted write: persists a single agent to SQL and memory."""
+        aid = agent["id"]
+        self.agents[aid] = agent
+        try:
+            with self.get_session() as session:
+                session.merge(Agent(
+                    id=aid,
+                    company_id=agent.get("companyId") or agent.get("company_id"),
+                    name=agent.get("name", "AI Assistant"),
+                    description=agent.get("description"),
+                    avatar_url=agent.get("avatarUrl") or agent.get("avatar_url"),
+                    status=agent.get("status", "active"),
+                    lifecycle_status=agent.get("lifecycleStatus") or agent.get("lifecycle_status", "published"),
+                    published_version_number=agent.get("publishedVersionNumber") or agent.get("published_version_number", 1),
+                    draft_version_number=agent.get("draftVersionNumber") or agent.get("draft_version_number", 1),
+                    last_published_at=agent.get("lastPublishedAt") or agent.get("last_published_at"),
+                    tone=agent.get("tone", "professional"),
+                    active_version_id=agent.get("activeVersionId") or agent.get("active_version_id"),
+                    draft_version_id=agent.get("draftVersionId") or agent.get("draft_version_id"),
+                    created_at=agent.get("createdAt") or agent.get("created_at", time.strftime("%Y-%m-%dT%H:%M:%SZ"))
+                ))
+        except Exception:
+            pass
+
+    def save_agent_version(self, ver: Dict[str, Any]):
+        """Targeted write: persists a single agent version to SQL and memory."""
+        vid = ver["id"]
+        self.agent_versions[vid] = ver
+        try:
+            with self.get_session() as session:
+                session.merge(AgentVersion(
+                    id=vid,
+                    agent_id=ver.get("agentId") or ver.get("agent_id"),
+                    company_id=ver.get("companyId") or ver.get("company_id"),
+                    version_number=ver.get("versionNumber") or ver.get("version_number", 1),
+                    status=ver.get("status", "draft"),
+                    system_instructions=ver.get("systemInstructions") or ver.get("system_instructions"),
+                    greeting_message=ver.get("greetingMessage") or ver.get("greeting_message"),
+                    fallback_message=ver.get("fallbackMessage") or ver.get("fallback_message"),
+                    tone=ver.get("tone", "professional"),
+                    model=ver.get("model", "gpt-4o"),
+                    temperature=float(ver.get("temperature", 0.2)),
+                    allowed_action_ids=ver.get("allowedActionIds") or ver.get("allowed_action_ids", []),
+                    escalation_settings=ver.get("escalationSettings") or ver.get("escalation_settings", {}),
+                    custom_safety_rules=ver.get("customSafetyRules") or ver.get("custom_safety_rules", []),
+                    change_summary=ver.get("changeSummary") or ver.get("change_summary"),
+                    published_by_user_id=ver.get("publishedByUserId") or ver.get("published_by_user_id"),
+                    published_at=ver.get("publishedAt") or ver.get("published_at"),
+                    created_at=ver.get("createdAt") or ver.get("created_at", time.strftime("%Y-%m-%dT%H:%M:%SZ"))
+                ))
+        except Exception:
+            pass
+
+    def save_integration(self, integ: Dict[str, Any]):
+        """Targeted write: persists a single integration to SQL and memory."""
+        iid = integ["id"]
+        self.integrations[iid] = integ
+        try:
+            with self.get_session() as session:
+                session.merge(Integration(
+                    id=iid,
+                    company_id=integ.get("companyId") or integ.get("company_id"),
+                    provider=integ.get("provider", ""),
+                    status=integ.get("status", "disconnected"),
+                    credentials_encrypted=integ.get("credentialsEncrypted") or integ.get("credentials_encrypted"),
+                    credentials_nonce=integ.get("credentialsNonce") or integ.get("credentials_nonce"),
+                    credentials_key_version=integ.get("credentialsKeyVersion") or integ.get("credentials_key_version", 1),
+                    webhook_url=integ.get("webhookUrl") or integ.get("webhook_url"),
+                    events_subscribed=integ.get("eventsSubscribed") or integ.get("events_subscribed", []),
+                    last_synced_at=integ.get("lastSyncedAt") or integ.get("last_synced_at"),
+                    settings=integ.get("settings", {}),
+                    created_at=integ.get("createdAt") or integ.get("created_at", time.strftime("%Y-%m-%dT%H:%M:%SZ"))
+                ))
+        except Exception:
+            pass
+
+    def get_integrations_for_company(self, company_id: str) -> List[Dict[str, Any]]:
+        """Authoritative read: retrieves integrations for a tenant from SQL and syncs memory."""
+        try:
+            with self.engine.connect() as conn:
+                rows = conn.execute(
+                    Base.metadata.tables["integrations"].select().where(
+                        Base.metadata.tables["integrations"].c.company_id == company_id
+                    )
+                ).mappings().all()
+                if rows:
+                    items = []
+                    for r in rows:
+                        item = {
+                            "id": r["id"],
+                            "companyId": r["company_id"],
+                            "provider": r["provider"],
+                            "name": r.get("settings", {}).get("name", r["provider"].title()),
+                            "status": r["status"],
+                            "encryptedCredentials": r["credentials_encrypted"],
+                            "credentialsNonce": r["credentials_nonce"],
+                            "credentialsKeyVersion": r["credentials_key_version"],
+                            "webhookUrl": r["webhook_url"],
+                            "eventsSubscribed": r["events_subscribed"] or [],
+                            "config": r["settings"] or {},
+                            "connectedAt": r["created_at"],
+                            "createdAt": r["created_at"]
+                        }
+                        self.integrations[r["id"]] = item
+                        items.append(item)
+                    return items
+        except Exception:
+            pass
+        return [i for i in self.integrations.values() if i.get("companyId") == company_id]
+
+    def delete_integration(self, integration_id: str, company_id: str):
+        """Targeted delete: removes an integration from SQL and memory."""
+        if integration_id in self.integrations:
+            del self.integrations[integration_id]
+        try:
+            with self.get_session() as session:
+                session.execute(
+                    Base.metadata.tables["integrations"].delete().where(
+                        Base.metadata.tables["integrations"].c.id == integration_id,
+                        Base.metadata.tables["integrations"].c.company_id == company_id
+                    )
+                )
+        except Exception:
+            pass
+
+    def save_agent_tool(self, tool: Dict[str, Any]):
+        """Targeted write: persists a single tool to SQL and memory."""
+        tid = tool["id"]
+        self.agent_tools[tid] = tool
+        try:
+            with self.get_session() as session:
+                session.merge(AgentTool(
+                    id=tid,
+                    company_id=tool.get("companyId") or tool.get("company_id"),
+                    code=tool.get("code", ""),
+                    name=tool.get("name", ""),
+                    description=tool.get("description"),
+                    risk_level=tool.get("riskLevel") or tool.get("risk_level", "low_risk"),
+                    requires_user_confirmation=bool(tool.get("requiresUserConfirmation") or tool.get("requires_user_confirmation", False)),
+                    confirmation_prompt=tool.get("confirmationPrompt") or tool.get("confirmation_prompt"),
+                    enabled=bool(tool.get("enabled", True)),
+                    parameters_schema=tool.get("parameters") or tool.get("parameters_schema", []),
+                    endpoint_config_encrypted=tool.get("endpointConfig") or tool.get("endpoint_config_encrypted", {}),
+                    created_at=tool.get("createdAt") or tool.get("created_at", time.strftime("%Y-%m-%dT%H:%M:%SZ"))
+                ))
+        except Exception:
+            pass
+
+    def save_knowledge_source(self, ks: Dict[str, Any]):
+        """Targeted write: persists a single knowledge source to SQL and memory."""
+        ks_id = ks["id"]
+        self.knowledge_sources[ks_id] = ks
+        try:
+            with self.get_session() as session:
+                session.merge(KnowledgeSource(
+                    id=ks_id,
+                    company_id=ks.get("companyId") or ks.get("company_id"),
+                    collection_id=ks.get("collectionId") or ks.get("collection_id"),
+                    title=ks.get("title", ""),
+                    source_type=ks.get("sourceType") or ks.get("source_type", "document"),
+                    file_name=ks.get("fileName") or ks.get("file_name"),
+                    file_size_bytes=ks.get("fileSizeBytes") or ks.get("file_size_bytes", 0),
+                    version=ks.get("version", 1),
+                    source_url=ks.get("sourceUrl") or ks.get("source_url"),
+                    category=ks.get("category", "General"),
+                    status=ks.get("status", "processing"),
+                    lifecycle_state=ks.get("lifecycleState") or ks.get("lifecycle_state", "active"),
+                    processing_stage=ks.get("processingStage") or ks.get("processing_stage", "queued"),
+                    error_message=ks.get("errorMessage") or ks.get("error_message"),
+                    retention_days=ks.get("retentionDays") or ks.get("retention_days", 90),
+                    last_indexed_at=ks.get("lastIndexedAt") or ks.get("last_indexed_at"),
+                    chunk_count=ks.get("chunkCount") or ks.get("chunk_count", 0),
+                    total_tokens=ks.get("totalTokens") or ks.get("total_tokens", 0),
+                    last_synced_at=ks.get("lastSyncedAt") or ks.get("last_synced_at"),
+                    created_at=ks.get("createdAt") or ks.get("created_at", time.strftime("%Y-%m-%dT%H:%M:%SZ"))
+                ))
+        except Exception:
+            pass
+
+    def save_document_chunk(self, chunk: Dict[str, Any]):
+        """Targeted write: persists a single document chunk to SQL and memory."""
+        cid = chunk["id"]
+        self.document_chunks[cid] = chunk
+        try:
+            with self.get_session() as session:
+                session.merge(DocumentChunk(
+                    id=cid,
+                    knowledge_source_id=chunk.get("knowledgeSourceId") or chunk.get("knowledge_source_id"),
+                    company_id=chunk.get("companyId") or chunk.get("company_id"),
+                    collection_id=chunk.get("collectionId") or chunk.get("collection_id"),
+                    chunk_index=chunk.get("chunkIndex") or chunk.get("chunk_index", 0),
+                    content=chunk.get("content", ""),
+                    token_count=chunk.get("tokenCount") or chunk.get("token_count", 0),
+                    section_header=chunk.get("sectionHeader") or chunk.get("section_header"),
+                    metadata_json=chunk.get("metadata") or chunk.get("metadata_json", {}),
+                    created_at=chunk.get("createdAt") or chunk.get("created_at", time.strftime("%Y-%m-%dT%H:%M:%SZ"))
+                ))
+        except Exception:
+            pass
+
+    def save_subscription(self, sub: Dict[str, Any]):
+        """Targeted write: persists a single subscription to SQL and memory."""
+        sid = sub["id"]
+        self.subscriptions[sid] = sub
+        try:
+            with self.get_session() as session:
+                session.merge(Subscription(
+                    id=sid,
+                    company_id=sub.get("companyId") or sub.get("company_id"),
+                    plan_id=sub.get("planId") or sub.get("plan_id", "starter"),
+                    billing_cycle=sub.get("billingCycle") or sub.get("billing_cycle", "monthly"),
+                    status=sub.get("status", "active"),
+                    current_period_start=sub.get("currentPeriodStart") or sub.get("current_period_start"),
+                    current_period_end=sub.get("currentPeriodEnd") or sub.get("current_period_end"),
+                    cancel_at_period_end=bool(sub.get("cancelAtPeriodEnd") or sub.get("cancel_at_period_end", False)),
+                    razorpay_subscription_id=sub.get("razorpaySubscriptionId") or sub.get("razorpay_subscription_id"),
+                    razorpay_customer_id=sub.get("razorpayCustomerId") or sub.get("razorpay_customer_id"),
+                    created_at=sub.get("createdAt") or sub.get("created_at", time.strftime("%Y-%m-%dT%H:%M:%SZ"))
+                ))
+        except Exception:
+            pass
+
+    def save_webhook(self, hook: Dict[str, Any]):
+        """Targeted write: persists a single webhook to SQL and memory."""
+        hid = hook["id"]
+        self.webhooks[hid] = hook
+        try:
+            with self.get_session() as session:
+                session.merge(Webhook(
+                    id=hid,
+                    company_id=hook.get("companyId") or hook.get("company_id"),
+                    target_url=hook.get("targetUrl") or hook.get("target_url", ""),
+                    events=hook.get("events", []),
+                    secret_encrypted=hook.get("secret") or hook.get("secret_encrypted", ""),
+                    status=hook.get("status", "active"),
+                    last_delivery_status=hook.get("lastDeliveryStatus") or hook.get("last_delivery_status"),
+                    response_time_ms=hook.get("responseTimeMs") or hook.get("response_time_ms"),
+                    last_delivered_at=hook.get("lastDeliveredAt") or hook.get("last_delivered_at"),
+                    failure_count=hook.get("failureCount") or hook.get("failure_count", 0),
+                    created_at=hook.get("createdAt") or hook.get("created_at", time.strftime("%Y-%m-%dT%H:%M:%SZ"))
                 ))
         except Exception:
             pass
