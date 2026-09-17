@@ -133,6 +133,7 @@ class EmailService:
 
         user["passwordHash"] = hash_password(new_password)
         user["updatedAt"] = time.strftime("%Y-%m-%dT%H:%M:%SZ")
+        db.save_user(user)
         
         # Invalidate all active user sessions for security
         revoke_user_sessions(user_id)
@@ -152,5 +153,6 @@ class EmailService:
 
         user["isEmailVerified"] = True
         user["updatedAt"] = time.strftime("%Y-%m-%dT%H:%M:%SZ")
+        db.save_user(user)
         db.flush_durable_storage()
         return True

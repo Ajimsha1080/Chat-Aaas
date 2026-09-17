@@ -90,28 +90,137 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
 
 
 # ---------------------------------------------------------------------------
-# ---------------------------------------------------------------------------
-# JWT & Server-Side Session Invalidation
+# JWT & Distributed Redis Session Invalidation
 # ---------------------------------------------------------------------------
 
 _REVOKED_TOKENS: set = set()
 _REVOKED_USERS: Dict[str, float] = {}
 _REVOKED_TENANTS: Dict[str, float] = {}
 
-def revoke_token(jti: str) -> None:
-    """Revokes a specific token by its unique JWT ID."""
-    if jti:
-        _REVOKED_TOKENS.add(jti)
+_redis_client = None
+_redis_checked = False
 
-def revoke_user_sessions(user_id: str) -> None:
+def _get_redis_client():
+    global _redis_client, _redis_checked
+    if _redis_client is not None:
+        return _redis_client
+    if not _redis_checked:
+        try:
+            import redis
+            client = redis.from_url(
+                settings.REDIS_URL,
+                socket_timeout=0.5,
+                socket_connect_timeout=0.5,
+                decode_responses=True
+            )
+            client.ping()
+            _redis_client = client
+        except Exception:
+            _redis_client = None
+        _redis_checked = True
+    return _redis_client
+
+def set_redis_client(client) -> None:
+    """Injects or overrides Redis client (e.g. for testing distributed revocation)."""
+    global _redis_client, _redis_checked
+    _redis_client = client
+    _redis_checked = True
+
+def revoke_token(jti: str, ttl_seconds: int = 7 * 86400) -> None:
+    """Revokes a specific token by its unique JWT ID with TTL matching max token life."""
+    if not jti:
+        return
+    _REVOKED_TOKENS.add(jti)
+    r = _get_redis_client()
+    if r:
+        try:
+            r.setex(f"revocation:token:{jti}", ttl_seconds, "1")
+        except Exception as exc:
+            logger.warning(f"Redis token revocation failed for {jti}: {exc}")
+
+def revoke_user_sessions(user_id: str, ttl_seconds: int = 7 * 86400) -> None:
     """Immediately invalidates all active sessions issued for a user."""
+    if not user_id:
+        return
     import time
-    _REVOKED_USERS[user_id] = time.time()
+    now_ts = time.time()
+    _REVOKED_USERS[user_id] = now_ts
+    r = _get_redis_client()
+    if r:
+        try:
+            r.setex(f"revocation:user:{user_id}", ttl_seconds, str(now_ts))
+        except Exception as exc:
+            logger.warning(f"Redis user session revocation failed for {user_id}: {exc}")
 
-def revoke_tenant_sessions(company_id: str) -> None:
+def revoke_tenant_sessions(company_id: str, ttl_seconds: int = 7 * 86400) -> None:
     """Immediately invalidates all active sessions issued for an entire tenant."""
+    if not company_id:
+        return
     import time
-    _REVOKED_TENANTS[company_id] = time.time()
+    now_ts = time.time()
+    _REVOKED_TENANTS[company_id] = now_ts
+    r = _get_redis_client()
+    if r:
+        try:
+            r.setex(f"revocation:tenant:{company_id}", ttl_seconds, str(now_ts))
+        except Exception as exc:
+            logger.warning(f"Redis tenant session revocation failed for {company_id}: {exc}")
+
+def is_token_revoked(jti: str) -> bool:
+    """Checks if a specific JTI has been revoked locally or in distributed Redis."""
+    if not jti:
+        return False
+    if jti in _REVOKED_TOKENS:
+        return True
+    r = _get_redis_client()
+    if r:
+        try:
+            if r.get(f"revocation:token:{jti}"):
+                _REVOKED_TOKENS.add(jti)
+                return True
+        except Exception:
+            pass
+    return False
+
+def is_user_revoked(user_id: str, iat: float) -> bool:
+    """Checks if a user's sessions were revoked after the token's issued-at time."""
+    if not user_id:
+        return False
+    local_ts = _REVOKED_USERS.get(user_id)
+    if local_ts and iat <= local_ts:
+        return True
+    r = _get_redis_client()
+    if r:
+        try:
+            val = r.get(f"revocation:user:{user_id}")
+            if val:
+                revoked_ts = float(val)
+                _REVOKED_USERS[user_id] = revoked_ts
+                if iat <= revoked_ts:
+                    return True
+        except Exception:
+            pass
+    return False
+
+def is_tenant_revoked(company_id: str, iat: float) -> bool:
+    """Checks if a tenant's sessions were revoked after the token's issued-at time."""
+    if not company_id:
+        return False
+    local_ts = _REVOKED_TENANTS.get(company_id)
+    if local_ts and iat <= local_ts:
+        return True
+    r = _get_redis_client()
+    if r:
+        try:
+            val = r.get(f"revocation:tenant:{company_id}")
+            if val:
+                revoked_ts = float(val)
+                _REVOKED_TENANTS[company_id] = revoked_ts
+                if iat <= revoked_ts:
+                    return True
+        except Exception:
+            pass
+    return False
 
 def create_jwt_token(
     user_id: str,
@@ -171,7 +280,7 @@ def create_refresh_token(
 
 def decode_jwt_token(token: str) -> Optional[Dict[str, Any]]:
     """
-    Verify signature, algorithm, and expiry; check revocation registry; return claims or None.
+    Verify signature, algorithm, and expiry; check distributed revocation registry; return claims or None.
     """
     try:
         payload = jwt.decode(
@@ -180,7 +289,7 @@ def decode_jwt_token(token: str) -> Optional[Dict[str, Any]]:
             algorithms=[settings.JWT_ALGORITHM],
         )
         jti = payload.get("jti")
-        if jti and jti in _REVOKED_TOKENS:
+        if jti and is_token_revoked(jti):
             logger.debug("JWT rejected: token JTI is revoked")
             return None
 
@@ -188,11 +297,11 @@ def decode_jwt_token(token: str) -> Optional[Dict[str, Any]]:
         company_id = payload.get("company_id")
         iat = payload.get("iat", 0)
 
-        if user_id and iat <= _REVOKED_USERS.get(user_id, 0):
+        if user_id and is_user_revoked(user_id, iat):
             logger.debug(f"JWT rejected: user {user_id} sessions were revoked after issuance")
             return None
 
-        if company_id and iat <= _REVOKED_TENANTS.get(company_id, 0):
+        if company_id and is_tenant_revoked(company_id, iat):
             logger.debug(f"JWT rejected: tenant {company_id} sessions were revoked after issuance")
             return None
 

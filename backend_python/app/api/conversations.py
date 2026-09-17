@@ -55,7 +55,7 @@ async def send_message(req: SendMessageRequest, ctx: TenantContext = Depends(get
 
     # Find or create conversation
     conv_id = req.conversationId or f"conv-{int(time.time() * 1000)}"
-    conv = db.conversations.get(conv_id)
+    conv = db.get_conversation_by_id(conv_id, company_id)
     if not conv or conv.get("companyId") != company_id:
         conv = {
             "id": conv_id,
@@ -71,7 +71,6 @@ async def send_message(req: SendMessageRequest, ctx: TenantContext = Depends(get
             "startedAt": time.strftime("%Y-%m-%dT%H:%M:%SZ"),
             "lastMessageAt": time.strftime("%Y-%m-%dT%H:%M:%SZ")
         }
-        db.conversations[conv_id] = conv
 
     # 1. User Message
     user_msg_id = f"msg-u-{int(time.time() * 1000)}"
@@ -83,12 +82,12 @@ async def send_message(req: SendMessageRequest, ctx: TenantContext = Depends(get
         "text": req.text,
         "createdAt": time.strftime("%Y-%m-%dT%H:%M:%SZ")
     }
-    db.messages[user_msg_id] = user_msg
 
     # 2. Check if AI response is suppressed because a human is active or requested
     if ConversationService.is_ai_suppressed(conv_id, company_id):
         conv["lastMessageAt"] = time.strftime("%Y-%m-%dT%H:%M:%SZ")
-        db.flush_durable_storage()
+        db.save_conversation(conv)
+        db.save_message(user_msg)
         UsageService.record_event(company_id, "message", 1, "count", conv_id)
         notice_msg = {
             "id": f"msg-sys-{int(time.time() * 1000)}",
@@ -98,6 +97,7 @@ async def send_message(req: SendMessageRequest, ctx: TenantContext = Depends(get
             "text": "Your message was sent to our support team. An operator will respond momentarily.",
             "createdAt": time.strftime("%Y-%m-%dT%H:%M:%SZ")
         }
+        db.save_message(notice_msg)
         return {
             "status": 200,
             "data": {
@@ -129,14 +129,15 @@ async def send_message(req: SendMessageRequest, ctx: TenantContext = Depends(get
         "confirmationAction": runtime_res.confirmation_action,
         "createdAt": time.strftime("%Y-%m-%dT%H:%M:%SZ")
     }
-    db.messages[agent_msg_id] = agent_msg
 
     conv["lastMessageAt"] = time.strftime("%Y-%m-%dT%H:%M:%SZ")
     if runtime_res.should_escalate_to_human or runtime_res.handoff_required:
         conv["status"] = "handoff_requested"
         conv["sentiment"] = "urgent"
 
-    db.flush_durable_storage()
+    db.save_conversation(conv)
+    db.save_message(user_msg)
+    db.save_message(agent_msg)
     UsageService.record_event(company_id, "message", 2, "count", conv_id)
     UsageService.record_event(company_id, "token_consumption", 350, "tokens", conv_id)
 

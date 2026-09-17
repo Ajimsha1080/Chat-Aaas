@@ -6,7 +6,7 @@ from app.core.security import hash_password, verify_password, create_jwt_token, 
 class AuthService:
     @staticmethod
     def login(email: str, password: str) -> Optional[Dict[str, Any]]:
-        user = next((u for u in db.users.values() if u.get("email", "").lower() == email.lower()), None)
+        user = db.get_user_by_email(email)
         if not user or not verify_password(password, user.get("passwordHash", "")):
             return None
 
@@ -14,7 +14,7 @@ class AuthService:
             from fastapi import HTTPException, status
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="User account is suspended.")
 
-        membership = next((m for m in db.memberships.values() if m.get("userId") == user["id"]), None)
+        membership = db.get_membership_for_user(user["id"])
         if not membership:
             from fastapi import HTTPException, status
             raise HTTPException(
@@ -143,16 +143,33 @@ class AuthService:
             "createdAt": time.strftime("%Y-%m-%dT%H:%M:%SZ")
         }
 
-        db.users[user_id] = new_user
-        db.companies[company_id] = new_company
-        db.agents[agent_id] = new_agent
-        db.agent_versions[version_id] = new_version
-        db.memberships[f"mem-{user_id}"] = {
+        mem = {
             "id": f"mem-{user_id}",
             "userId": user_id,
             "companyId": company_id,
             "role": "owner",
-            "status": "active"
+            "status": "active",
+            "createdAt": time.strftime("%Y-%m-%dT%H:%M:%SZ")
+        }
+
+        # Targeted persistent writes to SQL & cache
+        db.save_user(new_user)
+        db.save_company(new_company)
+        db.save_membership(mem)
+        db.agents[agent_id] = new_agent
+        db.agent_versions[version_id] = new_version
+        db.flush_durable_storage()
+
+        token = create_jwt_token(user_id, company_id, "owner")
+        refresh_token = create_refresh_token(user_id, company_id, "owner")
+        return {
+            "user": new_user,
+            "company": new_company,
+            "agent": new_agent,
+            "token": token,
+            "refreshToken": refresh_token,
+            "tokenType": "Bearer",
+            "expiresIn": 900
         }
 
         token = create_jwt_token(user_id, company_id, "owner")

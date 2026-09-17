@@ -23,7 +23,7 @@ def _persist_chat_turn(company_id: str, req: ChatRequest, bot_reply: str, tokens
         return None
 
     conv_id = req.conversation_id or req.session_id or f"conv-{int(time.time() * 1000)}"
-    conv = db.conversations.get(conv_id)
+    conv = db.get_conversation_by_id(conv_id, company_id)
     now_str = time.strftime("%Y-%m-%dT%H:%M:%SZ")
     if not conv or conv.get("companyId") != company_id:
         conv = {
@@ -40,14 +40,13 @@ def _persist_chat_turn(company_id: str, req: ChatRequest, bot_reply: str, tokens
             "startedAt": now_str,
             "lastMessageAt": now_str
         }
-        db.conversations[conv_id] = conv
     else:
         conv["lastMessageAt"] = now_str
         conv["totalTokensUsed"] = conv.get("totalTokensUsed", 0) + tokens_used
 
     # Save User message
     u_msg_id = f"msg-u-{int(time.time() * 1000)}"
-    db.messages[u_msg_id] = {
+    u_msg = {
         "id": u_msg_id,
         "conversationId": conv_id,
         "companyId": company_id,
@@ -58,7 +57,7 @@ def _persist_chat_turn(company_id: str, req: ChatRequest, bot_reply: str, tokens
 
     # Save Agent message
     a_msg_id = f"msg-a-{int(time.time() * 1000) + 1}"
-    db.messages[a_msg_id] = {
+    a_msg = {
         "id": a_msg_id,
         "conversationId": conv_id,
         "companyId": company_id,
@@ -67,7 +66,11 @@ def _persist_chat_turn(company_id: str, req: ChatRequest, bot_reply: str, tokens
         "tokensUsed": tokens_used,
         "createdAt": now_str
     }
-    db.flush_durable_storage()
+
+    # Targeted persistent writes (only the specific modified rows)
+    db.save_conversation(conv)
+    db.save_message(u_msg)
+    db.save_message(a_msg)
     return conv_id
 
 @router.post("", response_model=ChatResponse)
