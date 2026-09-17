@@ -1,6 +1,6 @@
 import time
 from dataclasses import dataclass
-from typing import Optional
+from typing import Optional, List
 from fastapi import Header, HTTPException, status, Depends
 from app.core.security import decode_jwt_token
 from app.core.config import settings
@@ -14,6 +14,8 @@ class TenantContext:
     correlation_id: str
     is_impersonated: bool = False
     impersonator_user_id: Optional[str] = None
+    scopes: Optional[List[str]] = None
+    is_api_key: bool = False
 
 def _resolve_api_key_context(key_str: str, header_comp: Optional[str], correlation_id: str) -> TenantContext:
     matched_key = next((k for k in db.api_keys.values() if k.get("key") == key_str or k.get("id") == key_str), None)
@@ -35,11 +37,14 @@ def _resolve_api_key_context(key_str: str, header_comp: Optional[str], correlati
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Company workspace is suspended."
             )
+        key_scopes = matched_key.get("scopes")
         return TenantContext(
             company_id=comp_id,
             user_id=f"key_{matched_key.get('id')}",
             role="api_client",
-            correlation_id=correlation_id
+            correlation_id=correlation_id,
+            scopes=key_scopes,
+            is_api_key=True
         )
 
     matched_comp = next((c for c in db.companies.values() if c.get("apiKey") == key_str), None)
@@ -52,8 +57,10 @@ def _resolve_api_key_context(key_str: str, header_comp: Optional[str], correlati
         return TenantContext(
             company_id=matched_comp["id"],
             user_id=f"api_{matched_comp['id']}",
-            role="owner",
-            correlation_id=correlation_id
+            role="api_client",
+            correlation_id=correlation_id,
+            scopes=["chat:read", "chat:write", "analytics:read", "knowledge:read"],
+            is_api_key=True
         )
 
     raise HTTPException(

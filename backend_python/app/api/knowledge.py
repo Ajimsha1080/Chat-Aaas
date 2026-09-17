@@ -132,7 +132,7 @@ def get_knowledge_source_details(source_id: str, ctx: TenantContext = Depends(ge
 @router.post("/sources/{source_id}/disable")
 def disable_knowledge_source(source_id: str, ctx: TenantContext = Depends(get_tenant_context)):
     """Temporarily disables a knowledge source, immediately halting RAG retrieval without deleting data."""
-    if not has_permission(ctx.role, "knowledge:write"):
+    if not has_permission(ctx, "knowledge:write"):
         raise HTTPException(status_code=403, detail="Forbidden: Insufficient permissions to modify knowledge.")
 
     source = db.knowledge_sources.get(source_id)
@@ -154,7 +154,7 @@ def disable_knowledge_source(source_id: str, ctx: TenantContext = Depends(get_te
 @router.post("/sources/{source_id}/enable")
 def enable_knowledge_source(source_id: str, ctx: TenantContext = Depends(get_tenant_context)):
     """Re-enables a disabled knowledge source, restoring its availability in RAG retrieval."""
-    if not has_permission(ctx.role, "knowledge:write"):
+    if not has_permission(ctx, "knowledge:write"):
         raise HTTPException(status_code=403, detail="Forbidden: Insufficient permissions to modify knowledge.")
 
     source = db.knowledge_sources.get(source_id)
@@ -176,7 +176,7 @@ def enable_knowledge_source(source_id: str, ctx: TenantContext = Depends(get_ten
 @router.post("/sources/{source_id}/trash")
 def move_knowledge_source_to_trash(source_id: str, ctx: TenantContext = Depends(get_tenant_context)):
     """Moves a knowledge source to Trash. Excludes it from RAG while permitting restore within 30 days."""
-    if not has_permission(ctx.role, "knowledge:delete"):
+    if not has_permission(ctx, "knowledge:delete"):
         raise HTTPException(status_code=403, detail="Forbidden: Insufficient permissions to delete knowledge.")
 
     source = db.knowledge_sources.get(source_id)
@@ -199,7 +199,7 @@ def move_knowledge_source_to_trash(source_id: str, ctx: TenantContext = Depends(
 @router.post("/sources/{source_id}/restore")
 def restore_knowledge_source_from_trash(source_id: str, ctx: TenantContext = Depends(get_tenant_context)):
     """Restores a knowledge source from Trash back to active state and re-enables RAG indexing."""
-    if not has_permission(ctx.role, "knowledge:write"):
+    if not has_permission(ctx, "knowledge:write"):
         raise HTTPException(status_code=403, detail="Forbidden: Insufficient permissions to restore knowledge.")
 
     source = db.knowledge_sources.get(source_id)
@@ -222,7 +222,7 @@ def restore_knowledge_source_from_trash(source_id: str, ctx: TenantContext = Dep
 @router.post("/sources/{source_id}/reprocess")
 def reprocess_knowledge_source(source_id: str, ctx: TenantContext = Depends(get_tenant_context)):
     """Re-executes document chunking, embedding, and vector indexing for a knowledge source."""
-    if not has_permission(ctx.role, "knowledge:write"):
+    if not has_permission(ctx, "knowledge:write"):
         raise HTTPException(status_code=403, detail="Forbidden: Insufficient permissions to reprocess knowledge.")
 
     source = db.knowledge_sources.get(source_id)
@@ -246,7 +246,7 @@ def reprocess_knowledge_source(source_id: str, ctx: TenantContext = Depends(get_
 @router.delete("/sources/{source_id}/permanent")
 def delete_knowledge_source(source_id: str, ctx: TenantContext = Depends(get_tenant_context)):
     """Permanently purges a knowledge source, all vector chunks, embeddings, and retrieval references."""
-    if not has_permission(ctx.role, "knowledge:delete"):
+    if not has_permission(ctx, "knowledge:delete"):
         raise HTTPException(status_code=403, detail="Forbidden: Insufficient permissions to delete knowledge.")
 
     source = db.knowledge_sources.get(source_id)
@@ -289,7 +289,7 @@ def _check_knowledge_quota(company_id: str, role: str):
 @router.post("/ingest", status_code=status.HTTP_201_CREATED)
 def ingest_file_document(req: IngestFileRequest, ctx: TenantContext = Depends(get_tenant_context)):
     """Ingests, sanitizes, and chunks multi-format documents (.pdf, .docx, .txt, .md, .csv, .json)."""
-    if not has_permission(ctx.role, "knowledge:write"):
+    if not has_permission(ctx, "knowledge:write"):
         raise HTTPException(status_code=403, detail="Forbidden: Insufficient role permissions to ingest knowledge.")
 
     RateLimiter.check_upload_rate_limit(ctx.company_id)
@@ -395,7 +395,7 @@ async def upload_real_file_document(
     Direct multipart file upload for PDF, DOCX, TXT, CSV, JSON, MD.
     Extracts text page-by-page, chunks semantically, and indexes into tenant vector store.
     """
-    if not has_permission(ctx.role, "knowledge:write"):
+    if not has_permission(ctx, "knowledge:write"):
         raise HTTPException(status_code=403, detail="Forbidden: Insufficient permissions.")
 
     RateLimiter.check_upload_rate_limit(ctx.company_id)
@@ -497,7 +497,7 @@ async def upload_real_file_document(
 @router.post("/crawl", status_code=status.HTTP_201_CREATED)
 async def crawl_and_ingest_website(req: IngestWebsiteRequest, ctx: TenantContext = Depends(get_tenant_context)):
     """Crawls website URL with strict SSRF defense, depth limits, and HTML parsing."""
-    if not has_permission(ctx.role, "knowledge:write"):
+    if not has_permission(ctx, "knowledge:write"):
         raise HTTPException(status_code=403, detail="Forbidden: Insufficient role permissions.")
 
     RateLimiter.check_crawler_rate_limit(ctx.company_id)
@@ -596,7 +596,7 @@ async def crawl_and_ingest_website(req: IngestWebsiteRequest, ctx: TenantContext
 @router.post("/faqs", status_code=status.HTTP_201_CREATED)
 def create_faq_knowledge(req: IngestFaqRequest, ctx: TenantContext = Depends(get_tenant_context)):
     """Creates a structured FAQ knowledge entry and indexes it immediately."""
-    if not has_permission(ctx.role, "knowledge:write"):
+    if not has_permission(ctx, "knowledge:write"):
         raise HTTPException(status_code=403, detail="Forbidden: Insufficient permissions.")
 
     src_id = f"ks-{ctx.company_id}-faq-{uuid.uuid4().hex[:6]}"
@@ -656,7 +656,7 @@ def list_collections(ctx: TenantContext = Depends(get_tenant_context)):
 @router.post("/collections", status_code=status.HTTP_201_CREATED)
 def create_collection(req: CreateCollectionRequest, ctx: TenantContext = Depends(get_tenant_context)):
     """Creates a new organized knowledge collection."""
-    if not has_permission(ctx.role, "knowledge:write"):
+    if not has_permission(ctx, "knowledge:write"):
         raise HTTPException(status_code=403, detail="Forbidden: Insufficient permissions.")
 
     col_id = f"col-{ctx.company_id}-{uuid.uuid4().hex[:6]}"
@@ -676,7 +676,7 @@ def create_collection(req: CreateCollectionRequest, ctx: TenantContext = Depends
 @router.delete("/collections/{collection_id}")
 def delete_collection(collection_id: str, ctx: TenantContext = Depends(get_tenant_context)):
     """Deletes a collection and detaches its associated sources."""
-    if not has_permission(ctx.role, "knowledge:delete"):
+    if not has_permission(ctx, "knowledge:delete"):
         raise HTTPException(status_code=403, detail="Forbidden.")
 
     col = db.knowledge_collections.get(collection_id)

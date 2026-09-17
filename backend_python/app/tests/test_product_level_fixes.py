@@ -3,6 +3,7 @@ import time
 from fastapi.testclient import TestClient
 from app.main import app
 from app.db.database import db
+from app.core.security import create_jwt_token
 
 client = TestClient(app)
 
@@ -151,8 +152,9 @@ def test_team_member_lifecycle_role_and_removal():
         "role": "viewer"
     }
 
+    token = create_jwt_token("usr-owner-prod", comp_id, "owner")
     headers = {
-        "Authorization": "Bearer sk_live_testprod123",
+        "Authorization": f"Bearer {token}",
         "Content-Type": "application/json"
     }
 

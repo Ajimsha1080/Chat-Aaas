@@ -36,21 +36,21 @@ def get_agent_versions(ctx: TenantContext = Depends(get_tenant_context)):
 
 @router.put("/draft")
 def update_draft(req: UpdateDraftRequest, ctx: TenantContext = Depends(get_tenant_context)):
-    if not has_permission(ctx.role, "agent:write"):
+    if not has_permission(ctx, "agent:write"):
         raise HTTPException(status_code=403, detail="Forbidden: Insufficient role permissions to edit draft.")
     res = AgentService.update_draft(ctx.company_id, req.model_dump(exclude_unset=True))
     return {"status": 200, "data": {"draft": res}}
 
 @router.post("/publish")
 def publish_draft(req: PublishDraftRequest, ctx: TenantContext = Depends(get_tenant_context)):
-    if not has_permission(ctx.role, "agent:publish"):
+    if not has_permission(ctx, "agent:publish"):
         raise HTTPException(status_code=403, detail="Forbidden: Insufficient role permissions to publish version.")
     res = AgentService.publish_draft(ctx.company_id, req.changeSummary, ctx.user_id)
     return {"status": 200, "data": {"version": res}}
 
 @router.post("/rollback")
 def rollback_version(req: RollbackRequest, ctx: TenantContext = Depends(get_tenant_context)):
-    if not has_permission(ctx.role, "agent:rollback"):
+    if not has_permission(ctx, "agent:rollback"):
         raise HTTPException(status_code=403, detail="Forbidden: Insufficient role permissions to rollback version.")
     res = AgentService.rollback_version(ctx.company_id, req.targetVersionId)
     return {"status": 200, "data": {"activeVersion": res}}
@@ -64,7 +64,7 @@ def get_agent_dependencies(ctx: TenantContext = Depends(get_tenant_context)):
 @router.post("/unpublish")
 def unpublish_agent(ctx: TenantContext = Depends(get_tenant_context)):
     """Unpublishes the assistant, returning it to draft/ready status without removing configuration."""
-    if not has_permission(ctx.role, "agent:publish"):
+    if not has_permission(ctx, "agent:publish"):
         raise HTTPException(status_code=403, detail="Forbidden: Insufficient permissions to unpublish.")
     res = AgentService.unpublish_agent(ctx.company_id)
     return {"status": 200, "data": {"agent": res, "message": "Assistant unpublished successfully."}}
@@ -72,7 +72,7 @@ def unpublish_agent(ctx: TenantContext = Depends(get_tenant_context)):
 @router.post("/disable")
 def disable_agent(ctx: TenantContext = Depends(get_tenant_context)):
     """Disables the assistant, temporarily pausing all deployments."""
-    if not has_permission(ctx.role, "agent:write"):
+    if not has_permission(ctx, "agent:write"):
         raise HTTPException(status_code=403, detail="Forbidden: Insufficient permissions to disable assistant.")
     res = AgentService.disable_agent(ctx.company_id)
     return {"status": 200, "data": {"agent": res, "message": "Assistant disabled successfully."}}
@@ -80,7 +80,7 @@ def disable_agent(ctx: TenantContext = Depends(get_tenant_context)):
 @router.post("/enable")
 def enable_agent(ctx: TenantContext = Depends(get_tenant_context)):
     """Re-enables the assistant for all active deployments."""
-    if not has_permission(ctx.role, "agent:write"):
+    if not has_permission(ctx, "agent:write"):
         raise HTTPException(status_code=403, detail="Forbidden: Insufficient permissions to enable assistant.")
     res = AgentService.enable_agent(ctx.company_id)
     return {"status": 200, "data": {"agent": res, "message": "Assistant enabled and active."}}
@@ -88,7 +88,7 @@ def enable_agent(ctx: TenantContext = Depends(get_tenant_context)):
 @router.post("/archive")
 def archive_agent(ctx: TenantContext = Depends(get_tenant_context)):
     """Archives the assistant."""
-    if not has_permission(ctx.role, "agent:write"):
+    if not has_permission(ctx, "agent:write"):
         raise HTTPException(status_code=403, detail="Forbidden: Insufficient permissions to archive assistant.")
     res = AgentService.archive_agent(ctx.company_id)
     return {"status": 200, "data": {"agent": res, "message": "Assistant archived."}}
@@ -96,7 +96,7 @@ def archive_agent(ctx: TenantContext = Depends(get_tenant_context)):
 @router.delete("")
 def delete_agent(ctx: TenantContext = Depends(get_tenant_context)):
     """Marks the assistant as deleted after verifying confirmation."""
-    if not has_permission(ctx.role, "agent:publish"):
+    if not has_permission(ctx, "agent:publish"):
         raise HTTPException(status_code=403, detail="Forbidden: Insufficient permissions to delete assistant.")
     res = AgentService.delete_agent(ctx.company_id)
     return {"status": 200, "data": {"agent": res, "message": "Assistant deleted."}}

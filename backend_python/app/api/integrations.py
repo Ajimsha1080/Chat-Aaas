@@ -37,7 +37,7 @@ def list_integrations(ctx: TenantContext = Depends(get_tenant_context)):
 
 @router.post("/connect")
 def connect_integration(req: ConnectIntegrationRequest, ctx: TenantContext = Depends(get_tenant_context)):
-    if not has_permission(ctx.role, "integration:manage"):
+    if not has_permission(ctx, "integration:manage"):
         raise HTTPException(status_code=403, detail="Forbidden: Insufficient permissions to manage integrations.")
 
     if not req.credentials:
@@ -74,7 +74,7 @@ def connect_integration(req: ConnectIntegrationRequest, ctx: TenantContext = Dep
 
 @router.post("/{integration_id}/test")
 def test_integration_connection(integration_id: str, ctx: TenantContext = Depends(get_tenant_context)):
-    if not has_permission(ctx.role, "integration:manage"):
+    if not has_permission(ctx, "integration:manage"):
         raise HTTPException(status_code=403, detail="Forbidden: Insufficient permissions to test integrations.")
 
     item = db.integrations.get(integration_id)
@@ -133,7 +133,7 @@ def test_integration_connection(integration_id: str, ctx: TenantContext = Depend
 
 @router.delete("/{integration_id}")
 def disconnect_integration(integration_id: str, ctx: TenantContext = Depends(get_tenant_context)):
-    if not has_permission(ctx.role, "integration:manage"):
+    if not has_permission(ctx, "integration:manage"):
         raise HTTPException(status_code=403, detail="Forbidden: Insufficient permissions to manage integrations.")
 
     item = db.integrations.get(integration_id)

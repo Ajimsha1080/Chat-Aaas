@@ -76,10 +76,18 @@ def get_team_members(ctx: TenantContext = Depends(get_tenant_context)):
         })
     return {"status": 200, "data": {"team": team}}
 
-@router.post("/team/invite")
+@router.post("/team/invite", status_code=status.HTTP_201_CREATED)
 def invite_team_member(req: InviteMemberRequest, ctx: TenantContext = Depends(get_tenant_context)):
-    if not has_permission(ctx.role, "team:manage"):
+    if not has_permission(ctx, "team:manage"):
         raise HTTPException(status_code=403, detail="Forbidden: Insufficient permissions to invite team members.")
+
+    allowed_roles = ["admin", "agent_editor", "support_agent", "support_lead", "viewer", "owner"]
+    target_role = req.role or "agent_editor"
+    if target_role not in allowed_roles:
+        raise HTTPException(status_code=400, detail=f"Invalid role. Allowed: {', '.join(allowed_roles)}")
+
+    if target_role == "owner" and ctx.role not in ["owner", "super_admin", "platform_super_admin"]:
+        raise HTTPException(status_code=403, detail="Forbidden: Only existing workspace owners or super admins can invite new owners.")
 
     new_user_id = f"usr-{int(time.time() * 1000)}"
     new_mem_id = f"mem-{new_user_id}"
@@ -97,7 +105,7 @@ def invite_team_member(req: InviteMemberRequest, ctx: TenantContext = Depends(ge
         "id": new_mem_id,
         "userId": new_user_id,
         "companyId": ctx.company_id,
-        "role": req.role or "agent_editor",
+        "role": target_role,
         "status": "invited",
         "createdAt": time.strftime("%Y-%m-%dT%H:%M:%SZ")
     }
@@ -110,7 +118,7 @@ def invite_team_member(req: InviteMemberRequest, ctx: TenantContext = Depends(ge
         "data": {
             "message": f"Invitation sent to {req.email}",
             "membershipId": new_mem_id,
-            "role": req.role
+            "role": target_role
         }
     }
 
@@ -120,16 +128,19 @@ def update_team_member_role(
     req: UpdateRoleRequest,
     ctx: TenantContext = Depends(get_tenant_context)
 ):
-    if not has_permission(ctx.role, "team:manage"):
+    if not has_permission(ctx, "team:manage"):
         raise HTTPException(status_code=403, detail="Forbidden: Insufficient permissions to update team roles.")
 
     membership = db.memberships.get(membership_id)
     if not membership or membership.get("companyId") != ctx.company_id:
         raise HTTPException(status_code=404, detail="Team membership not found.")
 
-    allowed_roles = ["admin", "agent_editor", "support_agent", "viewer", "owner"]
+    allowed_roles = ["admin", "agent_editor", "support_agent", "support_lead", "viewer", "owner"]
     if req.role not in allowed_roles:
         raise HTTPException(status_code=400, detail=f"Invalid role. Allowed: {', '.join(allowed_roles)}")
+
+    if req.role == "owner" and ctx.role not in ["owner", "super_admin", "platform_super_admin"]:
+        raise HTTPException(status_code=403, detail="Forbidden: Only existing workspace owners or super admins can assign owner role.")
 
     # If demoting from owner, ensure at least one active owner remains
     if membership.get("role") == "owner" and req.role != "owner":
@@ -166,7 +177,7 @@ def remove_team_member(
     membership_id: str,
     ctx: TenantContext = Depends(get_tenant_context)
 ):
-    if not has_permission(ctx.role, "team:manage"):
+    if not has_permission(ctx, "team:manage"):
         raise HTTPException(status_code=403, detail="Forbidden: Insufficient permissions to remove team members.")
 
     membership = db.memberships.get(membership_id)

@@ -237,7 +237,6 @@ class PaymentService:
             company["planStatus"] = "active"
             company["subscriptionId"] = subscription.get("id")
             db.save_company(company)
-            db.flush_durable_storage()
             return {"status": "success", "action": "subscription_activated", "companyId": company_id, "planId": plan_id}
 
         return {"status": "company_not_found", "companyId": company_id}
@@ -277,12 +276,8 @@ class PaymentService:
                 "paymentId": payment.get("id"),
                 "createdAt": time.strftime("%Y-%m-%dT%H:%M:%SZ")
             }
-            db.invoices[invoice_id] = invoice
             db.save_invoice(invoice)
-            db.flush_durable_storage()
             return {"status": "success", "action": "invoice_generated", "invoiceId": invoice_id}
-
-        return {"status": "company_not_found", "companyId": company_id}
 
         return {"status": "company_not_found", "companyId": company_id}
 
@@ -293,8 +288,9 @@ class PaymentService:
         company_id = notes.get("companyId")
 
         if company_id and company_id in db.companies:
-            db.companies[company_id]["planStatus"] = "past_due"
-            db.flush_durable_storage()
+            company = db.companies[company_id]
+            company["planStatus"] = "past_due"
+            db.save_company(company)
             return {"status": "success", "action": "subscription_halted", "companyId": company_id}
 
         return {"status": "company_not_found", "companyId": company_id}
@@ -306,8 +302,9 @@ class PaymentService:
         company_id = notes.get("companyId")
 
         if company_id and company_id in db.companies:
-            db.companies[company_id]["planStatus"] = "cancelled"
-            db.flush_durable_storage()
+            company = db.companies[company_id]
+            company["planStatus"] = "cancelled"
+            db.save_company(company)
             return {"status": "success", "action": "subscription_cancelled", "companyId": company_id}
 
         return {"status": "company_not_found", "companyId": company_id}

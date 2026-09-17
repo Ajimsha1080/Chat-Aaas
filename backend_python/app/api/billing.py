@@ -26,7 +26,7 @@ def get_plans():
 @router.post("/checkout")
 def create_subscription_checkout(req: CheckoutRequest, ctx: TenantContext = Depends(get_tenant_context)):
     """Creates a Razorpay Subscription order for tenant checkout."""
-    if not has_permission(ctx.role, "billing:manage"):
+    if not has_permission(ctx, "billing:manage"):
         raise HTTPException(status_code=403, detail="Forbidden: Only owners/admins can change subscriptions.")
 
     try:
@@ -68,7 +68,7 @@ def get_entitlements(ctx: TenantContext = Depends(get_tenant_context)):
 
 @router.post("/upgrade")
 def upgrade_plan(req: UpgradePlanRequest, ctx: TenantContext = Depends(get_tenant_context)):
-    if not has_permission(ctx.role, "billing:manage"):
+    if not has_permission(ctx, "billing:manage"):
         raise HTTPException(status_code=403, detail="Forbidden: Only owners/admins can change subscriptions.")
 
     try:

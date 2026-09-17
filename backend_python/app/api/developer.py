@@ -20,14 +20,14 @@ class CreateWebhookRequest(BaseModel):
 
 @router.get("/api-keys")
 def get_api_keys(ctx: TenantContext = Depends(get_tenant_context)):
-    if not has_permission(ctx.role, "developer:manage"):
+    if not has_permission(ctx, "developer:manage"):
         raise HTTPException(status_code=403, detail="Forbidden: Developer privilege required.")
     keys = [k for k in db.api_keys.values() if k.get("companyId") == ctx.company_id]
     return {"status": 200, "data": {"apiKeys": keys}}
 
 @router.post("/api-keys", status_code=status.HTTP_201_CREATED)
 def create_api_key(req: CreateApiKeyRequest, ctx: TenantContext = Depends(get_tenant_context)):
-    if not has_permission(ctx.role, "developer:manage"):
+    if not has_permission(ctx, "developer:manage"):
         raise HTTPException(status_code=403, detail="Forbidden: Developer privilege required.")
 
     key_id = f"key-{int(time.time() * 1000)}"
@@ -60,7 +60,7 @@ def create_api_key(req: CreateApiKeyRequest, ctx: TenantContext = Depends(get_te
 @router.post("/api-keys/{key_id}/rotate")
 def rotate_api_key(key_id: str, ctx: TenantContext = Depends(get_tenant_context)):
     """Rotates an API key: revokes existing key and generates a new credential."""
-    if not has_permission(ctx.role, "developer:manage"):
+    if not has_permission(ctx, "developer:manage"):
         raise HTTPException(status_code=403, detail="Forbidden: Developer privilege required.")
 
     old_key = db.api_keys.get(key_id)
@@ -102,7 +102,7 @@ def rotate_api_key(key_id: str, ctx: TenantContext = Depends(get_tenant_context)
 @router.post("/api-keys/{key_id}/revoke")
 def revoke_api_key(key_id: str, ctx: TenantContext = Depends(get_tenant_context)):
     """Immediately revokes an API credential from authenticating platform requests."""
-    if not has_permission(ctx.role, "developer:manage"):
+    if not has_permission(ctx, "developer:manage"):
         raise HTTPException(status_code=403, detail="Forbidden: Developer privilege required.")
 
     key = db.api_keys.get(key_id)
@@ -115,14 +115,14 @@ def revoke_api_key(key_id: str, ctx: TenantContext = Depends(get_tenant_context)
 
 @router.get("/webhooks")
 def get_webhooks(ctx: TenantContext = Depends(get_tenant_context)):
-    if not has_permission(ctx.role, "developer:manage"):
+    if not has_permission(ctx, "developer:manage"):
         raise HTTPException(status_code=403, detail="Forbidden: Developer privilege required.")
     webhooks = [w for w in db.webhooks.values() if w.get("companyId") == ctx.company_id]
     return {"status": 200, "data": {"webhooks": webhooks}}
 
 @router.post("/webhooks", status_code=status.HTTP_201_CREATED)
 def create_webhook(req: CreateWebhookRequest, ctx: TenantContext = Depends(get_tenant_context)):
-    if not has_permission(ctx.role, "developer:manage"):
+    if not has_permission(ctx, "developer:manage"):
         raise HTTPException(status_code=403, detail="Forbidden: Developer privilege required.")
 
     hook_id = f"hook-{int(time.time() * 1000)}"
@@ -146,7 +146,7 @@ def create_webhook(req: CreateWebhookRequest, ctx: TenantContext = Depends(get_t
 @router.post("/webhooks/{hook_id}/toggle")
 def toggle_webhook_status(hook_id: str, ctx: TenantContext = Depends(get_tenant_context)):
     """Enables or disables webhook event dispatching."""
-    if not has_permission(ctx.role, "developer:manage"):
+    if not has_permission(ctx, "developer:manage"):
         raise HTTPException(status_code=403, detail="Forbidden: Developer privilege required.")
 
     hook = db.webhooks.get(hook_id)
@@ -160,7 +160,7 @@ def toggle_webhook_status(hook_id: str, ctx: TenantContext = Depends(get_tenant_
 @router.post("/webhooks/{hook_id}/test")
 def test_webhook_delivery(hook_id: str, ctx: TenantContext = Depends(get_tenant_context)):
     """Dispatches a test signature event and records delivery latency."""
-    if not has_permission(ctx.role, "developer:manage"):
+    if not has_permission(ctx, "developer:manage"):
         raise HTTPException(status_code=403, detail="Forbidden: Developer privilege required.")
 
     hook = db.webhooks.get(hook_id)
@@ -187,7 +187,7 @@ def test_webhook_delivery(hook_id: str, ctx: TenantContext = Depends(get_tenant_
 @router.delete("/webhooks/{hook_id}")
 def delete_webhook(hook_id: str, ctx: TenantContext = Depends(get_tenant_context)):
     """Deletes a webhook endpoint."""
-    if not has_permission(ctx.role, "developer:manage"):
+    if not has_permission(ctx, "developer:manage"):
         raise HTTPException(status_code=403, detail="Forbidden: Developer privilege required.")
 
     hook = db.webhooks.get(hook_id)

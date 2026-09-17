@@ -20,7 +20,7 @@ def list_tools(ctx: TenantContext = Depends(get_tenant_context)):
 
 @router.post("/execute")
 def execute_tool(req: ExecuteToolRequest, ctx: TenantContext = Depends(get_tenant_context)):
-    if not has_permission(ctx.role, "tool:execute"):
+    if not has_permission(ctx, "tool:execute"):
         raise HTTPException(status_code=403, detail="Forbidden: Insufficient role permissions to execute actions.")
 
     result = ToolService.execute_tool(

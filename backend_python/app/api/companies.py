@@ -165,6 +165,8 @@ def get_company_by_id(company_id: str, ctx: TenantContext = Depends(get_tenant_c
 
 @router.put("/{company_id}")
 def update_company_by_id(company_id: str, req: UpdateCompanyRequest, ctx: TenantContext = Depends(get_tenant_context)):
+    if not has_permission(ctx, "company:manage"):
+        raise HTTPException(status_code=403, detail="Forbidden: Insufficient permissions to modify company workspace.")
     if ctx.role not in ["super_admin", "platform_super_admin"] and ctx.company_id != company_id:
         raise HTTPException(status_code=403, detail="Forbidden: You do not have permission to modify another company workspace.")
     comp = db.companies.get(company_id)
