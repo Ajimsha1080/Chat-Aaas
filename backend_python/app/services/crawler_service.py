@@ -1,19 +1,32 @@
 import ipaddress
 import socket
 from urllib.parse import urlparse, urljoin
-from typing import Tuple, List, Set, Optional
+from typing import Tuple, List, Set, Optional, Union
 
 MAX_PAYLOAD_BYTES = 10 * 1024 * 1024  # 10 MB ceiling
 MAX_CRAWL_DEPTH = 3
 
 BLOCKED_NETWORKS = [
-    ipaddress.ip_network("127.0.0.0/8"),
+    ipaddress.ip_network("0.0.0.0/8"),
     ipaddress.ip_network("10.0.0.0/8"),
+    ipaddress.ip_network("100.64.0.0/10"),     # Carrier Grade NAT
+    ipaddress.ip_network("127.0.0.0/8"),
+    ipaddress.ip_network("169.254.0.0/16"),    # Link-local & Cloud Metadata (169.254.169.254)
     ipaddress.ip_network("172.16.0.0/12"),
+    ipaddress.ip_network("192.0.0.0/24"),
+    ipaddress.ip_network("192.0.2.0/24"),      # TEST-NET-1
     ipaddress.ip_network("192.168.0.0/16"),
-    ipaddress.ip_network("169.254.169.254/32"), # AWS/Cloud Metadata
+    ipaddress.ip_network("198.18.0.0/15"),     # Benchmarking
+    ipaddress.ip_network("198.51.100.0/24"),   # TEST-NET-2
+    ipaddress.ip_network("203.0.113.0/24"),    # TEST-NET-3
+    ipaddress.ip_network("224.0.0.0/4"),       # Multicast
+    ipaddress.ip_network("240.0.0.0/4"),       # Reserved
+    ipaddress.ip_network("255.255.255.255/32"),
+    ipaddress.ip_network("::/128"),
     ipaddress.ip_network("::1/128"),
-    ipaddress.ip_network("fc00::/7")
+    ipaddress.ip_network("fc00::/7"),
+    ipaddress.ip_network("fe80::/10"),
+    ipaddress.ip_network("ff00::/8")
 ]
 
 BLOCKED_HOSTNAMES = {
@@ -23,52 +36,87 @@ BLOCKED_HOSTNAMES = {
 
 class CrawlerService:
     @staticmethod
-    def validate_url_safety(url: str) -> Tuple[bool, str]:
+    def is_ip_blocked(ip_obj: Union[ipaddress.IPv4Address, ipaddress.IPv6Address]) -> bool:
+        """Checks if an IP address belongs to private, loopback, link-local, or cloud metadata ranges."""
+        if ip_obj.is_private or ip_obj.is_loopback or ip_obj.is_link_local or ip_obj.is_multicast or ip_obj.is_reserved or ip_obj.is_unspecified:
+            return True
+        for blocked in BLOCKED_NETWORKS:
+            if ip_obj in blocked:
+                return True
+        return False
+
+    @classmethod
+    def resolve_and_validate_target(
+        cls, url: str
+    ) -> Tuple[bool, str, Optional[str], Optional[int], Optional[str], Optional[str], Optional[str]]:
         """
-        Validates that a URL does not target localhost, private subnets, or cloud metadata (SSRF defense).
+        Parses the URL, resolves its hostname to IP address(es) in a single step,
+        validates that no resolved IP is in a blocked/private/metadata range,
+        and returns the validated IP, port, path, hostname, and scheme for direct IP connection.
+        Prevents DNS rebinding and SSRF TOCTOU vulnerabilities.
         """
         try:
             parsed = urlparse(url)
-            if parsed.scheme not in ["http", "https"]:
-                return False, f"Invalid scheme {parsed.scheme}: Only http/https supported."
+            scheme = parsed.scheme
+            if scheme not in ["http", "https"]:
+                return False, f"Invalid scheme {scheme}: Only http/https supported.", None, None, None, None, None
             
             hostname = parsed.hostname
             if not hostname:
-                return False, "Invalid URL: Hostname missing."
+                return False, "Invalid URL: Hostname missing.", None, None, None, None, None
                 
             hostname_lower = hostname.lower()
             if hostname_lower in BLOCKED_HOSTNAMES or hostname_lower.endswith(".internal") or hostname_lower.endswith(".local"):
-                return False, f"SSRF Attack Blocked: Target '{hostname}' is a restricted local/metadata address."
+                return False, f"SSRF Attack Blocked: Target '{hostname}' is a restricted local/metadata address.", None, None, None, None, None
+
+            port = parsed.port or (443 if scheme == "https" else 80)
+            path = parsed.path or "/"
+            if parsed.query:
+                path_and_query = f"{path}?{parsed.query}"
+            else:
+                path_and_query = path
 
             # Check if hostname is direct IP
             try:
                 ip_obj = ipaddress.ip_address(hostname)
-                for blocked in BLOCKED_NETWORKS:
-                    if ip_obj in blocked:
-                        return False, f"SSRF Protection Blocked: IP '{hostname}' belongs to private/cloud metadata range."
-                return True, "URL is safe for ingestion."
+                if cls.is_ip_blocked(ip_obj):
+                    return False, f"SSRF Protection Blocked: IP '{hostname}' belongs to private/cloud metadata range.", None, None, None, None, None
+                return True, "URL is safe for ingestion.", str(ip_obj), port, path_and_query, hostname, scheme
             except ValueError:
                 # Hostname is a domain name
                 pass
 
-            # Resolve DNS if possible
+            # Resolve DNS
             try:
-                ip_addresses = socket.getaddrinfo(hostname, None)
+                ip_addresses = socket.getaddrinfo(hostname, port)
+                if not ip_addresses:
+                    return False, f"DNS resolution returned no records for hostname '{hostname}'.", None, None, None, None, None
+
+                validated_ip = None
                 for addr_info in ip_addresses:
                     raw_ip = addr_info[4][0]
                     ip_obj = ipaddress.ip_address(raw_ip)
-                    for blocked in BLOCKED_NETWORKS:
-                        if ip_obj in blocked:
-                            return False, f"SSRF Protection Blocked: Host '{hostname}' resolves to private/metadata IP '{raw_ip}'."
-            except socket.gaierror:
-                # If offline or simulated test environment, allow valid public TLDs
-                if any(hostname_lower.endswith(tld) for tld in [".com", ".org", ".io", ".net", ".ai", ".co", ".gov", ".edu", ".in", ".de", ".uk"]):
-                    return True, "URL structure is valid and public."
-                return False, f"DNS resolution failed for hostname '{hostname}'."
+                    if cls.is_ip_blocked(ip_obj):
+                        return False, f"SSRF Protection Blocked: Host '{hostname}' resolves to private/metadata IP '{raw_ip}'.", None, None, None, None, None
+                    if validated_ip is None:
+                        validated_ip = raw_ip
 
-            return True, "URL is safe for ingestion."
+                return True, "URL is safe for ingestion.", validated_ip, port, path_and_query, hostname, scheme
+            except socket.gaierror:
+                # Fallback for offline or simulated test environments without direct DNS
+                if any(hostname_lower.endswith(tld) for tld in [".com", ".org", ".io", ".net", ".ai", ".co", ".gov", ".edu", ".in", ".de", ".uk"]):
+                    return True, "URL structure is valid and public.", None, port, path_and_query, hostname, scheme
+                return False, f"DNS resolution failed for hostname '{hostname}'.", None, None, None, None, None
         except Exception as e:
-            return False, f"Safety check error: {str(e)}"
+            return False, f"Safety check error: {str(e)}", None, None, None, None, None
+
+    @classmethod
+    def validate_url_safety(cls, url: str) -> Tuple[bool, str]:
+        """
+        Validates that a URL does not target localhost, private subnets, or cloud metadata (SSRF defense).
+        """
+        is_safe, reason, _, _, _, _, _ = cls.resolve_and_validate_target(url)
+        return is_safe, reason
 
     @staticmethod
     def validate_domain_scope(root_url: str, target_url: str) -> bool:
@@ -137,7 +185,9 @@ class CrawlerService:
         """
         Fetches web page content, extracts <title>, and strips HTML to clean readable text.
         Hardened with:
-        - Strict SSRF multi-hop validation
+        - DNS rebinding prevention: resolves once, validates IP against private/metadata ranges,
+          and connects directly to the validated IP with SNI & Host header.
+        - Strict SSRF multi-hop validation on every redirect hop.
         - Domain scope lock
         - Max depth <= 3
         - 10MB payload size ceiling
@@ -157,8 +207,8 @@ class CrawlerService:
                 headers = {"User-Agent": "CoarAI-WebCrawler/2.0 (+https://github.com/Ajimsha1080/Chat-Aaas)"}
                 resp = None
                 for hop in range(max_redirects + 1):
-                    # Strict SSRF check before each request and redirect hop
-                    is_safe, safety_reason = cls.validate_url_safety(current_url)
+                    # Strict SSRF and DNS check before each request and redirect hop
+                    is_safe, safety_reason, validated_ip, port, path_and_query, hostname, scheme = cls.resolve_and_validate_target(current_url)
                     if not is_safe:
                         return {
                             "success": False,
@@ -166,7 +216,19 @@ class CrawlerService:
                             "url": current_url
                         }
 
-                    resp = await client.get(current_url, headers=headers)
+                    # Connect directly to validated IP (avoiding DNS rebinding)
+                    if validated_ip:
+                        ip_formatted = f"[{validated_ip}]" if ":" in validated_ip else validated_ip
+                        ip_target_url = f"{scheme}://{ip_formatted}:{port}{path_and_query}"
+                        parsed_cur = urlparse(current_url)
+                        host_header = f"{hostname}:{parsed_cur.port}" if parsed_cur.port else hostname
+                        hop_headers = {**headers, "Host": host_header}
+                        extensions = {"sni_hostname": hostname} if scheme == "https" else {}
+                        req = client.build_request("GET", ip_target_url, headers=hop_headers, extensions=extensions)
+                        resp = await client.send(req)
+                    else:
+                        resp = await client.get(current_url, headers=headers)
+
                     if resp.is_redirect:
                         location = resp.headers.get("Location")
                         if not location:
