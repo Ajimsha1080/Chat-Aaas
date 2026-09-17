@@ -91,6 +91,31 @@ class RateLimiter:
         return True
 
     @classmethod
+    def check_chat_rate_limits(
+        cls,
+        company_id: str,
+        session_identifier: Optional[str] = None
+    ) -> bool:
+        """
+        Enforces two-layer defense against cost abuse and runaway loops:
+        1. Per-session rate limit based on tenant subscription plan entitlements.
+        2. Tenant-wide aggregate rate limit to prevent bypass via parallel sessions.
+        """
+        from app.services.payment_service import PaymentService
+        entitlements = PaymentService.get_tenant_entitlements(company_id)
+        session_rpm = entitlements.get("requests_per_minute", 20)
+        tenant_rpm = entitlements.get("tenant_requests_per_minute", session_rpm * 5)
+
+        # 1. Per-session rate limit
+        session_key = f"{company_id}_{session_identifier or 'anon'}"
+        cls.check_rate_limit(session_key, max_requests=session_rpm, window_seconds=60.0)
+
+        # 2. Tenant-level aggregate rate limit
+        tenant_key = f"tenant_{company_id}"
+        cls.check_rate_limit(tenant_key, max_requests=tenant_rpm, window_seconds=60.0)
+        return True
+
+    @classmethod
     def check_auth_rate_limit(cls, client_ip: str) -> bool:
         """Limits authentication attempts (login/signup) to 10 requests per minute per IP."""
         return cls.check_rate_limit(f"auth:{client_ip}", max_requests=10, window_seconds=60.0)

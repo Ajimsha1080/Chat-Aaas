@@ -65,15 +65,17 @@ class UsageService:
         
         # Count tenant conversations in current billing period (calendar month YYYY-MM)
         current_period = billing_period or time.strftime("%Y-%m")
-        tenant_convs = [
-            c for c in db.conversations.values()
-            if c.get("companyId") == company_id
-            and (
-                str(c.get("createdAt", "")).startswith(current_period)
-                or str(c.get("startedAt", "")).startswith(current_period)
-                or (not c.get("createdAt") and not c.get("startedAt"))
-            )
-        ]
+        tenant_convs = []
+        for c in db.conversations.values():
+            if c.get("companyId") != company_id:
+                continue
+            created_ts = c.get("createdAt") or c.get("startedAt")
+            if created_ts:
+                if str(created_ts).startswith(current_period):
+                    tenant_convs.append(c)
+            else:
+                # If timestamp is absent (legacy/unseeded mock), default to current period
+                tenant_convs.append(c)
         used_count = len(tenant_convs)
         
         is_exceeded = used_count >= max_allowed

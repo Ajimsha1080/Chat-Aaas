@@ -77,8 +77,15 @@ def list_all_tenants(
             if e.get("companyId") == cid and e.get("eventType") == "message"
         )
 
+        c_clean = dict(c)
+        raw_key = c_clean.get("apiKey")
+        if raw_key:
+            c_clean["apiKey"] = f"{raw_key[:8]}••••••••{raw_key[-4:]}" if len(raw_key) >= 12 else f"{raw_key[:4]}••••••••"
+        c_clean.pop("apiSecretEncrypted", None)
+        c_clean.pop("api_secret_encrypted", None)
+
         enriched.append({
-            **c,
+            **c_clean,
             "agent": agent or {"name": "Not Provisioned", "status": "draft"},
             "stats": {
                 "totalMessages": msg_count,

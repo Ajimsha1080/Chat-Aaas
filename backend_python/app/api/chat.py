@@ -114,9 +114,9 @@ async def process_chat_message(
                 detail=f"Monthly conversation limit ({quota.get('monthlyLimit')}) exceeded for your active subscription. Please upgrade to continue."
             )
     
-    # 3. Anti-spam & Cost Protection: Max 20 requests/minute per tenant session
-    client_key = f"{company_id}_{req.conversation_id or req.session_id or 'anon'}"
-    RateLimiter.check_rate_limit(client_key, max_requests=20)
+    # 3. Anti-spam & Cost Protection: Plan-based session and tenant-level aggregate rate limits
+    session_id = req.conversation_id or req.session_id or "anon"
+    RateLimiter.check_chat_rate_limits(company_id, session_id)
 
     stored_chunks = db.get_document_chunks_for_tenant(company_id, only_active=True)
 
@@ -191,9 +191,9 @@ async def stream_chat_tokens(
                 detail=f"Monthly conversation limit ({quota.get('monthlyLimit')}) exceeded for your active subscription. Please upgrade to continue."
             )
     
-    # 1. Anti-spam & Cost Protection: Max 20 requests/minute per tenant session
-    client_key = f"{company_id}_{req.conversation_id or req.session_id or 'anon'}"
-    RateLimiter.check_rate_limit(client_key, max_requests=20)
+    # 1. Anti-spam & Cost Protection: Plan-based session and tenant-level aggregate rate limits
+    session_id = req.conversation_id or req.session_id or "anon"
+    RateLimiter.check_chat_rate_limits(company_id, session_id)
 
     stored_chunks = db.get_document_chunks_for_tenant(company_id, only_active=True)
     agent = db.get_agent_for_company(company_id) or {"name": "Coar AI", "model": "gpt-4o-mini"}

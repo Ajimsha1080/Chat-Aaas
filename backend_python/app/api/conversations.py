@@ -48,9 +48,9 @@ def get_conversation(conversation_id: str, ctx: TenantContext = Depends(get_tena
 async def send_message(req: SendMessageRequest, ctx: TenantContext = Depends(get_tenant_context)):
     company_id = ctx.company_id
 
-    # Anti-Spam Rate Limiter
-    client_key = f"{company_id}_{req.conversationId or req.customerEmail or 'anon'}"
-    RateLimiter.check_rate_limit(client_key, max_requests=20)
+    # Anti-Spam & Cost Protection: Plan-based session and tenant-level aggregate rate limits
+    session_id = req.conversationId or req.customerEmail or "anon"
+    RateLimiter.check_chat_rate_limits(company_id, session_id)
 
 
     # Find or create conversation
