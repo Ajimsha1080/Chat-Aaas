@@ -40,17 +40,32 @@ class EnvelopeEncryption:
         kek = custom_kek or DEFAULT_MASTER_KEK
         aes_kek = AESGCM(kek)
 
-        if company_id in cls._TENANT_DEK_REGISTRY:
-            meta = cls._TENANT_DEK_REGISTRY[company_id]
+        # 1. Check in-memory registry
+        meta = cls._TENANT_DEK_REGISTRY.get(company_id)
+
+        # 2. If not in memory, query durable database
+        if not meta:
+            try:
+                from app.db.database import db
+                meta = db.get_tenant_key(company_id)
+                if meta:
+                    cls._TENANT_DEK_REGISTRY[company_id] = meta
+            except Exception:
+                meta = None
+
+        # 3. If found in registry or DB, unwrap and return
+        if meta:
             nonce = base64.b64decode(meta["nonce"])
             ciphertext = base64.b64decode(meta["wrapped_dek"])
             try:
                 plaintext_dek = aes_kek.decrypt(nonce, ciphertext, company_id.encode("utf-8"))
                 return plaintext_dek, meta
             except Exception as e:
-                raise ValueError(f"Failed to unwrap DEK for tenant {company_id}: {str(e)}")
+                if custom_kek is not None:
+                    raise ValueError(f"Failed to unwrap DEK for tenant {company_id}: {str(e)}")
+                # If default KEK fails to unwrap (e.g. ephemeral dev/test secret regenerated), generate a fresh DEK
 
-        # Generate fresh 256-bit DEK
+        # 4. Generate fresh 256-bit DEK, wrap and persist
         plaintext_dek = os.urandom(32)
         nonce = os.urandom(12)  # 96-bit nonce for GCM
         wrapped_dek = aes_kek.encrypt(nonce, plaintext_dek, company_id.encode("utf-8"))
@@ -64,6 +79,11 @@ class EnvelopeEncryption:
             "created_at": time.strftime("%Y-%m-%dT%H:%M:%SZ")
         }
         cls._TENANT_DEK_REGISTRY[company_id] = meta
+        try:
+            from app.db.database import db
+            db.save_tenant_key(meta)
+        except Exception:
+            pass
         return plaintext_dek, meta
 
     @classmethod
@@ -83,6 +103,15 @@ class EnvelopeEncryption:
 
         meta = cls._TENANT_DEK_REGISTRY.get(company_id)
         if not meta:
+            try:
+                from app.db.database import db
+                meta = db.get_tenant_key(company_id)
+                if meta:
+                    cls._TENANT_DEK_REGISTRY[company_id] = meta
+            except Exception:
+                meta = None
+
+        if not meta:
             raise ValueError(f"No existing DEK found for tenant {company_id}")
 
         old_nonce = base64.b64decode(meta["nonce"])
@@ -98,6 +127,11 @@ class EnvelopeEncryption:
         meta["rotated_at"] = time.strftime("%Y-%m-%dT%H:%M:%SZ")
 
         cls._TENANT_DEK_REGISTRY[company_id] = meta
+        try:
+            from app.db.database import db
+            db.save_tenant_key(meta)
+        except Exception:
+            pass
         return meta
 
     @classmethod

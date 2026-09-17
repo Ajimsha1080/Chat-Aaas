@@ -1,3 +1,4 @@
+import json
 import time
 import uuid
 from fastapi import APIRouter, HTTPException, Depends
@@ -6,7 +7,7 @@ from typing import Optional, Dict, Any, List
 from app.db.database import db
 from app.core.tenant import TenantContext, get_tenant_context
 from app.core.permissions import has_permission
-from app.core.security import encrypt_secret
+from app.core.envelope_encryption import EnvelopeEncryption
 
 router = APIRouter(prefix="/integrations", tags=["Integrations & Connectors"])
 
@@ -44,7 +45,8 @@ def connect_integration(req: ConnectIntegrationRequest, ctx: TenantContext = Dep
 
     # Unique connection ID supporting multiple connections per provider
     int_id = f"int-{ctx.company_id}-{req.provider}-{uuid.uuid4().hex[:8]}"
-    encrypted = encrypt_secret(str(req.credentials))
+    raw_creds = json.dumps(req.credentials) if isinstance(req.credentials, dict) else str(req.credentials)
+    encrypted = EnvelopeEncryption.encrypt_for_tenant(company_id=ctx.company_id, plain_data=raw_creds)
 
     record = {
         "id": int_id,

@@ -490,4 +490,13 @@ class HandoffSession(Base):
     )
 
 
+class TenantKeyMetadata(Base):
+    __tablename__ = "tenant_key_metadata"
 
+    company_id = Column(String(64), primary_key=True, index=True)
+    wrapped_dek = Column(Text, nullable=False)
+    nonce = Column(String(64), nullable=False)
+    algorithm = Column(String(50), default="AES-256-GCM", nullable=False)
+    version = Column(Integer, default=1, nullable=False)
+    created_at = Column(String(64), nullable=False)
+    rotated_at = Column(String(64), nullable=True)
