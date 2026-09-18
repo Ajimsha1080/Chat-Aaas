@@ -584,6 +584,7 @@ async def crawl_and_ingest_website(req: IngestWebsiteRequest, ctx: TenantContext
         "data": {
             "success": True,
             "source": new_source,
+            "extractedText": cleaned_content,
             "chunksCreated": len(created_chunk_ids),
             "message": f"Successfully crawled and indexed {len(created_chunk_ids)} semantic chunks from '{req.url}'."
         }

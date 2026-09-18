@@ -271,6 +271,41 @@ export const KnowledgeView: React.FC = () => {
       }
     }
 
+    // If adding a website URL, crawl and extract real HTML content via backend crawler
+    if (modalType === 'url' && formUrl.trim()) {
+      setIngestStep('Connecting to website & extracting HTML text...');
+      try {
+        const crawlRes = await APIClient.crawlUrl(formUrl.trim(), formCategory);
+        if (crawlRes && crawlRes.data) {
+          const extractedText = crawlRes.data.extractedText || crawlRes.data.content || '';
+          const chunksCreated = crawlRes.data.chunksCreated || Math.max(1, Math.ceil((extractedText.length || 1000) / 1000));
+          const finalExtracted = extractedText.trim() || contentToSave;
+
+          addKnowledgeItem({
+            type: 'url',
+            title: formTitle,
+            sourceUrl: formUrl.trim(),
+            fileSize: `${Math.max(1, Math.round(finalExtracted.length / 1024))} KB`,
+            content: finalExtracted,
+            category: formCategory,
+            collectionId: formCollectionId,
+            chunksCount: chunksCreated
+          });
+
+          setIsIngesting(false);
+          setIngestStep('');
+          setIsAddModalOpen(false);
+          setFormTitle('');
+          setFormContent('');
+          setFormUrl('');
+          showToast('Website Crawled & Indexed', `"${formTitle}" indexed with ${chunksCreated} vector chunks.`, 'success');
+          return;
+        }
+      } catch (crawlErr: any) {
+        console.info('Live web crawl fallback to local ingest:', crawlErr);
+      }
+    }
+
     // If uploading a real document file, upload directly via multipart API to parse real PDF / text
     if (modalType === 'document' && selectedFile) {
       setIngestStep('Extracting text and structure with Document AI...');
