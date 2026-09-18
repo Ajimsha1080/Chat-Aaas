@@ -2,6 +2,7 @@ import math
 import re
 from typing import List, Dict, Any, Tuple
 from app.schemas import ChunkSearchResult
+from app.services.embedding_service import EmbeddingService
 
 class RAGEngine:
     @staticmethod
@@ -30,14 +31,8 @@ class RAGEngine:
 
     @staticmethod
     def compute_mock_embedding(text: str, dim: int = 1536) -> List[float]:
-        """Computes a deterministic normalized mock embedding vector for testing/indexing."""
-        import hashlib
-        h = hashlib.sha256(text.lower().encode('utf-8')).hexdigest()
-        raw_vals = [int(h[i:i+4], 16) / 65535.0 for i in range(0, min(len(h), 64), 4)]
-        # Tile or pad to dim
-        extended = (raw_vals * (dim // len(raw_vals) + 1))[:dim]
-        magnitude = math.sqrt(sum(x * x for x in extended))
-        return [x / magnitude for x in extended] if magnitude > 0 else extended
+        """Computes a normalized semantic dense embedding vector."""
+        return EmbeddingService.compute_dense_vector(text, dimensions=dim, normalize=True)
 
     @staticmethod
     def cosine_similarity(vec_a: List[float], vec_b: List[float]) -> float:
@@ -61,9 +56,17 @@ class RAGEngine:
         top_k: int = 3
     ) -> List[ChunkSearchResult]:
         """
-        Retrieves relevant chunks strictly filtered by tenant company_id.
-        Applies stemming, stop-word filtering, and phrase boost.
+        Hybrid Semantic Retrieval Engine:
+        - Dense Vector Cosine Similarity (semantic conceptual matching & paraphrasing).
+        - Lexical BM25/keyword stemming & exact phrase match as precision tiebreaker/boost.
+        - Strict tenant boundary filtering by company_id.
         """
+        if not query or not query.strip():
+            return []
+
+        # 1. Compute dense query embedding vector
+        query_vec = EmbeddingService.compute_dense_vector(query, dimensions=1536, normalize=True)
+
         stop_words = {
             "what", "is", "the", "a", "an", "in", "on", "at", "for", "to", "of", "and", "or",
             "are", "how", "do", "does", "did", "can", "could", "would", "should", "will", "tell", "me",
@@ -95,27 +98,39 @@ class RAGEngine:
             section = chunk.get("sectionHeader") or ""
             full_chunk_text = f"{content} {title} {section}".lower()
 
+            # A. Vector Cosine Similarity
+            chunk_vec = chunk.get("embedding")
+            if not chunk_vec or len(chunk_vec) != 1536:
+                chunk_vec = EmbeddingService.compute_dense_vector(full_chunk_text, dimensions=1536, normalize=True)
+
+            vector_sim = cls.cosine_similarity(query_vec, chunk_vec)
+
+            # B. Lexical Overlap Score
             chunk_raw_words = set(re.findall(r'\w+', full_chunk_text))
             chunk_stemmed_words = {stem(w) for w in chunk_raw_words}
-
             overlap = len(stemmed_query_words.intersection(chunk_stemmed_words))
 
-            if overlap == 0 and not any(w in full_chunk_text for w in stemmed_query_words if len(w) >= 3):
-                relevance = 0.0
-            else:
-                relevance = min(1.0, (overlap / max(1, len(stemmed_query_words))) * 0.8 + 0.2)
-                if any(w in section.lower() or w in title.lower() for w in stemmed_query_words if len(w) >= 3):
-                    relevance = min(1.0, relevance + 0.15)
-                if query.lower().strip() in full_chunk_text:
-                    relevance = 1.0
+            keyword_score = (overlap / max(1, len(stemmed_query_words))) if stemmed_query_words else 0.0
 
-            if relevance >= threshold:
+            # C. Hybrid Fusion Score
+            # If there is strong semantic vector similarity, even without literal keyword match, score remains high
+            hybrid_score = (vector_sim * 0.70) + (keyword_score * 0.30)
+
+            # Context & exact match boosts
+            if any(w in section.lower() or w in title.lower() for w in stemmed_query_words if len(w) >= 3):
+                hybrid_score = min(1.0, hybrid_score + 0.10)
+            if query.lower().strip() in full_chunk_text:
+                hybrid_score = max(hybrid_score, 0.95)
+
+            final_score = min(1.0, max(0.0, hybrid_score))
+
+            if final_score >= threshold:
                 results.append(ChunkSearchResult(
                     chunk_id=chunk.get("id", "chk_1"),
                     knowledge_source_id=chunk.get("knowledgeSourceId") or chunk.get("knowledge_source_id", "src_1"),
                     content=content,
                     title=title,
-                    similarity_score=round(relevance, 3)
+                    similarity_score=round(final_score, 3)
                 ))
 
         results.sort(key=lambda x: x.similarity_score, reverse=True)

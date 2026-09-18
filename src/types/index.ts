@@ -41,11 +41,12 @@ export interface EscalationSettings {
 }
 
 export type ResourceLifecycleState = 'draft' | 'processing' | 'ready' | 'published' | 'disabled' | 'archived' | 'trash' | 'deleted';
-export type KnowledgeProcessingStage = 'uploaded' | 'parsed' | 'chunked' | 'embedded' | 'indexed' | 'failed';
+export type KnowledgeProcessingStage = 'uploaded' | 'parsed' | 'chunked' | 'embedded' | 'indexed' | 'partial' | 'failed';
 
 export interface AgentConfig {
   name: string;
   role?: string;
+  roleTitle?: string;
   goals?: string[];
   status: AgentStatus;
   lifecycleStatus?: ResourceLifecycleState;
@@ -68,7 +69,7 @@ export interface AgentConfig {
 
 export type KnowledgeType = 'url' | 'document' | 'faq' | 'text';
 
-export type IndexingStatus = 'indexed' | 'indexing' | 'pending' | 'failed';
+export type IndexingStatus = 'indexed' | 'indexing' | 'pending' | 'failed' | 'ready' | 'ready_partial';
 
 export interface KnowledgeItem {
   id: string;
@@ -84,6 +85,18 @@ export interface KnowledgeItem {
   deletedAt?: string;
   retentionDays?: number;
   lastIndexedAt?: string;
+  lastCheckedAt?: string;
+  isStale?: boolean;
+  crawlMetadata?: {
+    pagesCrawled?: number;
+    pagesSkipped?: number;
+    pagesFailed?: number;
+    crawledUrls?: string[];
+    skippedUrls?: any[];
+    failedUrls?: any[];
+    contentHash?: string;
+    lastCheckedAt?: string;
+  };
   errorDetails?: string;
   chunksCount: number;
   tokenCount: number;

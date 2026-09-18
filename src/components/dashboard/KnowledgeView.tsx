@@ -746,6 +746,13 @@ export const KnowledgeView: React.FC = () => {
             Stage 4/5: Embedded
           </span>
         );
+      case 'partial':
+        return (
+          <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full bg-amber-50 text-amber-800 border border-amber-300" title="Degraded ingestion: single-chunk fallback was used. Review content or re-crawl.">
+            <AlertTriangle className="w-3 h-3 text-amber-600" />
+            <span>Partial (Review Needed)</span>
+          </span>
+        );
       case 'failed':
         return (
           <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full bg-rose-50 text-rose-700 border border-rose-200">
@@ -1366,11 +1373,27 @@ export const KnowledgeView: React.FC = () => {
                           {cleanPreviewText(item.faqAnswer || item.content)}
                         </p>
 
-                        {/* Processing Stage Indicator */}
-                        <div className="mt-3 pt-2.5 border-t border-slate-100 flex items-center justify-between">
+                        {/* Processing Stage & Multi-Page Crawl Coverage */}
+                        <div className="mt-3 pt-2.5 border-t border-slate-100 flex items-center justify-between gap-2 flex-wrap">
                           <span className="text-[11px] text-slate-500 font-medium">Pipeline:</span>
-                          {renderProcessingBadge(item.processingStage)}
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            {renderProcessingBadge(item.processingStage || (item.status === 'ready_partial' ? 'partial' : 'indexed'))}
+                            {item.crawlMetadata?.pagesCrawled && item.crawlMetadata.pagesCrawled > 1 && (
+                              <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-sky-50 text-sky-800 border border-sky-200" title={`${item.crawlMetadata.pagesCrawled} internal pages crawled (${item.crawlMetadata.pagesSkipped || 0} skipped)`}>
+                                <Globe className="w-2.5 h-2.5 text-sky-600" />
+                                <span>{item.crawlMetadata.pagesCrawled} pages</span>
+                              </span>
+                            )}
+                          </div>
                         </div>
+
+                        {/* Last Checked / Freshness Metadata */}
+                        {item.lastCheckedAt && (
+                          <div className="mt-1.5 flex items-center justify-between text-[10px] text-slate-400 font-mono">
+                            <span>Last sync check:</span>
+                            <span className="text-slate-600 font-medium">{new Date(item.lastCheckedAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
+                          </div>
+                        )}
                       </div>
 
                       {/* Card Footer */}

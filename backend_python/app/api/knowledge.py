@@ -8,6 +8,7 @@ from app.db.database import db
 from app.services.crawler_service import CrawlerService
 from app.services.rag_engine import RAGEngine
 from app.services.document_ai import DocumentAIService
+from app.services.embedding_service import EmbeddingService
 from app.services.storage_service import StorageService
 from app.services.rate_limiter import RateLimiter
 from app.schemas import DocumentProcessRequest
@@ -247,6 +248,7 @@ def reprocess_knowledge_source(source_id: str, ctx: TenantContext = Depends(get_
         doc_res = DocumentAIService.process_document(doc_req)
         for c in doc_res.chunks:
             chk_id = f"chk-{ctx.company_id}-{uuid.uuid4().hex[:8]}"
+            chk_emb = EmbeddingService.compute_dense_vector(c.content, dimensions=1536, normalize=True)
             chk = {
                 "id": chk_id,
                 "knowledgeSourceId": source_id,
@@ -255,6 +257,7 @@ def reprocess_knowledge_source(source_id: str, ctx: TenantContext = Depends(get_
                 "chunkIndex": c.chunk_index,
                 "content": c.content,
                 "tokenCount": c.token_count,
+                "embedding": chk_emb,
                 "sectionHeader": c.section_header or source.get("title", "General"),
                 "metadata": {
                     "title": source.get("title"),
@@ -388,6 +391,7 @@ def ingest_file_document(req: IngestFileRequest, ctx: TenantContext = Depends(ge
     created_chunk_ids = []
     for c in res.chunks:
         chunk_id = f"chk-{ctx.company_id}-{uuid.uuid4().hex[:8]}"
+        chk_emb = EmbeddingService.compute_dense_vector(c.content, dimensions=1536, normalize=True)
         new_chunk = {
             "id": chunk_id,
             "knowledgeSourceId": src_id,
@@ -396,6 +400,7 @@ def ingest_file_document(req: IngestFileRequest, ctx: TenantContext = Depends(ge
             "chunkIndex": c.chunk_index,
             "content": c.content,
             "tokenCount": c.token_count,
+            "embedding": chk_emb,
             "sectionHeader": c.section_header,
             "metadata": {
                 "title": req.title,
@@ -497,6 +502,7 @@ async def upload_real_file_document(
     created_chunk_ids = []
     for c in res.chunks:
         chunk_id = f"chk-{ctx.company_id}-{uuid.uuid4().hex[:8]}"
+        chk_emb = EmbeddingService.compute_dense_vector(c.content, dimensions=1536, normalize=True)
         new_chunk = {
             "id": chunk_id,
             "knowledgeSourceId": src_id,
@@ -505,6 +511,7 @@ async def upload_real_file_document(
             "chunkIndex": c.chunk_index,
             "content": c.content,
             "tokenCount": c.token_count,
+            "embedding": chk_emb,
             "sectionHeader": c.section_header or clean_title,
             "metadata": {
                 "title": clean_title,
@@ -554,9 +561,10 @@ async def crawl_and_ingest_website(req: IngestWebsiteRequest, ctx: TenantContext
     if not safe:
         raise HTTPException(status_code=400, detail=f"SSRF Safety Validation Rejected: {reason}")
 
-    res = await CrawlerService.fetch_and_parse(req.url)
+    max_pages = req.maxPages or 20
+    res = await CrawlerService.crawl_website_multi_page(req.url, max_pages=max_pages, max_depth=2, respect_robots=True)
     if not res.get("success"):
-        raise HTTPException(status_code=400, detail=res.get("error", "Failed to fetch webpage."))
+        raise HTTPException(status_code=400, detail=res.get("error", "Failed to crawl website."))
 
     cleaned_content = res.get("content", "")
     src_id = f"ks-{ctx.company_id}-web-{uuid.uuid4().hex[:6]}"
@@ -566,12 +574,28 @@ async def crawl_and_ingest_website(req: IngestWebsiteRequest, ctx: TenantContext
     doc_req = DocumentProcessRequest(
         title=title,
         raw_text=cleaned_content,
-        doc_type="txt",
+        doc_type="website",
         chunk_size=500,
         chunk_overlap=50
     )
     doc_res = DocumentAIService.process_document(doc_req)
     chunks_to_save = doc_res.chunks if doc_res.chunks else []
+
+    # Detect degraded / partial fallback state
+    is_partial_fallback = len(chunks_to_save) == 0
+    final_status = "ready_partial" if is_partial_fallback else "ready"
+    processing_stage = "partial" if is_partial_fallback else "indexed"
+
+    crawl_meta = {
+        "pagesCrawled": res.get("pagesCrawled", 1),
+        "pagesSkipped": res.get("pagesSkipped", 0),
+        "pagesFailed": res.get("pagesFailed", 0),
+        "crawledUrls": res.get("crawledUrls", [req.url]),
+        "skippedUrls": res.get("skippedUrls", []),
+        "failedUrls": res.get("failedUrls", []),
+        "contentHash": res.get("contentHash", ""),
+        "lastCheckedAt": time.strftime("%Y-%m-%dT%H:%M:%S.000Z", time.gmtime())
+    }
 
     # Create source
     new_source = {
@@ -582,15 +606,17 @@ async def crawl_and_ingest_website(req: IngestWebsiteRequest, ctx: TenantContext
         "sourceType": "website",
         "sourceUrl": req.url,
         "category": req.category or "Website",
-        "status": "ready",
+        "status": final_status,
         "lifecycleState": "active",
-        "processingStage": "indexed",
+        "processingStage": processing_stage,
         "retentionDays": 30,
         "content": cleaned_content,
         "lastIndexedAt": time.strftime("%Y-%m-%dT%H:%M:%S.000Z", time.gmtime()),
+        "lastCheckedAt": time.strftime("%Y-%m-%dT%H:%M:%S.000Z", time.gmtime()),
         "chunkCount": max(1, len(chunks_to_save)),
         "totalChunks": max(1, len(chunks_to_save)),
         "totalTokens": doc_res.total_tokens or (len(cleaned_content) // 4),
+        "crawlMetadata": crawl_meta,
         "lastSyncedAt": time.strftime("%Y-%m-%dT%H:%M:%S.000Z", time.gmtime()),
         "createdAt": time.strftime("%Y-%m-%dT%H:%M:%S.000Z", time.gmtime())
     }
@@ -600,6 +626,7 @@ async def crawl_and_ingest_website(req: IngestWebsiteRequest, ctx: TenantContext
     if chunks_to_save:
         for c in chunks_to_save:
             chk_id = f"chk-{ctx.company_id}-{uuid.uuid4().hex[:8]}"
+            chk_emb = EmbeddingService.compute_dense_vector(c.content, dimensions=1536, normalize=True)
             chk = {
                 "id": chk_id,
                 "knowledgeSourceId": src_id,
@@ -608,6 +635,7 @@ async def crawl_and_ingest_website(req: IngestWebsiteRequest, ctx: TenantContext
                 "chunkIndex": c.chunk_index,
                 "content": c.content,
                 "tokenCount": c.token_count,
+                "embedding": chk_emb,
                 "sectionHeader": c.section_header or title,
                 "metadata": {"title": title, "category": req.category, "url": req.url}
             }
@@ -615,6 +643,7 @@ async def crawl_and_ingest_website(req: IngestWebsiteRequest, ctx: TenantContext
             created_chunk_ids.append(chk_id)
     else:
         chk_id = f"chk-{ctx.company_id}-{uuid.uuid4().hex[:8]}"
+        chk_emb = EmbeddingService.compute_dense_vector(cleaned_content[:1200], dimensions=1536, normalize=True)
         chk = {
             "id": chk_id,
             "knowledgeSourceId": src_id,
@@ -623,6 +652,7 @@ async def crawl_and_ingest_website(req: IngestWebsiteRequest, ctx: TenantContext
             "chunkIndex": 0,
             "content": cleaned_content[:1200],
             "tokenCount": max(1, len(cleaned_content[:1200]) // 4),
+            "embedding": chk_emb,
             "sectionHeader": title,
             "metadata": {"title": title, "category": req.category, "url": req.url}
         }
@@ -637,8 +667,13 @@ async def crawl_and_ingest_website(req: IngestWebsiteRequest, ctx: TenantContext
             "extractedText": cleaned_content,
             "chunksCreated": len(created_chunk_ids),
             "totalChunks": len(created_chunk_ids),
+            "crawlMetadata": crawl_meta,
+            "pagesCrawled": crawl_meta["pagesCrawled"],
+            "pagesSkipped": crawl_meta["pagesSkipped"],
+            "pagesFailed": crawl_meta["pagesFailed"],
+            "crawledUrls": crawl_meta["crawledUrls"],
             "chunks": [c.model_dump() if hasattr(c, "model_dump") else c for c in chunks_to_save],
-            "message": f"Successfully crawled and indexed {len(created_chunk_ids)} semantic chunks from '{req.url}'."
+            "message": f"Successfully crawled {crawl_meta['pagesCrawled']} page(s) and indexed {len(created_chunk_ids)} semantic vector chunks from '{req.url}'."
         }
     }
 
@@ -675,6 +710,7 @@ def create_faq_knowledge(req: IngestFaqRequest, ctx: TenantContext = Depends(get
     db.knowledge_sources[src_id] = new_source
 
     chunk_id = f"chk-{ctx.company_id}-{uuid.uuid4().hex[:8]}"
+    chk_emb = EmbeddingService.compute_dense_vector(content, dimensions=1536, normalize=True)
     new_chunk = {
         "id": chunk_id,
         "knowledgeSourceId": src_id,
@@ -683,6 +719,7 @@ def create_faq_knowledge(req: IngestFaqRequest, ctx: TenantContext = Depends(get
         "chunkIndex": 0,
         "content": content,
         "tokenCount": max(1, len(content) // 4),
+        "embedding": chk_emb,
         "sectionHeader": "FAQ",
         "metadata": {"title": req.question, "category": req.category, "faq": True}
     }

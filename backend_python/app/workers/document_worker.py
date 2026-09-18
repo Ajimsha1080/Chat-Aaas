@@ -137,6 +137,136 @@ class DocumentWorker:
                 iterations += 1
 
     @classmethod
+    async def recrawl_stale_website_sources(cls, force: bool = False, max_age_seconds: int = 86400) -> Dict[str, Any]:
+        """
+        Scans all active website knowledge sources, recrawls their live URLs,
+        diffs content hashes, and conditionally refreshes chunks and embeddings
+        only when content has actually changed.
+        """
+        import hashlib
+        from app.services.crawler_service import CrawlerService
+        from app.services.embedding_service import EmbeddingService
+
+        now = time.time()
+        checked = 0
+        updated = 0
+        unchanged = 0
+        errors = []
+
+        website_sources = [
+            s for s in list(db.knowledge_sources.values())
+            if s.get("sourceType") in ("website", "url") and s.get("lifecycleState") == "active" and s.get("sourceUrl")
+        ]
+
+        for source in website_sources:
+            source_id = source["id"]
+            url = source.get("sourceUrl", "")
+            if not url:
+                continue
+
+            # Check if source is stale based on lastIndexedAt or retentionDays
+            last_indexed_str = source.get("lastIndexedAt", "")
+            last_indexed_time = 0.0
+            if last_indexed_str:
+                try:
+                    # Parse ISO format or timestamp
+                    import datetime
+                    dt = datetime.datetime.fromisoformat(last_indexed_str.replace("Z", "+00:00"))
+                    last_indexed_time = dt.timestamp()
+                except Exception:
+                    last_indexed_time = 0.0
+
+            age_seconds = now - last_indexed_time
+            retention_days = source.get("retentionDays", 30)
+            threshold_seconds = max_age_seconds if not retention_days else min(max_age_seconds, retention_days * 86400)
+
+            if not force and age_seconds < threshold_seconds:
+                continue
+
+            checked += 1
+            try:
+                crawl_res = await CrawlerService.crawl_website_multi_page(url, max_pages=20, max_depth=2, respect_robots=True)
+                if not crawl_res.get("success"):
+                    errors.append({"sourceId": source_id, "url": url, "error": crawl_res.get("error")})
+                    continue
+
+                new_content = crawl_res.get("content", "").strip()
+                new_hash = crawl_res.get("contentHash") or hashlib.sha256(new_content.encode("utf-8")).hexdigest()
+                existing_hash = source.get("contentHash") or hashlib.sha256((source.get("content") or "").encode("utf-8")).hexdigest()
+
+                # Content Diffing: Avoid needless re-embedding if content is unchanged
+                if new_hash == existing_hash and not force:
+                    source["lastCheckedAt"] = time.strftime("%Y-%m-%dT%H:%M:%S.000Z", time.gmtime())
+                    source["isStale"] = False
+                    unchanged += 1
+                    continue
+
+                # Content changed: Chunk and re-embed
+                company_id = source.get("companyId")
+                title = crawl_res.get("title") or source.get("title")
+                doc_req = DocumentProcessRequest(
+                    title=title,
+                    raw_text=new_content,
+                    doc_type="website",
+                    chunk_size=500,
+                    chunk_overlap=50
+                )
+                doc_res = DocumentAIService.process_document(doc_req)
+
+                # Remove old chunks
+                old_chk_ids = [cid for cid, c in db.document_chunks.items() if (c.get("knowledgeSourceId") == source_id or c.get("knowledge_source_id") == source_id)]
+                for cid in old_chk_ids:
+                    del db.document_chunks[cid]
+
+                created_chunk_ids = []
+                for c in doc_res.chunks:
+                    chk_id = f"chk-{company_id}-{uuid.uuid4().hex[:8]}"
+                    chk_emb = EmbeddingService.compute_dense_vector(c.content, dimensions=1536, normalize=True)
+                    chk = {
+                        "id": chk_id,
+                        "knowledgeSourceId": source_id,
+                        "companyId": company_id,
+                        "collectionId": source.get("collectionId"),
+                        "chunkIndex": c.chunk_index,
+                        "content": c.content,
+                        "tokenCount": c.token_count,
+                        "embedding": chk_emb,
+                        "sectionHeader": c.section_header or title,
+                        "metadata": {"title": title, "category": source.get("category"), "url": url}
+                    }
+                    db.document_chunks[chk_id] = chk
+                    created_chunk_ids.append(chk_id)
+
+                source["content"] = new_content
+                source["contentHash"] = new_hash
+                source["chunkCount"] = len(created_chunk_ids)
+                source["totalChunks"] = len(created_chunk_ids)
+                source["totalTokens"] = doc_res.total_tokens
+                source["lastIndexedAt"] = time.strftime("%Y-%m-%dT%H:%M:%S.000Z", time.gmtime())
+                source["lastCheckedAt"] = time.strftime("%Y-%m-%dT%H:%M:%S.000Z", time.gmtime())
+                source["isStale"] = False
+                source["crawlMetadata"] = {
+                    "pagesCrawled": crawl_res.get("pagesCrawled", 1),
+                    "pagesSkipped": crawl_res.get("pagesSkipped", 0),
+                    "pagesFailed": crawl_res.get("pagesFailed", 0),
+                    "crawledUrls": crawl_res.get("crawledUrls", [url]),
+                    "contentHash": new_hash,
+                    "lastCheckedAt": time.strftime("%Y-%m-%dT%H:%M:%S.000Z", time.gmtime())
+                }
+                updated += 1
+            except Exception as e:
+                errors.append({"sourceId": source_id, "url": url, "error": str(e)})
+
+        db.save_state()
+        return {
+            "checked": checked,
+            "updated": updated,
+            "unchanged": unchanged,
+            "errors": errors
+        }
+
+    @classmethod
     def stop_worker(cls):
         """Signals the background loop to stop gracefully."""
         cls._running = False
+

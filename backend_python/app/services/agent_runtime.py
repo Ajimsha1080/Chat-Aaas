@@ -176,7 +176,7 @@ class AgentRuntime:
         # 4. RAG Knowledge Search
         reasoning_steps.append(ReasoningStep(
             stage="RAG Knowledge Retrieval",
-            detail=f"Querying vector embeddings isolated strictly for tenant '{company_id}'.",
+            detail=f"Querying hybrid vector embeddings and semantic cosine similarity isolated strictly for tenant '{company_id}'.",
             timestamp=now_str
         ))
         chunks = RAGEngine.search_chunks(user_msg, company_id, stored_chunks, threshold=0.30)

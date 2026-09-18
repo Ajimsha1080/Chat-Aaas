@@ -311,6 +311,7 @@ class CrawlerService:
                     "success": True,
                     "title": page_title,
                     "content": cleaned_text,
+                    "rawHtml": raw_html,
                     "url": current_url,
                     "rawLength": len(raw_html),
                     "textLength": len(cleaned_text),
@@ -322,5 +323,225 @@ class CrawlerService:
                 "error": f"Failed to fetch content from {current_url}: {str(e)}",
                 "url": current_url
             }
+
+    @classmethod
+    def extract_internal_links(cls, raw_html: str, base_url: str, root_url: str) -> List[str]:
+        """Extracts and normalizes all same-origin internal links from HTML."""
+        import re
+        from urllib.parse import urljoin, urlparse, urldefrag
+        links: List[str] = []
+        # Match href attributes in <a> tags
+        raw_hrefs = re.findall(r'<a\b[^>]*?\bhref=["\']([^"\'>\s]+)["\']', raw_html, re.IGNORECASE)
+        ignored_extensions = (
+            '.png', '.jpg', '.jpeg', '.gif', '.svg', '.webp', '.ico',
+            '.css', '.js', '.json', '.xml', '.pdf', '.zip', '.tar', '.gz',
+            '.mp4', '.mp3', '.wav', '.avi', '.mov', '.woff', '.woff2', '.ttf', '.eot'
+        )
+
+        for href in raw_hrefs:
+            href_clean = href.strip()
+            if not href_clean or href_clean.startswith(('javascript:', 'mailto:', 'tel:', 'data:', '#')):
+                continue
+            full_url = urljoin(base_url, href_clean)
+            defragged, _ = urldefrag(full_url)
+            parsed = urlparse(defragged)
+            if parsed.scheme not in ('http', 'https') or not parsed.hostname:
+                continue
+            path_lower = parsed.path.lower()
+            if any(path_lower.endswith(ext) for ext in ignored_extensions):
+                continue
+            if cls.validate_domain_scope(root_url, defragged) and defragged not in links:
+                links.append(defragged)
+
+        return links
+
+    @classmethod
+    async def fetch_sitemap_urls(cls, root_url: str, max_urls: int = 50) -> List[str]:
+        """Attempts to discover and parse sitemap.xml for target domain."""
+        import re
+        from urllib.parse import urlparse
+        parsed = urlparse(root_url)
+        sitemap_url = f"{parsed.scheme}://{parsed.netloc}/sitemap.xml"
+        is_safe, _ = cls.validate_url_safety(sitemap_url)
+        if not is_safe:
+            return []
+
+        try:
+            res = await cls.fetch_and_parse(sitemap_url, root_url=root_url, depth=1)
+            if not res.get("success") or not res.get("rawHtml"):
+                return []
+            raw_xml = res.get("rawHtml", "")
+            locs = re.findall(r'<loc>(https?://[^<\s]+)</loc>', raw_xml, re.IGNORECASE)
+            valid_locs = []
+            for loc in locs:
+                if cls.validate_domain_scope(root_url, loc) and loc not in valid_locs:
+                    valid_locs.append(loc)
+                    if len(valid_locs) >= max_urls:
+                        break
+            return valid_locs
+        except Exception:
+            return []
+
+    @classmethod
+    async def crawl_website_multi_page(
+        cls,
+        root_url: str,
+        max_pages: int = 20,
+        max_depth: int = 2,
+        respect_robots: bool = True
+    ) -> dict:
+        """
+        Executes bounded, secure, multi-page crawling across internal site pages.
+        - Checks /sitemap.xml and extracts same-origin <a> links.
+        - Validates SSRF safety per page individually.
+        - Enforces domain scope lock and robots.txt disallow rules.
+        - Aggregates multi-page content into a comprehensive structured knowledge source.
+        """
+        import hashlib
+        from collections import deque
+
+        url_clean = root_url.strip()
+        if "://" not in url_clean:
+            url_clean = f"https://{url_clean}"
+
+        is_safe, reason = cls.validate_url_safety(url_clean)
+        if not is_safe:
+            return {
+                "success": False,
+                "error": f"Root URL SSRF Safety Validation Failed: {reason}",
+                "url": url_clean,
+                "pagesCrawled": 0,
+                "pagesSkipped": 0,
+                "pagesFailed": 1
+            }
+
+        bounded_max_pages = max(1, min(max_pages, 50))
+        bounded_max_depth = max(1, min(max_depth, 3))
+
+        # Check robots.txt
+        disallowed_rules: List[str] = []
+        if respect_robots:
+            try:
+                from urllib.parse import urlparse
+                parsed_root = urlparse(url_clean)
+                robots_url = f"{parsed_root.scheme}://{parsed_root.netloc}/robots.txt"
+                if cls.validate_url_safety(robots_url)[0]:
+                    robots_res = await cls.fetch_and_parse(robots_url, root_url=url_clean, depth=1)
+                    if robots_res.get("success") and robots_res.get("rawHtml"):
+                        disallowed_rules = cls.parse_robots_txt_rules(robots_res.get("rawHtml", ""))
+            except Exception:
+                pass
+
+        # Discovered sitemap URLs
+        sitemap_urls = await cls.fetch_sitemap_urls(url_clean, max_urls=bounded_max_pages)
+
+        # BFS Frontier
+        queue: deque = deque([(url_clean, 0)])
+        for sm_url in sitemap_urls:
+            if sm_url != url_clean:
+                queue.append((sm_url, 1))
+
+        visited = set()
+        pages_crawled = []
+        pages_skipped = []
+        pages_failed = []
+
+        while queue and len(pages_crawled) < bounded_max_pages:
+            current_target, current_depth = queue.popleft()
+            if current_target in visited:
+                continue
+            visited.add(current_target)
+
+            if current_depth > bounded_max_depth:
+                pages_skipped.append({"url": current_target, "reason": "Exceeded max depth"})
+                continue
+
+            # Per-page SSRF validation
+            page_safe, page_reason = cls.validate_url_safety(current_target)
+            if not page_safe:
+                pages_skipped.append({"url": current_target, "reason": f"SSRF Blocked: {page_reason}"})
+                continue
+
+            # Domain scope validation
+            if not cls.validate_domain_scope(url_clean, current_target):
+                pages_skipped.append({"url": current_target, "reason": "Outside root domain scope"})
+                continue
+
+            # Robots.txt validation
+            if respect_robots and disallowed_rules:
+                from urllib.parse import urlparse
+                target_path = urlparse(current_target).path or "/"
+                if not cls.is_path_allowed_by_robots(target_path, disallowed_rules):
+                    pages_skipped.append({"url": current_target, "reason": "Disallowed by robots.txt"})
+                    continue
+
+            # Fetch page
+            fetch_res = await cls.fetch_and_parse(current_target, root_url=url_clean, depth=current_depth)
+            if not fetch_res.get("success"):
+                pages_failed.append({"url": current_target, "reason": fetch_res.get("error", "Fetch failed")})
+                continue
+
+            page_content = fetch_res.get("content", "").strip()
+            page_title = fetch_res.get("title") or current_target
+            raw_html = fetch_res.get("rawHtml", "")
+
+            if page_content:
+                pages_crawled.append({
+                    "url": current_target,
+                    "title": page_title,
+                    "content": page_content,
+                    "rawLength": fetch_res.get("rawLength", 0),
+                    "textLength": len(page_content),
+                    "depth": current_depth
+                })
+
+            # Extract internal links for next depth hop
+            if current_depth < bounded_max_depth and raw_html:
+                internal_links = cls.extract_internal_links(raw_html, base_url=current_target, root_url=url_clean)
+                for link in internal_links:
+                    if link not in visited and (link, current_depth + 1) not in queue:
+                        queue.append((link, current_depth + 1))
+
+        if not pages_crawled:
+            return {
+                "success": False,
+                "error": "No accessible pages could be crawled from the target website.",
+                "url": url_clean,
+                "pagesCrawled": 0,
+                "pagesSkipped": len(pages_skipped),
+                "pagesFailed": len(pages_failed),
+                "skippedUrls": pages_skipped,
+                "failedUrls": pages_failed
+            }
+
+        # Aggregate content with clear section demarcations
+        aggregated_sections = []
+        for p in pages_crawled:
+            aggregated_sections.append(
+                f"# {p['title']}\n"
+                f"Page URL: {p['url']}\n\n"
+                f"{p['content']}"
+            )
+        aggregated_content = "\n\n---\n\n".join(aggregated_sections)
+        content_hash = hashlib.sha256(aggregated_content.encode("utf-8")).hexdigest()
+
+        main_title = pages_crawled[0]["title"] if pages_crawled else url_clean
+
+        return {
+            "success": True,
+            "title": main_title,
+            "content": aggregated_content,
+            "url": url_clean,
+            "pagesCrawled": len(pages_crawled),
+            "pagesSkipped": len(pages_skipped),
+            "pagesFailed": len(pages_failed),
+            "crawledUrls": [p["url"] for p in pages_crawled],
+            "skippedUrls": pages_skipped,
+            "failedUrls": pages_failed,
+            "pages": pages_crawled,
+            "contentHash": content_hash,
+            "rawLength": sum(p.get("rawLength", 0) for p in pages_crawled),
+            "textLength": len(aggregated_content)
+        }
 
 
