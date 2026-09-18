@@ -269,21 +269,27 @@ export class AIAgentEngine {
     const matchedDocs: { item: KnowledgeItem; score: number }[] = [];
 
     for (const item of knowledgeItems) {
-      if (item.status !== 'indexed') continue;
-      const combinedText = `${item.title} ${item.content} ${item.faqAnswer || ''} ${item.category || ''}`.toLowerCase();
+      if (item.lifecycleState === 'trash' || item.lifecycleState === 'disabled') continue;
+      if (item.status === 'failed') continue;
+      
+      const combinedText = `${item.title} ${item.content || ''} ${item.faqAnswer || ''} ${item.category || ''} ${item.sourceUrl || ''}`.toLowerCase();
       let matchCount = 0;
       for (const word of targetWords) {
-        if (combinedText.includes(word)) {
+        const wLower = word.toLowerCase();
+        if (
+          combinedText.includes(wLower) ||
+          (wLower.length >= 3 && combinedText.split(/\s+/).some(t => t.startsWith(wLower) || wLower.startsWith(t)))
+        ) {
           matchCount++;
         }
       }
 
-      // Require at least one meaningful keyword match
+      // Require at least one meaningful keyword match or substring
       if (matchCount === 0 && !combinedText.includes(qLower)) continue;
 
       const score = targetWords.length > 0 ? (matchCount / targetWords.length) : 0;
-      if (score >= 0.35 || combinedText.includes(qLower)) {
-        matchedDocs.push({ item, score });
+      if (score >= 0.25 || matchCount > 0 || combinedText.includes(qLower)) {
+        matchedDocs.push({ item, score: Math.max(score, 0.6) });
       }
     }
 
