@@ -4,16 +4,32 @@ import hashlib
 from typing import List, Set
 from app.schemas import EmbeddingRequest, EmbeddingItem, EmbeddingResponse
 
-# Common semantic synonyms / conceptual clusters for dense semantic alignment
-SEMANTIC_CLUSTERS = [
-    {"price", "cost", "pricing", "rate", "rates", "charge", "charges", "fee", "fees", "billing", "payment", "tier", "plan", "subscription", "quote", "amount", "usd", "inr", "euro", "dollar"},
-    {"return", "refund", "returns", "refunds", "cancel", "cancellation", "reimbursement", "policy", "guarantee", "warranty", "exchange", "moneyback"},
-    {"support", "help", "contact", "reach", "email", "phone", "ticket", "assistance", "service", "hotline", "agent", "representative"},
-    {"security", "auth", "authentication", "login", "password", "oauth", "sso", "rbac", "permissions", "encryption", "privacy", "compliance", "gdpr", "hipaa", "soc2"},
-    {"deploy", "deployment", "install", "installation", "setup", "configure", "configuration", "integrate", "integration", "webhook", "api", "sdk", "endpoint"},
-    {"speed", "latency", "performance", "throughput", "uptime", "sla", "reliability", "scale", "scaling", "concurrency", "rate-limit", "quota"},
-    {"agent", "bot", "assistant", "ai", "llm", "chat", "copilot", "prompt", "persona", "customization", "grounding", "rag"},
-    {"document", "knowledge", "file", "pdf", "source", "chunks", "crawl", "website", "faq", "database", "vector", "ingestion"}
+# Multi-Industry Semantic Association Basins for Universal Dense Alignment
+UNIVERSAL_SEMANTIC_BASINS = [
+    # Pricing & Finance
+    {"price", "cost", "pricing", "rate", "rates", "charge", "charges", "fee", "fees", "billing", "payment", "tier", "plan", "subscription", "quote", "amount", "usd", "inr", "euro", "dollar", "expensive", "cheap", "afford", "invoice"},
+    # Returns & Guarantees
+    {"return", "refund", "returns", "refunds", "cancel", "cancellation", "reimbursement", "policy", "guarantee", "warranty", "exchange", "moneyback", "compensation"},
+    # Customer Support & Contact
+    {"support", "help", "contact", "reach", "email", "phone", "ticket", "assistance", "service", "hotline", "agent", "representative", "inquiry", "guidance"},
+    # Security & Access
+    {"security", "auth", "authentication", "login", "password", "oauth", "sso", "rbac", "permissions", "encryption", "privacy", "compliance", "gdpr", "hipaa", "soc2", "vulnerability", "audit"},
+    # Software & DevOps
+    {"deploy", "deployment", "install", "installation", "setup", "configure", "configuration", "integrate", "integration", "webhook", "api", "sdk", "endpoint", "server", "cloud", "database"},
+    # Performance & Reliability
+    {"speed", "latency", "performance", "throughput", "uptime", "sla", "reliability", "scale", "scaling", "concurrency", "rate-limit", "quota", "fast", "slow", "delay", "load"},
+    # AI & Agents
+    {"agent", "bot", "assistant", "ai", "llm", "chat", "copilot", "prompt", "persona", "customization", "grounding", "rag", "intelligence", "model", "token"},
+    # Knowledge & Documents
+    {"document", "knowledge", "file", "pdf", "source", "chunks", "crawl", "website", "faq", "database", "vector", "ingestion", "manual", "guide", "article"},
+    # Food, Bakery & Culinary (E.g. Hospitality / Bakery / Restaurant)
+    {"fresh", "freshness", "freshly", "bake", "baked", "bakes", "baking", "bakery", "baker", "bread", "loaf", "loaves", "dough", "oven", "daily", "morning", "pastry", "flour", "yeast", "croissant", "artisan", "artisanal", "frozen", "freeze", "ingredient", "recipe", "delicious", "warm"},
+    # Health, Wellness & Medical
+    {"health", "medical", "doctor", "physician", "clinic", "hospital", "patient", "treatment", "medicine", "prescription", "symptom", "therapy", "dosage", "cure", "diagnosis", "nurse"},
+    # Retail, Commerce & Shipping
+    {"order", "shipping", "delivery", "track", "tracking", "package", "warehouse", "inventory", "stock", "cart", "checkout", "dispatch", "courier", "arrival", "transit"},
+    # Hospitality & Travel
+    {"hotel", "room", "reservation", "booking", "checkin", "checkout", "suite", "amenities", "travel", "flight", "guest", "stay", "accommodation", "resort", "lodge"}
 ]
 
 class EmbeddingService:
@@ -21,8 +37,8 @@ class EmbeddingService:
     def generate_embeddings(request: EmbeddingRequest) -> EmbeddingResponse:
         """
         Generates dense vector embeddings for input text chunks.
-        Uses a semantic subword and concept-aligned random projection encoder (1536 dimensions),
-        producing high cosine similarity for paraphrased semantics and low similarity for unrelated topics.
+        Uses a semantic subword, stemming, and multi-industry concept projection encoder (1536 dimensions),
+        producing high cosine similarity for paraphrased semantics across arbitrary tenant industries.
         """
         items: List[EmbeddingItem] = []
         total_tokens = 0
@@ -48,10 +64,24 @@ class EmbeddingService:
         )
 
     @staticmethod
+    def _stem_word(word: str) -> str:
+        """Universal suffix stripping for English morphological invariance."""
+        w = word.lower()
+        suffixes = (
+            "ing", "ments", "ment", "tions", "tion", "ness", "able", "ible", "fully",
+            "ful", "less", "ated", "ate", "ized", "ize", "ised", "ise", "al", "ive",
+            "ity", "ous", "ies", "ed", "es", "ly", "er", "est", "s"
+        )
+        for s in suffixes:
+            if w.endswith(s) and len(w) - len(s) >= 3:
+                return w[:-len(s)]
+        return w
+
+    @staticmethod
     def compute_dense_vector(text: str, dimensions: int = 1536, normalize: bool = True) -> List[float]:
         """
         Computes a normalized dense vector for text using subword n-grams,
-        semantic concept cluster projections, and signed feature hashing.
+        morphological stemming, cross-industry concept basins, and signed hyper-plane projections.
         """
         if not text or not text.strip():
             return [0.0] * dimensions
@@ -72,28 +102,39 @@ class EmbeddingService:
                 mag = (h_bytes[k+3] / 255.0) * weight
                 vec[slot] += sign * mag
 
-        # 1. Word-level features & stems
+        # 1. Word-level features & morphological root stems
+        stemmed_words: List[str] = []
         for w in words:
             hash_feature(f"w:{w}", weight=1.5)
-            # Character n-grams (3-grams and 4-grams for morphological / typo invariance)
+            stem = EmbeddingService._stem_word(w)
+            stemmed_words.append(stem)
+            if stem != w:
+                hash_feature(f"stem:{stem}", weight=1.8)
+
+            # Character n-grams (3-grams, 4-grams for subword similarity)
             if len(w) >= 3:
                 for n in range(3, min(5, len(w) + 1)):
                     for i in range(len(w) - n + 1):
                         ngram = w[i:i+n]
                         hash_feature(f"ng:{ngram}", weight=0.6)
 
-        # 2. Semantic Cluster Projection (Paraphrasing / Synonym match)
-        word_set: Set[str] = set(words)
-        for cluster_idx, cluster in enumerate(SEMANTIC_CLUSTERS):
-            overlap = word_set.intersection(cluster)
+        # 2. Universal Semantic Concept Projection across arbitrary industries
+        word_set: Set[str] = set(words).union(set(stemmed_words))
+        for basin_idx, basin in enumerate(UNIVERSAL_SEMANTIC_BASINS):
+            # Also stem the basin words
+            basin_stemmed = {EmbeddingService._stem_word(bw) for bw in basin}.union(basin)
+            overlap = word_set.intersection(basin_stemmed)
             if overlap:
-                cluster_weight = 3.0 * len(overlap)
-                hash_feature(f"cluster:{cluster_idx}", weight=cluster_weight)
+                basin_weight = 3.5 * len(overlap)
+                hash_feature(f"basin:{basin_idx}", weight=basin_weight)
 
-        # 3. Whole phrase global semantic context
+        # 3. Local n-gram phrase context
         for i in range(len(words) - 1):
             bigram = f"{words[i]}_{words[i+1]}"
             hash_feature(f"bi:{bigram}", weight=1.2)
+            stemmed_bigram = f"{stemmed_words[i]}_{stemmed_words[i+1]}"
+            if stemmed_bigram != bigram:
+                hash_feature(f"bi_stem:{stemmed_bigram}", weight=1.4)
 
         # 4. Normalize to unit hypersphere for fast cosine similarity
         if normalize:
@@ -104,4 +145,5 @@ class EmbeddingService:
                 vec = [0.0] * dimensions
 
         return [round(x, 6) for x in vec]
+
 

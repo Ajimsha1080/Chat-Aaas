@@ -266,6 +266,30 @@ class DocumentWorker:
         }
 
     @classmethod
+    async def run_recrawl_scheduler_loop(cls, poll_interval: float = 60.0, max_iterations: Optional[int] = None):
+        """
+        Periodic scheduler loop that inspects stale website knowledge sources and
+        executes automated background re-crawling and content diffing.
+        """
+        cls._running = True
+        iterations = 0
+        while cls._running:
+            if max_iterations is not None and iterations >= max_iterations:
+                break
+            try:
+                await cls.recrawl_stale_website_sources(force=False)
+            except Exception as exc:
+                print(f"[DocumentWorker] Background recrawl scheduler notice: {exc}")
+
+            iterations += 1
+            # Sleep in short slices so stop_worker is responsive
+            slice_time = 0.5
+            elapsed = 0.0
+            while cls._running and elapsed < poll_interval:
+                await asyncio.sleep(slice_time)
+                elapsed += slice_time
+
+    @classmethod
     def stop_worker(cls):
         """Signals the background loop to stop gracefully."""
         cls._running = False

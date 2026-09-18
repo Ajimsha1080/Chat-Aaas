@@ -454,14 +454,17 @@ async def upload_real_file_document(
     filename = file.filename or "uploaded_document.pdf"
     clean_title = title or filename.rsplit('.', 1)[0].replace('_', ' ').replace('-', ' ').title()
 
-    # Real text extraction from binary (PDF / text)
-    extracted_text = DocumentAIService.extract_text_from_file_bytes(content_bytes, filename)
-    if not extracted_text:
-        extracted_text = f"Verified enterprise document {filename} ({len(content_bytes)} bytes)."
+    # Real text extraction from binary (PDF / DOCX / text)
+    try:
+        extracted_text = DocumentAIService.extract_text_from_file_bytes(content_bytes, filename)
+    except ValueError as ve:
+        raise HTTPException(status_code=400, detail=str(ve))
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"File extraction failure: {str(e)}")
 
     doc_type = filename.rsplit('.', 1)[-1].lower() if '.' in filename else 'pdf'
-    if doc_type not in ["pdf", "docx", "txt", "faq", "url", "markdown"]:
-        doc_type = "pdf"
+    if doc_type not in ["pdf", "docx", "txt", "faq", "url", "markdown", "file", "document", "website"]:
+        doc_type = "document"
 
     # Semantic Chunking
     doc_req = DocumentProcessRequest(

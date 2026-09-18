@@ -144,28 +144,99 @@ class DocumentAIService:
     @staticmethod
     def extract_text_from_file_bytes(content_bytes: bytes, filename: str) -> str:
         """
-        Extracts raw textual content from uploaded PDF, TXT, MD, CSV, JSON files.
+        Extracts raw textual content from uploaded PDF, DOCX, TXT, MD, CSV, JSON, HTML files.
+        Raises an explicit ValueError for binary format failures instead of silently falling back to UTF-8 noise.
         """
         import io
+        if not content_bytes:
+            raise ValueError(f"Uploaded file '{filename}' is empty.")
+
         ext = filename.split('.')[-1].lower() if '.' in filename else 'txt'
 
         if ext == 'pdf':
+            # Check for PDF header signature
+            if not content_bytes.startswith(b'%PDF-'):
+                raise ValueError(f"Invalid PDF file '{filename}': Missing '%PDF-' header signature.")
             try:
                 import pypdf
                 reader = pypdf.PdfReader(io.BytesIO(content_bytes))
-                extracted_pages = []
+                extracted_pages: List[str] = []
                 for i, page in enumerate(reader.pages):
-                    page_text = page.extract_text()
-                    if page_text and page_text.strip():
-                        extracted_pages.append(f"## Page {i + 1}\n{page_text.strip()}")
-                if extracted_pages:
-                    return "\n\n".join(extracted_pages)
-            except Exception as e:
-                print(f"[DocumentAIService] PDF extraction fallback: {e}")
+                    page_text = page.extract_text() or ""
+                    clean_page = page_text.strip()
+                    if clean_page:
+                        extracted_pages.append(f"## Page {i + 1}\n{clean_page}")
 
-        # Fallback to UTF-8 decoding
-        try:
-            return content_bytes.decode('utf-8', errors='ignore').strip()
-        except Exception:
-            return ""
+                if not extracted_pages:
+                    raise ValueError(f"PDF extraction failed for '{filename}': No extractable text found in document.")
+
+                full_pdf_text = "\n\n".join(extracted_pages)
+                # Verify that extracted text is not predominantly non-printable binary garbage
+                printable_chars = sum(1 for c in full_pdf_text if c.isprintable() or c in '\n\r\t ')
+                if printable_chars / max(1, len(full_pdf_text)) < 0.80 or full_pdf_text.startswith('%PDF-'):
+                    raise ValueError(f"PDF extraction failed for '{filename}': Extracted stream contains corrupted or unreadable binary noise.")
+
+                return full_pdf_text
+            except ValueError:
+                raise
+            except Exception as e:
+                raise ValueError(f"PDF parsing error for '{filename}': {str(e)}")
+
+        elif ext in ('docx', 'doc'):
+            try:
+                import docx
+                doc = docx.Document(io.BytesIO(content_bytes))
+                doc_lines: List[str] = []
+
+                # Extract paragraphs
+                for p in doc.paragraphs:
+                    p_text = p.text.strip()
+                    if p_text:
+                        # Convert Heading styles to markdown headings
+                        if p.style and p.style.name.startswith('Heading'):
+                            doc_lines.append(f"## {p_text}")
+                        else:
+                            doc_lines.append(p_text)
+
+                # Extract tables
+                for table in doc.tables:
+                    for row in table.rows:
+                        row_cells = [cell.text.strip() for cell in row.cells if cell.text.strip()]
+                        if row_cells:
+                            doc_lines.append(" | ".join(row_cells))
+
+                if not doc_lines:
+                    raise ValueError(f"DOCX extraction failed for '{filename}': Document contains no extractable text.")
+
+                full_docx_text = "\n\n".join(doc_lines)
+                printable_chars = sum(1 for c in full_docx_text if c.isprintable() or c in '\n\r\t ')
+                if printable_chars / max(1, len(full_docx_text)) < 0.80:
+                    raise ValueError(f"DOCX extraction failed for '{filename}': Extracted content contains corrupted binary noise.")
+
+                return full_docx_text
+            except ValueError:
+                raise
+            except Exception as e:
+                raise ValueError(f"DOCX parsing error for '{filename}': {str(e)}")
+
+        elif ext in ('txt', 'md', 'markdown', 'csv', 'json', 'html', 'xml', 'log', 'yaml', 'yml', 'rtf'):
+            try:
+                text = content_bytes.decode('utf-8')
+            except UnicodeDecodeError:
+                try:
+                    text = content_bytes.decode('latin-1')
+                except Exception as e:
+                    raise ValueError(f"Text decoding failed for '{filename}': {str(e)}")
+
+            printable_chars = sum(1 for c in text if c.isprintable() or c in '\n\r\t ')
+            if printable_chars / max(1, len(text)) < 0.80:
+                raise ValueError(f"File '{filename}' appears to be an unreadable binary format.")
+
+            return text.strip()
+
+        else:
+            raise ValueError(
+                f"Unsupported file format '.{ext}' for file '{filename}'. Supported formats: PDF, DOCX, TXT, MD, CSV, JSON, HTML."
+            )
+
 
