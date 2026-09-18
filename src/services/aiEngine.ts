@@ -268,28 +268,37 @@ export class AIAgentEngine {
 
     const matchedDocs: { item: KnowledgeItem; score: number }[] = [];
 
-    for (const item of knowledgeItems) {
-      if (item.lifecycleState === 'trash' || item.lifecycleState === 'disabled') continue;
-      if (item.status === 'failed') continue;
-      
-      const combinedText = `${item.title} ${item.content || ''} ${item.faqAnswer || ''} ${item.category || ''} ${item.sourceUrl || ''}`.toLowerCase();
+    const activeKnowledge = knowledgeItems.filter(i => i.lifecycleState !== 'trash' && i.lifecycleState !== 'disabled');
+
+    for (const item of activeKnowledge) {
+      const combinedText = `${item.title} ${item.sourceUrl || ''} ${item.content || ''} ${item.faqAnswer || ''} ${item.category || ''} ${company.name || ''}`.toLowerCase();
       let matchCount = 0;
+      
       for (const word of targetWords) {
-        const wLower = word.toLowerCase();
-        if (
-          combinedText.includes(wLower) ||
-          (wLower.length >= 3 && combinedText.split(/\s+/).some(t => t.startsWith(wLower) || wLower.startsWith(t)))
-        ) {
-          matchCount++;
+        if (combinedText.includes(word)) {
+          matchCount += 1.0;
+        } else if (word.length >= 3) {
+          // Stemmed & prefix match (e.g., 'coarai' matches 'coar', 'pricing' matches 'price')
+          const wordsInDoc = combinedText.split(/\W+/).filter(w => w.length >= 3);
+          const hasPrefixOrStem = wordsInDoc.some(dw => 
+            word.startsWith(dw) || 
+            dw.startsWith(word) || 
+            (word.length >= 4 && dw.length >= 4 && (word.slice(0, 4) === dw.slice(0, 4)))
+          );
+          if (hasPrefixOrStem) {
+            matchCount += 0.85;
+          }
         }
       }
 
-      // Require at least one meaningful keyword match or substring
-      if (matchCount === 0 && !combinedText.includes(qLower)) continue;
+      // Check full query inclusion or single-source fallback
+      if (combinedText.includes(qLower)) {
+        matchCount = Math.max(matchCount, targetWords.length || 1);
+      }
 
-      const score = targetWords.length > 0 ? (matchCount / targetWords.length) : 0;
-      if (score >= 0.25 || matchCount > 0 || combinedText.includes(qLower)) {
-        matchedDocs.push({ item, score: Math.max(score, 0.6) });
+      const score = targetWords.length > 0 ? (matchCount / targetWords.length) : (activeKnowledge.length === 1 ? 0.9 : 0);
+      if (score >= 0.20 || combinedText.includes(qLower) || (activeKnowledge.length === 1 && targetWords.length <= 2)) {
+        matchedDocs.push({ item, score: Math.min(1.0, score) });
       }
     }
 

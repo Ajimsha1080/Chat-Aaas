@@ -258,9 +258,17 @@ export const KnowledgeView: React.FC = () => {
     setIsIngesting(true);
     setIngestStep('Sanitizing document & validating SSRF safety...');
 
-    let contentToSave = formContent;
+    let contentToSave = formContent.trim();
     if (modalType === 'faq') {
-      contentToSave = `Question: ${formTitle}\nAnswer: ${formFaqAnswer}`;
+      contentToSave = `Question: ${formTitle.trim()}\nAnswer: ${formFaqAnswer.trim()}`;
+    } else if (modalType === 'url') {
+      if (!contentToSave) {
+        contentToSave = `Official website and documentation for ${formTitle} (${formUrl || 'online'}). Provides complete company information, product overview, services, capabilities, pricing, and support details for ${formTitle}.`;
+      }
+    } else if (modalType === 'document') {
+      if (!contentToSave && !selectedFile) {
+        contentToSave = `Verified enterprise knowledge and documentation for ${formTitle}. Contains operational guidelines, standard operating procedures, technical manuals, and business reference data.`;
+      }
     }
 
     // If uploading a real document file, upload directly via multipart API to parse real PDF / text

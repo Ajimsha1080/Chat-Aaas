@@ -35,9 +35,19 @@ BLOCKED_HOSTNAMES = {
 }
 
 class CrawlerService:
-    @staticmethod
-    def is_ip_blocked(ip_obj: Union[ipaddress.IPv4Address, ipaddress.IPv6Address]) -> bool:
+    @classmethod
+    def is_ip_blocked(cls, ip_obj: Union[ipaddress.IPv4Address, ipaddress.IPv6Address]) -> bool:
         """Checks if an IP address belongs to private, loopback, link-local, or cloud metadata ranges."""
+        # Handle IPv4-mapped IPv6 (::ffff:x.x.x.x)
+        if isinstance(ip_obj, ipaddress.IPv6Address) and ip_obj.ipv4_mapped:
+            return cls.is_ip_blocked(ip_obj.ipv4_mapped)
+
+        # Handle NAT64 Well-Known Prefix (64:ff9b::/96) and Local NAT64 (64:ff9b:1::/48)
+        if isinstance(ip_obj, ipaddress.IPv6Address):
+            if ip_obj in ipaddress.ip_network("64:ff9b::/96") or ip_obj in ipaddress.ip_network("64:ff9b:1::/48"):
+                embedded_ipv4 = ipaddress.IPv4Address(ip_obj.packed[-4:])
+                return cls.is_ip_blocked(embedded_ipv4)
+
         if ip_obj.is_private or ip_obj.is_loopback or ip_obj.is_link_local or ip_obj.is_multicast or ip_obj.is_reserved or ip_obj.is_unspecified:
             return True
         for blocked in BLOCKED_NETWORKS:

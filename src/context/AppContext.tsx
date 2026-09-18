@@ -971,6 +971,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       fileSize: item.fileSize || '120 KB',
       content: item.content,
       status: 'indexed',
+      processingStage: 'indexed',
+      lifecycleState: 'active',
       chunksCount: calculatedChunks,
       tokenCount: calculatedChunks * 125,
       lastUpdated: 'Just now',
