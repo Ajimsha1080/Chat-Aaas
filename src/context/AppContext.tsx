@@ -350,7 +350,41 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     syncTenantLiveData();
   }, [currentCompanyId]);
 
-  // 3. Background Real-time Polling for Live Conversations
+  // 3. Auto-heal any placeholder / un-crawled URL items
+  useEffect(() => {
+    const currentItems = knowledgeMap[currentCompanyId] || [];
+    const placeholderItems = currentItems.filter(
+      k => k.type === 'url' && k.sourceUrl && (k.content.includes('Official website and documentation for') || k.chunksCount <= 1 || k.content.length < 250)
+    );
+
+    if (placeholderItems.length > 0) {
+      placeholderItems.forEach(async (item) => {
+        try {
+          const crawlRes = await APIClient.crawlUrl(item.sourceUrl!, item.category);
+          if (crawlRes && crawlRes.data) {
+            const extracted = crawlRes.data.extractedText || crawlRes.data.content || '';
+            const chunks = crawlRes.data.chunksCreated || (extracted ? Math.max(1, Math.ceil(extracted.length / 1000)) : 1);
+            if (extracted && extracted.length > 200) {
+              setKnowledgeMap(prev => ({
+                ...prev,
+                [currentCompanyId]: (prev[currentCompanyId] || []).map(k => k.id === item.id ? {
+                  ...k,
+                  content: extracted,
+                  chunksCount: chunks,
+                  fileSize: `${Math.max(1, Math.round(extracted.length / 1024))} KB`,
+                  lastUpdated: 'Just now'
+                } : k)
+              }));
+            }
+          }
+        } catch (err) {
+          console.info('[Auto-crawl sync note]', err);
+        }
+      });
+    }
+  }, [currentCompanyId, knowledgeMap[currentCompanyId]?.length]);
+
+  // 4. Background Real-time Polling for Live Conversations
   useEffect(() => {
     const pollInterval = setInterval(async () => {
       try {
