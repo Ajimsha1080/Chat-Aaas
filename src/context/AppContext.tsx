@@ -1091,26 +1091,65 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     showToast('Source Enabled', 'Knowledge item is active and ready for AI retrieval.', 'success');
   };
 
+  const updateKnowledgeItem = (id: string, updates: Partial<KnowledgeItem>) => {
+    setKnowledgeMap(prev => ({
+      ...prev,
+      [currentCompanyId]: (prev[currentCompanyId] || []).map(k =>
+        k.id === id ? { ...k, ...updates, lastUpdated: 'Just now', lastIndexedAt: new Date().toISOString() } : k
+      )
+    }));
+    addAuditLog('KNOWLEDGE_UPDATED', `Updated knowledge item: ${id}`);
+    showToast('Knowledge Updated', 'Knowledge item content and metadata updated successfully.', 'success');
+  };
+
   const reprocessKnowledgeItem = async (id: string) => {
+    const existing = (knowledgeMap[currentCompanyId] || []).find(k => k.id === id);
     setKnowledgeMap(prev => ({
       ...prev,
       [currentCompanyId]: (prev[currentCompanyId] || []).map(k =>
         k.id === id ? { ...k, processingStage: 'uploaded', status: 'indexing' } : k
       )
     }));
+
+    let crawledContent: string | null = null;
+    let crawledChunks = existing?.chunksCount || 1;
+
+    // If it's a URL source, fetch live webpage content
+    if (existing?.type === 'url' && existing.sourceUrl) {
+      try {
+        const crawlRes = await APIClient.crawlUrl(existing.sourceUrl, existing.category);
+        if (crawlRes && crawlRes.data) {
+          crawledContent = crawlRes.data.extractedText || crawlRes.data.content || null;
+          crawledChunks = crawlRes.data.chunksCreated || Math.max(1, Math.ceil((crawledContent?.length || 1000) / 1000));
+        }
+      } catch (crawlErr) {
+        console.info('Crawler during reprocess note:', crawlErr);
+      }
+    }
+
     try {
       await APIClient.reprocessKnowledgeSource(id);
     } catch (err) {
       console.info('Backend reprocess error:', err);
     }
+
     setKnowledgeMap(prev => ({
       ...prev,
       [currentCompanyId]: (prev[currentCompanyId] || []).map(k =>
-        k.id === id ? { ...k, processingStage: 'indexed', status: 'indexed', lastIndexedAt: new Date().toISOString() } : k
+        k.id === id ? {
+          ...k,
+          content: crawledContent || k.content,
+          chunksCount: crawledChunks,
+          fileSize: crawledContent ? `${Math.max(1, Math.round(crawledContent.length / 1024))} KB` : k.fileSize,
+          processingStage: 'indexed',
+          status: 'indexed',
+          lastIndexedAt: new Date().toISOString(),
+          lastUpdated: 'Just now'
+        } : k
       )
     }));
     addAuditLog('KNOWLEDGE_REPROCESSED', `Reprocessed and re-indexed knowledge item: ${id}`);
-    showToast('Reprocessed', 'Knowledge item was re-parsed, re-chunked, and re-indexed into vector storage.', 'success');
+    showToast('Reprocessed', `Knowledge item re-crawled and re-indexed (${crawledChunks} chunks).`, 'success');
   };
 
   const permanentDeleteKnowledgeItem = async (id: string) => {
@@ -1753,6 +1792,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
         knowledgeItems,
         addKnowledgeItem,
+        updateKnowledgeItem,
         deleteKnowledgeItem,
         trashKnowledgeItem,
         restoreKnowledgeItem,

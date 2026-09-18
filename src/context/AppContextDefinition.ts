@@ -239,6 +239,7 @@ export interface AppContextType {
   // Knowledge Management & Lifecycle
   knowledgeItems: KnowledgeItem[];
   addKnowledgeItem: (item: Partial<KnowledgeItem> & { title: string; content: string; type: KnowledgeItem['type'] }) => void;
+  updateKnowledgeItem: (id: string, updates: Partial<KnowledgeItem>) => void;
   deleteKnowledgeItem: (id: string) => void;
   trashKnowledgeItem: (id: string) => Promise<void>;
   restoreKnowledgeItem: (id: string) => Promise<void>;
