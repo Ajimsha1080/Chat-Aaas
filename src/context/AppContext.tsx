@@ -52,13 +52,13 @@ import { AIAgentEngine } from '../services/aiEngine';
 import { APIClient } from '../api/apiClient';
 import { AppContext, normalizeCompany, normalizeConversation, normalizeKnowledgeItem } from './AppContextDefinition';
 
-const LOCAL_STORAGE_KEY = 'coarai_platform_state_v8';
+const LOCAL_STORAGE_KEY = 'coarai_platform_state_v9';
 
 // Auto-cleanup legacy cached mock states from browser localStorage
 if (typeof window !== 'undefined' && window.localStorage) {
   try {
     Object.keys(localStorage).forEach(key => {
-      if (key.startsWith('coarai_platform_state_v') && !key.startsWith('coarai_platform_state_v8')) {
+      if (key.startsWith('coarai_platform_state_') && !key.startsWith('coarai_platform_state_v9')) {
         localStorage.removeItem(key);
       }
     });
