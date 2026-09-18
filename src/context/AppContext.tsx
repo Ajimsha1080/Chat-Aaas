@@ -37,7 +37,6 @@ import {
   INITIAL_ACTIONS, 
   INITIAL_CONVERSATIONS, 
   INITIAL_AUDIT_LOGS, 
-  INITIAL_TEAM, 
   INITIAL_INVOICES, 
   INITIAL_ANALYTICS,
   INITIAL_AGENT_VERSIONS,
@@ -351,8 +350,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   }, [currentCompanyId]);
 
   // 3. Auto-heal any placeholder / un-crawled URL items
+  const currentKnowledgeItems = knowledgeMap[currentCompanyId];
   useEffect(() => {
-    const currentItems = knowledgeMap[currentCompanyId] || [];
+    const currentItems = currentKnowledgeItems || [];
     const placeholderItems = currentItems.filter(
       k => k.type === 'url' && k.sourceUrl && (k.content.includes('Official website and documentation for') || (k.chunksCount <= 1 && k.content.length < 300))
     );
@@ -384,7 +384,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         }
       });
     }
-  }, [currentCompanyId, knowledgeMap[currentCompanyId]?.length]);
+  }, [currentCompanyId, currentKnowledgeItems]);
 
   // 4. Background Real-time Polling for Live Conversations
   useEffect(() => {

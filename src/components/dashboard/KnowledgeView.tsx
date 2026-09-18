@@ -1,4 +1,4 @@
-import React, { useState, useRef, useMemo } from 'react';
+import React, { useState, useRef } from 'react';
 import { 
   Globe, 
   FileText, 
@@ -49,7 +49,7 @@ export interface SemanticChunkView {
   tokens: number;
 }
 
-export function getSemanticChunks(text: string, chunkSize = 500, overlap = 50): SemanticChunkView[] {
+function getSemanticChunks(text: string, chunkSize = 500, overlap = 50): SemanticChunkView[] {
   if (!text || !text.trim()) return [];
   const clean = text.trim();
   const paragraphs = clean.split('\n\n').map(p => p.trim()).filter(Boolean);
@@ -384,7 +384,7 @@ export const KnowledgeView: React.FC = () => {
                 binaryStr += ' ';
               }
             }
-            const matches = binaryStr.match(/[A-Za-z0-9\s.,!?:;'"()\/-]{6,}/g);
+            const matches = binaryStr.match(/[A-Za-z0-9\s.,!?:;'"()/-]{6,}/g);
             if (matches && matches.length > 5) {
               const cleanExtracted = matches
                 .filter(m => !m.includes('/Filter') && !m.includes('/Font') && !m.includes('/Type') && !m.includes('/Length'))

@@ -28,7 +28,6 @@ import {
   DeploymentItem,
   ApiKeyMetadata
 } from '../types';
-import { INITIAL_COMPANIES } from '../data/mockData';
 
 const defaultStats = {
   totalConversations: 0,
