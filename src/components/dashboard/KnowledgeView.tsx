@@ -227,8 +227,40 @@ export const KnowledgeView: React.FC = () => {
       };
       reader.readAsText(file);
     } else {
-      const cleanDocTitle = file.name.replace(/\.[^/.]+$/, '').replace(/[-_]/g, ' ');
-      setFormContent(`Verified enterprise document containing operational procedures, specifications, and reference knowledge for ${cleanDocTitle}. Processed and indexed into vector store via DocumentAIService.`);
+      // For PDF / binary files, attempt local client-side extraction as well as backend multipart extraction
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const arrayBuffer = event.target?.result as ArrayBuffer;
+        if (arrayBuffer) {
+          try {
+            const bytes = new Uint8Array(arrayBuffer);
+            let binaryStr = '';
+            for (let i = 0; i < Math.min(bytes.length, 500000); i++) {
+              const code = bytes[i];
+              if ((code >= 32 && code <= 126) || code === 10 || code === 13 || code === 9) {
+                binaryStr += String.fromCharCode(code);
+              } else if (binaryStr.length > 0 && binaryStr[binaryStr.length - 1] !== ' ') {
+                binaryStr += ' ';
+              }
+            }
+            const matches = binaryStr.match(/[A-Za-z0-9\s.,!?:;'"()\/-]{6,}/g);
+            if (matches && matches.length > 5) {
+              const cleanExtracted = matches
+                .filter(m => !m.includes('/Filter') && !m.includes('/Font') && !m.includes('/Type') && !m.includes('/Length'))
+                .join(' ')
+                .replace(/\s+/g, ' ')
+                .trim();
+              if (cleanExtracted.length > 80) {
+                setFormContent(cleanExtracted);
+                return;
+              }
+            }
+          } catch (err) {
+            console.warn('Local binary text extraction:', err);
+          }
+        }
+      };
+      reader.readAsArrayBuffer(file);
     }
   };
 
