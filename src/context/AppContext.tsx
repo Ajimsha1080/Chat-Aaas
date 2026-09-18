@@ -991,10 +991,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     } else if (item.type === 'url' && item.sourceUrl) {
       APIClient.ingestWebsite({ url: item.sourceUrl, category: item.category })
         .then(res => {
-          if (res?.data?.chunksCreated) {
+          if (res?.data) {
+            const extracted = res.data.extractedText || res.data.source?.content || res.data.content || '';
+            const chunks = res.data.chunksCreated || (extracted ? Math.max(1, Math.ceil(extracted.length / 1000)) : 1);
             setKnowledgeMap(prev => ({
               ...prev,
-              [currentCompanyId]: (prev[currentCompanyId] || []).map(k => k.id === newItem.id ? { ...k, chunksCount: res.data.chunksCreated } : k)
+              [currentCompanyId]: (prev[currentCompanyId] || []).map(k => k.id === newItem.id ? {
+                ...k,
+                content: extracted || k.content,
+                chunksCount: chunks,
+                fileSize: extracted ? `${Math.max(1, Math.round(extracted.length / 1024))} KB` : k.fileSize
+              } : k)
             }));
           }
         })
@@ -1002,10 +1009,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     } else {
       APIClient.ingestFile({ title: item.title, content: item.content, fileName: item.fileName, category: item.category })
         .then(res => {
-          if (res?.data?.chunksCreated) {
+          if (res?.data) {
+            const chunks = res.data.chunksCreated || Math.max(1, Math.ceil((item.content.length || 1000) / 1000));
             setKnowledgeMap(prev => ({
               ...prev,
-              [currentCompanyId]: (prev[currentCompanyId] || []).map(k => k.id === newItem.id ? { ...k, chunksCount: res.data.chunksCreated } : k)
+              [currentCompanyId]: (prev[currentCompanyId] || []).map(k => k.id === newItem.id ? { ...k, chunksCount: chunks } : k)
             }));
           }
         })
