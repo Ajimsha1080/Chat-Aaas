@@ -176,13 +176,32 @@ class CrawlerService:
 
     @staticmethod
     def clean_html_content(raw_html: str) -> str:
-        """Strips HTML tags, scripts, and stylesheets safely."""
+        """Strips HTML tags, scripts, and stylesheets safely while preserving headings and paragraphs for semantic chunking."""
         import re
+        import html
         text = re.sub(r'<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>', '', raw_html, flags=re.IGNORECASE)
         text = re.sub(r'<style\b[^<]*(?:(?!<\/style>)<[^<]*)*<\/style>', '', text, flags=re.IGNORECASE)
+        text = re.sub(r'<svg\b[^<]*(?:(?!<\/svg>)<[^<]*)*<\/svg>', '', text, flags=re.IGNORECASE)
+
+        # Convert headings to markdown headings so section structure is preserved
+        for h in range(1, 7):
+            text = re.sub(rf'<h{h}\b[^>]*>(.*?)</h{h}>', rf'\n\n# \1\n\n', text, flags=re.IGNORECASE | re.DOTALL)
+
+        # Convert block-level elements and linebreaks into clean paragraph breaks
+        text = re.sub(r'<(?:p|section|article|header|footer|nav|aside|li|tr|blockquote)\b[^>]*>', '\n\n', text, flags=re.IGNORECASE)
+        text = re.sub(r'<(?:br|hr)\s*/?>', '\n', text, flags=re.IGNORECASE)
+
+        # Strip remaining tags
         text = re.sub(r'<[^>]+>', ' ', text)
-        text = re.sub(r'\s+', ' ', text).strip()
-        return text
+
+        # Unescape HTML entities (&amp;, &nbsp;, etc.)
+        text = html.unescape(text)
+
+        # Clean up whitespace per line and assemble clean paragraph breaks
+        lines = [re.sub(r'[ \t]+', ' ', line).strip() for line in text.split('\n')]
+        clean_lines = [l for l in lines if l]
+        text = '\n\n'.join(clean_lines)
+        return text.strip()
 
     @classmethod
     async def fetch_and_parse(

@@ -33,6 +33,8 @@ class DocumentAIService:
 
     @staticmethod
     def _clean_text(text: str) -> str:
+        if not text:
+            return ""
         # Strip excessive newlines and control characters
         text = re.sub(r'\r\n|\r', '\n', text)
         text = re.sub(r'[ \t]+', ' ', text)
@@ -40,55 +42,99 @@ class DocumentAIService:
         return text.strip()
 
     @staticmethod
-    def _create_chunks(text: str, chunk_size: int, overlap: int) -> List[ProcessedChunk]:
-        paragraphs = text.split('\n\n')
+    def _create_chunks(text: str, chunk_size: int = 500, overlap: int = 50) -> List[ProcessedChunk]:
+        if not text or not text.strip():
+            return []
+
+        chunk_size = max(100, chunk_size)
+        overlap = max(0, min(overlap, chunk_size // 2))
+
+        # Split into paragraphs or line blocks
+        paragraphs = [p.strip() for p in text.split('\n\n') if p.strip()]
+        if not paragraphs:
+            paragraphs = [p.strip() for p in text.split('\n') if p.strip()]
+        if not paragraphs:
+            paragraphs = [text.strip()]
+
         chunks: List[ProcessedChunk] = []
         current_chunk = ""
-        current_header = None
+        current_header = "General"
         chunk_idx = 0
 
-        for p in paragraphs:
-            p_strip = p.strip()
-            if not p_strip:
+        for p_strip in paragraphs:
+            # Check for markdown heading (e.g. # Title, ## Section)
+            is_markdown_heading = bool(re.match(r'^#{1,6}\s+\S+', p_strip))
+            if is_markdown_heading:
+                clean_head = re.sub(r'^#{1,6}\s*', '', p_strip).strip()
+                if current_chunk:
+                    chunk_idx += 1
+                    chunks.append(ProcessedChunk(
+                        chunk_id=f"chk_{uuid.uuid4().hex[:8]}",
+                        chunk_index=chunk_idx,
+                        content=current_chunk.strip(),
+                        token_count=max(1, len(current_chunk) // 4),
+                        section_header=current_header
+                    ))
+                    current_chunk = ""
+                if clean_head:
+                    current_header = clean_head
                 continue
 
-            # Detect header like lines (short lines or markdown headings)
-            is_header = p_strip.startswith('#') or (len(p_strip) < 60 and not p_strip.endswith('.'))
-            if is_header:
-                current_header = p_strip.replace('#', '').strip()
-                # If we already have accumulated content, create a chunk boundary at the new section
-                if current_chunk:
-                    chunk_idx += 1
-                    chunks.append(ProcessedChunk(
-                        chunk_id=f"chk_{uuid.uuid4().hex[:8]}",
-                        chunk_index=chunk_idx,
-                        content=current_chunk,
-                        token_count=max(1, len(current_chunk) // 4),
-                        section_header=current_header
-                    ))
-                    current_chunk = p_strip
-                    continue
-
-            if len(current_chunk) + len(p_strip) <= chunk_size:
-                current_chunk += ("\n\n" + p_strip if current_chunk else p_strip)
+            # If the paragraph itself exceeds chunk_size, split into sub-segments along sentence boundaries
+            segments: List[str] = []
+            if len(p_strip) > chunk_size:
+                rem = p_strip
+                while len(rem) > chunk_size:
+                    # Find sentence boundary within chunk_size
+                    split_point = rem[:chunk_size].rfind('. ')
+                    if split_point == -1 or split_point < chunk_size // 3:
+                        split_point = rem[:chunk_size].rfind('? ')
+                    if split_point == -1 or split_point < chunk_size // 3:
+                        split_point = rem[:chunk_size].rfind('! ')
+                    if split_point == -1 or split_point < chunk_size // 3:
+                        split_point = rem[:chunk_size].rfind(' ')
+                    if split_point == -1:
+                        split_point = chunk_size
+                    else:
+                        split_point += 1
+                    segments.append(rem[:split_point].strip())
+                    rem = rem[max(0, split_point - overlap):].strip()
+                if rem:
+                    segments.append(rem)
             else:
-                if current_chunk:
+                segments = [p_strip]
+
+            # Accumulate segments into chunks
+            for seg in segments:
+                if not seg:
+                    continue
+                if current_chunk and (len(current_chunk) + len(seg) + 2 > chunk_size):
                     chunk_idx += 1
                     chunks.append(ProcessedChunk(
                         chunk_id=f"chk_{uuid.uuid4().hex[:8]}",
                         chunk_index=chunk_idx,
-                        content=current_chunk,
+                        content=current_chunk.strip(),
                         token_count=max(1, len(current_chunk) // 4),
                         section_header=current_header
                     ))
-                current_chunk = p_strip
+                    # Carry over overlap if enabled
+                    if overlap > 0 and len(current_chunk) > overlap:
+                        overlap_tail = current_chunk[-overlap:].strip()
+                        space_idx = overlap_tail.find(' ')
+                        if space_idx != -1:
+                            overlap_tail = overlap_tail[space_idx + 1:]
+                        current_chunk = f"{overlap_tail}\n\n{seg}" if overlap_tail else seg
+                    else:
+                        current_chunk = seg
+                else:
+                    current_chunk = f"{current_chunk}\n\n{seg}" if current_chunk else seg
 
-        if current_chunk:
+        if current_chunk and current_chunk.strip():
             chunk_idx += 1
             chunks.append(ProcessedChunk(
                 chunk_id=f"chk_{uuid.uuid4().hex[:8]}",
                 chunk_index=chunk_idx,
-                content=current_chunk,
+                content=current_chunk.strip(),
                 token_count=max(1, len(current_chunk) // 4),
                 section_header=current_header
             ))

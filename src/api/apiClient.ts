@@ -68,7 +68,16 @@ export class APIClient {
       }
 
       const res = await response.json();
-      return res.data || res;
+      const unwrapped = res.data !== undefined ? res.data : res;
+      if (unwrapped && typeof unwrapped === 'object' && !('data' in unwrapped)) {
+        Object.defineProperty(unwrapped, 'data', {
+          value: unwrapped,
+          enumerable: false,
+          configurable: true,
+          writable: true
+        });
+      }
+      return unwrapped;
     } catch (err: any) {
       console.warn(`[APIClient] Request failed for ${path}:`, err.message);
       throw err;
@@ -169,7 +178,17 @@ export class APIClient {
     if (!response.ok) {
       throw new Error(`File upload failed with status ${response.status}`);
     }
-    return await response.json();
+    const res = await response.json();
+    const unwrapped = res.data !== undefined ? res.data : res;
+    if (unwrapped && typeof unwrapped === 'object' && !('data' in unwrapped)) {
+      Object.defineProperty(unwrapped, 'data', {
+        value: unwrapped,
+        enumerable: false,
+        configurable: true,
+        writable: true
+      });
+    }
+    return unwrapped;
   }
 
   public static async ingestFaq(data: { question: string; answer: string; collectionId?: string; category?: string }) {

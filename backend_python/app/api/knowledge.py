@@ -229,6 +229,45 @@ def reprocess_knowledge_source(source_id: str, ctx: TenantContext = Depends(get_
     if not source or source.get("companyId") != ctx.company_id:
         raise HTTPException(status_code=404, detail="Knowledge source not found.")
 
+    content = source.get("content") or ""
+    new_chunk_count = source.get("chunkCount", 1)
+    if content.strip():
+        # Remove old chunks for this source
+        old_chk_ids = [cid for cid, c in db.document_chunks.items() if (c.get("knowledgeSourceId") == source_id or c.get("knowledge_source_id") == source_id)]
+        for cid in old_chk_ids:
+            del db.document_chunks[cid]
+
+        doc_req = DocumentProcessRequest(
+            title=source.get("title", "Document"),
+            raw_text=content,
+            doc_type=source.get("sourceType", "txt"),
+            chunk_size=500,
+            chunk_overlap=50
+        )
+        doc_res = DocumentAIService.process_document(doc_req)
+        for c in doc_res.chunks:
+            chk_id = f"chk-{ctx.company_id}-{uuid.uuid4().hex[:8]}"
+            chk = {
+                "id": chk_id,
+                "knowledgeSourceId": source_id,
+                "companyId": ctx.company_id,
+                "collectionId": source.get("collectionId"),
+                "chunkIndex": c.chunk_index,
+                "content": c.content,
+                "tokenCount": c.token_count,
+                "sectionHeader": c.section_header or source.get("title", "General"),
+                "metadata": {
+                    "title": source.get("title"),
+                    "category": source.get("category"),
+                    "fileName": source.get("fileName")
+                }
+            }
+            db.document_chunks[chk_id] = chk
+
+        new_chunk_count = len(doc_res.chunks)
+        source["chunkCount"] = new_chunk_count
+        source["totalTokens"] = doc_res.total_tokens
+
     source["processingStage"] = "indexed"
     source["status"] = "ready"
     source["lastIndexedAt"] = time.strftime("%Y-%m-%dT%H:%M:%SZ")
@@ -237,8 +276,9 @@ def reprocess_knowledge_source(source_id: str, ctx: TenantContext = Depends(get_
     return {
         "status": 200,
         "data": {
-            "message": f"Reprocessed and re-indexed '{source.get('title')}'. All vector chunks synchronized.",
-            "source": source
+            "message": f"Reprocessed and re-indexed '{source.get('title')}'. Generated {new_chunk_count} vector chunks.",
+            "source": source,
+            "chunksCreated": new_chunk_count
         }
     }
 
@@ -522,7 +562,8 @@ async def crawl_and_ingest_website(req: IngestWebsiteRequest, ctx: TenantContext
         title=title,
         raw_text=cleaned_content,
         doc_type="txt",
-        chunk_size=500
+        chunk_size=500,
+        chunk_overlap=50
     )
     doc_res = DocumentAIService.process_document(doc_req)
     chunks_to_save = doc_res.chunks if doc_res.chunks else []
@@ -543,6 +584,7 @@ async def crawl_and_ingest_website(req: IngestWebsiteRequest, ctx: TenantContext
         "content": cleaned_content,
         "lastIndexedAt": time.strftime("%Y-%m-%dT%H:%M:%S.000Z", time.gmtime()),
         "chunkCount": max(1, len(chunks_to_save)),
+        "totalChunks": max(1, len(chunks_to_save)),
         "totalTokens": doc_res.total_tokens or (len(cleaned_content) // 4),
         "lastSyncedAt": time.strftime("%Y-%m-%dT%H:%M:%S.000Z", time.gmtime()),
         "createdAt": time.strftime("%Y-%m-%dT%H:%M:%S.000Z", time.gmtime())
@@ -589,6 +631,8 @@ async def crawl_and_ingest_website(req: IngestWebsiteRequest, ctx: TenantContext
             "source": new_source,
             "extractedText": cleaned_content,
             "chunksCreated": len(created_chunk_ids),
+            "totalChunks": len(created_chunk_ids),
+            "chunks": [c.model_dump() if hasattr(c, "model_dump") else c for c in chunks_to_save],
             "message": f"Successfully crawled and indexed {len(created_chunk_ids)} semantic chunks from '{req.url}'."
         }
     }
