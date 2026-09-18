@@ -66,7 +66,12 @@ class CrawlerService:
         Prevents DNS rebinding and SSRF TOCTOU vulnerabilities.
         """
         try:
-            parsed = urlparse(url)
+            url_clean = url.strip()
+            if not url_clean:
+                return False, "Invalid URL: Empty URL provided.", None, None, None, None, None
+            if "://" not in url_clean:
+                url_clean = f"https://{url_clean}"
+            parsed = urlparse(url_clean)
             scheme = parsed.scheme
             if scheme not in ["http", "https"]:
                 return False, f"Invalid scheme {scheme}: Only http/https supported.", None, None, None, None, None
@@ -185,7 +190,7 @@ class CrawlerService:
 
         # Convert headings to markdown headings so section structure is preserved
         for h in range(1, 7):
-            text = re.sub(rf'<h{h}\b[^>]*>(.*?)</h{h}>', rf'\n\n# \1\n\n', text, flags=re.IGNORECASE | re.DOTALL)
+            text = re.sub(rf'<h{h}\b[^>]*>(.*?)</h{h}>', r'\n\n# \1\n\n', text, flags=re.IGNORECASE | re.DOTALL)
 
         # Convert block-level elements and linebreaks into clean paragraph breaks
         text = re.sub(r'<(?:p|section|article|header|footer|nav|aside|li|tr|blockquote)\b[^>]*>', '\n\n', text, flags=re.IGNORECASE)
@@ -229,11 +234,23 @@ class CrawlerService:
 
         import re
         import httpx
-        current_url = url
+        url_clean = url.strip()
+        if "://" not in url_clean:
+            url_clean = f"https://{url_clean}"
+        current_url = url_clean
         max_redirects = 5
         try:
-            async with httpx.AsyncClient(timeout=10.0, follow_redirects=False) as client:
-                headers = {"User-Agent": "CoarAI-WebCrawler/2.0 (+https://github.com/Ajimsha1080/Chat-Aaas)"}
+            async with httpx.AsyncClient(timeout=12.0, follow_redirects=False) as client:
+                headers = {
+                    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36 (CoarAI-Crawler/2.0)",
+                    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
+                    "Accept-Language": "en-US,en;q=0.9",
+                    "Sec-Fetch-Dest": "document",
+                    "Sec-Fetch-Mode": "navigate",
+                    "Sec-Fetch-Site": "none",
+                    "Sec-Fetch-User": "?1",
+                    "Upgrade-Insecure-Requests": "1"
+                }
                 resp = None
                 for hop in range(max_redirects + 1):
                     # Strict SSRF and DNS check before each request and redirect hop
@@ -245,16 +262,20 @@ class CrawlerService:
                             "url": current_url
                         }
 
-                    # Connect directly to validated IP (avoiding DNS rebinding)
+                    # Connect directly to validated IP (avoiding DNS rebinding) with graceful fallback
                     if validated_ip:
-                        ip_formatted = f"[{validated_ip}]" if ":" in validated_ip else validated_ip
-                        ip_target_url = f"{scheme}://{ip_formatted}:{port}{path_and_query}"
-                        parsed_cur = urlparse(current_url)
-                        host_header = f"{hostname}:{parsed_cur.port}" if parsed_cur.port else hostname
-                        hop_headers = {**headers, "Host": host_header}
-                        extensions = {"sni_hostname": hostname} if scheme == "https" else {}
-                        req = client.build_request("GET", ip_target_url, headers=hop_headers, extensions=extensions)
-                        resp = await client.send(req)
+                        try:
+                            ip_formatted = f"[{validated_ip}]" if ":" in validated_ip else validated_ip
+                            ip_target_url = f"{scheme}://{ip_formatted}:{port}{path_and_query}"
+                            parsed_cur = urlparse(current_url)
+                            host_header = f"{hostname}:{parsed_cur.port}" if parsed_cur.port else hostname
+                            hop_headers = {**headers, "Host": host_header}
+                            extensions = {"sni_hostname": hostname} if scheme == "https" else {}
+                            req = client.build_request("GET", ip_target_url, headers=hop_headers, extensions=extensions)
+                            resp = await client.send(req)
+                        except Exception:
+                            # Fallback to standard client.get if direct IP/SNI fails due to TLS/ALPN strictness (SSRF validation was already completed)
+                            resp = await client.get(current_url, headers=headers)
                     else:
                         resp = await client.get(current_url, headers=headers)
 

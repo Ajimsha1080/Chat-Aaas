@@ -545,6 +545,11 @@ async def crawl_and_ingest_website(req: IngestWebsiteRequest, ctx: TenantContext
     RateLimiter.check_crawler_rate_limit(ctx.company_id)
     _check_knowledge_quota(ctx.company_id, ctx.role)
 
+    normalized_url = req.url.strip()
+    if "://" not in normalized_url:
+        normalized_url = f"https://{normalized_url}"
+    req.url = normalized_url
+
     safe, reason = CrawlerService.validate_url_safety(req.url)
     if not safe:
         raise HTTPException(status_code=400, detail=f"SSRF Safety Validation Rejected: {reason}")

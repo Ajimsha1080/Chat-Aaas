@@ -203,16 +203,21 @@ export const KnowledgeView: React.FC = () => {
   };
 
   const handleRecrawlEditItem = async () => {
-    if (!editItemUrl.trim()) return;
+    let targetUrl = editItemUrl.trim();
+    if (!targetUrl) return;
+    if (!targetUrl.startsWith('http://') && !targetUrl.startsWith('https://')) {
+      targetUrl = `https://${targetUrl}`;
+      setEditItemUrl(targetUrl);
+    }
     setIsRecrawlingEdit(true);
     try {
-      const crawlRes = await APIClient.crawlUrl(editItemUrl.trim(), editingKnowledgeItem?.category);
+      const crawlRes = await APIClient.crawlUrl(targetUrl, editingKnowledgeItem?.category);
       const data = (crawlRes as any)?.data || crawlRes;
       if (data) {
         const text = data.extractedText || data.content || '';
         if (text) {
           setEditItemContent(text);
-          showToast('Live Crawl Succeeded', `Extracted ${text.length} characters from ${editItemUrl}. Click Save to apply.`, 'success');
+          showToast('Live Crawl Succeeded', `Extracted ${text.length} characters from ${targetUrl}. Click Save to apply.`, 'success');
         } else {
           showToast('Crawl Completed', 'No text extracted. You can paste content directly.', 'info');
         }
@@ -441,9 +446,13 @@ export const KnowledgeView: React.FC = () => {
 
     // If adding a website URL, crawl and extract real HTML content via backend crawler
     if (modalType === 'url' && formUrl.trim()) {
+      let targetUrl = formUrl.trim();
+      if (!targetUrl.startsWith('http://') && !targetUrl.startsWith('https://')) {
+        targetUrl = `https://${targetUrl}`;
+      }
       setIngestStep('Connecting to website & extracting HTML text...');
       try {
-        const crawlRes = await APIClient.crawlUrl(formUrl.trim(), formCategory);
+        const crawlRes = await APIClient.crawlUrl(targetUrl, formCategory);
         const resData = (crawlRes as any)?.data || crawlRes;
         if (resData && (resData.extractedText || resData.content || resData.chunksCreated || resData.success)) {
           const extractedText = (resData.extractedText || resData.content || '').trim();
@@ -453,7 +462,7 @@ export const KnowledgeView: React.FC = () => {
           addKnowledgeItem({
             type: 'url',
             title: formTitle,
-            sourceUrl: formUrl.trim(),
+            sourceUrl: targetUrl,
             fileSize: `${Math.max(1, Math.round(finalExtracted.length / 1024))} KB`,
             content: finalExtracted,
             category: formCategory,

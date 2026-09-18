@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Company, 
   SubscriptionPlan, 
@@ -270,38 +270,24 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         // Fetch Live Knowledge Sources
         const kRes = await APIClient.getKnowledge();
         if (kRes && kRes.sources) {
-          const mappedKnowledge: KnowledgeItem[] = kRes.sources.map((s: any) => {
-            // Map backend sourceType to frontend type ('website' -> 'url', 'faq' -> 'faq', else -> 'document')
-            let frontendType: KnowledgeItem['type'] = 'document';
-            if (s.sourceType === 'website' || s.sourceType === 'url') frontendType = 'url';
-            else if (s.sourceType === 'faq') frontendType = 'faq';
-            else if (s.sourceType === 'document' || s.sourceType === 'doc') frontendType = 'document';
-
-            const contentText = s.content || '';
-            const chunkCount = s.chunkCount || s.totalChunks || (contentText.length > 0 ? Math.max(1, Math.ceil(contentText.length / 500)) : 1);
-            const computedFileSize = contentText.length > 0
-              ? `${Math.max(1, Math.round(contentText.length / 1024))} KB`
-              : (s.fileSizeBytes ? `${(s.fileSizeBytes / 1024).toFixed(1)} KB` : '120 KB');
-
-            return {
-              id: s.id,
-              type: frontendType,
-              title: s.title,
-              sourceUrl: s.sourceUrl,
-              fileName: s.fileName || s.title,
-              fileSize: computedFileSize,
-              content: contentText,
-              status: s.status === 'ready' ? 'indexed' : (s.status || 'indexed'),
-              lifecycleState: s.lifecycleState || 'active',
-              processingStage: s.processingStage || 'indexed',
-              deletedAt: s.deletedAt,
-              retentionDays: s.retentionDays || 30,
-              lastIndexedAt: s.lastIndexedAt,
-              chunksCount: chunkCount,
-              tokenCount: s.totalTokens || chunkCount * 65,
-              lastUpdated: s.createdAt || new Date().toISOString()
-            };
-          });
+          const mappedKnowledge: KnowledgeItem[] = kRes.sources.map((s: any) => ({
+            id: s.id,
+            type: s.sourceType || 'doc',
+            title: s.title,
+            sourceUrl: s.sourceUrl,
+            fileName: s.fileName || s.title,
+            fileSize: s.fileSizeBytes ? `${(s.fileSizeBytes / 1024).toFixed(1)} KB` : '120 KB',
+            content: s.content || '',
+            status: s.status === 'ready' ? 'indexed' : (s.status || 'indexed'),
+            lifecycleState: s.lifecycleState || 'active',
+            processingStage: s.processingStage || 'indexed',
+            deletedAt: s.deletedAt,
+            retentionDays: s.retentionDays || 30,
+            lastIndexedAt: s.lastIndexedAt,
+            chunksCount: s.chunkCount || 1,
+            tokenCount: s.totalTokens || 150,
+            lastUpdated: s.createdAt || new Date().toISOString()
+          }));
           setKnowledgeMap(prev => ({ ...prev, [currentCompanyId]: mappedKnowledge }));
         }
 
@@ -364,18 +350,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     syncTenantLiveData();
   }, [currentCompanyId]);
 
-  // 3. Auto-heal any placeholder / un-crawled URL items (runs once per company switch)
-  const healedIdsRef = useRef<Set<string>>(new Set());
+  // 3. Auto-heal any placeholder / un-crawled URL items
   useEffect(() => {
     const currentItems = knowledgeMap[currentCompanyId] || [];
     const placeholderItems = currentItems.filter(
-      k => k.type === 'url' && k.sourceUrl && !healedIdsRef.current.has(k.id) &&
-        (k.content.includes('Official website and documentation for') || k.content.startsWith('Verified enterprise knowledge') || (k.chunksCount <= 1 && k.content.length < 300))
+      k => k.type === 'url' && k.sourceUrl && (k.content.includes('Official website and documentation for') || (k.chunksCount <= 1 && k.content.length < 300))
     );
 
     if (placeholderItems.length > 0) {
       placeholderItems.forEach(async (item) => {
-        healedIdsRef.current.add(item.id); // Mark as healing immediately to prevent re-entry
         try {
           const crawlRes = await APIClient.crawlUrl(item.sourceUrl!, item.category);
           const data = (crawlRes as any)?.data || crawlRes;
@@ -401,8 +384,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         }
       });
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentCompanyId]);
+  }, [currentCompanyId, knowledgeMap[currentCompanyId]?.length]);
 
   // 4. Background Real-time Polling for Live Conversations
   useEffect(() => {
@@ -1040,30 +1022,25 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }));
 
     // Real-time backend ingestion & dynamic chunk count sync
-    // IMPORTANT: Skip backend ingestion if content was already crawled by the caller (KnowledgeView)
-    const isAlreadyCrawled = item.content && item.content.length > 300 && !item.content.startsWith('Official website and documentation for');
     if (item.type === 'faq' && item.faqAnswer) {
       APIClient.ingestFaq({ question: item.title, answer: item.faqAnswer, category: item.category }).catch(e => console.info('Backend FAQ ingest error:', e));
-    } else if (item.type === 'url' && item.sourceUrl && !isAlreadyCrawled) {
-      // Only call ingestWebsite if content wasn't already extracted by the caller
+    } else if (item.type === 'url' && item.sourceUrl) {
       APIClient.ingestWebsite({ url: item.sourceUrl, category: item.category })
         .then(res => {
           const data = (res as any)?.data || res;
           if (data) {
             const extracted = data.extractedText || data.source?.content || data.content || '';
             const chunks = data.chunksCreated || data.totalChunks || (extracted ? Math.max(1, Math.ceil(extracted.length / 500)) : 1);
-            if (extracted && extracted.length > 100) {
-              setKnowledgeMap(prev => ({
-                ...prev,
-                [currentCompanyId]: (prev[currentCompanyId] || []).map(k => k.id === newItem.id ? {
-                  ...k,
-                  content: extracted || k.content,
-                  chunksCount: chunks,
-                  tokenCount: chunks * 65,
-                  fileSize: extracted ? `${Math.max(1, Math.round(extracted.length / 1024))} KB` : k.fileSize
-                } : k)
-              }));
-            }
+            setKnowledgeMap(prev => ({
+              ...prev,
+              [currentCompanyId]: (prev[currentCompanyId] || []).map(k => k.id === newItem.id ? {
+                ...k,
+                content: extracted || k.content,
+                chunksCount: chunks,
+                tokenCount: chunks * 65,
+                fileSize: extracted ? `${Math.max(1, Math.round(extracted.length / 1024))} KB` : k.fileSize
+              } : k)
+            }));
           }
         })
         .catch(e => console.info('Backend website ingest error:', e));
