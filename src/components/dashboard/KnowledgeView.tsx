@@ -450,11 +450,11 @@ export const KnowledgeView: React.FC = () => {
       contentToSave = `Question: ${formTitle.trim()}\nAnswer: ${formFaqAnswer.trim()}`;
     } else if (modalType === 'url') {
       if (!contentToSave) {
-        contentToSave = `Official website and documentation for ${formTitle} (${formUrl || 'online'}). Provides complete company information, product overview, services, capabilities, pricing, and support details for ${formTitle}.`;
+        contentToSave = `# ${formTitle}\nPage URL: ${formUrl || 'online'}`;
       }
     } else if (modalType === 'document') {
       if (!contentToSave && !selectedFile) {
-        contentToSave = `Verified enterprise knowledge and documentation for ${formTitle}. Contains operational guidelines, standard operating procedures, technical manuals, and business reference data.`;
+        contentToSave = `# ${formTitle}\n\nDocument content for ${formTitle}.`;
       }
     }
 
@@ -552,7 +552,7 @@ export const KnowledgeView: React.FC = () => {
       let finalContent = contentToSave || formContent;
       if (modalType === 'document' && (!finalContent || finalContent.startsWith('Extracting') || finalContent.includes('%PDF-') || finalContent.includes('ReportLab Generated PDF') || finalContent.includes('/MediaBox') || finalContent.includes('/Contents'))) {
         finalContent = generateComprehensiveDocumentContent(formTitle, formFileName || selectedFile?.name);
-      } else if (modalType === 'url' && (!finalContent || finalContent.startsWith('Official website and documentation for') || finalContent.includes('Verified company overview and documentation for'))) {
+      } else if (modalType === 'url' && !finalContent) {
         finalContent = generateComprehensiveWebsiteContent(formTitle, formUrl);
       }
       const fileBytes = selectedFile ? selectedFile.size : (finalContent ? finalContent.length : 120000);
@@ -564,7 +564,7 @@ export const KnowledgeView: React.FC = () => {
         sourceUrl: modalType === 'url' ? formUrl : undefined,
         fileName: modalType === 'document' ? (formFileName || selectedFile?.name || 'knowledge_document.pdf') : undefined,
         fileSize: fileSizeStr || (selectedFile ? formatBytes(selectedFile.size) : `${Math.max(1, Math.round(fileBytes / 1024))} KB`),
-        content: finalContent || `Verified enterprise knowledge for ${formTitle}`,
+        content: finalContent || `Knowledge content for ${formTitle}`,
         category: formCategory,
         faqAnswer: modalType === 'faq' ? formFaqAnswer : undefined,
         collectionId: formCollectionId,
