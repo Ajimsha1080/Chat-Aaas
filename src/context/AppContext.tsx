@@ -560,7 +560,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         allowedActions: [],
         escalationSettings: {
           enabled: true,
-          triggerKeywords: ['human', 'agent', 'support', 'help', 'talk to person', 'refund'],
+          triggerKeywords: ['talk to human', 'speak to person', 'human representative', 'transfer to human'],
           maxUnansweredQueriesBeforeEscalation: 2,
           notifyEmail: `support@${domain}`,
           escalationMessage: 'Transferring you to a live support team member now.',

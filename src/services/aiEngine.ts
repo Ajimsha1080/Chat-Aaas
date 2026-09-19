@@ -142,12 +142,23 @@ export class AIAgentEngine {
       };
     }
 
-    // Step 2: Check Escalation Keywords & Rules
+    // Step 2: Check Escalation Keywords & Rules (Explicit Human Handoff only)
     const escalation = company.agent.escalationSettings;
     if (escalation && escalation.enabled) {
-      const hitKeyword = escalation.triggerKeywords?.find(kw => qLower.includes(kw.toLowerCase()));
-      if (hitKeyword) {
-        reasoning.push(`[Escalation Trigger] Detected critical keyword: "${hitKeyword}"`);
+      // Check for explicit human handoff request (e.g. "talk to human", "speak with a person")
+      const isExplicitHumanHandoff = /(talk to (a )?human|speak to (a )?human|human representative|live agent|talk to (a )?person|speak with (a )?person|transfer (me )?to (a )?human|real person|customer service rep|agent handoff)/i.test(qLower);
+      
+      // Filter out overly generic words like 'agent', 'support', 'help' that occur in normal platform queries
+      const customKeywords = (escalation.triggerKeywords || []).filter(kw => {
+        const k = kw.trim().toLowerCase();
+        return !['agent', 'agents', 'help', 'support'].includes(k);
+      });
+
+      const hitCustom = customKeywords.find(kw => qLower.includes(kw.toLowerCase()));
+
+      if (isExplicitHumanHandoff || hitCustom) {
+        const hitKeyword = hitCustom || 'talk to human';
+        reasoning.push(`[Escalation Trigger] Detected human handoff request: "${hitKeyword}"`);
         reasoning.push(`[Hierarchy 5: Action Engine] Triggering human handoff notification to ${escalation.notifyEmail}`);
 
         const handoffTrace: ToolExecutionTrace = {

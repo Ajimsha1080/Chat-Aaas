@@ -56,7 +56,7 @@ const defaultAgent: AgentConfig = {
   allowedActions: [],
   escalationSettings: {
     enabled: true,
-    triggerKeywords: ['human', 'agent', 'support'],
+    triggerKeywords: ['talk to human', 'speak to person', 'human representative', 'transfer to human'],
     maxUnansweredQueriesBeforeEscalation: 2,
     notifyEmail: 'support@company.com',
     escalationMessage: 'Connecting you to a team member.',
