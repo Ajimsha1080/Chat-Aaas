@@ -355,12 +355,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   useEffect(() => {
     const currentItems = currentKnowledgeItems || [];
     const placeholderItems = currentItems.filter(
-      k => k.type === 'url' && k.sourceUrl && (
+      k => k.type === 'url' && (
+        k.chunksCount <= 3 ||
+        k.content.length < 2000 ||
         k.content.includes('Official website and documentation for') ||
-        k.content.includes('Website & Operational Knowledge') ||
         k.content.includes('Verified company overview and documentation for') ||
         k.content.includes('Enterprise Architecture & Integration') ||
-        (k.chunksCount <= 2 && k.content.length < 1500) ||
         !k.content ||
         k.content.trim() === ''
       )
@@ -369,20 +369,24 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (placeholderItems.length > 0) {
       placeholderItems.forEach(async (item) => {
         let finalExtracted = '';
-        let chunks = 1;
+        let chunks = 17;
+        const targetUrl = item.sourceUrl && (item.sourceUrl.startsWith('http://') || item.sourceUrl.startsWith('https://'))
+          ? item.sourceUrl
+          : (item.sourceUrl ? `https://${item.sourceUrl}` : 'https://www.coarai.com');
+
         try {
-          const crawlRes = await APIClient.crawlUrl(item.sourceUrl!, item.category);
+          const crawlRes = await APIClient.crawlUrl(targetUrl, item.category);
           const data = (crawlRes as any)?.data || crawlRes;
           if (data) {
-            finalExtracted = data.extractedText || data.content || '';
-            chunks = data.chunksCreated || data.totalChunks || (finalExtracted ? Math.max(1, Math.ceil(finalExtracted.length / 500)) : 1);
+            finalExtracted = (data.extractedText || data.content || '').trim();
+            chunks = data.chunksCreated || data.totalChunks || (finalExtracted ? Math.max(1, Math.ceil(finalExtracted.length / 500)) : 17);
           }
         } catch (err) {
           console.info('[Auto-crawl sync note]', err);
         }
 
         if (!finalExtracted || finalExtracted.length < 100) {
-          finalExtracted = generateComprehensiveWebsiteContent(item.title, item.sourceUrl);
+          finalExtracted = generateComprehensiveWebsiteContent(item.title, targetUrl);
           chunks = Math.max(1, Math.ceil(finalExtracted.length / 500));
         }
 
@@ -391,6 +395,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           [currentCompanyId]: (prev[currentCompanyId] || []).map(k => k.id === item.id ? {
             ...k,
             content: finalExtracted,
+            sourceUrl: k.sourceUrl || targetUrl,
             chunksCount: chunks,
             tokenCount: chunks * 65,
             fileSize: `${Math.max(1, Math.round(finalExtracted.length / 1024))} KB`,
