@@ -622,19 +622,19 @@ export class AIAgentEngine {
       });
       const selectedPoints = informative.slice(0, 5);
       if (selectedPoints.length > 0) {
-        return `Here are the core principles and main takeaways from the verified documentation:\n\n${selectedPoints.map(p => `• ${p.replace(/^[-*•\s]+/, '').trim()}`).join('\n')}`;
+        return `Here are the core principles and main takeaways:\n\n${selectedPoints.map(p => `• ${p.replace(/^[-*•\s]+/, '').trim()}`).join('\n')}`;
       }
-      return `Here is a summary based on the documentation:\n\n${rawSentences.slice(0, 3).join(' ')}`;
+      return `Here is a summary:\n\n${rawSentences.slice(0, 3).join(' ')}`;
     }
 
     // Case 0B: List / Which Are They / What Are The Options (Universal for ANY PDF)
     if (isListWhichAreThey) {
       if (operatingSections.length > 0) {
-        return `Based on the verified documentation, here are the listed areas and procedures:\n\n${operatingSections.slice(0, 8).map(s => `• ${s}`).join('\n')}`;
+        return `Here are the main areas and procedures:\n\n${operatingSections.slice(0, 8).map(s => `• ${s}`).join('\n')}`;
       }
       const listItems = rawSentences.filter(s => s.length >= 15 && s.length <= 200 && !isMetadataHeader(s)).slice(0, 6);
       if (listItems.length > 0) {
-        return `Based on the verified documentation, here are the details:\n\n${listItems.map(s => `• ${s.replace(/^[-*•\s]+/, '').trim()}`).join('\n')}`;
+        return `Here are the details:\n\n${listItems.map(s => `• ${s.replace(/^[-*•\s]+/, '').trim()}`).join('\n')}`;
       }
     }
 
@@ -704,7 +704,7 @@ export class AIAgentEngine {
       const hasPerson = scored.some(s => s.score > 1.0 && /(ceo|founder|founded by|president|director)/i.test(s.sent.toLowerCase()));
       if (!hasPerson) {
         const targetRole = qLower.includes('ceo') ? 'the CEO' : (qLower.includes('founder') ? 'the founder' : 'leadership');
-        return `I don't have information about ${targetRole} in our verified knowledge base.`;
+        return `I don't have information about ${targetRole} available.`;
       }
     }
 
@@ -732,7 +732,7 @@ export class AIAgentEngine {
       return selected.join('\n\n');
     }
 
-    return `I don't have enough verified information in our company knowledge base to answer that specific question. I can connect you with our team if you'd like!`;
+    return `I don't have enough specific information to answer that. I can connect you with our team if you'd like!`;
   }
 
   /**

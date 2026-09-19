@@ -2,7 +2,7 @@ import math
 import re
 from typing import List, Dict, Any, Tuple
 from app.schemas import ChunkSearchResult
-from app.services.embedding_service import EmbeddingService
+from app.services.embedding_service import EmbeddingService, UNIVERSAL_SEMANTIC_BASINS
 
 class RAGEngine:
     @staticmethod
@@ -85,6 +85,12 @@ class RAGEngine:
             return w
 
         stemmed_query_words = {stem(w) for w in meaningful_query_words}
+        # Expand synonym stems from universal basins
+        expanded_synonym_stems: set = set()
+        for basin in UNIVERSAL_SEMANTIC_BASINS:
+            if any(w in basin or stem(w) in {stem(b) for b in basin} for w in meaningful_query_words):
+                expanded_synonym_stems.update({stem(b) for b in basin})
+
         results: List[ChunkSearchResult] = []
 
         for chunk in stored_chunks:
@@ -105,12 +111,15 @@ class RAGEngine:
 
             vector_sim = cls.cosine_similarity(query_vec, chunk_vec)
 
-            # B. Lexical Overlap Score
+            # B. Lexical Overlap Score (Direct match + Synonym match)
             chunk_raw_words = set(re.findall(r'\w+', full_chunk_text))
             chunk_stemmed_words = {stem(w) for w in chunk_raw_words}
-            overlap = len(stemmed_query_words.intersection(chunk_stemmed_words))
+            direct_overlap = len(stemmed_query_words.intersection(chunk_stemmed_words))
+            synonym_overlap = len(expanded_synonym_stems.intersection(chunk_stemmed_words)) if expanded_synonym_stems else 0
 
-            keyword_score = (overlap / max(1, len(stemmed_query_words))) if stemmed_query_words else 0.0
+            direct_keyword_score = (direct_overlap / max(1, len(stemmed_query_words))) if stemmed_query_words else 0.0
+            synonym_keyword_score = min(1.0, synonym_overlap / max(1, len(stemmed_query_words))) if stemmed_query_words else 0.0
+            keyword_score = max(direct_keyword_score, synonym_keyword_score * 0.85)
 
             # C. Hybrid Fusion Score
             # If there is strong semantic vector similarity, even without literal keyword match, score remains high
@@ -170,11 +179,11 @@ class RAGEngine:
         4. LLM synthesis & citations formatting
         """
         chunks = cls.search_chunks(query, company_id, stored_chunks, threshold=0.1, top_k=top_k)
-        is_grounded, ground_msg = cls.evaluate_groundedness(chunks, threshold=0.20)
+        is_grounded, ground_msg = cls.evaluate_groundedness(chunks, threshold=0.45)
 
         citations = []
         for c in chunks:
-            if c.similarity_score >= 0.20:
+            if c.similarity_score >= 0.45:
                 citations.append({
                     "chunkId": c.chunk_id,
                     "sourceId": c.knowledge_source_id,
@@ -205,6 +214,24 @@ class RAGEngine:
             answer = await LLMProvider.generate_response(prompt=query, system_instruction=sys_inst)
         except Exception:
             answer = f"### {getattr(chunks[0], 'title', 'Company Knowledge')}\n\n{chunks[0].content}"
+
+        is_refusal = any(phrase in answer.lower() for phrase in [
+            "cannot verify", "can't verify", "do not have information", "don't have information",
+            "couldn't find enough information", "not mentioned in", "does not contain information",
+            "does not provide information", "no information available", "not available in the provided",
+            "unable to verify", "i don't have enough", "cannot provide information", "can't provide information",
+            "not present in", "not found in", "no mention of", "not covered in", "unable to find"
+        ])
+        if is_refusal:
+            return {
+                "success": False,
+                "answer": answer,
+                "isGrounded": False,
+                "grounded": False,
+                "citations": [],
+                "confidenceScore": 0.0,
+                "needsGapRecorded": True
+            }
 
         return {
             "success": True,

@@ -848,7 +848,7 @@ def record_knowledge_feedback(req: KnowledgeFeedbackRequest, ctx: TenantContext 
 @router.post("/test-rag")
 async def test_rag_knowledge(req: TestRagRequest, ctx: TenantContext = Depends(get_tenant_context)):
     """Executes a real grounded RAG query returning verified source citations and anti-hallucination validation."""
-    chunks = db.get_document_chunks_for_tenant(ctx.company_id)
+    chunks = db.get_document_chunks_for_tenant(ctx.company_id, only_active=True)
     res = await RAGEngine.execute_rag_query(req.query, ctx.company_id, chunks, top_k=req.top_k or 3)
 
     # If answer was ungrounded, record a knowledge gap automatically
@@ -870,7 +870,7 @@ async def test_rag_knowledge(req: TestRagRequest, ctx: TenantContext = Depends(g
 @router.post("/semantic-test")
 def semantic_search_test(req: SemanticTestRequest, ctx: TenantContext = Depends(get_tenant_context)):
     """Raw semantic chunk search endpoint for developer telemetry."""
-    chunks = db.get_document_chunks_for_tenant(ctx.company_id)
+    chunks = db.get_document_chunks_for_tenant(ctx.company_id, only_active=True)
     results = RAGEngine.search_chunks(req.query, ctx.company_id, chunks, top_k=req.top_k or 5, threshold=0.1)
     return {"status": 200, "data": {"query": req.query, "results": results}}
 

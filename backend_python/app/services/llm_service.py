@@ -302,7 +302,7 @@ class LLMProvider:
             has_person_info = any(score > 1.0 and any(w in sent.lower() for w in ["ceo", "founder", "founded by", "president", "director"]) for score, sent in scored_sentences)
             if not has_person_info:
                 target_role = "the CEO" if "ceo" in q_lower else ("the founder" if "founder" in q_lower else "leadership")
-                return f"I don't have information about {target_role} in our verified knowledge base."
+                return f"I don't have information about {target_role} available."
 
         # Case E: Boolean / Yes-No / Capability Question
         if is_boolean_question:
@@ -329,7 +329,7 @@ class LLMProvider:
             return "\n\n".join(selected_sents)
 
         # Fallback Grounded Statement
-        return "I don't have enough verified information in our company knowledge base to answer that specific question. I can connect you with our team if you'd like!"
+        return "I don't have enough specific information to answer that. I can connect you with our team if you'd like!"
 
     @classmethod
     async def stream_chat_completion(
