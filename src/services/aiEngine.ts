@@ -47,7 +47,8 @@ export class AIAgentEngine {
     actions: ActionDefinition[],
     conversationHistory: Message[] = []
   ): Promise<AIResponseResult> {
-    const qLower = userQuery.toLowerCase().trim();
+    const normalizedQuery = this.normalizeUserQuery(userQuery);
+    const qLower = normalizedQuery.toLowerCase().trim();
     const reasoning: string[] = [];
 
     // Step 1: Check Agent Status
@@ -66,8 +67,9 @@ export class AIAgentEngine {
         content: m.text
       }));
 
+      // Set timeout to 25000ms to allow 105B LLM generation over live network
       const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Backend timeout')), 2500)
+        setTimeout(() => reject(new Error('Backend timeout')), 25000)
       );
 
       const backendCall = APIClient.sendChatMessage(userQuery, {
@@ -266,7 +268,7 @@ export class AIAgentEngine {
     const passages = this.extractSemanticPassages(activeKnowledge);
     const scoredPassages = this.rankPassages(userQuery, passages, company.name);
 
-    if (scoredPassages.length > 0 && scoredPassages[0].score >= 0.15) {
+    if (scoredPassages.length > 0 && scoredPassages[0].score >= 0.12) {
       const topPassage = scoredPassages[0];
       const sourceDoc = activeKnowledge.find(k => k.id === topPassage.passage.sourceId) || { title: topPassage.passage.sourceTitle };
       
@@ -287,9 +289,29 @@ export class AIAgentEngine {
       };
     }
 
+    // If company knowledge exists, check if query is asking for company attributes (founder, CEO, contact, pricing, overview)
+    if (passages.length > 0) {
+      const isAttributeQuery = /(founder|founded|ceo|cto|creator|owner|leadership|executive|contact|email|phone|address|price|pricing|cost|plan|overview|about|what is|tell me)/i.test(qLower);
+      if (isAttributeQuery) {
+        const topPassage = passages[0];
+        const sourceDoc = activeKnowledge.find(k => k.id === topPassage.sourceId) || { title: topPassage.sourceTitle };
+        const answer = this.synthesizeGroundedAnswer(
+          userQuery,
+          topPassage,
+          passages.slice(0, 3),
+          company
+        );
+        return {
+          message: answer,
+          reasoningSteps: reasoning,
+          matchedKnowledgeSources: [sourceDoc.title]
+        };
+      }
+    }
+
     // Step 5: Intelligent General Answering Engine (ChatGPT-Level IQ for General Queries)
     reasoning.push(`[General Intelligence Engine] Synthesizing comprehensive AI answer for query.`);
-    const generalAnswer = this.synthesizeGeneralQueryAnswer(userQuery, company);
+    const generalAnswer = this.synthesizeGeneralQueryAnswer(userQuery, company, activeKnowledge.length > 0);
 
     return {
       message: generalAnswer,
@@ -376,6 +398,31 @@ export class AIAgentEngine {
   }
 
   /**
+   * Normalizes user query by expanding compound or glued words (e.g. foundername -> founder name)
+   */
+  private static normalizeUserQuery(query: string): string {
+    let normalized = query.trim();
+    normalized = normalized.replace(/([a-z])([A-Z])/g, '$1 $2');
+    const compoundPatterns: [RegExp, string][] = [
+      [/^foundername$/i, 'founder name'],
+      [/^ceoname$/i, 'ceo name'],
+      [/^companyname$/i, 'company name'],
+      [/^phonenumber$/i, 'phone number'],
+      [/^contactus$/i, 'contact us'],
+      [/^contactinfo$/i, 'contact info'],
+      [/^whatis$/i, 'what is'],
+      [/^whois$/i, 'who is'],
+      [/^pricingplan$/i, 'pricing plan'],
+      [/^aboutcompany$/i, 'about company'],
+      [/^overviewof$/i, 'overview of']
+    ];
+    for (const [pattern, repl] of compoundPatterns) {
+      normalized = normalized.replace(pattern, repl);
+    }
+    return normalized;
+  }
+
+  /**
    * Ranks semantic passages against the user query.
    */
   private static rankPassages(
@@ -383,7 +430,8 @@ export class AIAgentEngine {
     passages: SemanticPassage[], 
     companyName: string
   ): { passage: SemanticPassage; score: number }[] {
-    const qLower = userQuery.toLowerCase().trim();
+    const qExpanded = this.normalizeUserQuery(userQuery);
+    const qLower = qExpanded.toLowerCase().trim();
     const stopWords = new Set([
       "what", "is", "the", "a", "an", "in", "on", "at", "for", "to", "of", "and", "or",
       "are", "how", "do", "does", "did", "can", "could", "would", "should", "will", "tell", "me",
@@ -404,7 +452,8 @@ export class AIAgentEngine {
       cost: ['price', 'pricing', 'plan', 'tier', 'fee', 'rate', 'billing'],
       refund: ['return', 'cancel', 'cancellation', 'money back', 'guarantee', 'policy'],
       return: ['refund', 'cancel', 'exchange', 'warranty', 'policy'],
-      contact: ['email', 'support', 'phone', 'helpdesk', 'reach', 'talk'],
+      contact: ['email', 'support', 'phone', 'helpdesk', 'reach', 'talk', 'address'],
+      founder: ['founded', 'creator', 'created by', 'ceo', 'cto', 'leadership', 'executive', 'owner'],
       hours: ['time', 'schedule', 'available', 'working', 'operation', 'days'],
       sla: ['uptime', 'guarantee', 'availability', 'support', 'tier', 'response'],
       security: ['gdpr', 'hipaa', 'soc2', 'compliance', 'privacy', 'encryption', 'data', 'jwt', 'auth'],
@@ -448,7 +497,7 @@ export class AIAgentEngine {
       // Normalize by number of query terms
       const normalizedScore = allWords.length > 0 ? Math.min(1.0, score / Math.max(1, allWords.length * 0.3)) : (passages.length === 1 ? 0.9 : 0);
 
-      if (normalizedScore > 0.12) {
+      if (normalizedScore > 0.10) {
         scored.push({ passage, score: normalizedScore });
       }
     }
@@ -465,7 +514,8 @@ export class AIAgentEngine {
     _supportingPassages: SemanticPassage[],
     _company: Company
   ): string {
-    const qLower = query.toLowerCase().trim();
+    const qExpanded = this.normalizeUserQuery(query);
+    const qLower = qExpanded.toLowerCase().trim();
 
     // If it's a direct FAQ
     if (primaryPassage.isFaq && primaryPassage.faqAnswer) {
@@ -479,6 +529,57 @@ export class AIAgentEngine {
     const faqMatch = cleanContent.match(faqPattern);
     if (faqMatch) {
       return faqMatch[2].trim();
+    }
+
+    // Determine Entity Title
+    let entityTitle = (primaryPassage.sourceTitle || primaryPassage.header || _company.name || 'Documentation')
+      .replace(/Website\s*(&\s*Operational\s*Knowledge)?/gi, '')
+      .replace(/\.[^/.]+$/, '')
+      .replace(/[-_]/g, ' ')
+      .trim();
+
+    if (!entityTitle || entityTitle.length <= 1) {
+      entityTitle = _company.name || 'CoarAI';
+    } else if (entityTitle.toLowerCase() === 'coarai') {
+      entityTitle = 'CoarAI';
+    } else {
+      entityTitle = entityTitle.split(/\s+/).map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+    }
+
+    const allKnowledgeText = cleanContent + ' ' + _supportingPassages.map(p => p.content).join(' ');
+
+    // 1. SPECIFIC ATTRIBUTE CHECKS FIRST: Founder / Leadership / CEO
+    const isFounderQuery = /(founder|founded|created by|creator|ceo|cto|leadership|executive|owner)/i.test(qLower);
+    if (isFounderQuery) {
+      const founderMatch = allKnowledgeText.match(/(?:founder|founded by|creator|ceo|cto|leadership)\s*(?:is|was|:)?\s*([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*)/i);
+      if (founderMatch) {
+        return `According to the documentation for **${entityTitle}**, the founder/leadership is **${founderMatch[1]}**.`;
+      }
+      return `The available documentation for **${entityTitle}** does not specify the founder's name or executive leadership details. For official leadership information, please consult the company's official website or team page.`;
+    }
+
+    // 2. SPECIFIC ATTRIBUTE CHECKS: Contact / Phone / Email / Address
+    const isContactQuery = /(phone number|contact number|call us|office address|headquarters|postal code|email address|how to contact)/i.test(qLower);
+    if (isContactQuery) {
+      const phoneMatch = allKnowledgeText.match(/(?:\+?\d{1,3}[-.\s]?)?\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}/);
+      const emailMatch = allKnowledgeText.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/);
+      if (phoneMatch || emailMatch) {
+        return `### Contact Information for ${entityTitle}\n\n` +
+          (emailMatch ? `- **Email**: ${emailMatch[0]}\n` : '') +
+          (phoneMatch ? `- **Phone**: ${phoneMatch[0]}\n` : '');
+      }
+      return `The current documentation for **${entityTitle}** does not list a direct phone number or physical office address. Please reach out via their official support channels or website.`;
+    }
+
+    // 3. SPECIFIC ATTRIBUTE CHECKS: Pricing / Cost / Plans
+    const isPricingQuery = /(pricing|price|cost|how much|subscription plan|plan tiers|pricing quote)/i.test(qLower);
+    if (isPricingQuery) {
+      const priceLines = allKnowledgeText.split('\n').filter(l => /\$|€|£|₹|inr|usd|plan|pricing|tier|per month|free/i.test(l));
+      if (priceLines.length > 0) {
+        const cleanPriceSummary = priceLines.slice(0, 5).join('\n').trim();
+        return `### Pricing & Plan Information for ${entityTitle}\n\n${cleanPriceSummary}`;
+      }
+      return `The available documentation for **${entityTitle}** does not detail specific subscription pricing tiers. Please visit their official pricing page or contact sales for current rates.`;
     }
 
     const isSopContext = /SOP|Operations|Standard Operating Procedures|Policy|Procedure|Guidelines|Internal|BrightForge/i.test(
@@ -498,7 +599,7 @@ export class AIAgentEngine {
     // Filter out raw binary placeholders
     const isPlaceholderText = cleanContent.includes('Verified enterprise documentation for') && cleanContent.length < 350;
 
-    // 1. If asking to EXPLAIN the company / organization
+    // 4. If asking to EXPLAIN the company / organization
     if (isExplainQuery && isSopContext) {
       return `### Overview of BrightForge Technologies
 
@@ -516,7 +617,7 @@ export class AIAgentEngine {
 The operations framework covers everything from daily administration and communications to onboarding, security governance, and emergency response.`;
     }
 
-    // 2. If asking for STANDARD OPERATING PROCEDURES (SOP)
+    // 5. If asking for STANDARD OPERATING PROCEDURES (SOP)
     if (isSopQuery && isSopContext) {
       return `### Standard Operating Procedures Overview
 
@@ -556,7 +657,6 @@ BrightForge Technologies maintains 23 standard operating procedures structured a
 23. **Emergency Escalation**: Multi-tier escalation matrix for critical operational disruptions.`;
     }
 
-    // 3. Specific topic queries directly matching the PDF SOPs
     if (isOnboardingQuery && isSopContext) {
       return `### Employee Onboarding Procedure
 
@@ -653,45 +753,6 @@ Compliance procedures maintain high operational standards and adherence to polic
 - **Periodic Audits**: Regular internal reviews ensure workflows remain aligned with documented procedures.`;
     }
 
-    // 3b. Universal Overview & Explanation for any uploaded document, website, or entity
-    let entityTitle = (primaryPassage.sourceTitle || primaryPassage.header || 'Documentation')
-      .replace(/Website\s*(&\s*Operational\s*Knowledge)?/gi, '')
-      .replace(/\.[^/.]+$/, '')
-      .replace(/[-_]/g, ' ')
-      .trim();
-
-    if (!entityTitle || entityTitle.length <= 1) {
-      entityTitle = 'CoarAI';
-    } else if (entityTitle.toLowerCase() === 'coarai') {
-      entityTitle = 'CoarAI';
-    } else {
-      entityTitle = entityTitle.split(/\s+/).map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
-    }
-
-    const allKnowledgeText = cleanContent + ' ' + _supportingPassages.map(p => p.content).join(' ');
-
-    // 3c. Specific Attribute Checks (Founder, CEO, Contact, Pricing, etc.)
-    const isFounderQuery = /\b(founder|founded|created by|creator|ceo|cto|leadership|executive)\b/i.test(qLower);
-    if (isFounderQuery) {
-      const founderMatch = allKnowledgeText.match(/(?:founder|founded by|creator|ceo|cto|leadership)\s*(?:is|was|:)?\s*([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*)/i);
-      if (founderMatch) {
-        return `According to the documentation for **${entityTitle}**, the founder/leadership is **${founderMatch[1]}**.`;
-      }
-      return `The available documentation for **${entityTitle}** does not specify the founder's name or executive leadership details. For official leadership information, please consult the company's official website or team page.`;
-    }
-
-    const isContactQuery = /\b(phone number|contact number|call us|office address|headquarters|postal code)\b/i.test(qLower);
-    if (isContactQuery) {
-      const phoneMatch = allKnowledgeText.match(/(?:\+?\d{1,3}[-.\s]?)?\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}/);
-      const emailMatch = allKnowledgeText.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/);
-      if (phoneMatch || emailMatch) {
-        return `### Contact Information for ${entityTitle}\n\n` +
-          (emailMatch ? `- **Email**: ${emailMatch[0]}\n` : '') +
-          (phoneMatch ? `- **Phone**: ${phoneMatch[0]}\n` : '');
-      }
-      return `The current documentation for **${entityTitle}** does not list a direct phone number or physical office address. Please reach out via their official support channels or website.`;
-    }
-
     if (isExplainQuery && !isSopContext) {
       // If it's specifically CoarAI
       if (entityTitle.toLowerCase() === 'coarai') {
@@ -746,7 +807,7 @@ Compliance procedures maintain high operational standards and adherence to polic
 ${summaryBody || `**${entityTitle}** contains verified documentation, operating guidelines, and technical specifications.`}`;
     }
 
-    // 4. Universal Answer Formulation for Specific Queries across ANY uploaded PDF / Website
+    // 6. Universal Answer Formulation for Specific Queries across ANY uploaded PDF / Website
     if (!isPlaceholderText && cleanContent.length > 50) {
       // Strip raw codes, metadata lines, and placeholder banners
       const sanitized = cleanContent
@@ -803,21 +864,18 @@ ${summaryBody || `**${entityTitle}** contains verified documentation, operating 
       return `${headerTitle}${structuredBody || sanitized}`.trim();
     }
 
-    // 5. Default high-quality structured answer
-    return `### Operational Overview
+    // Default high-quality structured answer for documentation
+    return `### Overview of ${entityTitle}
 
-Our company operates under documented standard operating procedures and governance policies to ensure quality, security, and operational consistency:
-
-- **Standardized Workflows**: Clear operational paths for daily administration, onboarding, and departmental tasks.
-- **Security & Access Controls**: Strict adherence to the principle of least privilege, access logging, and data classification.
-- **Reliability & Support**: Active monitoring, business continuity plans, and rapid escalation channels.`;
+**${entityTitle}** documentation covers operational processes, standard procedures, and technical guidelines designed to maintain high performance, reliability, and security.`;
   }
 
   /**
    * Synthesizes an intelligent, comprehensive, ChatGPT-level response for general or technical inquiries.
    */
-  private static synthesizeGeneralQueryAnswer(query: string, company: Company): string {
-    const qLower = query.toLowerCase().trim();
+  private static synthesizeGeneralQueryAnswer(query: string, company: Company, hasUploadedKnowledge = false): string {
+    const qNormalized = this.normalizeUserQuery(query);
+    const qLower = qNormalized.toLowerCase().trim();
 
     // 1. Math / Calculation queries
     if (/^[\d\s+\-*/^().%]+$/.test(query) || qLower.startsWith('calculate') || (qLower.startsWith('what is ') && /\d+/.test(qLower))) {
@@ -852,13 +910,13 @@ Our company operates under documented standard operating procedures and governan
       return `Hello! How can I help you today? Feel free to ask any question regarding our company operations, standard operating procedures, technical setup, or general topics.`;
     }
 
-    // 4. Business / Strategy / Marketing queries
-    if (qLower.includes('sales') || qLower.includes('pipeline') || qLower.includes('conversion') || qLower.includes('strategy') || qLower.includes('cac') || qLower.includes('marketing') || qLower.includes('onboarding')) {
-      return `### Strategic Framework & Actionable Steps\n\nTo effectively address **${query}**, here is a structured best-practice approach:\n\n1. **Define Core Objectives & KPIs**\n   - Establish measurable targets (e.g. Conversion rate, CAC:LTV ratio, Time-to-value).\n   - Benchmark current performance against industry standards.\n\n2. **Optimize Execution & Funnel Workflow**\n   - Identify drop-off points in your customer journey.\n   - Implement automated follow-ups and AI-driven response systems to engage leads instantly.\n\n3. **Continuous Iteration & Feedback Loop**\n   - Review customer interactions and unanswered inquiries weekly.\n   - Refine value propositions based on real user feedback.\n\nWould you like me to tailor this strategy specifically to **${company.name}**'s operational workflow?`;
+    // 4. If the workspace has uploaded documents, honestly explain that the query wasn't found in the docs
+    if (hasUploadedKnowledge) {
+      return `I searched the available documentation for **${company.name}**, but could not find specific information regarding "**${query}**". If you have additional documents, links, or context, please feel free to upload them or ask a related question.`;
     }
 
-    // 5. Default High-Quality Synthesis for any general inquiry
-    return `### ${query}\n\nHere is a structured overview addressing your query:\n\n- **Core Concept**: Analyzing key requirements, operational objectives, and best-practice principles.\n- **Implementation Strategy**: Prioritize clarity, repeatability, and risk mitigation across all stages.\n- **Recommendation**: Align with team guidelines and documented standards to ensure predictable outcomes.\n\nPlease let me know if you would like deeper details, specific examples, or step-by-step guidance on any aspect!`;
+    // 5. Intelligent ChatGPT-Grade Conversational Fallback
+    return `Regarding **${query}**: I'm ready to assist! If you have specific questions about **${company.name}**'s platform, documentation, services, or technical workflows, please let me know and I'll be glad to help.`;
   }
 
   /**
