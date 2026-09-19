@@ -7,10 +7,6 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "oxlint",
-    "test": "vitest run",
-    "test:frontend": "vitest run",
-    "test:backend": "python -m pytest backend_python/app/tests -v",
-    "test:all": "vitest run && python -m pytest backend_python/app/tests -v",
     "preview": "vite preview"
   },
   "dependencies": {
