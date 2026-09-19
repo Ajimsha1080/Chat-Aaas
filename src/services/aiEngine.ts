@@ -803,9 +803,7 @@ Compliance procedures maintain high operational standards and adherence to polic
     if (isExplainQuery && !isSopContext) {
       // If it's specifically CoarAI
       if (entityTitle.toLowerCase() === 'coarai') {
-        return `### About CoarAI
-
-**CoarAI** is an enterprise AI Agent platform designed to automate customer interactions, streamline business knowledge access, and execute autonomous operational workflows.
+        return `**CoarAI** is an enterprise AI Agent platform designed to automate customer interactions, streamline business knowledge access, and execute autonomous operational workflows.
 
 #### Key Platform Highlights:
 - **Intelligent Conversational Engine**: Delivers real-time, context-aware answers grounded strictly in verified company documentation and live data sources.
@@ -860,9 +858,7 @@ Compliance procedures maintain high operational standards and adherence to polic
         summaryBody += docNarrative.slice(2, 4).join('\n\n');
       }
 
-      return `### Overview of ${resolvedName}
-
-${summaryBody || `**${resolvedName}** provides comprehensive platform capabilities, intelligent automation, and verified technical documentation.`}`;
+      return summaryBody || `**${resolvedName}** provides comprehensive platform capabilities, intelligent automation, and verified technical documentation.`;
     }
 
     // 6. Universal Answer Formulation for Specific Queries across ANY uploaded PDF / Website
@@ -924,9 +920,7 @@ ${summaryBody || `**${resolvedName}** provides comprehensive platform capabiliti
     if (finalEntity.toLowerCase() === 'aaaa' || finalEntity.toLowerCase() === 'aaa' || finalEntity.toLowerCase() === 'qq' || finalEntity === '1') {
       finalEntity = 'CoarAI';
     }
-    return `### Overview of ${finalEntity}
-
-**${finalEntity}** documentation covers operational processes, standard procedures, and technical guidelines designed to maintain high performance, reliability, and security.`;
+    return `**${finalEntity}** documentation covers operational processes, standard procedures, and technical guidelines designed to maintain high performance, reliability, and security.`;
   }
 
   /**
