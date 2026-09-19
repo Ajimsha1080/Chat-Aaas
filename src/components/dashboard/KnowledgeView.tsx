@@ -150,11 +150,37 @@ export const KnowledgeView: React.FC = () => {
   const [editItemContent, setEditItemContent] = useState('');
   const [editItemUrl, setEditItemUrl] = useState('');
   const [isRecrawlingEdit, setIsRecrawlingEdit] = useState(false);
+  const [isRecrawlingPreview, setIsRecrawlingPreview] = useState(false);
   const [isTestSandboxOpen, setIsTestSandboxOpen] = useState(false);
   const [isNewCollectionModalOpen, setIsNewCollectionModalOpen] = useState(false);
   const [convertingGap, setConvertingGap] = useState<KnowledgeGap | null>(null);
   const [gapFaqAnswer, setGapFaqAnswer] = useState('');
   const [showInfoTooltip, setShowInfoTooltip] = useState(false);
+
+  const handleRecrawlPreview = async (item: KnowledgeItem) => {
+    if (!item.sourceUrl) return;
+    setIsRecrawlingPreview(true);
+    try {
+      const crawlRes = await APIClient.crawlUrl(item.sourceUrl, item.category);
+      const resData = (crawlRes as any)?.data || crawlRes;
+      const extractedText = (resData?.extractedText || resData?.content || '').trim();
+      const chunksCreated = resData?.chunksCreated || resData?.totalChunks || (extractedText ? Math.max(1, Math.ceil(extractedText.length / 500)) : 1);
+      if (extractedText) {
+        updateKnowledgeItem(item.id, {
+          content: extractedText,
+          chunksCount: chunksCreated,
+          tokenCount: chunksCreated * 65,
+          fileSize: `${Math.max(1, Math.round(extractedText.length / 1024))} KB`,
+          lastUpdated: 'Just now'
+        });
+        showToast('Site Re-Crawled', `Indexed ${chunksCreated} vector chunks from ${item.sourceUrl}.`, 'success');
+      }
+    } catch (err: any) {
+      showToast('Crawl Error', err.message || 'Failed to crawl website.', 'error');
+    } finally {
+      setIsRecrawlingPreview(false);
+    }
+  };
 
   // Collections & Gaps State
   const [collections, setCollections] = useState<KnowledgeCollection[]>([]);
@@ -1951,7 +1977,8 @@ export const KnowledgeView: React.FC = () => {
 
       {/* Preview Content Modal */}
       {previewItem && (() => {
-        const previewText = previewItem.faqAnswer ? `Question: ${previewItem.title}\n\nAnswer: ${previewItem.faqAnswer}` : (previewItem.content || '');
+        const liveItem = knowledgeItems.find(k => k.id === previewItem.id) || previewItem;
+        const previewText = liveItem.faqAnswer ? `Question: ${liveItem.title}\n\nAnswer: ${liveItem.faqAnswer}` : (liveItem.content || '');
         const previewChunks = getSemanticChunks(previewText, 500, 50);
         return (
           <div className="fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in">
@@ -1959,19 +1986,33 @@ export const KnowledgeView: React.FC = () => {
               <div className="flex items-center justify-between pb-3.5 border-b border-slate-100">
                 <div className="flex items-center gap-3">
                   <div className="p-2 bg-slate-100 text-slate-800 rounded-xl border border-slate-200">
-                    {previewItem.type === 'url' ? <Globe className="w-5 h-5" /> : previewItem.type === 'document' ? <FileText className="w-5 h-5" /> : <HelpCircle className="w-5 h-5" />}
+                    {liveItem.type === 'url' ? <Globe className="w-5 h-5 text-indigo-600" /> : liveItem.type === 'document' ? <FileText className="w-5 h-5 text-indigo-600" /> : <HelpCircle className="w-5 h-5 text-indigo-600" />}
                   </div>
                   <div>
-                    <h3 className="text-base font-bold text-slate-900">{previewItem.title}</h3>
-                    <span className="text-xs text-slate-500 capitalize font-mono">{previewItem.category || 'General'} · {previewItem.type}</span>
+                    <h3 className="text-base font-bold text-slate-900">{liveItem.title}</h3>
+                    <span className="text-xs text-slate-500 capitalize font-mono">{liveItem.category || 'General'} · {liveItem.type}</span>
                   </div>
                 </div>
-                <button
-                  onClick={() => setPreviewItem(null)}
-                  className="text-slate-400 hover:text-slate-700 p-1.5 rounded-lg hover:bg-slate-100 cursor-pointer"
-                >
-                  <X className="w-5 h-5" />
-                </button>
+                <div className="flex items-center gap-2">
+                  {liveItem.type === 'url' && liveItem.sourceUrl && (
+                    <button
+                      type="button"
+                      disabled={isRecrawlingPreview}
+                      onClick={() => handleRecrawlPreview(liveItem)}
+                      className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-xs font-semibold rounded-lg border border-indigo-200 transition-all cursor-pointer"
+                      title="Fetch live HTML content and re-vectorize"
+                    >
+                      <RefreshCw className={`w-3.5 h-3.5 ${isRecrawlingPreview ? 'animate-spin' : ''}`} />
+                      <span>{isRecrawlingPreview ? 'Crawling...' : 'Re-crawl Site'}</span>
+                    </button>
+                  )}
+                  <button
+                    onClick={() => setPreviewItem(null)}
+                    className="text-slate-400 hover:text-slate-700 p-1.5 rounded-lg hover:bg-slate-100 cursor-pointer"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
               </div>
 
               {/* View Mode Toggle: Content vs Vector Chunks */}

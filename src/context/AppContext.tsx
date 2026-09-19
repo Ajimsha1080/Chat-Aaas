@@ -350,12 +350,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     syncTenantLiveData();
   }, [currentCompanyId]);
 
-  // 3. Auto-crawl only uninitialized/empty URL items
+  // 3. Auto-crawl and enrich uninitialized or stub URL items
   const currentKnowledgeItems = knowledgeMap[currentCompanyId];
   useEffect(() => {
     const currentItems = currentKnowledgeItems || [];
     const placeholderItems = currentItems.filter(
-      k => k.type === 'url' && (!k.content || k.content.trim() === '')
+      k => k.type === 'url' && (!k.content || k.content.trim() === '' || k.content.length < 150 || (k.chunksCount && k.chunksCount <= 1 && k.content.length < 300))
     );
 
     if (placeholderItems.length > 0) {
@@ -379,24 +379,21 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           }
         }
 
-        if (!finalExtracted || finalExtracted.length < 50) {
-          finalExtracted = generateComprehensiveWebsiteContent(item.title, targetUrl);
-          chunks = Math.max(1, Math.ceil(finalExtracted.length / 500));
+        if (finalExtracted && finalExtracted.length >= 50) {
+          setKnowledgeMap(prev => ({
+            ...prev,
+            [currentCompanyId]: (prev[currentCompanyId] || []).map(k => k.id === item.id ? {
+              ...k,
+              title: item.title || 'Website Documentation',
+              content: finalExtracted,
+              sourceUrl: k.sourceUrl || targetUrl,
+              chunksCount: chunks,
+              tokenCount: chunks * 65,
+              fileSize: `${Math.max(1, Math.round(finalExtracted.length / 1024))} KB`,
+              lastUpdated: 'Just now'
+            } : k)
+          }));
         }
-
-        setKnowledgeMap(prev => ({
-          ...prev,
-          [currentCompanyId]: (prev[currentCompanyId] || []).map(k => k.id === item.id ? {
-            ...k,
-            title: item.title || 'Website Documentation',
-            content: finalExtracted,
-            sourceUrl: k.sourceUrl || targetUrl,
-            chunksCount: chunks,
-            tokenCount: chunks * 65,
-            fileSize: `${Math.max(1, Math.round(finalExtracted.length / 1024))} KB`,
-            lastUpdated: 'Just now'
-          } : k)
-        }));
       });
     }
 
