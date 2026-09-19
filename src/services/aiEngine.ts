@@ -638,6 +638,31 @@ export class AIAgentEngine {
       }
     }
 
+    // Case 0C: Full Name / Full Form / Acronym Definition
+    const isAcronymOrDefinition = /(full\s*name|full\s*form|stand[s]?\s*for|mean[s]?\b|meaning\s*of|definition\s*of)/i.test(qLower) || (/^what\s+is\s+([a-zA-Z0-9_\-\/]+)\??$/i.test(qLower.trim()) && qTokens.length === 1);
+    if (isAcronymOrDefinition) {
+      const candidateTerms = qTokens.filter((t: string) => !['full', 'name', 'form', 'stand', 'stands', 'mean', 'meaning', 'definition', 'what', 'term'].includes(t.toLowerCase()));
+      for (const term of candidateTerms) {
+        if (term.length < 2) continue;
+        const tEscaped = term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        const pat1 = new RegExp(`\\b${tEscaped}\\s*\\(([^)]+)\\)`, 'i');
+        const pat2 = new RegExp(`([A-Za-z0-9\\s\\-]{3,60})\\s*\\(${tEscaped}\\)`, 'i');
+        const pat3 = new RegExp(`\\b${tEscaped}\\s+(?:stands for|means|is defined as|short for)\\s+([^,.;\\n]+)`, 'i');
+        const pat4 = new RegExp(`\\b${tEscaped}\\s*:\\s*([A-Za-z0-9\\s\\-]{3,60})`, 'i');
+
+        for (const sent of rawSentences) {
+          const m1 = pat1.exec(sent);
+          if (m1 && m1[1]) return `${term.toUpperCase()} stands for **${m1[1].trim()}**.`;
+          const m2 = pat2.exec(sent);
+          if (m2 && m2[1]) return `${term.toUpperCase()} stands for **${m2[1].trim()}**.`;
+          const m3 = pat3.exec(sent);
+          if (m3 && m3[1]) return `${term.toUpperCase()} stands for **${m3[1].trim()}**.`;
+          const m4 = pat4.exec(sent);
+          if (m4 && m4[1]) return `${term.toUpperCase()} stands for **${m4[1].trim()}**.`;
+        }
+      }
+    }
+
     // Score sentences
     const scored = rawSentences.map(sent => {
       const sLower = sent.toLowerCase();

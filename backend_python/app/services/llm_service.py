@@ -258,6 +258,33 @@ class LLMProvider:
 
         # 5. Formulate Question-Specific Response
 
+        # Case 0: Full Name / Full Form / Acronym Definition (e.g., "Rag full name", "SLA full form", "What does API stand for?")
+        is_acronym_or_definition = any(k in q_lower for k in ["full name", "full form", "stand for", "stands for", "meaning of", "definition of"]) or (q_lower.startswith("what is") and len(meaningful_tokens) == 1)
+        if is_acronym_or_definition:
+            candidate_terms = [t for t in meaningful_tokens if t.lower() not in ["full", "name", "form", "stand", "stands", "mean", "meaning", "definition", "what", "term"]]
+            for term in candidate_terms:
+                if len(term) < 2:
+                    continue
+                t_escaped = re.escape(term)
+                pat1 = re.compile(rf'\b{t_escaped}\s*\(([^)]+)\)', re.IGNORECASE)
+                pat2 = re.compile(rf'([A-Za-z0-9\s\-]{{3,60}})\s*\({t_escaped}\)', re.IGNORECASE)
+                pat3 = re.compile(rf'\b{t_escaped}\s+(?:stands for|means|is defined as|short for)\s+([^,.;\n]+)', re.IGNORECASE)
+                pat4 = re.compile(rf'\b{t_escaped}\s*:\s*([A-Za-z0-9\s\-]{{3,60}})', re.IGNORECASE)
+
+                for sent in raw_sentences:
+                    m1 = pat1.search(sent)
+                    if m1 and m1.group(1):
+                        return f"{term.upper()} stands for **{m1.group(1).strip()}**."
+                    m2 = pat2.search(sent)
+                    if m2 and m2.group(1):
+                        return f"{term.upper()} stands for **{m2.group(1).strip()}**."
+                    m3 = pat3.search(sent)
+                    if m3 and m3.group(1):
+                        return f"{term.upper()} stands for **{m3.group(1).strip()}**."
+                    m4 = pat4.search(sent)
+                    if m4 and m4.group(1):
+                        return f"{term.upper()} stands for **{m4.group(1).strip()}**."
+
         # Case A: "What does your company do?" / Company Overview
         if is_what_do_you_do:
             for score, sent in scored_sentences:

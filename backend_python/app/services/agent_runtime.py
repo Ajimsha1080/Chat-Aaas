@@ -281,8 +281,9 @@ class AgentRuntime:
             f"2. If the user asks what the company does or what services are offered, answer ONLY about the company's core services / products (e.g., 'The company provides cloud services for AWS and Azure.'). Do NOT include support hours or refund policies unless specifically asked.\n"
             f"3. If the user asks a yes/no or capability question (e.g., 'Can I get support at night?'), begin with a direct answer ('Yes, ...') followed by the concise explanation from the context.\n"
             f"4. If the user asks about refunds, answer ONLY about the refund policy.\n"
-            f"5. Base your answer strictly on the verified knowledge context below. If a specific detail (such as a founder's name or pricing) is not mentioned in the context, state clearly that the documentation does not contain that information.\n"
-            f"6. Keep the response concise (1-2 sentences), conversational, and do not output raw document headers or metadata tags.\n\n"
+            f"5. If the user asks for the full name, full form, meaning, or definition of an acronym or term (e.g. 'Rag full name', 'What does RAG stand for?'), answer directly with the full expansion (e.g., 'RAG stands for Retrieval-Augmented Generation.') instead of returning unrelated context sentences.\n"
+            f"6. Base your answer strictly on the verified knowledge context below. If a specific detail (such as a founder's name or pricing) is not mentioned in the context, state clearly that the documentation does not contain that information.\n"
+            f"7. Keep the response concise (1-2 sentences), conversational, and do not output raw document headers or metadata tags.\n\n"
             f"Verified Knowledge Context:\n{retrieved_context}"
         )
 
@@ -436,8 +437,9 @@ class AgentRuntime:
             f"2. If the user asks what the company does or what services are offered, answer ONLY about the company's core services / products (e.g., 'The company provides cloud services for AWS and Azure.'). Do NOT include support hours or refund policies unless specifically asked.\n"
             f"3. If the user asks a yes/no or capability question (e.g., 'Can I get support at night?'), begin with a direct answer ('Yes, ...') followed by the concise explanation from the context.\n"
             f"4. If the user asks about refunds, answer ONLY about the refund policy.\n"
-            f"5. Base your answer strictly on the verified knowledge context below. If a specific detail (such as a founder's name or pricing) is not mentioned in the context, state clearly that the documentation does not contain that information.\n"
-            f"6. Keep the response concise (1-2 sentences), conversational, and do not output raw document headers or metadata tags.\n\n"
+            f"5. If the user asks for the full name, full form, meaning, or definition of an acronym or term (e.g. 'Rag full name', 'What does RAG stand for?'), answer directly with the full expansion (e.g., 'RAG stands for Retrieval-Augmented Generation.') instead of returning unrelated context sentences.\n"
+            f"6. Base your answer strictly on the verified knowledge context below. If a specific detail (such as a founder's name or pricing) is not mentioned in the context, state clearly that the documentation does not contain that information.\n"
+            f"7. Keep the response concise (1-2 sentences), conversational, and do not output raw document headers or metadata tags.\n\n"
             f"Verified Knowledge Context:\n{retrieved_context}"
         )
 
