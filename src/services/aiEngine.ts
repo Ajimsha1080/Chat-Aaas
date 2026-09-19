@@ -546,30 +546,44 @@ export class AIAgentEngine {
       }
     }
 
+    // Helper to strip markdown and check if a line is metadata boilerplate
+    const isMetadataHeader = (text: string): boolean => {
+      const clean = text.replace(/[*_#`~:\-\s]+/g, ' ').trim().toLowerCase();
+      return (
+        clean.startsWith('document title') ||
+        clean.startsWith('document id') ||
+        clean.startsWith('classification') ||
+        clean.startsWith('effective date') ||
+        clean.startsWith('version') ||
+        clean.startsWith('review cycle') ||
+        clean.startsWith('document owner') ||
+        clean.startsWith('page url') ||
+        clean.startsWith('author') ||
+        clean.startsWith('table of contents') ||
+        /^(title|doc id|date|owner|version|sop id)\b/i.test(clean)
+      );
+    };
+
     // Extract sentences and clean them
     const lines = allText.split('\n').map(l => l.trim()).filter(l => l.length > 5);
     const rawSentences: string[] = [];
     const operatingSections: string[] = [];
     
     for (const line of lines) {
-      // Filter out boilerplate metadata headers
-      if (
-        line.startsWith('#') || 
-        line.toLowerCase().startsWith('table of contents') ||
-        /^(document title|document id|classification|effective date|version|review cycle|document owner|page url):/i.test(line)
-      ) {
+      if (isMetadataHeader(line)) continue;
+      if (line.startsWith('#') || line.toLowerCase().startsWith('table of contents')) {
         if (line.startsWith('###') || line.startsWith('##')) {
-          operatingSections.push(line.replace(/^#+\s*/, '').trim());
+          const secTitle = line.replace(/^#+\s*/, '').trim();
+          if (!isMetadataHeader(secTitle)) {
+            operatingSections.push(secTitle);
+          }
         }
         continue;
       }
       const sList = line.split(/(?<=[.?!])\s+/);
       for (const s of sList) {
         const sClean = s.replace(/^[-*•□\s\d.)]+/, '').trim();
-        if (
-          sClean.length > 8 && 
-          !/^(document title|document id|classification|effective date|version|review cycle|document owner|page url):/i.test(sClean)
-        ) {
+        if (sClean.length > 8 && !isMetadataHeader(sClean)) {
           rawSentences.push(sClean);
         }
       }
@@ -581,10 +595,10 @@ export class AIAgentEngine {
 
     // Stop words & tokens
     const stopWords = new Set([
-      "main", "pionts", "points", "piont", "point", "which", "are", "they", "them",
+      "main", "pionts", "points", "piont", "point", "which", "are", "they", "them", "explain",
       "what", "is", "the", "a", "an", "in", "on", "at", "for", "to", "of", "and", "or",
       "are", "how", "do", "does", "did", "can", "could", "would", "should", "will", "tell", "me",
-      "about", "our", "your", "you", "know", "this", "that", "these", "those", "explain", "please",
+      "about", "our", "your", "you", "know", "this", "that", "these", "those", "please",
       "who", "where", "when", "why", "which", "have", "has", "had", "think", "with", "from",
       "give", "information", "info", "details", "detail", "overview", "summary", "provide", "show", "list", "help"
     ]);
@@ -592,7 +606,7 @@ export class AIAgentEngine {
     const qTokens = (qLower.match(/\b[a-z0-9_-]+\b/g) || []).filter(t => !stopWords.has(t) && t.length > 1);
 
     const isWhatDoYouDo = /what does (your|the|this) company do|what (do|does) (you|the company|your company|this company) do|what is (your|the) company|what services (do you|does the company|are) provide|what are your services|tell me about (your company|the company)|who are you and what do you do/i.test(qLower);
-    const isMainPoints = /(main (point|points|piont|pionts)|key points|summary|overview|highlights|core principles)/i.test(qLower);
+    const isMainPoints = /(main (point|points|piont|pionts)|key points|summary|overview|highlights|core principles|operating principles)/i.test(qLower);
     const isListWhichAreThey = /(which are (they|the)|what are (they|the)|list (them|all|the)|name (them|the)|procedures)/i.test(qLower);
     const isBoolean = /^(can i|can we|can customers|can users|can you|is there|are there|is it|are you|do you|does the|does your|do they|will you|is support|are refunds)\b/i.test(qLower);
     const isRefundDuration = /(refund|return|money back)/i.test(qLower) && /(how long|days|timeline|time limit|window|when|period|policy)/i.test(qLower);
@@ -601,11 +615,14 @@ export class AIAgentEngine {
 
     // Case 0A: Main Points / Summary / Key Takeaways (Universal for ANY PDF)
     if (isMainPoints) {
-      // Pick top information-dense bullet points or key sentences from the document
-      const bulletCandidates = rawSentences.filter(s => s.length >= 20 && s.length <= 250);
-      const selectedPoints = bulletCandidates.slice(0, 5);
+      // Find substantive sentences from the document
+      const informative = rawSentences.filter(s => {
+        const lower = s.toLowerCase();
+        return !isMetadataHeader(s) && lower.length >= 20 && !lower.startsWith('source') && !lower.startsWith('page');
+      });
+      const selectedPoints = informative.slice(0, 5);
       if (selectedPoints.length > 0) {
-        return `Here are the key points from the verified documentation:\n\n${selectedPoints.map(p => `• ${p.replace(/^[-*•\s]+/, '').trim()}`).join('\n')}`;
+        return `Here are the core principles and main takeaways from the verified documentation:\n\n${selectedPoints.map(p => `• ${p.replace(/^[-*•\s]+/, '').trim()}`).join('\n')}`;
       }
       return `Here is a summary based on the documentation:\n\n${rawSentences.slice(0, 3).join(' ')}`;
     }
@@ -613,9 +630,9 @@ export class AIAgentEngine {
     // Case 0B: List / Which Are They / What Are The Options (Universal for ANY PDF)
     if (isListWhichAreThey) {
       if (operatingSections.length > 0) {
-        return `Based on the verified documentation, here are the listed sections:\n\n${operatingSections.slice(0, 8).map(s => `• ${s}`).join('\n')}`;
+        return `Based on the verified documentation, here are the listed areas and procedures:\n\n${operatingSections.slice(0, 8).map(s => `• ${s}`).join('\n')}`;
       }
-      const listItems = rawSentences.filter(s => s.length >= 15 && s.length <= 200).slice(0, 6);
+      const listItems = rawSentences.filter(s => s.length >= 15 && s.length <= 200 && !isMetadataHeader(s)).slice(0, 6);
       if (listItems.length > 0) {
         return `Based on the verified documentation, here are the details:\n\n${listItems.map(s => `• ${s.replace(/^[-*•\s]+/, '').trim()}`).join('\n')}`;
       }
