@@ -170,11 +170,11 @@ class RAGEngine:
         4. LLM synthesis & citations formatting
         """
         chunks = cls.search_chunks(query, company_id, stored_chunks, threshold=0.1, top_k=top_k)
-        is_grounded, ground_msg = cls.evaluate_groundedness(chunks, threshold=0.50)
+        is_grounded, ground_msg = cls.evaluate_groundedness(chunks, threshold=0.20)
 
         citations = []
         for c in chunks:
-            if c.similarity_score >= 0.50:
+            if c.similarity_score >= 0.20:
                 citations.append({
                     "chunkId": c.chunk_id,
                     "sourceId": c.knowledge_source_id,

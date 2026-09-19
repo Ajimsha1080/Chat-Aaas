@@ -286,7 +286,7 @@ class AgentRuntime:
             f"Verified Knowledge Context:\n{retrieved_context}"
         )
 
-        llm_response = await LLMProvider.generate_response(
+        llm_response, gen_mode = await LLMProvider.generate_response_with_mode(
             prompt=current_user_question,
             system_instruction=sys_instruction,
             model=model_name,
@@ -305,6 +305,8 @@ class AgentRuntime:
             confidence_score=chunks[0].similarity_score,
             tokens_used=total_tokens,
             citations=citations,
+            generation_mode=gen_mode,
+            generationMode=gen_mode,
             session_id=request.session_id or "sess_live"
         )
 
@@ -408,7 +410,8 @@ class AgentRuntime:
 
         # 4. Emit Start Event with Citations
         citations = [getattr(c, "title", "Knowledge Base") for c in chunks[:3]]
-        yield f"data: {json.dumps({'type': 'start', 'conversationId': conv_id, 'citations': citations, 'confidenceScore': chunks[0].similarity_score})}\n\n"
+        gen_mode = "llm" if (settings.CUSTOM_LLM_API_URL and settings.CUSTOM_LLM_API_KEY) else "template_fallback"
+        yield f"data: {json.dumps({'type': 'start', 'conversationId': conv_id, 'citations': citations, 'confidenceScore': chunks[0].similarity_score, 'generationMode': gen_mode})}\n\n"
 
         # 5. Stream Real Tokens from LLMProvider
         retrieved_context = "\n\n".join([f"Source ({getattr(c, 'title', 'Knowledge Base')}): {c.content}" for c in chunks[:3]])
@@ -461,5 +464,5 @@ class AgentRuntime:
         UsageService.record_event(company_id, "message", 1, "messages", conv_id)
         UsageService.record_event(company_id, "llm_tokens", total_tokens, "tokens", conv_id)
 
-        yield f"data: {json.dumps({'type': 'done', 'conversationId': conv_id, 'fullMessage': full_msg, 'tokensUsed': total_tokens})}\n\n"
+        yield f"data: {json.dumps({'type': 'done', 'conversationId': conv_id, 'fullMessage': full_msg, 'tokensUsed': total_tokens, 'generationMode': gen_mode})}\n\n"
         yield "data: [DONE]\n\n"

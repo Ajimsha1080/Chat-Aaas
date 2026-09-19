@@ -6,23 +6,31 @@ from app.schemas import EmbeddingRequest, EmbeddingItem, EmbeddingResponse
 
 # Multi-Industry Semantic Association Basins for Universal Dense Alignment
 UNIVERSAL_SEMANTIC_BASINS = [
+    # Core Company Identity & Offerings
+    {"company", "business", "service", "services", "offer", "offering", "offerings", "do", "provide", "product", "products", "solution", "solutions", "work", "specialty", "specialization", "tech", "platform", "capability", "capabilities", "mission"},
+    # Cloud Infrastructure & Platforms
+    {"cloud", "aws", "azure", "gcp", "amazon", "microsoft", "google", "infrastructure", "compute", "serverless", "devops", "hosting", "storage", "virtual", "cluster", "kubernetes", "docker", "vpc", "iam"},
+    # 24/7 Availability & Nighttime Support
+    {"night", "nighttime", "weekend", "weekends", "24/7", "24x7", "round-the-clock", "always", "hours", "available", "evening", "midnight", "afterhours", "overnight", "schedule", "operating"},
+    # Customer Support & Contact
+    {"support", "help", "contact", "reach", "email", "phone", "ticket", "assistance", "service", "hotline", "agent", "representative", "inquiry", "guidance", "chat", "desk"},
+    # Returns, Refunds & Guarantees
+    {"return", "refund", "returns", "refunds", "cancel", "cancellation", "reimbursement", "policy", "guarantee", "warranty", "exchange", "moneyback", "compensation", "30", "window", "eligible", "eligibility", "days"},
     # Pricing & Finance
     {"price", "cost", "pricing", "rate", "rates", "charge", "charges", "fee", "fees", "billing", "payment", "tier", "plan", "subscription", "quote", "amount", "usd", "inr", "euro", "dollar", "expensive", "cheap", "afford", "invoice"},
-    # Returns & Guarantees
-    {"return", "refund", "returns", "refunds", "cancel", "cancellation", "reimbursement", "policy", "guarantee", "warranty", "exchange", "moneyback", "compensation"},
-    # Customer Support & Contact
-    {"support", "help", "contact", "reach", "email", "phone", "ticket", "assistance", "service", "hotline", "agent", "representative", "inquiry", "guidance"},
+    # Leadership, Management & Corporate Info
+    {"ceo", "founder", "founders", "cto", "cfo", "coo", "executive", "executives", "leadership", "president", "director", "headquarters", "address", "location", "office", "street", "city"},
     # Security & Access
     {"security", "auth", "authentication", "login", "password", "oauth", "sso", "rbac", "permissions", "encryption", "privacy", "compliance", "gdpr", "hipaa", "soc2", "vulnerability", "audit"},
     # Software & DevOps
-    {"deploy", "deployment", "install", "installation", "setup", "configure", "configuration", "integrate", "integration", "webhook", "api", "sdk", "endpoint", "server", "cloud", "database"},
+    {"deploy", "deployment", "install", "installation", "setup", "configure", "configuration", "integrate", "integration", "webhook", "api", "sdk", "endpoint", "server", "database"},
     # Performance & Reliability
     {"speed", "latency", "performance", "throughput", "uptime", "sla", "reliability", "scale", "scaling", "concurrency", "rate-limit", "quota", "fast", "slow", "delay", "load"},
     # AI & Agents
     {"agent", "bot", "assistant", "ai", "llm", "chat", "copilot", "prompt", "persona", "customization", "grounding", "rag", "intelligence", "model", "token"},
     # Knowledge & Documents
     {"document", "knowledge", "file", "pdf", "source", "chunks", "crawl", "website", "faq", "database", "vector", "ingestion", "manual", "guide", "article"},
-    # Food, Bakery & Culinary (E.g. Hospitality / Bakery / Restaurant)
+    # Food, Bakery & Culinary (Hospitality / Bakery / Restaurant)
     {"fresh", "freshness", "freshly", "bake", "baked", "bakes", "baking", "bakery", "baker", "bread", "loaf", "loaves", "dough", "oven", "daily", "morning", "pastry", "flour", "yeast", "croissant", "artisan", "artisanal", "frozen", "freeze", "ingredient", "recipe", "delicious", "warm"},
     # Health, Wellness & Medical
     {"health", "medical", "doctor", "physician", "clinic", "hospital", "patient", "treatment", "medicine", "prescription", "symptom", "therapy", "dosage", "cure", "diagnosis", "nurse"},

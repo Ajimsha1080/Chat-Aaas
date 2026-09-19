@@ -232,6 +232,8 @@ class ChatResponse(BaseModel):
     conversation_id: Optional[str] = None
     citations: List[str] = []
     tokens_used: int = 120
+    generation_mode: Optional[Literal["llm", "template_fallback"]] = "llm"
+    generationMode: Optional[Literal["llm", "template_fallback"]] = "llm"
 
 class ROIAnalyticsResponse(BaseModel):
     automation_rate_percent: float
