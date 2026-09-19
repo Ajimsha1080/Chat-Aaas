@@ -1207,6 +1207,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const reprocessKnowledgeItem = async (id: string) => {
     const existing = (knowledgeMap[currentCompanyId] || []).find(k => k.id === id);
+    if (!existing) return;
+
     setKnowledgeMap(prev => ({
       ...prev,
       [currentCompanyId]: (prev[currentCompanyId] || []).map(k =>
@@ -1215,22 +1217,35 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }));
 
     let crawledContent: string | null = null;
-    let crawledChunks = existing?.chunksCount || 1;
+    let crawledChunks = existing.chunksCount || 1;
+    let crawlSucceeded = false;
+    let crawlErrorMessage = '';
 
     // If it's a URL source, fetch live webpage content
-    if (existing?.type === 'url' && existing.sourceUrl) {
-      try {
-        const crawlRes = await APIClient.crawlUrl(existing.sourceUrl, existing.category);
-        const data = (crawlRes as any)?.data || crawlRes;
-        if (data) {
-          crawledContent = data.extractedText || data.content || null;
-          crawledChunks = data.chunksCreated || data.totalChunks || Math.max(1, Math.ceil(((crawledContent || existing.content || '').length || 500) / 500));
+    if (existing.type === 'url') {
+      let targetUrl = (existing.sourceUrl || '').trim();
+      if (targetUrl) {
+        if (!targetUrl.startsWith('http://') && !targetUrl.startsWith('https://')) {
+          targetUrl = `https://${targetUrl}`;
         }
-      } catch (crawlErr) {
-        console.info('Crawler during reprocess note:', crawlErr);
+        try {
+          const crawlRes = await APIClient.crawlUrl(targetUrl, existing.category);
+          const data = (crawlRes as any)?.data || crawlRes;
+          if (data && (data.extractedText || data.content || data.chunksCreated || data.success)) {
+            crawledContent = (data.extractedText || data.content || '').trim();
+            crawledChunks = data.chunksCreated || data.totalChunks || (crawledContent ? Math.max(1, Math.ceil(crawledContent.length / 500)) : 1);
+            crawlSucceeded = true;
+          }
+        } catch (crawlErr: any) {
+          crawlErrorMessage = crawlErr?.message || 'Failed to crawl website URL.';
+          console.warn('[Crawler reprocess notice]:', crawlErr);
+        }
+      } else {
+        crawlErrorMessage = 'No valid website URL configured for this source.';
       }
-    } else if (existing?.content) {
+    } else if (existing.content) {
       crawledChunks = Math.max(1, Math.ceil((existing.content.length || 500) / 500));
+      crawlSucceeded = true;
     }
 
     try {
@@ -1239,15 +1254,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       console.info('Backend reprocess error:', err);
     }
 
+    const finalContent = crawledContent || existing.content;
+    const finalChunks = crawledChunks;
+
     setKnowledgeMap(prev => ({
       ...prev,
       [currentCompanyId]: (prev[currentCompanyId] || []).map(k =>
         k.id === id ? {
           ...k,
-          content: crawledContent || k.content,
-          chunksCount: crawledChunks,
-          tokenCount: crawledChunks * 65,
-          fileSize: crawledContent ? `${Math.max(1, Math.round(crawledContent.length / 1024))} KB` : k.fileSize,
+          content: finalContent,
+          chunksCount: finalChunks,
+          tokenCount: finalChunks * 65,
+          fileSize: finalContent ? `${Math.max(1, Math.round(finalContent.length / 1024))} KB` : k.fileSize,
           processingStage: 'indexed',
           status: 'indexed',
           lastIndexedAt: new Date().toISOString(),
@@ -1255,8 +1273,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         } : k
       )
     }));
+
     addAuditLog('KNOWLEDGE_REPROCESSED', `Reprocessed and re-indexed knowledge item: ${id}`);
-    showToast('Reprocessed', `Knowledge item re-crawled and re-indexed (${crawledChunks} chunks).`, 'success');
+    if (existing.type === 'url' && !crawlSucceeded) {
+      showToast('Re-crawl Warning', crawlErrorMessage || 'Could not crawl URL. Open Edit to check the URL.', 'warning');
+    } else {
+      showToast('Reprocessed', `Knowledge item re-indexed (${finalChunks} semantic vector chunks).`, 'success');
+    }
   };
 
   const permanentDeleteKnowledgeItem = async (id: string) => {

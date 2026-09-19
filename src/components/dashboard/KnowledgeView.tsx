@@ -169,18 +169,23 @@ export const KnowledgeView: React.FC = () => {
 
   const [previewTab, setPreviewTab] = useState<'content' | 'chunks'>('content');
 
+  const [editItemChunks, setEditItemChunks] = useState<number | null>(null);
+
   const handleOpenEdit = (item: KnowledgeItem) => {
     setEditingKnowledgeItem(item);
     setEditItemTitle(item.title);
     setEditItemContent(item.faqAnswer || item.content);
     setEditItemUrl(item.sourceUrl || '');
+    setEditItemChunks(item.chunksCount || null);
   };
 
   const handleSaveEdit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingKnowledgeItem || !editItemTitle.trim()) return;
 
-    const computedChunks = Math.max(1, Math.ceil(editItemContent.length / 500));
+    const semanticChunks = getSemanticChunks(editItemContent, 500, 50);
+    const computedChunks = editItemChunks || (editingKnowledgeItem.type === 'faq' ? 1 : Math.max(1, semanticChunks.length || Math.ceil(editItemContent.length / 500)));
+
     updateKnowledgeItem(editingKnowledgeItem.id, {
       title: editItemTitle.trim(),
       content: editItemContent.trim(),
@@ -205,10 +210,12 @@ export const KnowledgeView: React.FC = () => {
       const crawlRes = await APIClient.crawlUrl(targetUrl, editingKnowledgeItem?.category);
       const data = (crawlRes as any)?.data || crawlRes;
       if (data) {
-        const text = data.extractedText || data.content || '';
+        const text = (data.extractedText || data.content || '').trim();
+        const chunks = data.chunksCreated || data.totalChunks || (text ? getSemanticChunks(text, 500, 50).length : 1);
         if (text) {
           setEditItemContent(text);
-          showToast('Live Crawl Succeeded', `Extracted ${text.length} characters from ${targetUrl}. Click Save to apply.`, 'success');
+          setEditItemChunks(chunks);
+          showToast('Live Crawl Succeeded', `Extracted ${text.length} characters (${chunks} vector chunks) from ${targetUrl}. Click Save to apply.`, 'success');
         } else {
           showToast('Crawl Completed', 'No text extracted. You can paste content directly.', 'info');
         }
