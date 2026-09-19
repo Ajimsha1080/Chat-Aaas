@@ -350,59 +350,45 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     syncTenantLiveData();
   }, [currentCompanyId]);
 
-  // 3. Auto-heal any placeholder / un-crawled URL items
+  // 3. Auto-crawl only uninitialized/empty URL items
   const currentKnowledgeItems = knowledgeMap[currentCompanyId];
   useEffect(() => {
     const currentItems = currentKnowledgeItems || [];
     const placeholderItems = currentItems.filter(
-      k => k.type === 'url' && (
-        k.chunksCount <= 3 ||
-        k.content.length < 2000 ||
-        k.content.includes('Official website and documentation for') ||
-        k.content.includes('Verified company overview and documentation for') ||
-        k.content.includes('Enterprise Architecture & Integration') ||
-        k.content.includes('Aaaa') ||
-        k.content.includes('aaaa') ||
-        /^(a+|q+|test|doc|sample|\d+)$/i.test(k.title.trim()) ||
-        !k.content ||
-        k.content.trim() === ''
-      )
+      k => k.type === 'url' && (!k.content || k.content.trim() === '')
     );
 
     if (placeholderItems.length > 0) {
       placeholderItems.forEach(async (item) => {
         let finalExtracted = '';
-        let chunks = 17;
+        let chunks = 1;
         const targetUrl = item.sourceUrl && (item.sourceUrl.startsWith('http://') || item.sourceUrl.startsWith('https://'))
           ? item.sourceUrl
-          : (item.sourceUrl ? `https://${item.sourceUrl}` : 'https://www.coarai.com');
+          : (item.sourceUrl ? `https://${item.sourceUrl}` : '');
 
-        try {
-          const crawlRes = await APIClient.crawlUrl(targetUrl, item.category);
-          const data = (crawlRes as any)?.data || crawlRes;
-          if (data) {
-            finalExtracted = (data.extractedText || data.content || '').trim();
-            chunks = data.chunksCreated || data.totalChunks || (finalExtracted ? Math.max(1, Math.ceil(finalExtracted.length / 500)) : 17);
+        if (targetUrl) {
+          try {
+            const crawlRes = await APIClient.crawlUrl(targetUrl, item.category);
+            const data = (crawlRes as any)?.data || crawlRes;
+            if (data) {
+              finalExtracted = (data.extractedText || data.content || '').trim();
+              chunks = data.chunksCreated || data.totalChunks || (finalExtracted ? Math.max(1, Math.ceil(finalExtracted.length / 500)) : 1);
+            }
+          } catch (err) {
+            console.info('[Auto-crawl sync note]', err);
           }
-        } catch (err) {
-          console.info('[Auto-crawl sync note]', err);
         }
 
-        if (!finalExtracted || finalExtracted.length < 100) {
+        if (!finalExtracted || finalExtracted.length < 50) {
           finalExtracted = generateComprehensiveWebsiteContent(item.title, targetUrl);
           chunks = Math.max(1, Math.ceil(finalExtracted.length / 500));
         }
-
-        // Clean any leftover dummy names
-        finalExtracted = finalExtracted.replace(/\b(Aaaa|aaaa|Aaa|aaa|Qq|qq)\b/g, 'CoarAI');
-
-        const cleanTitle = /^(a+|q+|test|doc|sample|\d+)$/i.test(item.title.trim()) ? 'CoarAI Platform Documentation' : item.title;
 
         setKnowledgeMap(prev => ({
           ...prev,
           [currentCompanyId]: (prev[currentCompanyId] || []).map(k => k.id === item.id ? {
             ...k,
-            title: cleanTitle,
+            title: item.title || 'Website Documentation',
             content: finalExtracted,
             sourceUrl: k.sourceUrl || targetUrl,
             chunksCount: chunks,
