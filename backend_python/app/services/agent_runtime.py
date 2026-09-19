@@ -1,9 +1,21 @@
 import asyncio
 import time
+import json
+import re
 from typing import AsyncGenerator, Dict, Any, List
-from app.schemas import ChatRequest, ChatResponse, ReasoningStep
+from app.schemas import (
+    ChatRequest,
+    ChatResponse,
+    ReasoningStep,
+    ChunkSearchResult,
+    RerankRequest,
+    RerankCandidate
+)
 from app.services.rag_engine import RAGEngine
+from app.services.reranking_service import RerankingService
+from app.services.query_rewriter import QueryRewriter
 from app.services.tool_registry import ToolRegistry
+from app.services.llm_service import LLMProvider
 from app.core.config import settings
 
 class AgentRuntime:
@@ -16,18 +28,20 @@ class AgentRuntime:
         stored_chunks: List[Dict[str, Any]]
     ) -> ChatResponse:
         """
-        Executes the 5-tier reasoning process:
-        System Guardrails -> Persona -> RAG Knowledge -> Tool Authorization -> Grounded Response.
+        Executes the natural RAG intelligence pipeline:
+        Guardrails -> Lifecycle -> Human Escalation -> Tool Gates -> Greeting ->
+        Query Rewriting -> Hybrid Retrieval -> Reranking -> LLM Synthesis -> Grounding.
         """
-        user_msg = request.message.strip()
+        current_user_question = request.message.strip()
+        conversation_history = getattr(request, "history", []) or []
         reasoning_steps: List[ReasoningStep] = []
         now_str = time.strftime("%H:%M:%S")
 
-        # 0. Lifecycle Check: If assistant is disabled, unavailble message
+        # 0. Lifecycle Check: If assistant is disabled, return unavailable message
         if agent_config.get("lifecycleStatus") in ["disabled", "archived", "deleted"] or agent_config.get("status") in ["paused", "disabled"]:
             reasoning_steps.append(ReasoningStep(
                 stage="Assistant State",
-                detail="Assistant is currently unavailable on this deployment.",
+                detail="Assistant is currently unavailable or disabled on this deployment.",
                 timestamp=now_str
             ))
             return ChatResponse(
@@ -43,29 +57,19 @@ class AgentRuntime:
             timestamp=now_str
         ))
 
-        # 1. Agent Disabled / Paused Check
-        if agent_config.get("status") == "paused" or agent_config.get("lifecycleStatus") in ["disabled", "paused"]:
-            return ChatResponse(
-                message="This AI assistant is currently unavailable or disabled by the administrator.",
-                reasoning_steps=[ReasoningStep(
-                    stage="Lifecycle Status Check",
-                    detail="Assistant is disabled or paused. Halting automated responses.",
-                    timestamp=now_str
-                )],
-                session_id=request.session_id or "sess_live"
-            )
-
-        # 2. Human Escalation Trigger Check (strictly explicit intent phrases, not feature queries)
-        is_feature_or_info_query = any(q in user_msg.lower() for q in ["how", "what", "does", "can", "is there", "support", "feature", "explain", "why"])
+        # 2. Human Escalation Trigger Check
         explicit_escalation_phrases = [
             "talk to a human", "talk to human", "speak with a human", "speak to human", "speak to a person",
             "transfer to a human", "transfer to human", "connect to human", "connect to a human",
-            "connect me to a representative", "let me speak to someone", "i want a human", "give me a human"
+            "connect me to a representative", "let me speak to someone", "i want a human", "give me a human",
+            "human support manager", "human support agent", "speak to an agent", "talk to an agent",
+            "need a human", "real human"
         ]
-        if not is_feature_or_info_query and any(phrase in user_msg.lower() for phrase in explicit_escalation_phrases):
+        q_lower = current_user_question.lower()
+        if any(phrase in q_lower for phrase in explicit_escalation_phrases):
             reasoning_steps.append(ReasoningStep(
                 stage="Human Handoff Trigger",
-                detail="Customer explicitly requested human intervention. Initiating live transfer.",
+                detail="Customer requested human intervention. Initiating live transfer.",
                 timestamp=now_str
             ))
             return ChatResponse(
@@ -76,10 +80,9 @@ class AgentRuntime:
                 session_id=request.session_id or "sess_live"
             )
 
-        # 3. Tool Intent Recognition & Execution
-        import re
-        if "order" in user_msg.lower() and ("track" in user_msg.lower() or "status" in user_msg.lower() or "where" in user_msg.lower()):
-            ord_match = re.search(r'\b(ORD-[0-9A-Za-z]+)\b', user_msg, re.IGNORECASE) or re.search(r'(?:order|id)[:\s#]*([0-9A-Za-z_-]{4,})', user_msg, re.IGNORECASE)
+        # 3. Tool Intent Recognition & Execution (Orders)
+        if "order" in q_lower and ("track" in q_lower or "status" in q_lower or "where" in q_lower):
+            ord_match = re.search(r'\b(ORD-[0-9A-Za-z]+)\b', current_user_question, re.IGNORECASE) or re.search(r'(?:order|id)[:\s#]*([0-9A-Za-z_-]{4,})', current_user_question, re.IGNORECASE)
             if ord_match:
                 extracted_order_id = ord_match.group(1).upper()
                 reasoning_steps.append(ReasoningStep(
@@ -108,11 +111,19 @@ class AgentRuntime:
                     session_id=request.session_id or "sess_live"
                 )
 
-        # Distinguish between policy/informational questions and explicit transaction requests
-        is_informational_refund = any(q in user_msg.lower() for q in ["how", "what", "policy", "when", "can i", "process", "time", "days", "rules"])
-        has_explicit_action = any(act in user_msg.lower() for act in ["refund my", "refund order", "cancel and refund", "issue refund", "give me a refund", "process refund", "request refund"])
-        if (has_explicit_action or "ord-" in user_msg.lower()) and not is_informational_refund:
-            ord_match = re.search(r'\b(ORD-[0-9A-Za-z]+)\b', user_msg, re.IGNORECASE) or re.search(r'(?:order|id)[:\s#]*([0-9A-Za-z_-]{4,})', user_msg, re.IGNORECASE)
+        # Action Execution Gates (Refunds) - strictly first-person transactional intent
+        is_informational_refund = any(q in q_lower for q in [
+            "how", "what", "policy", "when", "can", "could", "is there", "are there",
+            "process", "time", "days", "rules", "window", "eligible", "allowed", "possible", "terms"
+        ])
+        explicit_action_phrases = [
+            "refund my", "refund order", "cancel and refund", "issue refund for",
+            "give me a refund", "process my refund", "i want a refund", "refund me",
+            "i would like a refund", "please refund"
+        ]
+        has_explicit_action = any(act in q_lower for act in explicit_action_phrases)
+        if (has_explicit_action or "ord-" in q_lower) and not is_informational_refund:
+            ord_match = re.search(r'\b(ORD-[0-9A-Za-z]+)\b', current_user_question, re.IGNORECASE) or re.search(r'(?:order|id)[:\s#]*([0-9A-Za-z_-]{4,})', current_user_question, re.IGNORECASE)
             target_order = ord_match.group(1).upper() if ord_match else None
             reasoning_steps.append(ReasoningStep(
                 stage="High-Risk Action Gate",
@@ -135,9 +146,8 @@ class AgentRuntime:
                     session_id=request.session_id or "sess_live"
                 )
 
-        # 3.5 Conversational Greeting & Intent Detector (prevents RAG refusal on casual greetings)
-        from app.services.llm_service import LLMProvider
-        clean_user_msg = re.sub(r'[^\w\s]', '', user_msg.lower()).strip()
+        # 3.5 Conversational Greeting & Intent Detector
+        clean_user_msg = re.sub(r'[^\w\s]', '', q_lower).strip()
         greetings = ["hi", "hello", "hey", "greetings", "hi there", "hello there", "good morning", "good afternoon", "good evening", "howdy"]
         gratitudes = ["thanks", "thank you", "thanks!", "ty", "great", "awesome", "perfect", "thank you so much"]
         identity_queries = ["who are you", "what can you do", "what do you do", "help"]
@@ -145,13 +155,13 @@ class AgentRuntime:
         agent_name = agent_config.get("name") or "Coar AI"
         greeting_reply = agent_config.get("greetingMessage") or f"Hello! 👋 I'm {agent_name}. How can I assist you with our services, pricing, or policies today?"
 
-        if clean_user_msg in greetings or any(clean_user_msg.startswith(g + " ") for g in greetings):
+        if clean_user_msg in greetings or any(clean_user_msg.startswith(g + " ") and len(clean_user_msg.split()) <= 3 for g in greetings):
             reasoning_steps.append(ReasoningStep(
                 stage="Conversational Intent",
                 detail="Identified casual greeting. Replying with persona welcome message.",
                 timestamp=now_str
             ))
-            t_count = LLMProvider.count_tokens(user_msg + "\n" + greeting_reply)
+            t_count = LLMProvider.count_tokens(current_user_question + "\n" + greeting_reply)
             return ChatResponse(
                 message=greeting_reply,
                 reasoning_steps=reasoning_steps,
@@ -162,7 +172,7 @@ class AgentRuntime:
 
         if clean_user_msg in gratitudes:
             reply = "You're very welcome! Let me know if you need anything else."
-            t_count = LLMProvider.count_tokens(user_msg + "\n" + reply)
+            t_count = LLMProvider.count_tokens(current_user_question + "\n" + reply)
             return ChatResponse(
                 message=reply,
                 reasoning_steps=reasoning_steps,
@@ -173,7 +183,7 @@ class AgentRuntime:
 
         if clean_user_msg in identity_queries:
             reply = f"I'm **{agent_name}**, your official AI assistant! I can answer questions about our company products, documentation, policies, and process live requests."
-            t_count = LLMProvider.count_tokens(user_msg + "\n" + reply)
+            t_count = LLMProvider.count_tokens(current_user_question + "\n" + reply)
             return ChatResponse(
                 message=reply,
                 reasoning_steps=reasoning_steps,
@@ -182,24 +192,59 @@ class AgentRuntime:
                 session_id=request.session_id or "sess_live"
             )
 
-        # 4. RAG Knowledge Search
+        # 4. Context-Aware Query Rewriting (resolves follow-ups like "how does it work?")
+        retrieval_query = QueryRewriter.rewrite_query(current_user_question, conversation_history)
+        if retrieval_query != current_user_question:
+            reasoning_steps.append(ReasoningStep(
+                stage="Query Understanding & Rewriting",
+                detail=f"Resolved follow-up context. Rewritten retrieval query: '{retrieval_query}'",
+                timestamp=now_str
+            ))
+
+        # 5. Hybrid RAG Knowledge Search
         reasoning_steps.append(ReasoningStep(
             stage="RAG Knowledge Retrieval",
             detail=f"Querying hybrid vector embeddings and semantic cosine similarity isolated strictly for tenant '{company_id}'.",
             timestamp=now_str
         ))
-        chunks = RAGEngine.search_chunks(user_msg, company_id, stored_chunks, threshold=0.15)
-        is_grounded, ground_msg = RAGEngine.evaluate_groundedness(chunks, threshold=0.20)
+        raw_chunks = RAGEngine.search_chunks(retrieval_query, company_id, stored_chunks, threshold=0.15, top_k=6)
 
+        # Cross-Encoder Reranking
+        if raw_chunks:
+            candidates = [
+                RerankCandidate(
+                    id=c.chunk_id,
+                    content=c.content,
+                    metadata={"title": getattr(c, "title", "Knowledge Base")},
+                    initial_score=c.similarity_score
+                )
+                for c in raw_chunks
+            ]
+            rerank_req = RerankRequest(query=retrieval_query, candidates=candidates, top_k=3)
+            rerank_res = RerankingService.rerank_candidates(rerank_req)
+            chunks = [
+                ChunkSearchResult(
+                    chunk_id=item.id,
+                    knowledge_source_id="src_rag",
+                    content=item.content,
+                    title=item.metadata.get("title", "Knowledge Base") if item.metadata else "Knowledge Base",
+                    similarity_score=item.relevance_score
+                )
+                for item in rerank_res.results
+            ]
+        else:
+            chunks = []
+
+        is_grounded, ground_msg = RAGEngine.evaluate_groundedness(chunks, threshold=0.15)
         reasoning_steps.append(ReasoningStep(
             stage="Anti-Hallucination Evaluator",
             detail=ground_msg,
             timestamp=now_str
         ))
 
-        if not is_grounded:
+        if not is_grounded or not chunks:
             refusal_msg = "I don't have enough verified information in our company knowledge base to answer that accurately. I can connect you with our team if you'd like!"
-            t_count = LLMProvider.count_tokens(user_msg + "\n" + refusal_msg)
+            t_count = LLMProvider.count_tokens(current_user_question + "\n" + refusal_msg)
             return ChatResponse(
                 message=refusal_msg,
                 reasoning_steps=reasoning_steps,
@@ -209,50 +254,59 @@ class AgentRuntime:
                 session_id=request.session_id or "sess_live"
             )
 
-        # 5. Synthesize Grounded Response using Real-Time Sarvam AI LLM
+        # 6. Question-Centric Grounded Synthesis
         model_name = agent_config.get('modelTier') or settings.DEFAULT_LLM_MODEL
         if model_name == 'sarvam-2b':
             model_name = settings.DEFAULT_LLM_MODEL
-        context_str = "\n\n".join([f"Source ({getattr(c, 'title', 'Knowledge Base')}): {c.content}" for c in chunks[:3]])
+
+        retrieved_context = "\n\n".join([f"Source ({getattr(c, 'title', 'Knowledge Base')}): {c.content}" for c in chunks[:3]])
+
+        history_str = ""
+        if conversation_history:
+            hist_lines = []
+            for h in conversation_history[-4:]:
+                role = getattr(h, "role", "user") if hasattr(h, "role") else (h.get("role", "user") if isinstance(h, dict) else "user")
+                txt = getattr(h, "content", "") if hasattr(h, "content") else (h.get("content", "") if isinstance(h, dict) else "")
+                if txt:
+                    hist_lines.append(f"{role.capitalize()}: {txt}")
+            if hist_lines:
+                history_str = "Conversation History:\n" + "\n".join(hist_lines) + "\n\n"
+
         sys_instruction = (
             f"You are the official AI assistant for company {company_id}.\n"
-            f"Persona tone: {agent_config.get('tone', 'professional')}.\n"
-            f"Instructions:\n"
-            f"1. Answer the user's question directly, clearly, and conversationally using clean markdown.\n"
-            f"2. Base your answer strictly on the verified knowledge context below.\n"
-            f"3. If a specific detail (such as a founder's name, phone number, or unlisted policy) is not mentioned in the context, state clearly that the documentation does not contain that information.\n"
-            f"4. Do not output raw document headers, metadata tags, or internal codes.\n\n"
-            f"Verified Knowledge Context:\n{context_str}"
+            f"Persona tone: {agent_config.get('tone', 'professional')}.\n\n"
+            f"{history_str}"
+            f"CRITICAL INSTRUCTIONS:\n"
+            f"1. Answer ONLY the specific question asked by the user: '{current_user_question}'. Do NOT summarize or dump the entire knowledge context.\n"
+            f"2. If the user asks what the company does or what services are offered, answer ONLY about the company's core services / products (e.g., 'The company provides cloud services for AWS and Azure.'). Do NOT include support hours or refund policies unless specifically asked.\n"
+            f"3. If the user asks a yes/no or capability question (e.g., 'Can I get support at night?'), begin with a direct answer ('Yes, ...') followed by the concise explanation from the context.\n"
+            f"4. If the user asks about refunds, answer ONLY about the refund policy.\n"
+            f"5. Base your answer strictly on the verified knowledge context below. If a specific detail (such as a founder's name or pricing) is not mentioned in the context, state clearly that the documentation does not contain that information.\n"
+            f"6. Keep the response concise (1-2 sentences), conversational, and do not output raw document headers or metadata tags.\n\n"
+            f"Verified Knowledge Context:\n{retrieved_context}"
         )
 
         llm_response = await LLMProvider.generate_response(
-            prompt=user_msg,
+            prompt=current_user_question,
             system_instruction=sys_instruction,
             model=model_name,
             temperature=float(agent_config.get('creativityLevel', 0.3)) if isinstance(agent_config.get('creativityLevel'), (int, float)) else 0.3
         )
 
-        prompt_tokens = LLMProvider.count_tokens(user_msg + "\n" + sys_instruction, model=model_name)
+        prompt_tokens = LLMProvider.count_tokens(current_user_question + "\n" + sys_instruction, model=model_name)
         completion_tokens = LLMProvider.count_tokens(llm_response, model=model_name)
         total_tokens = prompt_tokens + completion_tokens
+
+        citations = [getattr(c, "title", "Knowledge Base") for c in chunks[:3]]
 
         return ChatResponse(
             message=llm_response,
             reasoning_steps=reasoning_steps,
             confidence_score=chunks[0].similarity_score,
             tokens_used=total_tokens,
+            citations=citations,
             session_id=request.session_id or "sess_live"
         )
-
-    @classmethod
-    async def stream_tokens(cls, full_text: str) -> AsyncGenerator[str, None]:
-        """Asynchronously streams response tokens chunk-by-chunk for low-latency TTFT."""
-        words = full_text.split(" ")
-        for i, word in enumerate(words):
-            chunk = word + (" " if i < len(words) - 1 else "")
-            yield f"data: {chunk}\n\n"
-            await asyncio.sleep(0.02)
-        yield "data: [DONE]\n\n"
 
     @classmethod
     async def stream_process_message(
@@ -266,10 +320,8 @@ class AgentRuntime:
         True SSE streaming generator for real token delivery from the LLM provider.
         Yields structured SSE data events: start -> token -> done.
         """
-        import json
-        from app.services.llm_service import LLMProvider
-
-        user_msg = request.message.strip()
+        current_user_question = request.message.strip()
+        conversation_history = getattr(request, "history", []) or []
 
         # 1. State / Availability Check
         if agent_config.get("status") == "paused" or agent_config.get("lifecycleStatus") in ["disabled", "paused"]:
@@ -278,23 +330,29 @@ class AgentRuntime:
             return
 
         # 2. Human Escalation Trigger
-        escalation_keywords = ["human", "agent", "representative", "manager", "support person", "call me", "talk to human"]
-        if any(kw in user_msg.lower() for kw in escalation_keywords):
+        explicit_escalation_phrases = [
+            "talk to a human", "talk to human", "speak with a human", "speak to human", "speak to a person",
+            "transfer to a human", "transfer to human", "connect to human", "connect to a human",
+            "connect me to a representative", "let me speak to someone", "i want a human", "give me a human",
+            "human support manager", "human support agent", "speak to an agent", "talk to an agent"
+        ]
+        q_lower = current_user_question.lower()
+        if any(kw in q_lower for kw in explicit_escalation_phrases):
             yield f"data: {json.dumps({'type': 'escalate', 'message': 'I am connecting you with a human support specialist right now.'})}\n\n"
             yield "data: [DONE]\n\n"
             return
 
         # 2.5 Conversational Greeting & Intent Detector
-        import re
-        clean_user_msg = re.sub(r'[^\w\s]', '', user_msg.lower()).strip()
+        clean_user_msg = re.sub(r'[^\w\s]', '', q_lower).strip()
         greetings = ["hi", "hello", "hey", "greetings", "hi there", "hello there", "good morning", "good afternoon", "good evening", "howdy"]
         gratitudes = ["thanks", "thank you", "thanks!", "ty", "great", "awesome", "perfect", "thank you so much"]
 
         agent_name = agent_config.get("name") or "Coar AI"
         greeting_reply = agent_config.get("greetingMessage") or f"Hello! 👋 I'm {agent_name}. How can I assist you with our services, pricing, or policies today?"
 
-        if clean_user_msg in greetings or any(clean_user_msg.startswith(g + " ") for g in greetings):
-            conv_id = getattr(request, "conversation_id", None) or getattr(request, "session_id", None)
+        conv_id = getattr(request, "conversation_id", None) or getattr(request, "session_id", None)
+
+        if clean_user_msg in greetings or any(clean_user_msg.startswith(g + " ") and len(clean_user_msg.split()) <= 3 for g in greetings):
             yield f"data: {json.dumps({'type': 'start', 'conversationId': conv_id, 'citations': [], 'confidenceScore': 1.0})}\n\n"
             yield f"data: {json.dumps({'type': 'token', 'token': greeting_reply})}\n\n"
             yield f"data: {json.dumps({'type': 'done', 'conversationId': conv_id, 'fullMessage': greeting_reply, 'tokensUsed': 15})}\n\n"
@@ -303,18 +361,43 @@ class AgentRuntime:
 
         if clean_user_msg in gratitudes:
             reply = "You're very welcome! Let me know if you need anything else."
-            conv_id = getattr(request, "conversation_id", None) or getattr(request, "session_id", None)
             yield f"data: {json.dumps({'type': 'start', 'conversationId': conv_id, 'citations': [], 'confidenceScore': 1.0})}\n\n"
             yield f"data: {json.dumps({'type': 'token', 'token': reply})}\n\n"
             yield f"data: {json.dumps({'type': 'done', 'conversationId': conv_id, 'fullMessage': reply, 'tokensUsed': 10})}\n\n"
             yield "data: [DONE]\n\n"
             return
 
-        # 3. RAG Retrieval & Grounding
-        chunks = RAGEngine.search_chunks(user_msg, company_id, stored_chunks, threshold=0.25)
-        is_grounded, ground_msg = RAGEngine.evaluate_groundedness(chunks, threshold=0.35)
+        # 3. Query Rewriting & Hybrid Retrieval
+        retrieval_query = QueryRewriter.rewrite_query(current_user_question, conversation_history)
+        raw_chunks = RAGEngine.search_chunks(retrieval_query, company_id, stored_chunks, threshold=0.15, top_k=6)
 
-        if not is_grounded:
+        if raw_chunks:
+            candidates = [
+                RerankCandidate(
+                    id=c.chunk_id,
+                    content=c.content,
+                    metadata={"title": getattr(c, "title", "Knowledge Base")},
+                    initial_score=c.similarity_score
+                )
+                for c in raw_chunks
+            ]
+            rerank_res = RerankingService.rerank_candidates(RerankRequest(query=retrieval_query, candidates=candidates, top_k=3))
+            chunks = [
+                ChunkSearchResult(
+                    chunk_id=item.id,
+                    knowledge_source_id="src_rag",
+                    content=item.content,
+                    title=item.metadata.get("title", "Knowledge Base") if item.metadata else "Knowledge Base",
+                    similarity_score=item.relevance_score
+                )
+                for item in rerank_res.results
+            ]
+        else:
+            chunks = []
+
+        is_grounded, ground_msg = RAGEngine.evaluate_groundedness(chunks, threshold=0.15)
+
+        if not is_grounded or not chunks:
             refusal_payload = {
                 "type": "refusal",
                 "message": "I do not have enough verified information in our company knowledge base to answer that accurately. I can connect you with our team if you would like!"
@@ -324,31 +407,44 @@ class AgentRuntime:
             return
 
         # 4. Emit Start Event with Citations
-        conv_id = getattr(request, "conversation_id", None) or getattr(request, "session_id", None)
-        citations = [{"chunkId": c.chunk_id, "title": getattr(c, "title", "Knowledge Base")} for c in chunks[:3]]
+        citations = [getattr(c, "title", "Knowledge Base") for c in chunks[:3]]
         yield f"data: {json.dumps({'type': 'start', 'conversationId': conv_id, 'citations': citations, 'confidenceScore': chunks[0].similarity_score})}\n\n"
 
         # 5. Stream Real Tokens from LLMProvider
-        context_str = "\n\n".join([f"Source ({getattr(c, 'title', 'Knowledge Base')}): {c.content}" for c in chunks[:3]])
+        retrieved_context = "\n\n".join([f"Source ({getattr(c, 'title', 'Knowledge Base')}): {c.content}" for c in chunks[:3]])
+        
+        history_str = ""
+        if conversation_history:
+            hist_lines = []
+            for h in conversation_history[-4:]:
+                role = getattr(h, "role", "user") if hasattr(h, "role") else (h.get("role", "user") if isinstance(h, dict) else "user")
+                txt = getattr(h, "content", "") if hasattr(h, "content") else (h.get("content", "") if isinstance(h, dict) else "")
+                if txt:
+                    hist_lines.append(f"{role.capitalize()}: {txt}")
+            if hist_lines:
+                history_str = "Conversation History:\n" + "\n".join(hist_lines) + "\n\n"
+
         sys_instruction = (
             f"You are the official AI assistant for company {company_id}.\n"
-            f"Persona tone: {agent_config.get('tone', 'professional')}.\n"
-            f"Instructions:\n"
-            f"1. Answer the user's question directly, clearly, and conversationally using clean markdown.\n"
-            f"2. Base your answer strictly on the verified knowledge context below.\n"
-            f"3. If a specific detail (such as a founder's name, phone number, or unlisted policy) is not mentioned in the context, state clearly that the documentation does not contain that information.\n"
-            f"4. Do not output raw document headers, metadata tags, or internal codes.\n\n"
-            f"Verified Knowledge Context:\n{context_str}"
+            f"Persona tone: {agent_config.get('tone', 'professional')}.\n\n"
+            f"{history_str}"
+            f"CRITICAL INSTRUCTIONS:\n"
+            f"1. Answer ONLY the specific question asked by the user: '{current_user_question}'. Do NOT summarize or dump the entire knowledge context.\n"
+            f"2. If the user asks what the company does or what services are offered, answer ONLY about the company's core services / products (e.g., 'The company provides cloud services for AWS and Azure.'). Do NOT include support hours or refund policies unless specifically asked.\n"
+            f"3. If the user asks a yes/no or capability question (e.g., 'Can I get support at night?'), begin with a direct answer ('Yes, ...') followed by the concise explanation from the context.\n"
+            f"4. If the user asks about refunds, answer ONLY about the refund policy.\n"
+            f"5. Base your answer strictly on the verified knowledge context below. If a specific detail (such as a founder's name or pricing) is not mentioned in the context, state clearly that the documentation does not contain that information.\n"
+            f"6. Keep the response concise (1-2 sentences), conversational, and do not output raw document headers or metadata tags.\n\n"
+            f"Verified Knowledge Context:\n{retrieved_context}"
         )
 
-        full_acc = []
         model_name = agent_config.get("modelTier") or settings.DEFAULT_LLM_MODEL
         if model_name == "sarvam-2b":
             model_name = settings.DEFAULT_LLM_MODEL
 
         full_acc = []
         async for token in LLMProvider.stream_chat_completion(
-            messages=[{"role": "user", "content": user_msg}],
+            messages=[{"role": "user", "content": current_user_question}],
             system_instruction=sys_instruction,
             model=model_name,
             temperature=0.3
@@ -357,7 +453,7 @@ class AgentRuntime:
             yield f"data: {json.dumps({'type': 'token', 'token': token})}\n\n"
 
         full_msg = ''.join(full_acc)
-        prompt_tokens = LLMProvider.count_tokens(user_msg + "\n" + sys_instruction, model=model_name)
+        prompt_tokens = LLMProvider.count_tokens(current_user_question + "\n" + sys_instruction, model=model_name)
         completion_tokens = LLMProvider.count_tokens(full_msg, model=model_name)
         total_tokens = prompt_tokens + completion_tokens
 
@@ -367,4 +463,3 @@ class AgentRuntime:
 
         yield f"data: {json.dumps({'type': 'done', 'conversationId': conv_id, 'fullMessage': full_msg, 'tokensUsed': total_tokens})}\n\n"
         yield "data: [DONE]\n\n"
-

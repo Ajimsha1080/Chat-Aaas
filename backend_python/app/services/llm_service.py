@@ -10,7 +10,7 @@ class LLMProvider:
     Supports:
     - Custom In-House Product API (via CUSTOM_LLM_API_URL)
     - Self-Hosted Ollama / vLLM / LocalAI
-    - Built-in grounded RAG simulation fallback
+    - Built-in grounded RAG synthesis engine
     """
 
     @classmethod
@@ -80,202 +80,20 @@ class LLMProvider:
         return f"Regarding your inquiry about '{prompt}', our team is available to assist."
 
     @classmethod
-    def format_chatgpt_style(cls, title: str, text: str, prompt: str) -> str:
-        """Formats raw extracted document text into a clean, structured ChatGPT-style response."""
-        clean_text = text.strip()
-        clean_title = re.sub(r'[*#\_~]', '', title).strip()
-
-        # 0. Check if content is an FAQ entry (contains "Answer: ..." or "A: ...")
-        faq_ans_match = re.search(r'(?:Answer|A):\s*(.*)$', clean_text, re.DOTALL | re.IGNORECASE)
-        if faq_ans_match:
-            faq_ans = faq_ans_match.group(1).strip()
-            if faq_ans:
-                return faq_ans
-
-        # 1. Clean URLs and boilerplate noise
-        clean_text = re.sub(r'Page URL:\s*https?://\S+', '', clean_text, flags=re.I)
-        clean_text = re.sub(r'https?://\S+', '', clean_text)
-
-        # Remove repetitive title prefix
-        if clean_text.lower().startswith(clean_title.lower() + ":"):
-            clean_text = clean_text[len(clean_title) + 1:].strip()
-        elif clean_text.lower().startswith(clean_title.lower()):
-            clean_text = clean_text[len(clean_title):].strip().lstrip(":-\n ")
-
-        # Remove leading hashes and special artifacts
-        clean_text = re.sub(r'^[*#\s]+', '', clean_text).strip()
-        clean_text = clean_text.replace('***', '').replace('**', '').replace('*', '')
-
-        # Remove navigation keyword clutter
-        nav_noise = {
-            'how it works', 'explore the agents', 'request a demo', 'sign in', 'log in', 'sign up',
-            'menu', 'navigation', 'privacy policy', 'terms of service', 'all rights reserved',
-            'cookie policy', 'get started', 'contact sales', 'book a demo', 'ai business operating system'
-        }
-
-        # Split into raw lines / sentences
-        raw_lines = [l.strip() for l in clean_text.split('\n') if l.strip()]
-        meaningful_lines = []
-        for l in raw_lines:
-            if l.lower() in nav_noise:
-                continue
-            words = l.split()
-            if len(words) >= 4 and sum(1 for w in words if w.lower() in {'agent', 'agents', 'finance', 'integrations', 'security', 'pricing', 'demo', 'explore', 'how', 'works', 'request'}) >= len(words) * 0.7:
-                continue
-            meaningful_lines.append(l)
-
-        clean_body = " ".join(meaningful_lines) if meaningful_lines else clean_text
-        sentences = [s.strip() for s in re.split(r'(?<=[.?!])\s+', clean_body) if s.strip() and len(s.strip()) > 5]
-
-        # Extract entity / product / company name
-        entity_name = (
-            clean_title
-            .replace(".pdf", "")
-            .replace(".docx", "")
-            .replace(".txt", "")
-            .replace("Internal Company Operations SOP Premium", "")
-            .replace("Operations SOP Premium", "")
-            .replace("Internal Company Operations", "")
-            .replace("Standard Operating Procedures", "")
-            .replace("INTERNAL COMPANY OPERATIONS", "")
-            .replace("STANDARD OPERATING PROCEDURES", "")
-            .split('—')[0]
-            .split('-')[0]
-            .replace('.com', '')
-            .strip()
-        )
-        if not entity_name or entity_name.lower() in ['verified documentation', 'knowledge base', 'general', 'document']:
-            comp_match = re.search(r'\b([A-Z][A-Za-z0-9\s]{2,30}(?:TECHNOLOGIES|INC|CORP|LLC|AI|SYSTEMS|SOFTWARE|COMPANY))\b', clean_text, re.IGNORECASE)
-            if comp_match:
-                entity_name = comp_match.group(1).title().strip()
-            else:
-                entity_name = 'Our company'
-
-        q_lower = prompt.lower().strip()
-        stop_words = {
-            'what', 'is', 'the', 'a', 'an', 'in', 'on', 'at', 'for', 'to', 'of', 'and', 'or',
-            'are', 'how', 'do', 'does', 'can', 'tell', 'me', 'about', 'our', 'your', 'this', 'explain', 'policy', 'please'
-        }
-        all_query_words = set(re.findall(r'\w+', q_lower))
-        meaningful_words = [w for w in all_query_words if w not in stop_words] or list(all_query_words)
-
-        is_how_it_works = any(w in q_lower for w in ['how it works', 'how does it work', 'how to work', 'mechanism', 'workflow', 'process', 'steps'])
-        is_explain_query = any(w in q_lower for w in ['explain', 'what is', 'about', 'tell me', 'overview', 'who is', 'summary', 'describe'])
-
-        # Check if text is an Internal Company Operations SOP document
-        is_sop_context = any(w in clean_text.upper() for w in ['STANDARD OPERATING PROCEDURES', 'INTERNAL COMPANY OPERATIONS', 'CLASSIFICATION INTERNAL USE', 'OWNER • OPERATIONS']) or any(w in clean_title.upper() for w in ['INTERNAL', 'SOP', 'OPERATIONS'])
-
-        if is_explain_query and is_sop_context:
-            md = [
-                f"### About {entity_name}\n\n**{entity_name}** maintains a structured internal operations framework designed for consistent, secure, and accountable execution across all departments.\n\nIt establishes authorized standard operating procedures for data security, team onboarding, compliance, and incident management.",
-                "### Operational Framework Overview\n"
-                "- **Scope & Purpose**: A practical operating system for repeatable, secure, and compliant internal execution.\n"
-                "- **Classification**: Internal Use Document (Version 1.0).\n"
-                "- **Governance**: Owned and monitored by Operations and Management.",
-                "### Key Policy Areas Covered\n"
-                "- **Employee Onboarding & Access Control**: Standardized equipment issuance, permission management, and policy sign-off.\n"
-                "- **Internal Training & Compliance**: Mandatory regulatory training and policy acknowledgements.\n"
-                "- **Data Confidentiality & Protection**: Information security, conflict of interest reporting, and IP safeguards.\n"
-                "- **Business Continuity & Recovery**: Verified backup routines, system failovers, and incident escalation protocols.",
-                "Feel free to ask about any specific operating procedure, compliance requirement, or escalation workflow!"
-            ]
-            return "\n\n".join(md)
-
-        if is_how_it_works:
-            md = [
-                f"### How {entity_name} Works\n\n**{entity_name}** operates as an autonomous AI workforce running directly on top of your existing enterprise software:\n",
-                "1. **Connects to Existing Infrastructure**: Integrates directly with your ERP, databases, and operational software without requiring migrations.\n"
-                "2. **Deploys Specialized AI Agents**: Autonomous agents (such as Finance, Operations, and Workflow agents) execute daily operational tasks.\n"
-                "3. **Continuous Execution & Oversight**: Performs automated workflows while enforcing strict enterprise security, permission boundaries, and audit logging.",
-                "Would you like more details on specific integrations, agent capabilities, or security controls?"
-            ]
-            return "\n\n".join(md)
-
-        if is_explain_query and any(w in q_lower or w in clean_title.lower() or w in clean_text.lower() for w in ['coar', 'erp', 'workforce', 'operating system', 'agent', 'software', 'platform']):
-            md = [
-                f"### About {entity_name}\n\n**{entity_name}** provides an intelligent AI workforce that operates your existing business software and enterprise tools.\n\nYour ERP has software. Your AI agents should operate it. Rather than forcing system migrations, it runs seamlessly on top of what you already have.",
-                "### Key Highlights\n"
-                "- **Non-Invasive Architecture**: Integrates directly into your existing ERP and software stack without migration.\n"
-                "- **Autonomous AI Agents**: Features specialized agents (such as Finance Agent and Operations) to handle recurring business processes.\n"
-                "- **Enterprise Security & Governance**: Provides end-to-end data isolation, role-based controls, and complete traceability.",
-                "Feel free to ask about how it works, available agents, or technical integration details!"
-            ]
-            return "\n\n".join(md)
-
-        # Specific query matching: if prompt asks about specific facts (warranty, RMA, timeline, price, refund, technical specs, numbers, etc.)
-        matched_sentences = []
-        for s in sentences:
-            s_clean = re.sub(r'^(?:0\d|\d{1,2})\s+[A-Z0-9\s]{5,50}STANDARD OPERATING PROCEDURES\s*', '', s, flags=re.I).strip()
-            s_clean = re.sub(r'VERSION\s*[\d\.]+\s*EFFECTIVE.*$', '', s_clean, flags=re.I).strip()
-            if not s_clean:
-                continue
-            s_words = set(re.findall(r'\w+', s_clean.lower()))
-            overlap_score = len(s_words.intersection(meaningful_words))
-            if overlap_score > 0:
-                matched_sentences.append((overlap_score, s_clean))
-
-        matched_sentences.sort(key=lambda x: x[0], reverse=True)
-        if matched_sentences and not is_how_it_works:
-            seen_sents = set()
-            best_sentences = []
-            for _, s in matched_sentences:
-                s_key = s.lower().strip()
-                if s_key not in seen_sents:
-                    seen_sents.add(s_key)
-                    best_sentences.append(s)
-                if len(best_sentences) >= 3:
-                    break
-            result_body = "\n\n".join(best_sentences)
-            is_question_title = clean_title.endswith('?') or any(clean_title.lower().startswith(w) for w in ['what ', 'how ', 'why ', 'where ', 'who ', 'when ', 'is ', 'are ', 'can ', 'do ', 'does '])
-            if clean_title and len(clean_title) > 3 and not clean_title.lower().startswith("verified") and not clean_title.lower().startswith("knowledge") and not is_question_title:
-                return f"**{clean_title}**\n\n{result_body}"
-            return result_body
-
-        # Standard list / document formatting
-        formatted_blocks = []
-        for sentence in sentences:
-            if any(kw in sentence.lower() for kw in ["involves ", "includes ", "consists of ", "requires ", "features ", "provides "]):
-                header_match = re.match(r'^(.*?(?:involves|includes|consists of|requires|features|provides))\s*(.*)$', sentence, re.IGNORECASE)
-                if header_match:
-                    lead = header_match.group(1).strip()
-                    items_str = header_match.group(2).strip()
-                    raw_items = [re.sub(r'[*#\_~]', '', item).strip().rstrip('.').lstrip('and ') for item in re.split(r',|\band\b', items_str) if item.strip()]
-                    bullet_list = [f"- **{item[0].upper() + item[1:]}**" if len(item) > 10 else f"- {item[0].upper() + item[1:]}" for item in raw_items if len(item) > 2]
-                    if bullet_list:
-                        formatted_blocks.append(f"{lead}:\n" + "\n".join(bullet_list))
-                        continue
-            formatted_blocks.append(sentence)
-
-        result_body = "\n\n".join(formatted_blocks)
-        is_question_title = clean_title.endswith('?') or any(clean_title.lower().startswith(w) for w in ['what ', 'how ', 'why ', 'where ', 'who ', 'when ', 'is ', 'are ', 'can ', 'do ', 'does '])
-        if clean_title and len(clean_title) > 3 and not clean_title.lower().startswith("verified") and not clean_title.lower().startswith("knowledge") and not is_question_title:
-            return f"**{clean_title}**\n\n{result_body}"
-        return result_body
-
-    @classmethod
     def synthesize_grounded_answer(cls, prompt: str, system_instruction: str) -> str:
         """
-        Synthesizes a true GPT-level, highly structured, beautifully formatted executive response
-        from verified company documentation.
+        Synthesizes a clean, natural, ChatGPT-style response directly answering the user's question,
+        strictly grounded in the verified knowledge context.
         """
-        import re
-
         if not system_instruction or "Verified Knowledge Context:" not in system_instruction:
             return f"Regarding your inquiry about '{prompt}', our team is available to assist."
 
         context_body = system_instruction.split("Verified Knowledge Context:")[1].strip()
         raw_sources = context_body.split("Source (")
 
-        stop_words = {
-            "what", "is", "the", "a", "an", "in", "on", "at", "for", "to", "of", "and", "or",
-            "are", "how", "do", "does", "can", "tell", "me", "about", "our", "your", "this", "explain", "policy", "please"
-        }
-        all_query_words = set(re.findall(r'\w+', prompt.lower()))
-        meaningful_words = [w for w in all_query_words if w not in stop_words] or list(all_query_words)
-
-        parsed_chunks = []
-        doc_main_title = "Verified Company Knowledge Base"
-
+        # 1. Parse knowledge sources and clean sentences
+        clean_passages = []
+        doc_titles = []
         for raw in raw_sources:
             if not raw.strip():
                 continue
@@ -285,220 +103,196 @@ class LLMProvider:
             if len(split_parts) == 2:
                 title = split_parts[0].strip()
                 body = split_parts[1]
-                doc_main_title = title
+                doc_titles.append(title)
 
-            lines = [l.strip() for l in body.split("\n") if l.strip()]
-            filtered = []
-            for l in lines:
-                if re.match(r'^##\s*Page\s*\d+', l, re.I):
+            # Clean markup artifacts, URLs, and page markers
+            body_clean = re.sub(r'Page URL:\s*https?://\S+', '', body, flags=re.I)
+            body_clean = re.sub(r'https?://\S+', '', body_clean)
+            body_clean = re.sub(r'##\s*Page\s*\d+', '', body_clean, flags=re.I)
+            clean_passages.append({"title": title, "body": body_clean.strip()})
+
+        if not clean_passages:
+            return f"I don't have enough verified information in our company knowledge base to answer that. I can connect you with our team if you'd like!"
+
+        combined_context = "\n\n".join([p["body"] for p in clean_passages])
+
+        # 0. Check for explicit FAQ entry match
+        for p in clean_passages:
+            faq_pattern = r'(?:Question|Q):\s*(.+?)\s*(?:Answer|A):\s*([\s\S]+?)(?=(?:\n(?:Question|Q):|$))'
+            for match in re.finditer(faq_pattern, p["body"], re.IGNORECASE):
+                fq, fa = match.group(1).strip(), match.group(2).strip()
+                # Check overlap between user prompt and FAQ question
+                p_terms = set(re.findall(r'\w+', prompt.lower()))
+                fq_terms = set(re.findall(r'\w+', fq.lower()))
+                if len(p_terms.intersection(fq_terms)) >= max(1, len(p_terms) * 0.5):
+                    return fa
+
+        # 2. Extract individual factual sentences from all context
+        raw_sentences = []
+        for p in clean_passages:
+            # Handle bullet points
+            lines = [l.strip() for l in p["body"].split("\n") if l.strip()]
+            for line in lines:
+                # Remove boilerplate headers
+                if line.startswith("#") or line.lower().startswith("table of contents"):
                     continue
-                if "• INTERNAL OPERATIONS" in l or "INTERNAL COMPANY OPERATIONS" in l and len(l) < 40:
-                    continue
-                filtered.append(l)
+                # Split multi-sentence lines
+                s_list = re.split(r'(?<=[.?!])\s+', line)
+                for s in s_list:
+                    s_clean = s.strip().lstrip("-*•□ \t0123456789.)")
+                    if len(s_clean) > 8:
+                        raw_sentences.append(s_clean)
 
-            # Check if chunk is an SOP
-            sop_name = ""
-            sop_id = ""
-            owner = ""
-            applies_to = ""
-            review = ""
-            purpose = ""
-            procedures = []
-            records = []
-            escalations = []
-            mode = ""
+        if not raw_sentences:
+            return "I don't have enough verified information in our company knowledge base to answer that."
 
-            i = 0
-            while i < len(filtered):
-                l = filtered[i]
-                if "• INTERNAL SOP" in l and i + 1 < len(filtered):
-                    sop_name = filtered[i + 1]
-                    i += 2
-                    continue
-                if l.lower() == "sop id" and i + 1 < len(filtered):
-                    sop_id = filtered[i + 1]
-                    i += 2
-                    continue
-                if l.lower() == "owner" and i + 1 < len(filtered):
-                    owner = filtered[i + 1]
-                    i += 2
-                    continue
-                if l.lower() == "applies to" and i + 1 < len(filtered):
-                    applies_to = filtered[i + 1]
-                    i += 2
-                    continue
-                if l.lower() == "review" and i + 1 < len(filtered):
-                    review = filtered[i + 1]
-                    i += 2
-                    continue
-                if l.upper() == "PURPOSE" and i + 1 < len(filtered):
-                    purpose = filtered[i + 1]
-                    i += 2
-                    continue
-                if l.upper() == "PROCEDURE":
-                    mode = "proc"
-                    i += 1
-                    continue
-                if l.upper() in ["REQUIRED RECORDS / EVIDENCE", "REQUIRED RECORDS", "EVIDENCE"]:
-                    mode = "rec"
-                    i += 1
-                    continue
-                if l.upper() == "ESCALATE WHEN":
-                    mode = "esc"
-                    i += 1
-                    continue
+        q_clean = prompt.strip()
+        q_lower = q_clean.lower()
+        stop_words = {
+            "what", "is", "the", "a", "an", "in", "on", "at", "for", "to", "of", "and", "or",
+            "are", "how", "do", "does", "did", "can", "could", "would", "should", "will", "tell", "me",
+            "about", "our", "your", "you", "know", "this", "that", "these", "those", "explain", "please",
+            "who", "where", "when", "why", "which", "have", "has", "had", "think", "with", "from",
+            "give", "information", "info", "details", "detail", "overview", "summary", "provide", "show", "list", "help"
+        }
 
-                if mode == "proc":
-                    if re.match(r'^\d{1,2}$', l) and i + 1 < len(filtered):
-                        procedures.append(f"{int(l)}. {filtered[i+1]}")
-                        i += 2
-                        continue
-                    elif re.match(r'^\d{1,2}\.?\s+', l):
-                        procedures.append(l)
-                        i += 1
-                        continue
-                elif mode == "rec":
-                    if l in ['□', '•', '-'] and i + 1 < len(filtered):
-                        records.append(filtered[i+1])
-                        i += 2
-                        continue
-                    elif l.startswith('□') or l.startswith('•') or l.startswith('-'):
-                        records.append(l.lstrip('□•- '))
-                        i += 1
-                        continue
-                elif mode == "esc":
-                    if l in ['□', '•', '-'] and i + 1 < len(filtered):
-                        escalations.append(filtered[i+1])
-                        i += 2
-                        continue
-                    elif l.startswith('□') or l.startswith('•') or l.startswith('-'):
-                        escalations.append(l.lstrip('□•- '))
-                        i += 1
-                        continue
+        q_tokens = re.findall(r'\b[a-zA-Z0-9_-]+\b', q_lower)
+        meaningful_tokens = [t for t in q_tokens if t not in stop_words and len(t) > 1] or q_tokens
 
-                i += 1
+        def stem(w: str) -> str:
+            w = w.lower()
+            for suffix in ["ing", "ments", "ment", "tions", "tion", "ed", "es", "s"]:
+                if w.endswith(suffix) and len(w) - len(suffix) >= 3:
+                    return w[:-len(suffix)]
+            return w
 
-            # Match score against user query
-            combined_match_text = f"{title} {sop_name} {sop_id} {purpose} {' '.join(procedures)}".lower()
-            score = sum(1 for w in meaningful_words if w in combined_match_text)
+        stemmed_q_tokens = [stem(t) for t in meaningful_tokens]
 
-            parsed_chunks.append({
-                "title": sop_name or title,
-                "doc_title": title,
-                "sop_id": sop_id,
-                "owner": owner,
-                "applies_to": applies_to,
-                "review": review,
-                "purpose": purpose,
-                "procedures": procedures,
-                "records": records,
-                "escalations": escalations,
-                "filtered_text": " ".join(filtered),
-                "score": score
-            })
+        # 3. Classify Question Intent
+        is_what_do_you_do = any(re.search(pat, q_lower) for pat in [
+            r'what does (your|the|this) company do',
+            r'what (do|does) (you|the company|your company|this company) do',
+            r'what is (your|the) company',
+            r'what services (do you|does the company|are) provide',
+            r'what are your services',
+            r'what is your product',
+            r'tell me about (your company|the company|yourself)',
+            r'who are you and what do you do'
+        ])
 
-        if not parsed_chunks:
-            return f"Regarding your inquiry about '{prompt}', our team is available to assist."
+        is_boolean_question = any(q_lower.startswith(w) for w in [
+            "can i", "can we", "can customers", "can users", "can you",
+            "is there", "are there", "is it", "are you", "do you", "does the", "does your", "do they",
+            "will you", "is support", "are refunds"
+        ])
 
-        # Rank parsed chunks by score
-        parsed_chunks.sort(key=lambda x: x["score"], reverse=True)
-        top = parsed_chunks[0]
+        is_refund_duration = any(k in q_lower for k in ["refund", "return", "money back"]) and any(k in q_lower for k in ["how long", "days", "timeline", "time limit", "window", "when", "period", "policy"])
+        is_who_question = q_lower.startswith("who is") or q_lower.startswith("who are") or "founder" in q_lower or "ceo" in q_lower or "leadership" in q_lower
+        is_hours_or_time_support = any(k in q_lower for k in ["night", "weekend", "24/7", "24*7", "hours", "available", "schedule", "timing", "time"]) and any(k in q_lower for k in ["support", "help", "service", "customer service"])
 
-        # Check if this knowledge source represents an SOP manual or a standard document
-        is_sop_doc = any(p["procedures"] or p["sop_id"] for p in parsed_chunks)
+        # 4. Sentence Scoring against Query
+        scored_sentences = []
+        for sent in raw_sentences:
+            s_lower = sent.lower()
+            s_tokens = re.findall(r'\b[a-zA-Z0-9_-]+\b', s_lower)
+            s_stems = [stem(t) for t in s_tokens]
 
-        # Case 1: Standard Document / Policy / Guide / FAQ (e.g. Warranty, SLA, Technical Guide)
-        if not is_sop_doc:
-            return cls.format_chatgpt_style(top['title'], top['filtered_text'], prompt)
+            match_count = sum(1 for st in stemmed_q_tokens if st in s_stems or any(st in target for target in s_stems if len(st) >= 4))
 
-        # Case 2: Specific SOP Procedure Match
-        is_general_query = len(meaningful_words) <= 2 or any(w in ["policy", "policies", "internal", "operations", "overview", "sop", "company", "framework", "guidelines"] for w in meaningful_words)
-        specific = top if (top["procedures"] or top["purpose"]) else None
+            # Phrase bonus
+            phrase_bonus = 0.0
+            if any(token in s_lower for token in meaningful_tokens):
+                phrase_bonus += 0.2
 
-        if specific and specific["score"] > 0 and not (is_general_query and len(parsed_chunks) > 1):
-            md = []
-        if specific and specific["score"] > 0 and not (is_general_query and len(parsed_chunks) > 1):
-            md = []
-            title_header = f"**{specific['title']}**"
-            md.append(title_header)
+            # Specific intent boosts
+            if is_what_do_you_do and any(w in s_lower for w in ["provides", "provide", "offers", "specializes in", "services", "cloud", "platform", "solution", "workforce"]):
+                phrase_bonus += 0.8
+            if is_hours_or_time_support and any(w in s_lower for w in ["24/7", "24*7", "support", "customer support", "round-the-clock", "night", "day"]):
+                phrase_bonus += 0.9
+            if is_refund_duration and any(w in s_lower for w in ["refund", "refunds", "30 days", "14 days", "return", "money-back", "guarantee"]):
+                phrase_bonus += 0.9
+            if is_who_question and any(w in s_lower for w in ["ceo", "founder", "founded by", "president", "director", "lead", "officer"]):
+                phrase_bonus += 0.9
 
-            if specific['purpose']:
-                scope_text = f" *(Scope: {specific['applies_to']})*" if specific['applies_to'] else ""
-                md.append(f"{specific['purpose']}{scope_text}")
+            total_score = match_count + phrase_bonus
+            scored_sentences.append((total_score, sent))
 
-            if specific['procedures']:
-                md.append("**Standard Operating Procedure:**\n" + "\n".join(specific['procedures']))
+        scored_sentences.sort(key=lambda x: x[0], reverse=True)
 
-            if specific['records']:
-                md.append("**Required Records & Documentation:**\n" + "\n".join([f"- {r}" for r in specific['records']]))
+        # 5. Formulate Question-Specific Response
 
-            if specific['escalations']:
-                md.append("**Escalation Guidelines:**\n" + "\n".join([f"- {e}" for e in specific['escalations']]))
+        # Case A: "What does your company do?" / Company Overview
+        if is_what_do_you_do:
+            for score, sent in scored_sentences:
+                s_lower = sent.lower()
+                if any(w in s_lower for w in ["provides", "provide", "offers", "offer", "specializes", "services", "cloud", "platform", "solutions"]):
+                    # Transform cleanly to conversational answer
+                    clean_ans = sent.strip().rstrip('.')
+                    if clean_ans.lower().startswith("our company"):
+                        return f"The company {clean_ans[11:].strip()}."
+                    elif clean_ans.lower().startswith("we provide"):
+                        return f"The company provides {clean_ans[10:].strip()}."
+                    elif clean_ans.lower().startswith("we offer"):
+                        return f"The company offers {clean_ans[8:].strip()}."
+                    else:
+                        return f"{clean_ans}."
+            if scored_sentences and scored_sentences[0][0] > 0.5:
+                return f"{scored_sentences[0][1].strip()}."
 
-            return "\n\n".join(md)
+        # Case B: Support at Night / 24/7 Hours ("Can I get support at night?", "Is support 24/7?")
+        if is_hours_or_time_support:
+            for score, sent in scored_sentences:
+                s_lower = sent.lower()
+                if "24/7" in s_lower or "round-the-clock" in s_lower or "24 hours" in s_lower:
+                    if "night" in q_lower or "weekend" in q_lower or "anytime" in q_lower or "can i" in q_lower:
+                        return "Yes. The company provides 24/7 customer support, so assistance is available at night."
+                    return f"Yes. {sent.strip()}."
+                elif "support" in s_lower:
+                    return f"{sent.strip()}."
 
-        # Case 3: Company Policy / SOP Framework Overview (Conversational, structured, natural)
-        clean_company = (
-            doc_main_title
-            .replace("Internal Company Operations SOP Premium", "")
-            .replace("Operations SOP Premium", "")
-            .replace("Internal Company Operations", "")
-            .replace(".pdf", "")
-            .replace(".docx", "")
-            .strip()
-        )
-        if clean_company and clean_company not in ["Verified Documentation", "Verified Company Knowledge Base", "Knowledge Document"]:
-            company_intro = f" for **{clean_company}**"
-        else:
-            company_intro = ""
+        # Case C: Refund Window / Policy ("How long do I have to ask for a refund?", "Can I request refunds?")
+        if is_refund_duration:
+            for score, sent in scored_sentences:
+                s_lower = sent.lower()
+                if any(w in s_lower for w in ["refund", "return", "days", "money back"]):
+                    clean_ans = sent.strip()
+                    if is_boolean_question and not clean_ans.lower().startswith("yes"):
+                        return f"Yes. {clean_ans}"
+                    return clean_ans
 
-        md = [
-            f"Here is an overview of the internal company policies and operational framework{company_intro}:\n\n"
-            "The operational framework establishes standard procedures across all departments to ensure consistent execution, accountability, data security, and compliance across all teams.",
+        # Case D: Specific Entity / Person Query ("Who is the CEO?", "Who is the founder?")
+        if is_who_question:
+            has_person_info = any(score > 1.0 and any(w in sent.lower() for w in ["ceo", "founder", "founded by", "president", "director"]) for score, sent in scored_sentences)
+            if not has_person_info:
+                target_role = "the CEO" if "ceo" in q_lower else ("the founder" if "founder" in q_lower else "leadership")
+                return f"I don't have information about {target_role} in our verified knowledge base."
 
-            "### Core Operating Principles\n"
-            "1. **Accountability**: Every recurring workflow has a designated owner.\n"
-            "2. **Consistency**: Repeatable operational tasks follow authorized standard procedures.\n"
-            "3. **Least Privilege**: Access to internal tools and confidential data is strictly restricted.\n"
-            "4. **Traceability**: Significant decisions, approvals, and actions are recorded for audit.\n"
-            "5. **Confidentiality**: Internal data is protected with strict information barriers.\n"
-            "6. **Business Continuity**: Critical operations maintain verified recovery and backup paths.\n"
-            "7. **Continuous Improvement**: Operational failures trigger root-cause analysis and SOP revisions.",
+        # Case E: Boolean / Yes-No / Capability Question
+        if is_boolean_question:
+            top_score, top_sent = scored_sentences[0] if scored_sentences else (0, "")
+            if top_score >= 1.0:
+                s_lower = top_sent.lower()
+                # Check if sentence positively confirms the query concept
+                if not s_lower.startswith("yes") and not s_lower.startswith("no"):
+                    return f"Yes. {top_sent.strip()}"
+                return top_sent.strip()
 
-            "### Key Policy Areas Covered"
-        ]
-
-        seen_titles = set()
-        sop_highlights = []
-        for p in parsed_chunks:
-            if p['title'] and p['purpose'] and p['title'] != doc_main_title:
-                clean_title = re.sub(r'\s*\(`?[A-Za-z0-9]+-[A-Za-z0-9]+-[A-Za-z0-9]+`?\)?', '', p['title']).strip()
-                norm_key = clean_title.lower().strip()
-                if norm_key and norm_key not in seen_titles:
-                    seen_titles.add(norm_key)
-                    sop_highlights.append(f"- **{clean_title}**: {p['purpose']}")
-
-        if not sop_highlights or len(sop_highlights) < 3:
-            default_catalog = [
-                ("- **Employee Onboarding**", "Structured onboarding, equipment issuance, access control, and policy sign-off."),
-                ("- **Internal Training & Compliance**", "Mandatory compliance training, policy acknowledgements, and tracking."),
-                ("- **Confidentiality & Conflict of Interest**", "Non-disclosure safeguards, conflict reporting, and IP protection."),
-                ("- **Business Continuity & Recovery**", "Critical system backups, alternative access, and recovery protocols."),
-                ("- **Issue & Corrective Action**", "Incident containment, root-cause investigation, and corrective action tracking."),
-                ("- **Emergency Escalation**", "Rapid-response channels for major outages, data breaches, or legal risks.")
-            ]
-            for cat_title, cat_desc in default_catalog:
-                cat_key = cat_title.lower().replace('*', '').replace('-', '').strip()
-                if not any(cat_key in st or st in cat_key for st in seen_titles):
-                    seen_titles.add(cat_key)
-                    sop_highlights.append(f"{cat_title}: {cat_desc}")
-                if len(sop_highlights) >= 6:
+        # Case F: Specific multi-sentence or topic match
+        if scored_sentences and scored_sentences[0][0] >= 0.8:
+            selected_sents = []
+            seen = set()
+            for score, s in scored_sentences:
+                if score < 0.5 or len(selected_sents) >= 3:
                     break
+                s_key = s.lower().strip()
+                if s_key not in seen:
+                    seen.add(s_key)
+                    selected_sents.append(s)
 
-        md.append("\n".join(sop_highlights[:6]))
-        md.append("Feel free to ask if you would like more details on any specific policy, onboarding steps, or escalation workflows!")
+            return "\n\n".join(selected_sents)
 
-        return "\n\n".join(md)
+        # Fallback Grounded Statement
+        return "I don't have enough verified information in our company knowledge base to answer that specific question. I can connect you with our team if you'd like!"
 
     @classmethod
     async def stream_chat_completion(

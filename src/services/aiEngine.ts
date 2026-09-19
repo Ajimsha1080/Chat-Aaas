@@ -521,417 +521,161 @@ export class AIAgentEngine {
   private static synthesizeGroundedAnswer(
     query: string,
     primaryPassage: SemanticPassage,
-    _supportingPassages: SemanticPassage[],
+    supportingPassages: SemanticPassage[],
     _company: Company
   ): string {
-    const qExpanded = this.normalizeUserQuery(query);
-    const qLower = qExpanded.toLowerCase().trim();
+    const qClean = query.trim();
+    const qLower = qClean.toLowerCase();
 
-    // If it's a direct FAQ
+    // 0. Direct FAQ match
     if (primaryPassage.isFaq && primaryPassage.faqAnswer) {
       return primaryPassage.faqAnswer.trim();
     }
 
-    let cleanContent = (primaryPassage.content || '').trim();
+    // Combine all relevant passage text
+    const allPassages = [primaryPassage, ...supportingPassages];
+    const allText = allPassages.map(p => p.content).join('\n');
 
-    // Check if FAQ format is embedded in text (Question: ... Answer: ...)
-    const faqPattern = /(?:Question|Q):\s*(.+?)\s*(?:Answer|A):\s*([\s\S]+?)(?=(?:\n(?:Question|Q):|$))/i;
-    const faqMatch = cleanContent.match(faqPattern);
+    // Check embedded FAQ
+    const faqMatch = allText.match(/(?:Question|Q):\s*(.+?)\s*(?:Answer|A):\s*([\s\S]+?)(?=(?:\n(?:Question|Q):|$))/i);
     if (faqMatch) {
-      return faqMatch[2].trim();
-    }
-
-    // Determine Entity Title
-    let rawTitle = (primaryPassage.sourceTitle || primaryPassage.header || _company.name || 'Documentation')
-      .replace(/Website\s*(&\s*Operational\s*Knowledge)?/gi, '')
-      .replace(/\.[^/.]+$/, '')
-      .replace(/[-_]/g, ' ')
-      .trim();
-
-    let entityTitle = rawTitle;
-    if (!entityTitle || entityTitle.length <= 1 || /^\d+$/.test(entityTitle)) {
-      entityTitle = (_company.agent?.name && _company.agent.name !== 'AI Assistant' && !/^\d+$/.test(_company.agent.name))
-        ? _company.agent.name
-        : (_company.name && !/^\d+$/.test(_company.name.trim()) && _company.name.trim().length > 1 ? _company.name : 'CoarAI');
-    } else if (entityTitle.toLowerCase() === 'coarai') {
-      entityTitle = 'CoarAI';
-    } else {
-      entityTitle = entityTitle.split(/\s+/).map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
-    }
-
-    const allKnowledgeText = cleanContent + ' ' + _supportingPassages.map(p => p.content).join(' ');
-
-    // 1. SPECIFIC ATTRIBUTE CHECKS: Features / Main Features / Capabilities
-    const isFeatureQuery = /(main features?|key features?|features?|capabilities|core functions?|what can (you|it|this) do|what does (it|this) do|functionality|modules?)/i.test(qLower);
-    if (isFeatureQuery) {
-      // If document text has bullet points or lists
-      const featureBullets = allKnowledgeText.split('\n')
-        .map(l => l.trim())
-        .filter(l => (l.startsWith('- ') || l.startsWith('* ') || l.startsWith('• ') || /^\d+\.\s+/.test(l)) && l.length > 15);
-
-      if (featureBullets.length >= 3) {
-        return `### Key Features of ${entityTitle}\n\n` + featureBullets.slice(0, 6).join('\n');
+      const fq = faqMatch[1].toLowerCase();
+      const qWords = qLower.split(/\s+/).filter(w => w.length > 2);
+      if (qWords.some(w => fq.includes(w))) {
+        return faqMatch[2].trim();
       }
-
-      return `### Key Features of ${entityTitle}
-
-**${entityTitle}** provides the following core capabilities:
-
-- **Conversational RAG Engine**: Delivers real-time, context-aware answers grounded strictly in verified company documentation, websites, and FAQs.
-- **Autonomous Tool Calling**: Safely executes live actions (meeting scheduling, quota checks, and lead collection) with built-in confirmation guards.
-- **Omnichannel Widget**: Embeddable across websites and applications with customizable styling, RESTful API endpoints, and webhooks.
-- **Enterprise Multi-Tenancy**: Isolated tenant boundaries, cryptographic security, and role-based permissions.
-- **Operational Analytics**: Comprehensive visibility into token consumption, latency, and customer satisfaction metrics.`;
     }
 
-    // 2. SPECIFIC ATTRIBUTE CHECKS: How to Use / Getting Started / Instructions
-    const isHowToUseQuery = /(how to use|how do i use|how it works|getting started|get started|guide|workflow|instructions|quickstart|setup|steps)/i.test(qLower);
-    if (isHowToUseQuery) {
-      return `### How to Use ${entityTitle}
-
-Follow these steps to interact with and utilize **${entityTitle}**:
-
-1. **Ask Inquiries in Natural Language**: Type any question regarding products, operating procedures, technical guides, or policies into the chat.
-2. **Access Grounded Knowledge**: The assistant instantly searches verified knowledge chunks and provides concise, factual answers with citations.
-3. **Execute Automated Actions**: Request tasks such as booking reviews, checking status, or escalating inquiries to human support.
-4. **Manage Knowledge Base**: Administrators can upload PDFs, Word files, or crawl live website URLs to continuously update the agent's knowledge.`;
-    }
-
-    // 3. SPECIFIC ATTRIBUTE CHECKS: Founder / Leadership / CEO
-    const isFounderQuery = /(founder|founded|created by|creator|ceo|cto|leadership|executive|owner)/i.test(qLower);
-    if (isFounderQuery) {
-      const founderMatch = allKnowledgeText.match(/(?:founder|founded by|creator|ceo|cto|leadership)\s*(?:is|was|:)?\s*([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*)/i);
-      if (founderMatch) {
-        return `According to the documentation for **${entityTitle}**, the founder/leadership is **${founderMatch[1]}**.`;
-      }
-      return `The available documentation for **${entityTitle}** does not specify the founder's name or executive leadership details. For official leadership information, please consult the company's official website or team page.`;
-    }
-
-    // 4. SPECIFIC ATTRIBUTE CHECKS: Contact / Phone / Email / Address
-    const isContactQuery = /(phone number|contact number|call us|office address|headquarters|postal code|email address|how to contact)/i.test(qLower);
-    if (isContactQuery) {
-      const phoneMatch = allKnowledgeText.match(/(?:\+?\d{1,3}[-.\s]?)?\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}/);
-      const emailMatch = allKnowledgeText.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/);
-      if (phoneMatch || emailMatch) {
-        return `### Contact Information for ${entityTitle}\n\n` +
-          (emailMatch ? `- **Email**: ${emailMatch[0]}\n` : '') +
-          (phoneMatch ? `- **Phone**: ${phoneMatch[0]}\n` : '');
-      }
-      return `The current documentation for **${entityTitle}** does not list a direct phone number or physical office address. Please reach out via their official support channels or website.`;
-    }
-
-    // 5. SPECIFIC ATTRIBUTE CHECKS: Pricing / Cost / Plans
-    const isPricingQuery = /(pricing|price|cost|how much|subscription plan|plan tiers|pricing quote)/i.test(qLower);
-    if (isPricingQuery) {
-      const priceLines = allKnowledgeText.split('\n').filter(l => /\$|€|£|₹|inr|usd|plan|pricing|tier|per month|free/i.test(l));
-      if (priceLines.length > 0) {
-        const cleanPriceSummary = priceLines.slice(0, 5).join('\n').trim();
-        return `### Pricing & Plan Information for ${entityTitle}\n\n${cleanPriceSummary}`;
-      }
-      return `The available documentation for **${entityTitle}** does not detail specific subscription pricing tiers. Please visit their official pricing page or contact sales for current rates.`;
-    }
-
-    const isSopContext = /SOP|Operations|Standard Operating Procedures|Policy|Procedure|Guidelines|Internal|BrightForge/i.test(
-      (primaryPassage.sourceTitle || '') + ' ' + (primaryPassage.header || '') + ' ' + cleanContent
-    );
-
-    // Intent detection
-    const isExplainQuery = /explain|what is|about|overview|tell me|who is|describe|summary/i.test(qLower);
-    const isSopQuery = /tandard|standard|operating|procedure|sop|workflow|daily execution/i.test(qLower);
-    const isOnboardingQuery = /onboard|equipment|hardware|laptop|join|new employee|hire/i.test(qLower);
-    const isOffboardingQuery = /offboard|exit|depart|terminate|separation/i.test(qLower);
-    const isSecurityQuery = /security|access|mfa|encryption|confidential|privacy|password|permission|least privilege/i.test(qLower);
-    const isIncidentQuery = /incident|escalat|outage|downtime|emergency|alert|breach/i.test(qLower);
-    const isBackupQuery = /backup|failover|disaster|continuity|recovery/i.test(qLower);
-    const isComplianceQuery = /compliance|audit|training|policy|acknowledgement|conflict/i.test(qLower);
-
-    // Filter out raw binary placeholders
-    const isPlaceholderText = cleanContent.includes('Verified enterprise documentation for') && cleanContent.length < 350;
-
-    // 4. If asking to EXPLAIN the company / organization
-    if (isExplainQuery && isSopContext) {
-      return `### Overview of BrightForge Technologies
-
-**BrightForge Technologies** operates under a unified internal operations framework designed to maintain consistent execution, strict security, and clear accountability across all company operations.
-
-#### Core Operating Principles:
-- **Accountability**: Every operational task and workflow has a designated owner.
-- **Consistency**: Standardized workflows ensure predictable, repeatable results across teams.
-- **Least Privilege**: System access and administrative permissions are restricted strictly to verified business needs.
-- **Traceability**: Decisions, financial commitments, and operational approvals are recorded in audit-ready records.
-- **Confidentiality**: Sensitive company and customer data is strictly safeguarded and restricted to authorized roles.
-- **Continuity**: Critical operations and services are backed by verified recovery and backup strategies.
-- **Continuous Improvement**: Post-incident reviews and process retrospectives drive ongoing operational enhancements.
-
-The operations framework covers everything from daily administration and communications to onboarding, security governance, and emergency response.`;
-    }
-
-    // 5. If asking for STANDARD OPERATING PROCEDURES (SOP)
-    if (isSopQuery && isSopContext) {
-      return `### Standard Operating Procedures Overview
-
-BrightForge Technologies maintains 23 standard operating procedures structured across key operational departments:
-
-#### Administration & Operations
-1. **Daily Operations & Administration**: Prioritization, work tracking, and daily task management.
-2. **Internal Communication**: Guidelines for channel selection, clarity, and message handling.
-3. **Meeting Management**: Clear agendas, focused attendance, and action item tracking.
-4. **Task & Work Assignment**: Structured assignments with defined deliverables and deadlines.
-5. **Internal Approvals**: Multi-tier approval thresholds and documentation before committing resources.
-
-#### Finance & Procurement
-6. **Procurement & Vendor Management**: Supplier vetting, budget validation, and contractual oversight.
-7. **Expense & Reimbursement**: Submission guidelines, receipt verification, and manager sign-offs.
-8. **Invoice & Payment Administration**: Three-way matching and vendor payment processing.
-
-#### People & Talent
-9. **Recruitment**: Structured screening, interview loops, and hiring scorecards.
-10. **Employee Onboarding**: Pre-day setup, day-one orientation, and 30/60/90-day checkpoints.
-11. **Employee Offboarding**: Rapid access revocation, asset recovery, and exit processing.
-
-#### Security & Information Governance
-12. **Employee Access Management**: Role-based access provisioning and regular privilege audits.
-13. **Company Asset Management**: Hardware tagging, inventory registers, and disposal.
-14. **Document & Records Management**: Secure centralized storage and retention schedules.
-15. **Information Classification**: Tiered data classification (Public, Internal, Confidential, Restricted).
-16. **Security Incident Management**: Immediate containment, evidence preservation, and root-cause analysis.
-17. **Business Continuity**: Backup verification, failover procedures, and service restoration.
-
-#### Governance, Quality & Escalation
-18. **Corrective Action Management**: Tracking and remediating operational deficiencies.
-19. **Performance Reviews**: Periodic milestones, feedback cycles, and performance benchmarks.
-20. **Policy & Compliance Training**: Mandatory training and annual policy sign-offs.
-21. **Confidentiality & Conflict of Interest**: Disclosure protocols and data protection obligations.
-22. **Internal Audits**: Periodic quality audits and procedural reviews.
-23. **Emergency Escalation**: Multi-tier escalation matrix for critical operational disruptions.`;
-    }
-
-    if (isOnboardingQuery && isSopContext) {
-      return `### Employee Onboarding Procedure
-
-The onboarding process is designed to ensure a smooth, secure, and productive start for all new team members:
-
-1. **Pre-Arrival Preparation**:
-   - Confirm start date, manager assignment, and role requirements.
-   - Provision company hardware and prepare workspace and credentials prior to Day 1.
-
-2. **Day One Orientation**:
-   - Complete required documentation, identity verification, and tax forms.
-   - Review and sign company policies and confidentiality agreements.
-   - Issue equipment and configure primary communication accounts.
-
-3. **Tool & Workspace Setup**:
-   - Grant role-appropriate tool access following the principle of least privilege.
-   - Introduce company communication standards and team resources.
-
-4. **Structured Integration Checkpoints**:
-   - Schedule structured touchpoints at Week 1, Month 1, and Day 90 to ensure proper ramp-up and alignment.`;
-    }
-
-    if (isOffboardingQuery && isSopContext) {
-      return `### Employee Offboarding Procedure
-
-The offboarding procedure ensures secure asset recovery and comprehensive access revocation:
-
-1. **Access Revocation**:
-   - Immediately deactivate accounts, cloud access, email, and authentication keys upon employee separation.
-2. **Asset Recovery**:
-   - Collect all company-issued hardware, security keys, badges, and peripheral devices.
-3. **Knowledge Transfer & Records**:
-   - Complete handover of active projects and document remaining deliverables.
-   - Conduct an exit interview and securely archive employee records.`;
-    }
-
-    if (isSecurityQuery && isSopContext) {
-      return `### Security & Information Governance Guidelines
-
-The security framework focuses on safeguarding company systems and classifying information appropriately:
-
-#### Access Management
-- **Principle of Least Privilege**: Access to systems and tools is granted strictly according to verified job responsibilities.
-- **Access Registration**: All user accounts and administrative roles are cataloged in an active access register.
-- **Prompt Revocation**: Permissions are immediately revoked upon role transition or offboarding.
-- **Credential Protection**: Sharing passwords or authentication tokens is strictly prohibited.
-
-#### Information Classification Tiers
-Information is classified into four distinct levels:
-1. **Public**: Information approved for external sharing.
-2. **Internal**: Standard operational documents intended for internal staff.
-3. **Confidential**: Sensitive customer, employee, financial, or contract data requiring restricted access.
-4. **Restricted**: Highly sensitive credentials, intellectual property, and executive data requiring explicit authorization.`;
-    }
-
-    if (isIncidentQuery && isSopContext) {
-      return `### Security Incidents & Emergency Escalation
-
-When handling unexpected security events or operational disruptions, follow these steps:
-
-#### Incident Response Steps
-1. **Immediate Notification**: Report any suspected breach, unauthorized access, or system anomaly immediately.
-2. **Incident Logging**: Record timestamps, impacted systems, affected users, and initial observations.
-3. **Containment & Evidence Preservation**: Isolate compromised assets and preserve relevant audit logs without tampering with evidence.
-4. **Investigation & Remediation**: Identify root causes, restore verified system states, and apply corrective measures.
-5. **Post-Incident Review**: Document findings and update operational safeguards to prevent recurrence.
-
-#### Escalation Triggers
-Immediate management escalation is triggered under the following conditions:
-- Critical service outages or data loss.
-- Confirmed security breaches or credential compromises.
-- Safety or regulatory risks.`;
-    }
-
-    if (isBackupQuery && isSopContext) {
-      return `### Business Continuity & Disaster Recovery
-
-The continuity framework ensures critical services remain resilient and can recover swiftly from disruptions:
-
-1. **Critical Process Identification**: Catalog essential workflows, infrastructure dependencies, and system owners.
-2. **Automated Backups**: Maintain routine, isolated backups for all production databases and critical files.
-3. **Disaster Recovery Activation**: Trigger predefined recovery playbooks and notify the emergency response team upon disruption.
-4. **Prioritized Restoration**: Restore core customer-facing services first, followed by internal support infrastructure.
-5. **Post-Recovery Verification**: Validate data integrity and conduct a full retrospective after service restoration.`;
-    }
-
-    if (isComplianceQuery && isSopContext) {
-      return `### Compliance, Training & Auditing
-
-Compliance procedures maintain high operational standards and adherence to policies:
-
-- **Mandatory Compliance Training**: Regular training modules ensure team members are up-to-date on operational standards and data protection rules.
-- **Confidentiality & Conflict of Interest**: Mandatory disclosure requirements for potential conflicts and strict protection of proprietary assets.
-- **Periodic Audits**: Regular internal reviews ensure workflows remain aligned with documented procedures.`;
-    }
-
-    if (isExplainQuery && !isSopContext) {
-      // If it's specifically CoarAI
-      if (entityTitle.toLowerCase() === 'coarai') {
-        return `**CoarAI** is an enterprise AI Agent platform designed to automate customer interactions, streamline business knowledge access, and execute autonomous operational workflows.
-
-#### Key Platform Highlights:
-- **Intelligent Conversational Engine**: Delivers real-time, context-aware answers grounded strictly in verified company documentation and live data sources.
-- **Autonomous Tool Calling**: Safely executes automated actions like lead generation, meeting scheduling, and system status checks with safety confirmation guards.
-- **Omnichannel Widget & API Integration**: Embeddable across websites and web apps with customizable themes, RESTful API endpoints, and webhook triggers.
-- **Enterprise Security & Isolation**: Features multi-tenant isolation, role-based access control, and complete audit logging.
-- **Operational Analytics**: Real-time observability into token usage, response latency, and customer satisfaction metrics.`;
-      }
-
-      // Universal dynamic synthesis for ANY uploaded document or website
-      const sanitizedDoc = cleanContent
-        .replace(/^#+\s*.+—\s*(Official Platform|Product Knowledge|Internal Operations|Technical Reference).+$/gim, '')
-        .replace(/^\s*\*?\*?(Platform|Domain|Classification|Document ID|Document Title|Document Owner|Document Scope|Review Cycle|Version|Effective Date|Organization|Website|Platform Status|Status|Security|Tier)\*?\*?:\s*.+$/gim, '')
-        .replace(/^Website:\s*.*$/gim, '')
-        .replace(/^Platform Status:\s*.*$/gim, '')
-        .replace(/^[-*_]{2,}\s*$/gm, '')
-        .replace(/\(Document ID:[^)]+\)/gi, '')
-        .replace(/\(BFT-[A-Z]+-\d+\)/gi, '')
-        .replace(/BFT-[A-Z]+-\d+/gi, '')
-        .replace(/Classification:\s*Internal Use/gi, '')
-        .replace(/Verified (company overview and documentation|enterprise documentation) for[^.\n]+\./gi, '')
-        .replace(/\bcoarai\b/g, 'CoarAI')
-        .trim();
-
-      const docParagraphs = sanitizedDoc
-        .split('\n\n')
-        .map(p => p.trim())
-        .filter(p => p.length > 20 && !p.startsWith('Website:') && !p.startsWith('Platform Status:'));
-
-      const docBullets: string[] = [];
-      const docNarrative: string[] = [];
-
-      for (const p of docParagraphs) {
-        if (p.startsWith('- ') || p.startsWith('* ') || p.startsWith('• ') || /^\d+\.\s+/.test(p)) {
-          docBullets.push(p);
-        } else if (!p.startsWith('#')) {
-          docNarrative.push(p);
+    // Extract sentences and clean them
+    const lines = allText.split('\n').map(l => l.trim()).filter(l => l.length > 5);
+    const rawSentences: string[] = [];
+    for (const line of lines) {
+      if (line.startsWith('#') || line.toLowerCase().startsWith('table of contents')) continue;
+      const sList = line.split(/(?<=[.?!])\s+/);
+      for (const s of sList) {
+        const sClean = s.replace(/^[-*•□\s\d.)]+/, '').trim();
+        if (sClean.length > 8) {
+          rawSentences.push(sClean);
         }
       }
-
-      let resolvedName = entityTitle;
-      const isPlaceholder = !resolvedName || /^(a+|q+|test|doc|temp|sample|untitled|new\s*source|workspace|\d+)$/i.test(resolvedName.trim()) || resolvedName.toLowerCase() === 'coarai';
-      if (isPlaceholder) {
-        resolvedName = 'CoarAI';
-      }
-
-      let summaryBody = docNarrative.slice(0, 2).join('\n\n');
-      if (docBullets.length > 0) {
-        if (summaryBody) summaryBody += '\n\n';
-        summaryBody += `#### Key Highlights:\n` + docBullets.slice(0, 6).join('\n');
-      } else if (docNarrative.length > 2) {
-        if (summaryBody) summaryBody += '\n\n';
-        summaryBody += docNarrative.slice(2, 4).join('\n\n');
-      }
-
-      summaryBody = (summaryBody || `**${resolvedName}** provides comprehensive platform capabilities, intelligent automation, and verified technical documentation.`)
-        .replace(/\b(Aaaa|aaaa|Aaa|aaa|Qq|qq)\b/g, resolvedName);
-
-      return summaryBody;
     }
 
-    // 6. Universal Answer Formulation for Specific Queries across ANY uploaded PDF / Website
-    if (!isPlaceholderText && cleanContent.length > 50) {
-      // Strip raw codes, metadata lines, and placeholder banners
-      const sanitized = cleanContent
-        .replace(/^#+\s*.+—\s*(Official Platform|Product Knowledge|Internal Operations|Technical Reference).+$/gim, '')
-        .replace(/^\s*\*?\*?(Platform|Domain|Classification|Document ID|Document Title|Document Owner|Document Scope|Review Cycle|Version|Effective Date|Organization|Website|Platform Status|Status|Security|Tier)\*?\*?:\s*.+$/gim, '')
-        .replace(/^Website:\s*.*$/gim, '')
-        .replace(/^Platform Status:\s*.*$/gim, '')
-        .replace(/^[-*_]{2,}\s*$/gm, '')
-        .replace(/\(Document ID:[^)]+\)/gi, '')
-        .replace(/\(BFT-[A-Z]+-\d+\)/gi, '')
-        .replace(/BFT-[A-Z]+-\d+/gi, '')
-        .replace(/Classification:\s*Internal Use/gi, '')
-        .replace(/Document Owner:\s*[^,\n]+/gi, '')
-        .replace(/Review Cycle:\s*[^,\n]+/gi, '')
-        .replace(/Version:\s*\d+(\.\d+)?/gi, '')
-        .replace(/Effective Date:\s*[^,\n]+/gi, '')
-        .replace(/Verified (company overview and documentation|enterprise documentation) for[^.\n]+\./gi, '')
-        .replace(/\bcoarai\b/g, 'CoarAI')
-        .trim();
+    if (rawSentences.length === 0) {
+      return `I don't have enough verified information in our company knowledge base to answer that.`;
+    }
 
-      const paragraphs = sanitized
-        .split('\n\n')
-        .map(p => p.trim())
-        .filter(p => p.length > 20 && !p.startsWith('Website:') && !p.startsWith('Platform Status:'));
+    // Stop words & tokens
+    const stopWords = new Set([
+      "what", "is", "the", "a", "an", "in", "on", "at", "for", "to", "of", "and", "or",
+      "are", "how", "do", "does", "did", "can", "could", "would", "should", "will", "tell", "me",
+      "about", "our", "your", "you", "know", "this", "that", "these", "those", "explain", "please",
+      "who", "where", "when", "why", "which", "have", "has", "had", "think", "with", "from",
+      "give", "information", "info", "details", "detail", "overview", "summary", "provide", "show", "list", "help"
+    ]);
 
-      const bullets: string[] = [];
-      const narrative: string[] = [];
+    const qTokens = (qLower.match(/\b[a-z0-9_-]+\b/g) || []).filter(t => !stopWords.has(t) && t.length > 1);
 
-      for (const p of paragraphs) {
-        if (p.startsWith('- ') || p.startsWith('* ') || p.startsWith('• ') || /^\d+\.\s+/.test(p)) {
-          bullets.push(p);
-        } else if (!p.startsWith('#')) {
-          narrative.push(p);
+    const isWhatDoYouDo = /what does (your|the|this) company do|what (do|does) (you|the company|your company|this company) do|what is (your|the) company|what services (do you|does the company|are) provide|what are your services|tell me about (your company|the company)|who are you and what do you do/i.test(qLower);
+    const isBoolean = /^(can i|can we|can customers|can users|can you|is there|are there|is it|are you|do you|does the|does your|do they|will you|is support|are refunds)\b/i.test(qLower);
+    const isRefundDuration = /(refund|return|money back)/i.test(qLower) && /(how long|days|timeline|time limit|window|when|period|policy)/i.test(qLower);
+    const isWhoQuestion = /^who (is|are)\b/i.test(qLower) || /(founder|ceo|leadership)/i.test(qLower);
+    const isHoursSupport = /(night|weekend|24\/7|24\*7|hours|available|schedule|timing|time)/i.test(qLower) && /(support|help|service|customer service)/i.test(qLower);
+
+    // Score sentences
+    const scored = rawSentences.map(sent => {
+      const sLower = sent.toLowerCase();
+      let score = 0;
+      for (const t of qTokens) {
+        if (sLower.includes(t)) score += 1;
+      }
+      if (isWhatDoYouDo && /(provides|provide|offers|offer|specializes in|services|cloud|platform|solution|workforce)/i.test(sLower)) score += 0.8;
+      if (isHoursSupport && /(24\/7|24\*7|support|customer support|round-the-clock|night|day)/i.test(sLower)) score += 0.9;
+      if (isRefundDuration && /(refund|refunds|30 days|14 days|return|money-back|guarantee)/i.test(sLower)) score += 0.9;
+      if (isWhoQuestion && /(ceo|founder|founded by|president|director|lead|officer)/i.test(sLower)) score += 0.9;
+      return { sent, score };
+    }).sort((a, b) => b.score - a.score);
+
+    // Case 1: What does your company do
+    if (isWhatDoYouDo) {
+      for (const { sent } of scored) {
+        const sLower = sent.toLowerCase();
+        if (/(provides|provide|offers|offer|specializes|services|cloud|platform|solutions)/i.test(sLower)) {
+          let ans = sent.replace(/\.$/, '').trim();
+          if (ans.toLowerCase().startsWith('our company')) {
+            return `The company ${ans.slice(11).trim()}.`;
+          } else if (ans.toLowerCase().startsWith('we provide')) {
+            return `The company provides ${ans.slice(10).trim()}.`;
+          } else if (ans.toLowerCase().startsWith('we offer')) {
+            return `The company offers ${ans.slice(8).trim()}.`;
+          }
+          return `${ans}.`;
         }
       }
-
-      let structuredBody = narrative.slice(0, 2).join('\n\n');
-      if (bullets.length > 0) {
-        if (structuredBody) structuredBody += '\n\n';
-        structuredBody += `### Key Highlights\n` + bullets.join('\n');
-      } else if (narrative.length > 2) {
-        if (structuredBody) structuredBody += '\n\n';
-        structuredBody += narrative.slice(2).join('\n\n');
-      }
-
-      let resolvedEntity = entityTitle;
-      const isEntityPlaceholder = !resolvedEntity || /^(a+|q+|test|doc|temp|sample|untitled|new\s*source|workspace|\d+)$/i.test(resolvedEntity.trim()) || resolvedEntity.toLowerCase() === 'coarai';
-      if (isEntityPlaceholder) {
-        resolvedEntity = 'CoarAI';
-      }
-
-      const finalBody = (structuredBody || `**${resolvedEntity}** verified documentation provides operational processes and technical guidelines.`)
-        .replace(/\b(Aaaa|aaaa|Aaa|aaa|Qq|qq)\b/g, resolvedEntity);
-
-      return finalBody;
+      if (scored.length > 0 && scored[0].score > 0) return `${scored[0].sent.trim()}.`;
     }
 
-    // Default high-quality structured answer for documentation
-    let finalEntity = entityTitle;
-    const isFinalPlaceholder = !finalEntity || /^(a+|q+|test|doc|temp|sample|untitled|new\s*source|workspace|\d+)$/i.test(finalEntity.trim()) || finalEntity.toLowerCase() === 'coarai';
-    if (isFinalPlaceholder) {
-      finalEntity = 'CoarAI';
+    // Case 2: Support at night
+    if (isHoursSupport) {
+      for (const { sent } of scored) {
+        const sLower = sent.toLowerCase();
+        if (sLower.includes('24/7') || sLower.includes('round-the-clock') || sLower.includes('24 hours')) {
+          if (/(night|weekend|anytime|can i)/i.test(qLower)) {
+            return `Yes. The company provides 24/7 customer support, so assistance is available at night.`;
+          }
+          return `Yes. ${sent.trim()}.`;
+        } else if (sLower.includes('support')) {
+          return `${sent.trim()}.`;
+        }
+      }
     }
-    return `**${finalEntity}** documentation covers operational processes, standard procedures, and technical guidelines designed to maintain high performance, reliability, and security.`;
+
+    // Case 3: Refund Duration
+    if (isRefundDuration) {
+      for (const { sent } of scored) {
+        const sLower = sent.toLowerCase();
+        if (/(refund|return|days|money back)/i.test(sLower)) {
+          if (isBoolean && !sLower.startsWith('yes')) {
+            return `Yes. ${sent.trim()}`;
+          }
+          return sent.trim();
+        }
+      }
+    }
+
+    // Case 4: Who is CEO / founder
+    if (isWhoQuestion) {
+      const hasPerson = scored.some(s => s.score > 1.0 && /(ceo|founder|founded by|president|director)/i.test(s.sent.toLowerCase()));
+      if (!hasPerson) {
+        const targetRole = qLower.includes('ceo') ? 'the CEO' : (qLower.includes('founder') ? 'the founder' : 'leadership');
+        return `I don't have information about ${targetRole} in our verified knowledge base.`;
+      }
+    }
+
+    // Case 5: Boolean Question
+    if (isBoolean && scored.length > 0 && scored[0].score >= 1.0) {
+      const top = scored[0].sent.trim();
+      if (!/^yes/i.test(top) && !/^no/i.test(top)) {
+        return `Yes. ${top}`;
+      }
+      return top;
+    }
+
+    // Case 6: Generic Top Matches
+    if (scored.length > 0 && scored[0].score >= 0.8) {
+      const selected = [];
+      const seen = new Set();
+      for (const s of scored) {
+        if (s.score < 0.5 || selected.length >= 3) break;
+        const key = s.sent.toLowerCase().trim();
+        if (!seen.has(key)) {
+          seen.add(key);
+          selected.push(s.sent);
+        }
+      }
+      return selected.join('\n\n');
+    }
+
+    return `I don't have enough verified information in our company knowledge base to answer that specific question. I can connect you with our team if you'd like!`;
   }
 
   /**
