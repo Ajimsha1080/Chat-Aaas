@@ -95,8 +95,10 @@ export class AIAgentEngine {
           }];
         }
 
+        const cleanMsg = (res.message || res.answer || '').replace(/\b(Aaaa|aaaa|Aaa|aaa|Qq|qq)\b/g, 'CoarAI');
+
         return {
-          message: res.message || res.answer,
+          message: cleanMsg,
           reasoningSteps: reasoningSteps.length > 0 ? reasoningSteps : [
             `[FastAPI Backend v2.0.0] Response generated with ${res.tokens_used || 85} tokens`,
             `[Multi-Tenant Guard] Company: ${company.name} (${company.id})`
@@ -845,7 +847,8 @@ Compliance procedures maintain high operational standards and adherence to polic
       }
 
       let resolvedName = entityTitle;
-      if (resolvedName.toLowerCase() === 'aaaa' || resolvedName.toLowerCase() === 'aaa' || resolvedName.toLowerCase() === 'qq' || resolvedName === '1') {
+      const isPlaceholder = !resolvedName || /^(a+|q+|test|doc|temp|sample|untitled|new\s*source|workspace|\d+)$/i.test(resolvedName.trim()) || resolvedName.toLowerCase() === 'coarai';
+      if (isPlaceholder) {
         resolvedName = 'CoarAI';
       }
 
@@ -858,7 +861,10 @@ Compliance procedures maintain high operational standards and adherence to polic
         summaryBody += docNarrative.slice(2, 4).join('\n\n');
       }
 
-      return summaryBody || `**${resolvedName}** provides comprehensive platform capabilities, intelligent automation, and verified technical documentation.`;
+      summaryBody = (summaryBody || `**${resolvedName}** provides comprehensive platform capabilities, intelligent automation, and verified technical documentation.`)
+        .replace(/\b(Aaaa|aaaa|Aaa|aaa|Qq|qq)\b/g, resolvedName);
+
+      return summaryBody;
     }
 
     // 6. Universal Answer Formulation for Specific Queries across ANY uploaded PDF / Website
@@ -908,16 +914,21 @@ Compliance procedures maintain high operational standards and adherence to polic
       }
 
       let resolvedEntity = entityTitle;
-      if (resolvedEntity.toLowerCase() === 'aaaa' || resolvedEntity.toLowerCase() === 'aaa' || resolvedEntity.toLowerCase() === 'qq' || resolvedEntity === '1') {
+      const isEntityPlaceholder = !resolvedEntity || /^(a+|q+|test|doc|temp|sample|untitled|new\s*source|workspace|\d+)$/i.test(resolvedEntity.trim()) || resolvedEntity.toLowerCase() === 'coarai';
+      if (isEntityPlaceholder) {
         resolvedEntity = 'CoarAI';
       }
 
-      return structuredBody || `**${resolvedEntity}** verified documentation provides operational processes and technical guidelines.`;
+      const finalBody = (structuredBody || `**${resolvedEntity}** verified documentation provides operational processes and technical guidelines.`)
+        .replace(/\b(Aaaa|aaaa|Aaa|aaa|Qq|qq)\b/g, resolvedEntity);
+
+      return finalBody;
     }
 
     // Default high-quality structured answer for documentation
     let finalEntity = entityTitle;
-    if (finalEntity.toLowerCase() === 'aaaa' || finalEntity.toLowerCase() === 'aaa' || finalEntity.toLowerCase() === 'qq' || finalEntity === '1') {
+    const isFinalPlaceholder = !finalEntity || /^(a+|q+|test|doc|temp|sample|untitled|new\s*source|workspace|\d+)$/i.test(finalEntity.trim()) || finalEntity.toLowerCase() === 'coarai';
+    if (isFinalPlaceholder) {
       finalEntity = 'CoarAI';
     }
     return `**${finalEntity}** documentation covers operational processes, standard procedures, and technical guidelines designed to maintain high performance, reliability, and security.`;

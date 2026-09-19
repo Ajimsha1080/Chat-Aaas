@@ -141,7 +141,9 @@ export function generateComprehensiveDocumentContent(title: string, fileName?: s
  */
 export function generateComprehensiveWebsiteContent(title: string, url?: string): string {
   let cleanTitle = title.replace(/\.[^/.]+$/, '').replace(/[-_]/g, ' ').trim();
-  if (cleanTitle.toLowerCase() === 'coarai' || cleanTitle.toLowerCase() === 'aaa' || cleanTitle.toLowerCase() === 'qq') {
+  const isGenericPlaceholder = !cleanTitle || /^(a+|q+|test|doc|temp|sample|untitled|new\s*source|workspace|\d+)$/i.test(cleanTitle) || cleanTitle.toLowerCase() === 'coarai';
+  
+  if (isGenericPlaceholder) {
     cleanTitle = 'CoarAI';
   } else if (cleanTitle.length > 0) {
     cleanTitle = cleanTitle.split(/\s+/).map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');

@@ -361,6 +361,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         k.content.includes('Official website and documentation for') ||
         k.content.includes('Verified company overview and documentation for') ||
         k.content.includes('Enterprise Architecture & Integration') ||
+        k.content.includes('Aaaa') ||
+        k.content.includes('aaaa') ||
+        /^(a+|q+|test|doc|sample|\d+)$/i.test(k.title.trim()) ||
         !k.content ||
         k.content.trim() === ''
       )
@@ -390,10 +393,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           chunks = Math.max(1, Math.ceil(finalExtracted.length / 500));
         }
 
+        // Clean any leftover dummy names
+        finalExtracted = finalExtracted.replace(/\b(Aaaa|aaaa|Aaa|aaa|Qq|qq)\b/g, 'CoarAI');
+
+        const cleanTitle = /^(a+|q+|test|doc|sample|\d+)$/i.test(item.title.trim()) ? 'CoarAI Platform Documentation' : item.title;
+
         setKnowledgeMap(prev => ({
           ...prev,
           [currentCompanyId]: (prev[currentCompanyId] || []).map(k => k.id === item.id ? {
             ...k,
+            title: cleanTitle,
             content: finalExtracted,
             sourceUrl: k.sourceUrl || targetUrl,
             chunksCount: chunks,
