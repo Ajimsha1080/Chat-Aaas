@@ -377,6 +377,22 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           } catch (err) {
             console.info('[Auto-crawl sync note]', err);
           }
+
+          // Resilient browser fallback if backend crawler returned empty
+          if (!finalExtracted || finalExtracted.length < 100) {
+            try {
+              const res = await fetch(`https://r.jina.ai/${targetUrl}`);
+              if (res.ok) {
+                const jText = await res.text();
+                if (jText && jText.trim().length > 100) {
+                  finalExtracted = jText.trim();
+                  chunks = Math.max(1, Math.ceil(finalExtracted.length / 500));
+                }
+              }
+            } catch (jErr) {
+              console.warn('[Jina crawl fallback notice]:', jErr);
+            }
+          }
         }
 
         if (finalExtracted && finalExtracted.length >= 50) {

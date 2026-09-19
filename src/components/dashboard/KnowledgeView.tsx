@@ -453,10 +453,34 @@ export const KnowledgeView: React.FC = () => {
       }
       setIngestStep('Connecting to website & extracting live HTML text...');
       try {
-        const crawlRes = await APIClient.crawlUrl(targetUrl, formCategory);
-        const resData = (crawlRes as any)?.data || crawlRes;
-        const extractedText = (resData?.extractedText || resData?.content || '').trim();
-        const chunksCreated = resData?.chunksCreated || resData?.totalChunks || (extractedText ? Math.max(1, Math.ceil(extractedText.length / 500)) : 1);
+        let extractedText = '';
+        let chunksCreated = 1;
+
+        try {
+          const crawlRes = await APIClient.crawlUrl(targetUrl, formCategory);
+          const resData = (crawlRes as any)?.data || crawlRes;
+          extractedText = (resData?.extractedText || resData?.content || '').trim();
+          chunksCreated = resData?.chunksCreated || resData?.totalChunks || (extractedText ? Math.max(1, Math.ceil(extractedText.length / 500)) : 1);
+        } catch (backendCrawlErr) {
+          console.warn('Backend crawl note:', backendCrawlErr);
+        }
+
+        // Resilient browser fallback if backend crawler returned empty
+        if (!extractedText || extractedText.length < 100) {
+          try {
+            const res = await fetch(`https://r.jina.ai/${targetUrl}`);
+            if (res.ok) {
+              const jText = await res.text();
+              if (jText && jText.trim().length > 100) {
+                extractedText = jText.trim();
+                chunksCreated = Math.max(1, Math.ceil(extractedText.length / 500));
+              }
+            }
+          } catch (jErr) {
+            console.warn('[Jina crawl fallback notice]:', jErr);
+          }
+        }
+
         const finalExtracted = extractedText || formContent.trim() || `# ${formTitle}\nPage URL: ${targetUrl}`;
 
         addKnowledgeItem({
@@ -2026,13 +2050,13 @@ export const KnowledgeView: React.FC = () => {
                 </div>
               ) : (
                 <div className="flex-1 overflow-y-auto bg-slate-50 p-4.5 rounded-xl border border-slate-200 text-sm font-mono text-slate-800 whitespace-pre-wrap leading-relaxed">
-                  {previewItem.faqAnswer ? (
+                  {liveItem.faqAnswer ? (
                     <div>
-                      <p className="font-bold text-slate-900 mb-2">Q: {previewItem.title}</p>
-                      <p className="text-slate-800">A: {previewItem.faqAnswer}</p>
+                      <p className="font-bold text-slate-900 mb-2">Q: {liveItem.title}</p>
+                      <p className="text-slate-800">A: {liveItem.faqAnswer}</p>
                     </div>
                   ) : (
-                    cleanPreviewText(previewItem.content)
+                    cleanPreviewText(liveItem.content)
                   )}
                 </div>
               )}
