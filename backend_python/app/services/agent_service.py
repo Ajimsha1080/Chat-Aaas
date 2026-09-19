@@ -7,7 +7,33 @@ class AgentService:
     def get_agent_for_company(company_id: str) -> Optional[Dict[str, Any]]:
         agent = db.get_agent_for_company(company_id)
         if not agent:
-            return None
+            agent = {
+                "id": f"agt-{company_id}",
+                "companyId": company_id,
+                "name": "Coar AI",
+                "model": "gpt-4o-mini",
+                "tone": "professional",
+                "status": "active",
+                "lifecycleStatus": "published",
+                "creativityLevel": 0.3,
+                "activeVersionId": f"ver-{company_id}-v1",
+                "draftVersionId": f"ver-{company_id}-draft",
+                "publishedVersionNumber": 1,
+                "greetingMessage": "Hello! 👋 I'm your AI assistant. How can I help you today?",
+                "fallbackMessage": "I don't have enough verified information in our company knowledge base to answer that accurately. I can connect you with our team if you'd like!",
+                "allowedActions": [],
+                "escalationSettings": {"enabled": True, "triggerKeywords": ["human", "support", "agent", "refund"], "notifyEmail": "support@company.com"}
+            }
+            db.agents[agent["id"]] = agent
+            db.agent_versions[f"ver-{company_id}-v1"] = {
+                "id": f"ver-{company_id}-v1",
+                "agentId": agent["id"],
+                "companyId": company_id,
+                "versionNumber": 1,
+                "status": "published",
+                "changeSummary": "Initial baseline",
+                "createdAt": time.strftime("%Y-%m-%dT%H:%M:%SZ")
+            }
         active_ver = db.agent_versions.get(agent.get("activeVersionId", ""))
         draft_ver = db.agent_versions.get(agent.get("draftVersionId", ""))
         all_vers = [v for v in db.agent_versions.values() if v.get("agentId") == agent["id"] or v.get("companyId") == company_id]

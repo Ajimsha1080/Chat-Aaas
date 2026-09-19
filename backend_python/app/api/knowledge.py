@@ -221,14 +221,25 @@ def restore_knowledge_source_from_trash(source_id: str, ctx: TenantContext = Dep
     }
 
 @router.post("/sources/{source_id}/reprocess")
-def reprocess_knowledge_source(source_id: str, ctx: TenantContext = Depends(get_tenant_context)):
-    """Re-executes document chunking, embedding, and vector indexing for a knowledge source."""
+async def reprocess_knowledge_source(source_id: str, ctx: TenantContext = Depends(get_tenant_context)):
+    """Re-executes document chunking, embedding, and vector indexing for a knowledge source, re-crawling live website content if URL."""
     if not has_permission(ctx, "knowledge:write"):
         raise HTTPException(status_code=403, detail="Forbidden: Insufficient permissions to reprocess knowledge.")
 
     source = db.knowledge_sources.get(source_id)
     if not source or source.get("companyId") != ctx.company_id:
         raise HTTPException(status_code=404, detail="Knowledge source not found.")
+
+    # If it's a website source with a URL, re-crawl live pages
+    if (source.get("sourceType") == "website" or source.get("sourceUrl")) and source.get("sourceUrl"):
+        try:
+            crawl_res = await CrawlerService.crawl_website_multi_page(source["sourceUrl"], max_pages=15, max_depth=2, respect_robots=True)
+            if crawl_res.get("success") and crawl_res.get("content"):
+                source["content"] = crawl_res["content"]
+                if crawl_res.get("title") and not source.get("title"):
+                    source["title"] = crawl_res["title"]
+        except Exception as e:
+            logger.info("Live re-crawl exception during reprocess: %s", str(e))
 
     content = source.get("content") or ""
     new_chunk_count = source.get("chunkCount", 1)

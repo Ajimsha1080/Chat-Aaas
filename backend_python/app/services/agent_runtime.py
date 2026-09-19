@@ -4,6 +4,7 @@ from typing import AsyncGenerator, Dict, Any, List
 from app.schemas import ChatRequest, ChatResponse, ReasoningStep
 from app.services.rag_engine import RAGEngine
 from app.services.tool_registry import ToolRegistry
+from app.core.config import settings
 
 class AgentRuntime:
     @classmethod
@@ -55,7 +56,10 @@ class AgentRuntime:
             )
 
         # 2. Human Escalation Trigger Check
-        escalation_keywords = ["human", "agent", "representative", "manager", "support person", "call me", "talk to human"]
+        escalation_keywords = [
+            "human", "live agent", "human agent", "support agent", "talk to agent", "speak to agent",
+            "representative", "manager", "support person", "call me", "talk to human", "speak to human"
+        ]
         if any(kw in user_msg.lower() for kw in escalation_keywords):
             reasoning_steps.append(ReasoningStep(
                 stage="Human Handoff Trigger",
@@ -201,12 +205,18 @@ class AgentRuntime:
             )
 
         # 5. Synthesize Grounded Response using Real-Time Sarvam AI LLM
-        model_name = agent_config.get('modelTier', 'sarvam-2b')
+        model_name = agent_config.get('modelTier') or settings.DEFAULT_LLM_MODEL
+        if model_name == 'sarvam-2b':
+            model_name = settings.DEFAULT_LLM_MODEL
         context_str = "\n\n".join([f"Source ({getattr(c, 'title', 'Knowledge Base')}): {c.content}" for c in chunks[:3]])
         sys_instruction = (
-            f"You are the official AI Q&A assistant for company {company_id}. "
-            f"Persona tone: {agent_config.get('tone', 'professional')}. "
-            f"Answer the customer's question accurately and helpfully using the verified context below.\n\n"
+            f"You are the official AI assistant for company {company_id}.\n"
+            f"Persona tone: {agent_config.get('tone', 'professional')}.\n"
+            f"Instructions:\n"
+            f"1. Answer the user's question directly, clearly, and conversationally using clean markdown.\n"
+            f"2. Base your answer strictly on the verified knowledge context below.\n"
+            f"3. If a specific detail (such as a founder's name, phone number, or unlisted policy) is not mentioned in the context, state clearly that the documentation does not contain that information.\n"
+            f"4. Do not output raw document headers, metadata tags, or internal codes.\n\n"
             f"Verified Knowledge Context:\n{context_str}"
         )
 
@@ -316,24 +326,32 @@ class AgentRuntime:
         # 5. Stream Real Tokens from LLMProvider
         context_str = "\n\n".join([f"Source ({getattr(c, 'title', 'Knowledge Base')}): {c.content}" for c in chunks[:3]])
         sys_instruction = (
-            f"You are the official AI Q&A assistant for company {company_id}. "
-            f"Persona tone: {agent_config.get('tone', 'professional')}. "
-            f"Answer the customer's question accurately and helpfully using the verified context below.\n\n"
+            f"You are the official AI assistant for company {company_id}.\n"
+            f"Persona tone: {agent_config.get('tone', 'professional')}.\n"
+            f"Instructions:\n"
+            f"1. Answer the user's question directly, clearly, and conversationally using clean markdown.\n"
+            f"2. Base your answer strictly on the verified knowledge context below.\n"
+            f"3. If a specific detail (such as a founder's name, phone number, or unlisted policy) is not mentioned in the context, state clearly that the documentation does not contain that information.\n"
+            f"4. Do not output raw document headers, metadata tags, or internal codes.\n\n"
             f"Verified Knowledge Context:\n{context_str}"
         )
+
+        full_acc = []
+        model_name = agent_config.get("modelTier") or settings.DEFAULT_LLM_MODEL
+        if model_name == "sarvam-2b":
+            model_name = settings.DEFAULT_LLM_MODEL
 
         full_acc = []
         async for token in LLMProvider.stream_chat_completion(
             messages=[{"role": "user", "content": user_msg}],
             system_instruction=sys_instruction,
-            model=agent_config.get("modelTier", "sarvam-2b"),
+            model=model_name,
             temperature=0.3
         ):
             full_acc.append(token)
             yield f"data: {json.dumps({'type': 'token', 'token': token})}\n\n"
 
         full_msg = ''.join(full_acc)
-        model_name = agent_config.get("modelTier", "sarvam-2b")
         prompt_tokens = LLMProvider.count_tokens(user_msg + "\n" + sys_instruction, model=model_name)
         completion_tokens = LLMProvider.count_tokens(full_msg, model=model_name)
         total_tokens = prompt_tokens + completion_tokens

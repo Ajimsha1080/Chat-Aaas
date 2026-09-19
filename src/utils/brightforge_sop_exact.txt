@@ -1,0 +1,1255 @@
+## Page 1
+BRIGHTFORGE TECHNOLOGIES  •  INTERNAL OPERATIONS
+01
+ BRIGHTFORGE TECHNOLOGIES
+ INTERNAL COMPANY
+ OPERATIONS
+ STANDARD OPERATING
+ PROCEDURES
+ A practical operating system for consistent, secure, and accountable internal
+ execution.
+VERSION
+1.0
+EFFECTIVE
+30 AUG 2026
+CLASSIFICATION
+INTERNAL USE
+ DOCUMENT OWNER • OPERATIONS / MANAGEMENT
+
+## Page 2
+BRIGHTFORGE TECHNOLOGIES  •  INTERNAL OPERATIONS
+02
+DOCUMENT CONTROL
+Control & Governance
+This manual establishes the baseline for BrightForge Technologies’ internal company operations. It is
+intentionally focused on how the company manages itself—people, administration, information, finance
+administration, approvals, assets, vendors, incidents, continuity, and operating governance.
+Document ID
+BFT-OPS-SOP-001
+Owner
+Operations / Management
+Version
+1.0
+Effective Date
+30 August 2026
+Review Cycle
+Annual or after material process change
+Classification
+Internal Use
+OPERATING PRINCIPLES
+How the company should operate
+□
+Accountability — every recurring process has a clear owner.
+□
+Consistency — repeatable activities follow an approved procedure.
+□
+Least privilege — access is limited to legitimate business need.
+□
+Traceability — important decisions and approvals are recorded.
+□
+Confidentiality — internal and sensitive information is shared only with authorized people.
+□
+Continuity — critical operations have backups and recovery paths.
+□
+Continuous improvement — recurring failures become corrective actions or SOP updates.
+
+## Page 3
+BRIGHTFORGE TECHNOLOGIES  •  INTERNAL OPERATIONS
+03
+01 • INTERNAL SOP
+Daily Operations & Administration
+SOP ID
+BFT-OPS-002
+Owner
+Operations / Management
+Applies to
+Employees, contractors and authorized internal personnel
+Review
+Annual or after material change
+PURPOSE
+Provide a consistent baseline for routine internal administration and coordination.
+PROCEDURE
+01
+Review priorities, calendar, urgent notices, and operational blockers.
+02
+Update the approved work tracker for material tasks.
+03
+Handle or assign incoming administrative requests.
+04
+Record important decisions and commitments in durable company records.
+05
+Review unresolved items at day end and escalate time-critical issues.
+REQUIRED RECORDS / EVIDENCE
+□
+Daily work tracker
+□
+Calendar
+□
+Decision/action records
+ESCALATE WHEN
+□
+Critical blocker
+□
+Missed material deadline
+□
+Security/access issue
+
+## Page 4
+BRIGHTFORGE TECHNOLOGIES  •  INTERNAL OPERATIONS
+04
+02 • INTERNAL SOP
+Internal Communication
+SOP ID
+BFT-OPS-003
+Owner
+Operations / Management
+Applies to
+Employees, contractors and authorized internal personnel
+Review
+Annual or after material change
+PURPOSE
+Ensure internal information is communicated clearly, securely, and through approved channels.
+PROCEDURE
+01
+Use approved company communication channels.
+02
+Choose the channel based on urgency and sensitivity.
+03
+Use clear subjects and explicit action requests.
+04
+Restrict confidential information to authorized recipients.
+05
+Record material decisions, approvals, and exceptions in a durable record.
+06
+Do not use personal accounts as the permanent record for company business.
+REQUIRED RECORDS / EVIDENCE
+□
+Email/messaging records
+□
+Decision records
+□
+Shared documents
+ESCALATE WHEN
+□
+Misrouted confidential information
+□
+Critical issue
+□
+Unclear authority
+
+## Page 5
+BRIGHTFORGE TECHNOLOGIES  •  INTERNAL OPERATIONS
+05
+03 • INTERNAL SOP
+Meeting Management
+SOP ID
+BFT-OPS-004
+Owner
+Operations / Management
+Applies to
+Employees, contractors and authorized internal personnel
+Review
+Annual or after material change
+PURPOSE
+Make internal meetings purposeful, time-efficient, and decision-oriented.
+PROCEDURE
+01
+Define objective and agenda before scheduling.
+02
+Invite only necessary participants.
+03
+Start and end on time.
+04
+Capture decisions, owners, and due dates.
+05
+Distribute action items for decision-making or recurring meetings.
+06
+Cancel meetings that no longer have a valid purpose.
+REQUIRED RECORDS / EVIDENCE
+□
+Calendar
+□
+Agenda
+□
+Meeting notes/action tracker
+ESCALATE WHEN
+□
+No decision owner
+□
+Repeated missed actions
+□
+Sensitive topic
+
+## Page 6
+BRIGHTFORGE TECHNOLOGIES  •  INTERNAL OPERATIONS
+06
+04 • INTERNAL SOP
+Task & Work Assignment
+SOP ID
+BFT-OPS-005
+Owner
+Operations / Management
+Applies to
+Employees, contractors and authorized internal personnel
+Review
+Annual or after material change
+PURPOSE
+Ensure work has clear ownership, priority, deadlines, and escalation.
+PROCEDURE
+01
+Create a clear task with expected outcome.
+02
+Assign one accountable owner.
+03
+Set priority and due date.
+04
+Record dependencies and approvals.
+05
+Update status when started, blocked, or completed.
+06
+Escalate deadline risks early.
+07
+Close only after the expected outcome is verified.
+REQUIRED RECORDS / EVIDENCE
+□
+Task record
+□
+Due date
+□
+Status history
+ESCALATE WHEN
+□
+Blocked task
+□
+Deadline risk
+□
+Cross-team dependency
+
+## Page 7
+BRIGHTFORGE TECHNOLOGIES  •  INTERNAL OPERATIONS
+07
+05 • INTERNAL SOP
+Internal Approval & Decision
+SOP ID
+BFT-OPS-006
+Owner
+Operations / Management
+Applies to
+Employees, contractors and authorized internal personnel
+Review
+Annual or after material change
+PURPOSE
+Ensure material internal decisions are authorized and traceable.
+PROCEDURE
+01
+Describe the request, purpose, cost, timing, risks, and alternatives where relevant.
+02
+Confirm the correct approval level.
+03
+Obtain approval before making a material commitment.
+04
+Record approval or rejection.
+05
+Re-submit if circumstances materially change.
+06
+Retain supporting records.
+REQUIRED RECORDS / EVIDENCE
+□
+Approval request
+□
+Supporting documents
+□
+Decision record
+ESCALATE WHEN
+□
+Unauthorized commitment
+□
+Conflict of interest
+□
+Material cost/scope change
+□
+Legal concern
+
+## Page 8
+BRIGHTFORGE TECHNOLOGIES  •  INTERNAL OPERATIONS
+08
+06 • INTERNAL SOP
+Procurement & Vendor Management
+SOP ID
+BFT-OPS-007
+Owner
+Operations / Management
+Applies to
+Employees, contractors and authorized internal personnel
+Review
+Annual or after material change
+PURPOSE
+Control purchasing and vendor relationships while balancing cost, quality, risk, and need.
+PROCEDURE
+01
+Define business need and specification.
+02
+Check approved vendors first.
+03
+Obtain and compare quotations where practical.
+04
+Evaluate cost, quality, delivery, support, security, and contract terms.
+05
+Obtain approval before ordering.
+06
+Maintain vendor and purchase records.
+07
+Verify receipt before payment.
+08
+Review important vendors periodically.
+REQUIRED RECORDS / EVIDENCE
+□
+Vendor record
+□
+Quotation
+□
+Purchase approval
+□
+Invoice
+□
+Performance record
+ESCALATE WHEN
+□
+Unapproved vendor
+□
+Fraud concern
+□
+Conflict of interest
+□
+Vendor security concern
+
+## Page 9
+BRIGHTFORGE TECHNOLOGIES  •  INTERNAL OPERATIONS
+09
+07 • INTERNAL SOP
+Expense & Reimbursement
+SOP ID
+BFT-OPS-008
+Owner
+Operations / Management
+Applies to
+Employees, contractors and authorized internal personnel
+Review
+Annual or after material change
+PURPOSE
+Ensure business expenses are valid, documented, approved, and processed consistently.
+PROCEDURE
+01
+Confirm business purpose and budget.
+02
+Obtain pre-approval when required.
+03
+Retain itemized receipt.
+04
+Submit within the required period.
+05
+Manager/authorized approver reviews.
+06
+Finance/admin verifies documentation and processes reimbursement.
+07
+Record exceptions separately.
+REQUIRED RECORDS / EVIDENCE
+□
+Expense claim
+□
+Receipt
+□
+Approval
+□
+Payment record
+ESCALATE WHEN
+□
+Missing receipt
+□
+Duplicate claim
+□
+Personal expense
+□
+Outside-budget expense
+
+## Page 10
+BRIGHTFORGE TECHNOLOGIES  •  INTERNAL OPERATIONS
+10
+08 • INTERNAL SOP
+Invoice & Payment Administration
+SOP ID
+BFT-OPS-009
+Owner
+Operations / Management
+Applies to
+Employees, contractors and authorized internal personnel
+Review
+Annual or after material change
+PURPOSE
+Ensure supplier invoices are verified, approved, recorded, and paid through controlled processes.
+PROCEDURE
+01
+Receive invoice through an approved channel.
+02
+Verify supplier, amount, service/goods, tax details where applicable, and authorization.
+03
+Match invoice to supporting documents.
+04
+Obtain approval.
+05
+Schedule payment according to terms.
+06
+Record and reconcile payment.
+07
+Escalate suspicious or disputed invoices.
+REQUIRED RECORDS / EVIDENCE
+□
+Invoice register
+□
+Purchase record
+□
+Payment evidence
+□
+Reconciliation
+ESCALATE WHEN
+□
+Duplicate invoice
+□
+Changed bank details
+□
+Unknown supplier
+□
+Suspicious request
+
+## Page 11
+BRIGHTFORGE TECHNOLOGIES  •  INTERNAL OPERATIONS
+11
+09 • INTERNAL SOP
+Recruitment
+SOP ID
+BFT-HR-010
+Owner
+Operations / Management
+Applies to
+Employees, contractors and authorized internal personnel
+Review
+Annual or after material change
+PURPOSE
+Provide a consistent and documented internal hiring process.
+PROCEDURE
+01
+Confirm approved headcount.
+02
+Create role description and requirements.
+03
+Use approved recruitment channels.
+04
+Screen applications consistently.
+05
+Conduct structured interviews/assessments.
+06
+Document selection rationale.
+07
+Complete applicable checks.
+08
+Obtain hiring approval.
+09
+Issue formal offer/appointment documentation.
+REQUIRED RECORDS / EVIDENCE
+□
+Approved requisition
+□
+Job description
+□
+Interview notes
+□
+Selection record
+□
+Offer
+ESCALATE WHEN
+□
+Unapproved hiring
+□
+Conflict
+□
+Fairness concern
+□
+Candidate data concern
+
+## Page 12
+BRIGHTFORGE TECHNOLOGIES  •  INTERNAL OPERATIONS
+12
+10 • INTERNAL SOP
+Employee Onboarding
+SOP ID
+BFT-HR-011
+Owner
+Operations / Management
+Applies to
+Employees, contractors and authorized internal personnel
+Review
+Annual or after material change
+PURPOSE
+Give new employees the information, access, equipment, and support needed to start effectively.
+PROCEDURE
+01
+Confirm joining date and manager.
+02
+Complete employment documentation.
+03
+Create required accounts.
+04
+Issue equipment and role-appropriate access.
+05
+Explain confidentiality, security, acceptable use, and communication rules.
+06
+Introduce team and responsibilities.
+07
+Assign initial goals.
+08
+Conduct an early check-in.
+REQUIRED RECORDS / EVIDENCE
+□
+Onboarding checklist
+□
+Employment documents
+□
+Asset handover
+□
+Access record
+□
+Policy acknowledgement
+ESCALATE WHEN
+□
+Missing documents
+□
+Excessive access
+□
+Equipment issue
+
+## Page 13
+BRIGHTFORGE TECHNOLOGIES  •  INTERNAL OPERATIONS
+13
+11 • INTERNAL SOP
+Employee Offboarding
+SOP ID
+BFT-HR-012
+Owner
+Operations / Management
+Applies to
+Employees, contractors and authorized internal personnel
+Review
+Annual or after material change
+PURPOSE
+Protect company information and assets during employee separation.
+PROCEDURE
+01
+Confirm approved separation and final working date.
+02
+Plan work and ownership handover.
+03
+Identify assets and information under employee control.
+04
+Transfer required records.
+05
+Revoke accounts/access at the approved time.
+06
+Recover company assets.
+07
+Complete final HR/finance actions.
+08
+Archive required records.
+REQUIRED RECORDS / EVIDENCE
+□
+Offboarding checklist
+□
+Access revocation
+□
+Asset return
+□
+Handover
+ESCALATE WHEN
+□
+Immediate separation
+□
+Privileged access
+□
+Unreturned asset
+□
+Legal/financial issue
+
+## Page 14
+BRIGHTFORGE TECHNOLOGIES  •  INTERNAL OPERATIONS
+14
+12 • INTERNAL SOP
+Employee Access Management
+SOP ID
+BFT-SEC-013
+Owner
+Operations / Management
+Applies to
+Employees, contractors and authorized internal personnel
+Review
+Annual or after material change
+PURPOSE
+Ensure access is authorized, limited to business need, reviewable, and removed when no longer required.
+PROCEDURE
+01
+Request access through an approved process.
+02
+Manager/process owner confirms business need.
+03
+Admin grants minimum required access.
+04
+Record privileged/sensitive access.
+05
+Review access periodically.
+06
+Remove unnecessary access.
+07
+Immediately revoke access during offboarding or confirmed security events.
+08
+Never share authentication secrets.
+REQUIRED RECORDS / EVIDENCE
+□
+Access request
+□
+Approval
+□
+Access register
+□
+Review
+□
+Revocation
+ESCALATE WHEN
+□
+Unknown account
+□
+Privilege escalation
+□
+Shared credentials
+□
+Former employee access
+
+## Page 15
+BRIGHTFORGE TECHNOLOGIES  •  INTERNAL OPERATIONS
+15
+13 • INTERNAL SOP
+Company Asset Management
+SOP ID
+BFT-OPS-014
+Owner
+Operations / Management
+Applies to
+Employees, contractors and authorized internal personnel
+Review
+Annual or after material change
+PURPOSE
+Maintain accountability for physical and data-bearing company assets.
+PROCEDURE
+01
+Record company assets.
+02
+Assign accountable custodian.
+03
+Record asset/serial number where applicable.
+04
+Track condition and status.
+05
+Report loss or damage promptly.
+06
+Return assets during role change/offboarding.
+07
+Dispose through an approved process with secure data removal where applicable.
+REQUIRED RECORDS / EVIDENCE
+□
+Asset register
+□
+Handover
+□
+Maintenance
+□
+Disposal
+ESCALATE WHEN
+□
+Lost device
+□
+Unrecorded asset
+□
+Data-bearing disposal
+□
+Unauthorized transfer
+
+## Page 16
+BRIGHTFORGE TECHNOLOGIES  •  INTERNAL OPERATIONS
+16
+14 • INTERNAL SOP
+Document & Records Management
+SOP ID
+BFT-OPS-015
+Owner
+Operations / Management
+Applies to
+Employees, contractors and authorized internal personnel
+Review
+Annual or after material change
+PURPOSE
+Keep company records controlled, findable, current, and appropriately protected.
+PROCEDURE
+01
+Store business records in approved repositories.
+02
+Use consistent file naming.
+03
+Assign owner to controlled documents.
+04
+Use version numbers for formal revisions.
+05
+Restrict access by information sensitivity.
+06
+Archive superseded versions where needed.
+07
+Do not delete records under legal, contractual, financial, or investigation requirements.
+08
+Review controlled SOPs on schedule.
+REQUIRED RECORDS / EVIDENCE
+□
+Document register
+□
+Version history
+□
+Approval
+□
+Archive
+ESCALATE WHEN
+□
+Conflicting versions
+□
+Unauthorized deletion
+□
+Sensitive exposure
+□
+Expired SOP
+
+## Page 17
+BRIGHTFORGE TECHNOLOGIES  •  INTERNAL OPERATIONS
+17
+15 • INTERNAL SOP
+Information Classification & Handling
+SOP ID
+BFT-SEC-016
+Owner
+Operations / Management
+Applies to
+Employees, contractors and authorized internal personnel
+Review
+Annual or after material change
+PURPOSE
+Reduce information leakage and apply appropriate handling to sensitive company information.
+PROCEDURE
+01
+Classify information as Public, Internal, Confidential, or Restricted based on impact.
+02
+Store sensitive information only in approved systems.
+03
+Share only with authorized recipients.
+04
+Use appropriate access and secure transfer controls.
+05
+Avoid personal storage/unapproved services.
+06
+Report suspected disclosure immediately.
+07
+Delete/archive according to retention requirements.
+REQUIRED RECORDS / EVIDENCE
+□
+Classification
+□
+Access record
+□
+Sharing record where required
+□
+Retention/deletion
+ESCALATE WHEN
+□
+Wrong recipient
+□
+Data leakage
+□
+Lost device
+□
+Unapproved storage
+
+## Page 18
+BRIGHTFORGE TECHNOLOGIES  •  INTERNAL OPERATIONS
+18
+16 • INTERNAL SOP
+Internal Security Incident
+SOP ID
+BFT-SEC-017
+Owner
+Operations / Management
+Applies to
+Employees, contractors and authorized internal personnel
+Review
+Annual or after material change
+PURPOSE
+Provide a controlled response to suspected internal security incidents.
+PROCEDURE
+01
+Report suspected incident immediately.
+02
+Create incident record with time, system, users, and known facts.
+03
+Classify severity.
+04
+Preserve relevant evidence/logs.
+05
+Contain using authorized measures.
+06
+Investigate cause and scope.
+07
+Restore and validate systems.
+08
+Notify management/affected parties when required.
+09
+Complete root cause and corrective actions.
+REQUIRED RECORDS / EVIDENCE
+□
+Incident ticket
+□
+Timeline
+□
+Evidence/log references
+□
+Impact assessment
+□
+Corrective actions
+ESCALATE WHEN
+□
+Suspected breach
+□
+Credential compromise
+□
+Unauthorized access
+□
+Data disclosure
+
+## Page 19
+BRIGHTFORGE TECHNOLOGIES  •  INTERNAL OPERATIONS
+19
+17 • INTERNAL SOP
+Business Continuity & Recovery
+SOP ID
+BFT-OPS-018
+Owner
+Operations / Management
+Applies to
+Employees, contractors and authorized internal personnel
+Review
+Annual or after material change
+PURPOSE
+Maintain essential operations and recover critical services after disruption.
+PROCEDURE
+01
+Identify critical processes and owners.
+02
+Maintain backups and alternative access for critical records/systems.
+03
+Maintain recovery priorities and contacts.
+04
+Assess disruption and activate continuity response.
+05
+Prioritize safety, critical operations, communications, and essential systems.
+06
+Use approved alternate/manual processes.
+07
+Restore and verify integrity.
+08
+Record lessons learned.
+09
+Test important recovery procedures periodically.
+REQUIRED RECORDS / EVIDENCE
+□
+Continuity plan
+□
+Backup records
+□
+Emergency contacts
+□
+Recovery test
+ESCALATE WHEN
+□
+Extended outage
+□
+Critical data loss
+□
+Key-person dependency
+□
+Facility disruption
+
+## Page 20
+BRIGHTFORGE TECHNOLOGIES  •  INTERNAL OPERATIONS
+20
+18 • INTERNAL SOP
+Issue & Corrective Action
+SOP ID
+BFT-OPS-019
+Owner
+Operations / Management
+Applies to
+Employees, contractors and authorized internal personnel
+Review
+Annual or after material change
+PURPOSE
+Convert recurring or material operational problems into tracked improvements.
+PROCEDURE
+01
+Record issue, impact, date, and owner.
+02
+Apply immediate containment.
+03
+Perform root-cause analysis for material/recurring issues.
+04
+Define corrective/preventive actions with owners and deadlines.
+05
+Track actions to completion.
+06
+Verify effectiveness.
+07
+Update SOP/policy/training when required.
+REQUIRED RECORDS / EVIDENCE
+□
+Issue log
+□
+Root-cause analysis
+□
+Action plan
+□
+Effectiveness check
+ESCALATE WHEN
+□
+Repeated failure
+□
+Material impact
+□
+Security impact
+□
+Control failure
+
+## Page 21
+BRIGHTFORGE TECHNOLOGIES  •  INTERNAL OPERATIONS
+21
+19 • INTERNAL SOP
+Performance Review
+SOP ID
+BFT-OPS-020
+Owner
+Operations / Management
+Applies to
+Employees, contractors and authorized internal personnel
+Review
+Annual or after material change
+PURPOSE
+Review performance against agreed objectives and identify improvement needs.
+PROCEDURE
+01
+Define role/team objectives.
+02
+Review completed work, quality, reliability, collaboration, and agreed metrics.
+03
+Identify strengths and improvement areas.
+04
+Document development needs.
+05
+Agree next-period objectives.
+06
+Track follow-up actions.
+REQUIRED RECORDS / EVIDENCE
+□
+Goals/KPIs
+□
+Review notes
+□
+Development plan
+□
+Action tracker
+ESCALATE WHEN
+□
+Persistent underperformance
+□
+Role ambiguity
+□
+Resource constraint
+
+## Page 22
+BRIGHTFORGE TECHNOLOGIES  •  INTERNAL OPERATIONS
+22
+20 • INTERNAL SOP
+Internal Training & Policy Acknowledgement
+SOP ID
+BFT-HR-021
+Owner
+Operations / Management
+Applies to
+Employees, contractors and authorized internal personnel
+Review
+Annual or after material change
+PURPOSE
+Ensure personnel receive and acknowledge required policies and internal training.
+PROCEDURE
+01
+Identify mandatory and role-specific training.
+02
+Assign during onboarding and periodically.
+03
+Provide current SOP/policy materials.
+04
+Record completion/acknowledgement.
+05
+Track overdue items.
+06
+Escalate repeated non-completion.
+07
+Update training after material process changes.
+REQUIRED RECORDS / EVIDENCE
+□
+Training matrix
+□
+Completion record
+□
+Policy acknowledgement
+ESCALATE WHEN
+□
+Overdue mandatory training
+□
+Untrained controlled work
+□
+Policy change without training
+
+## Page 23
+BRIGHTFORGE TECHNOLOGIES  •  INTERNAL OPERATIONS
+23
+21 • INTERNAL SOP
+Confidentiality & Conflict of Interest
+SOP ID
+BFT-OPS-022
+Owner
+Operations / Management
+Applies to
+Employees, contractors and authorized internal personnel
+Review
+Annual or after material change
+PURPOSE
+Protect impartial decision-making and confidential company information.
+PROCEDURE
+01
+Disclose actual or potential conflicts.
+02
+Management determines mitigation or reassignment.
+03
+Protect confidential information.
+04
+Do not use company information for personal benefit.
+05
+Avoid improper gifts/benefits where prohibited.
+06
+Record material conflict decisions.
+REQUIRED RECORDS / EVIDENCE
+□
+Conflict disclosure
+□
+Management decision
+□
+Mitigation record
+ESCALATE WHEN
+□
+Undisclosed conflict
+□
+Information misuse
+□
+Improper benefit
+□
+Related-party transaction
+
+## Page 24
+BRIGHTFORGE TECHNOLOGIES  •  INTERNAL OPERATIONS
+24
+22 • INTERNAL SOP
+Internal Audit & SOP Review
+SOP ID
+BFT-OPS-023
+Owner
+Operations / Management
+Applies to
+Employees, contractors and authorized internal personnel
+Review
+Annual or after material change
+PURPOSE
+Keep SOPs accurate, owned, approved, and aligned with actual practice.
+PROCEDURE
+01
+Maintain SOP register and review dates.
+02
+Review relevance, ownership, controls, and actual practice.
+03
+Record gaps/deviations.
+04
+Assign corrective actions.
+05
+Approve and publish revisions.
+06
+Communicate material changes.
+07
+Train affected personnel where needed.
+REQUIRED RECORDS / EVIDENCE
+□
+SOP register
+□
+Review checklist
+□
+Findings
+□
+Corrective action
+□
+Approval
+ESCALATE WHEN
+□
+Expired SOP
+□
+Unowned process
+□
+Repeated deviation
+□
+Control failure
+
+## Page 25
+BRIGHTFORGE TECHNOLOGIES  •  INTERNAL OPERATIONS
+25
+23 • INTERNAL SOP
+Emergency Escalation
+SOP ID
+BFT-OPS-024
+Owner
+Operations / Management
+Applies to
+Employees, contractors and authorized internal personnel
+Review
+Annual or after material change
+PURPOSE
+Provide a rapid and disciplined response to serious internal events.
+PROCEDURE
+01
+Determine whether people, critical operations, information security, finances, legal obligations, or reputation are at risk.
+02
+Contact the appropriate emergency/management owner.
+03
+Provide concise facts and actions taken.
+04
+Follow authorized containment/continuity instructions.
+05
+Do not make unauthorized public statements.
+06
+Record decisions and actions.
+07
+Complete post-event review.
+REQUIRED RECORDS / EVIDENCE
+□
+Emergency contacts
+□
+Incident record
+□
+Decision log
+□
+Corrective actions
+ESCALATE WHEN
+□
+Safety emergency
+□
+Major outage
+□
+Security event
+□
+Fraud
+□
+Legal/regulatory event
+
+## Page 26
+BRIGHTFORGE TECHNOLOGIES  •  INTERNAL OPERATIONS
+26
+MANAGEMENT CONTROL
+Operating Checklists
+DAILY
+□
+Critical communications reviewed
+□
+Urgent blockers assigned
+□
+Calendar and commitments checked
+□
+Material decisions recorded
+□
+High-priority work updated
+WEEKLY
+□
+Open operational issues reviewed
+□
+Upcoming deadlines/dependencies reviewed
+□
+Finance/admin exceptions reviewed
+□
+Personnel/access changes reviewed
+□
+Vendor/procurement needs reviewed
+□
+Corrective actions checked
+MONTHLY
+□
+Budget/expense trends reviewed
+□
+Invoices/payments reviewed
+□
+Asset exceptions reviewed
+□
+Access review completed where required
+□
+Incidents and recurring issues reviewed
+□
+SOPs due for review identified
+□
+Training/policy acknowledgements checked
+□
+Continuity/backup exceptions reviewed
+
+## Page 27
+BRIGHTFORGE TECHNOLOGIES  •  INTERNAL OPERATIONS
+27
+GOVERNANCE
+Implementation & Approval
+This manual is the baseline for internal company operations. Management should assign named process
+owners, define approval/spend thresholds, maintain emergency contacts, and keep the controlled master copy
+in the approved document repository.
+Approved By
+________________________________________
+Role
+________________________________________
+Signature
+________________________________________
+Date
+________________________________________
+IMPLEMENTATION CHECKLIST
+□
+Assign owners to all SOPs.
+□
+Publish the controlled master copy.
+□
+Communicate applicable SOPs to employees.
+□
+Set up registers for assets, vendors, access, incidents, SOPs, and training.
+□
+Define approval and spend thresholds.
+□
+Review the manual at least annually.
+□
+Record and approve material changes.
+END OF CONTROLLED DOCUMENT

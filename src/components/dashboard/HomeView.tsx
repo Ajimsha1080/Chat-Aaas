@@ -1,13 +1,12 @@
 import { 
-  CheckCircle2, 
+  CheckCircle2,
+  ChevronRight,
   MessageSquare, 
   Clock, 
   BookOpen, 
   ArrowRight, 
   AlertTriangle, 
-  ChevronRight,
   ArrowUpRight,
-  ListTodo,
   HelpCircle
 } from 'lucide-react';
 import { useApp } from '../../context';
@@ -21,7 +20,6 @@ export const HomeView: React.FC = () => {
     integrations,
     currentPlan,
     setCurrentTab, 
-    setIsQuickTestOpen, 
     setActiveConversationId
   } = useApp();
 
@@ -60,27 +58,9 @@ export const HomeView: React.FC = () => {
   const maxConversations = currentPlan?.maxConversationsMonth ?? 5000;
   const usagePercent = Math.min(100, Math.round((messagesThisMonth / maxConversations) * 100));
 
-  const isAgentCustomized = Boolean(
-    currentCompany?.agent?.name && 
-    currentCompany.agent.name !== 'AI Assistant' && 
-    (currentCompany.agent.systemInstructions?.length > 30 || currentCompany.agent.businessInstructions?.length > 10)
-  );
-  const hasTested = allConvs.length > 0;
-
-  const checklistItems = [
-    { id: 1, title: 'Company profile and tone configured', completed: isAgentCustomized, tab: 'assistant' },
-    { id: 2, title: `Knowledge loaded (${readyKnowledgeCount} sources)`, completed: readyKnowledgeCount > 0, tab: 'knowledge' },
-    { id: 3, title: 'Test inquiries in Workbench', completed: hasTested, tab: 'test' },
-    { id: 4, title: 'Embed widget on website', completed: isDeployed, tab: 'deploy' }
-  ];
-
-  const completedCount = checklistItems.filter(i => i.completed).length;
-
   return (
     <div className="space-y-6 animate-in fade-in duration-150">
       {/* Four Core Status Cards */}
-
-      {/* 2. Four Core Status Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3.5 sm:gap-4">
         {/* Assistant Status */}
         <div 
@@ -176,62 +156,6 @@ export const HomeView: React.FC = () => {
           </div>
         </div>
       </div>
-
-      {/* 2. Getting Started Checklist */}
-      {completedCount < 4 && (
-        <div className="bg-white rounded-2xl p-5 sm:p-6 border border-slate-200/80 shadow-xs space-y-4">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-            <div>
-              <div className="flex items-center gap-2">
-                <ListTodo className="w-4 h-4 text-slate-700" />
-                <h3 className="text-sm font-bold text-slate-900">Getting Started Checklist</h3>
-                <span className="text-[11px] bg-slate-100 text-slate-600 font-semibold px-2 py-0.5 rounded border border-slate-200/80">
-                  {completedCount} of 4 Completed
-                </span>
-              </div>
-              <p className="text-xs text-slate-500 mt-0.5">
-                Complete these initial steps to calibrate your assistant and ingest verified knowledge.
-              </p>
-            </div>
-
-            <div className="w-32 bg-slate-100 h-1.5 rounded-full overflow-hidden border border-slate-200/60">
-              <div 
-                className="bg-indigo-600 h-full rounded-full transition-all duration-300"
-                style={{ width: `${(completedCount / 4) * 100}%` }}
-              />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5">
-            {checklistItems.map(item => (
-              <div 
-                key={item.id}
-                onClick={() => {
-                  if (item.tab === 'quicktest') setIsQuickTestOpen(true);
-                  else setCurrentTab(item.tab as any);
-                }}
-                className={`p-3 rounded-xl border transition-all cursor-pointer flex items-center justify-between ${
-                  item.completed 
-                    ? 'bg-slate-50/60 border-slate-200/70 text-slate-400' 
-                    : 'bg-white border-slate-200 hover:border-slate-300 text-slate-800 shadow-2xs'
-                }`}
-              >
-                <div className="flex items-center gap-2.5 min-w-0">
-                  {item.completed ? (
-                    <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-                  ) : (
-                    <div className="w-4 h-4 rounded-full border border-slate-300 shrink-0" />
-                  )}
-                  <span className={`text-xs font-medium truncate ${item.completed ? 'line-through text-slate-400' : ''}`}>
-                    {item.title}
-                  </span>
-                </div>
-                <ChevronRight className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
 
       {/* 3. Core Outcome Metrics */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3.5 sm:gap-4">

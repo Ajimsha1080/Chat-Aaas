@@ -50,9 +50,10 @@ def test_billing_upgrade_and_invoices_tenant_isolation():
 
     PaymentService.reset_processed_events()
 
-    # Seed two tenant companies
+    # Seed two tenant companies and clean any test invoices
     db.companies["comp-tenant-a"] = {"id": "comp-tenant-a", "name": "Tenant A Corp", "planId": "starter", "planStatus": "active"}
     db.companies["comp-tenant-b"] = {"id": "comp-tenant-b", "name": "Tenant B Corp", "planId": "starter", "planStatus": "active"}
+    db.invoices = {k: v for k, v in db.invoices.items() if v.get("companyId") not in ["comp-tenant-a", "comp-tenant-b"]}
 
     token_a = create_jwt_token("usr-a", "comp-tenant-a", "owner")
     token_b = create_jwt_token("usr-b", "comp-tenant-b", "owner")

@@ -46,46 +46,62 @@ class DocumentAIService:
         if not text or not text.strip():
             return []
 
-        chunk_size = max(100, chunk_size)
+        chunk_size = max(20, chunk_size)
         overlap = max(0, min(overlap, chunk_size // 2))
 
-        # Split into paragraphs or line blocks
-        paragraphs = [p.strip() for p in text.split('\n\n') if p.strip()]
-        if not paragraphs:
-            paragraphs = [p.strip() for p in text.split('\n') if p.strip()]
-        if not paragraphs:
-            paragraphs = [text.strip()]
+        # Split into lines first so single-line headings don't swallow subsequent content
+        raw_lines = [line.strip() for line in text.split('\n')]
+        paragraphs: List[tuple[str, str]] = []
+        current_block: List[str] = []
+        current_header = "General"
+
+        for line in raw_lines:
+            if not line:
+                if current_block:
+                    paragraphs.append(("\n".join(current_block), current_header))
+                    current_block = []
+                continue
+
+            heading_match = re.match(r'^#{1,6}\s+(.+)$', line)
+            if heading_match:
+                if current_block:
+                    paragraphs.append(("\n".join(current_block), current_header))
+                    current_block = []
+                current_header = heading_match.group(1).strip()
+            else:
+                current_block.append(line)
+
+        if current_block:
+            paragraphs.append(("\n".join(current_block), current_header))
 
         chunks: List[ProcessedChunk] = []
         current_chunk = ""
-        current_header = "General"
+        current_chunk_header = ""
         chunk_idx = 0
 
-        for p_strip in paragraphs:
-            # Check for markdown heading (e.g. # Title, ## Section)
-            is_markdown_heading = bool(re.match(r'^#{1,6}\s+\S+', p_strip))
-            if is_markdown_heading:
-                clean_head = re.sub(r'^#{1,6}\s*', '', p_strip).strip()
-                if current_chunk:
-                    chunk_idx += 1
-                    chunks.append(ProcessedChunk(
-                        chunk_id=f"chk_{uuid.uuid4().hex[:8]}",
-                        chunk_index=chunk_idx,
-                        content=current_chunk.strip(),
-                        token_count=max(1, len(current_chunk) // 4),
-                        section_header=current_header
-                    ))
-                    current_chunk = ""
-                if clean_head:
-                    current_header = clean_head
+        for p_strip, p_header in paragraphs:
+            if not p_strip.strip():
                 continue
+
+            # If header changed and we already have accumulated content, flush the previous section chunk
+            if current_chunk and current_chunk_header and p_header != current_chunk_header:
+                chunk_idx += 1
+                chunks.append(ProcessedChunk(
+                    chunk_id=f"chk_{uuid.uuid4().hex[:8]}",
+                    chunk_index=chunk_idx,
+                    content=current_chunk.strip(),
+                    token_count=max(1, len(current_chunk) // 4),
+                    section_header=current_chunk_header
+                ))
+                current_chunk = ""
+
+            current_chunk_header = p_header
 
             # If the paragraph itself exceeds chunk_size, split into sub-segments along sentence boundaries
             segments: List[str] = []
             if len(p_strip) > chunk_size:
                 rem = p_strip
                 while len(rem) > chunk_size:
-                    # Find sentence boundary within chunk_size
                     split_point = rem[:chunk_size].rfind('. ')
                     if split_point == -1 or split_point < chunk_size // 3:
                         split_point = rem[:chunk_size].rfind('? ')
@@ -104,7 +120,6 @@ class DocumentAIService:
             else:
                 segments = [p_strip]
 
-            # Accumulate segments into chunks
             for seg in segments:
                 if not seg:
                     continue
@@ -115,9 +130,8 @@ class DocumentAIService:
                         chunk_index=chunk_idx,
                         content=current_chunk.strip(),
                         token_count=max(1, len(current_chunk) // 4),
-                        section_header=current_header
+                        section_header=current_chunk_header
                     ))
-                    # Carry over overlap if enabled
                     if overlap > 0 and len(current_chunk) > overlap:
                         overlap_tail = current_chunk[-overlap:].strip()
                         space_idx = overlap_tail.find(' ')
@@ -136,7 +150,16 @@ class DocumentAIService:
                 chunk_index=chunk_idx,
                 content=current_chunk.strip(),
                 token_count=max(1, len(current_chunk) // 4),
-                section_header=current_header
+                section_header=current_chunk_header or "General"
+            ))
+
+        if not chunks and text.strip():
+            chunks.append(ProcessedChunk(
+                chunk_id=f"chk_{uuid.uuid4().hex[:8]}",
+                chunk_index=1,
+                content=text.strip()[:chunk_size],
+                token_count=max(1, len(text.strip()[:chunk_size]) // 4),
+                section_header="General"
             ))
 
         return chunks

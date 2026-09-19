@@ -25,7 +25,9 @@ dist-ssr
 
 # Environment & Secrets
 .env
-.env*.local
+.env*
+**/.env*
+*.env*
 
 # Python artifacts
 __pycache__/

@@ -2,7 +2,10 @@ import os
 import secrets
 import logging
 from typing import List, Optional
+from dotenv import load_dotenv
 from pydantic_settings import BaseSettings
+
+load_dotenv()
 
 logger = logging.getLogger(__name__)
 
@@ -107,7 +110,7 @@ class Settings(BaseSettings):
     CUSTOM_LLM_API_KEY: Optional[str] = (
         os.getenv("CUSTOM_LLM_API_KEY") or os.getenv("SARVAM_API_KEY") or None
     )
-    DEFAULT_LLM_MODEL: str = os.getenv("DEFAULT_LLM_MODEL", "sarvam-2b")
+    DEFAULT_LLM_MODEL: str = os.getenv("DEFAULT_LLM_MODEL", "sarvam-105b-conversations")
 
     # Demo / Seed Data (Must NEVER be enabled in production)
     _seed_env: bool = os.getenv("SEED_DEMO_DATA", "false").lower() == "true"

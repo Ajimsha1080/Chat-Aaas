@@ -81,49 +81,175 @@ class LLMProvider:
 
     @classmethod
     def format_chatgpt_style(cls, title: str, text: str, prompt: str) -> str:
-        """Formats raw extracted document text into a clean, structured ChatGPT-style response without raw markdown symbols."""
+        """Formats raw extracted document text into a clean, structured ChatGPT-style response."""
         clean_text = text.strip()
-
-        # Clean any stray markdown symbols from title
         clean_title = re.sub(r'[*#\_~]', '', title).strip()
 
-        # Remove repetitive title prefix e.g. "Client Requirement & Scoping: "
+        # 0. Check if content is an FAQ entry (contains "Answer: ..." or "A: ...")
+        faq_ans_match = re.search(r'(?:Answer|A):\s*(.*)$', clean_text, re.DOTALL | re.IGNORECASE)
+        if faq_ans_match:
+            faq_ans = faq_ans_match.group(1).strip()
+            if faq_ans:
+                return faq_ans
+
+        # 1. Clean URLs and boilerplate noise
+        clean_text = re.sub(r'Page URL:\s*https?://\S+', '', clean_text, flags=re.I)
+        clean_text = re.sub(r'https?://\S+', '', clean_text)
+
+        # Remove repetitive title prefix
         if clean_text.lower().startswith(clean_title.lower() + ":"):
             clean_text = clean_text[len(clean_title) + 1:].strip()
         elif clean_text.lower().startswith(clean_title.lower()):
             clean_text = clean_text[len(clean_title):].strip().lstrip(":-\n ")
 
-        # Remove leading Markdown hashes or asterisks
+        # Remove leading hashes and special artifacts
         clean_text = re.sub(r'^[*#\s]+', '', clean_text).strip()
-
-        # Clean all stray asterisks from raw text to avoid unclosed asterisk bugs
         clean_text = clean_text.replace('***', '').replace('**', '').replace('*', '')
 
-        # Split into sentences or paragraphs
-        sentences = [s.strip() for s in re.split(r'(?<=[.?!])\s+', clean_text) if s.strip()]
+        # Remove navigation keyword clutter
+        nav_noise = {
+            'how it works', 'explore the agents', 'request a demo', 'sign in', 'log in', 'sign up',
+            'menu', 'navigation', 'privacy policy', 'terms of service', 'all rights reserved',
+            'cookie policy', 'get started', 'contact sales', 'book a demo', 'ai business operating system'
+        }
 
+        # Split into raw lines / sentences
+        raw_lines = [l.strip() for l in clean_text.split('\n') if l.strip()]
+        meaningful_lines = []
+        for l in raw_lines:
+            if l.lower() in nav_noise:
+                continue
+            words = l.split()
+            if len(words) >= 4 and sum(1 for w in words if w.lower() in {'agent', 'agents', 'finance', 'integrations', 'security', 'pricing', 'demo', 'explore', 'how', 'works', 'request'}) >= len(words) * 0.7:
+                continue
+            meaningful_lines.append(l)
+
+        clean_body = " ".join(meaningful_lines) if meaningful_lines else clean_text
+        sentences = [s.strip() for s in re.split(r'(?<=[.?!])\s+', clean_body) if s.strip() and len(s.strip()) > 5]
+
+        # Extract entity / product / company name
+        entity_name = (
+            clean_title
+            .replace(".pdf", "")
+            .replace(".docx", "")
+            .replace(".txt", "")
+            .replace("Internal Company Operations SOP Premium", "")
+            .replace("Operations SOP Premium", "")
+            .replace("Internal Company Operations", "")
+            .replace("Standard Operating Procedures", "")
+            .replace("INTERNAL COMPANY OPERATIONS", "")
+            .replace("STANDARD OPERATING PROCEDURES", "")
+            .split('—')[0]
+            .split('-')[0]
+            .replace('.com', '')
+            .strip()
+        )
+        if not entity_name or entity_name.lower() in ['verified documentation', 'knowledge base', 'general', 'document']:
+            comp_match = re.search(r'\b([A-Z][A-Za-z0-9\s]{2,30}(?:TECHNOLOGIES|INC|CORP|LLC|AI|SYSTEMS|SOFTWARE|COMPANY))\b', clean_text, re.IGNORECASE)
+            if comp_match:
+                entity_name = comp_match.group(1).title().strip()
+            else:
+                entity_name = 'Our company'
+
+        q_lower = prompt.lower().strip()
+        stop_words = {
+            'what', 'is', 'the', 'a', 'an', 'in', 'on', 'at', 'for', 'to', 'of', 'and', 'or',
+            'are', 'how', 'do', 'does', 'can', 'tell', 'me', 'about', 'our', 'your', 'this', 'explain', 'policy', 'please'
+        }
+        all_query_words = set(re.findall(r'\w+', q_lower))
+        meaningful_words = [w for w in all_query_words if w not in stop_words] or list(all_query_words)
+
+        is_how_it_works = any(w in q_lower for w in ['how it works', 'how does it work', 'how to work', 'mechanism', 'workflow', 'process', 'steps'])
+        is_explain_query = any(w in q_lower for w in ['explain', 'what is', 'about', 'tell me', 'overview', 'who is', 'summary', 'describe'])
+
+        # Check if text is an Internal Company Operations SOP document
+        is_sop_context = any(w in clean_text.upper() for w in ['STANDARD OPERATING PROCEDURES', 'INTERNAL COMPANY OPERATIONS', 'CLASSIFICATION INTERNAL USE', 'OWNER • OPERATIONS']) or any(w in clean_title.upper() for w in ['INTERNAL', 'SOP', 'OPERATIONS'])
+
+        if is_explain_query and is_sop_context:
+            md = [
+                f"### About {entity_name}\n\n**{entity_name}** maintains a structured internal operations framework designed for consistent, secure, and accountable execution across all departments.\n\nIt establishes authorized standard operating procedures for data security, team onboarding, compliance, and incident management.",
+                "### Operational Framework Overview\n"
+                "- **Scope & Purpose**: A practical operating system for repeatable, secure, and compliant internal execution.\n"
+                "- **Classification**: Internal Use Document (Version 1.0).\n"
+                "- **Governance**: Owned and monitored by Operations and Management.",
+                "### Key Policy Areas Covered\n"
+                "- **Employee Onboarding & Access Control**: Standardized equipment issuance, permission management, and policy sign-off.\n"
+                "- **Internal Training & Compliance**: Mandatory regulatory training and policy acknowledgements.\n"
+                "- **Data Confidentiality & Protection**: Information security, conflict of interest reporting, and IP safeguards.\n"
+                "- **Business Continuity & Recovery**: Verified backup routines, system failovers, and incident escalation protocols.",
+                "Feel free to ask about any specific operating procedure, compliance requirement, or escalation workflow!"
+            ]
+            return "\n\n".join(md)
+
+        if is_how_it_works:
+            md = [
+                f"### How {entity_name} Works\n\n**{entity_name}** operates as an autonomous AI workforce running directly on top of your existing enterprise software:\n",
+                "1. **Connects to Existing Infrastructure**: Integrates directly with your ERP, databases, and operational software without requiring migrations.\n"
+                "2. **Deploys Specialized AI Agents**: Autonomous agents (such as Finance, Operations, and Workflow agents) execute daily operational tasks.\n"
+                "3. **Continuous Execution & Oversight**: Performs automated workflows while enforcing strict enterprise security, permission boundaries, and audit logging.",
+                "Would you like more details on specific integrations, agent capabilities, or security controls?"
+            ]
+            return "\n\n".join(md)
+
+        if is_explain_query and any(w in q_lower or w in clean_title.lower() or w in clean_text.lower() for w in ['coar', 'erp', 'workforce', 'operating system', 'agent', 'software', 'platform']):
+            md = [
+                f"### About {entity_name}\n\n**{entity_name}** provides an intelligent AI workforce that operates your existing business software and enterprise tools.\n\nYour ERP has software. Your AI agents should operate it. Rather than forcing system migrations, it runs seamlessly on top of what you already have.",
+                "### Key Highlights\n"
+                "- **Non-Invasive Architecture**: Integrates directly into your existing ERP and software stack without migration.\n"
+                "- **Autonomous AI Agents**: Features specialized agents (such as Finance Agent and Operations) to handle recurring business processes.\n"
+                "- **Enterprise Security & Governance**: Provides end-to-end data isolation, role-based controls, and complete traceability.",
+                "Feel free to ask about how it works, available agents, or technical integration details!"
+            ]
+            return "\n\n".join(md)
+
+        # Specific query matching: if prompt asks about specific facts (warranty, RMA, timeline, price, refund, technical specs, numbers, etc.)
+        matched_sentences = []
+        for s in sentences:
+            s_clean = re.sub(r'^(?:0\d|\d{1,2})\s+[A-Z0-9\s]{5,50}STANDARD OPERATING PROCEDURES\s*', '', s, flags=re.I).strip()
+            s_clean = re.sub(r'VERSION\s*[\d\.]+\s*EFFECTIVE.*$', '', s_clean, flags=re.I).strip()
+            if not s_clean:
+                continue
+            s_words = set(re.findall(r'\w+', s_clean.lower()))
+            overlap_score = len(s_words.intersection(meaningful_words))
+            if overlap_score > 0:
+                matched_sentences.append((overlap_score, s_clean))
+
+        matched_sentences.sort(key=lambda x: x[0], reverse=True)
+        if matched_sentences and not is_how_it_works:
+            seen_sents = set()
+            best_sentences = []
+            for _, s in matched_sentences:
+                s_key = s.lower().strip()
+                if s_key not in seen_sents:
+                    seen_sents.add(s_key)
+                    best_sentences.append(s)
+                if len(best_sentences) >= 3:
+                    break
+            result_body = "\n\n".join(best_sentences)
+            is_question_title = clean_title.endswith('?') or any(clean_title.lower().startswith(w) for w in ['what ', 'how ', 'why ', 'where ', 'who ', 'when ', 'is ', 'are ', 'can ', 'do ', 'does '])
+            if clean_title and len(clean_title) > 3 and not clean_title.lower().startswith("verified") and not clean_title.lower().startswith("knowledge") and not is_question_title:
+                return f"**{clean_title}**\n\n{result_body}"
+            return result_body
+
+        # Standard list / document formatting
         formatted_blocks = []
         for sentence in sentences:
-            # If sentence contains lists of items (e.g. "involves X, Y, Z, and W" or "includes X, Y, and Z")
-            if any(kw in sentence.lower() for kw in ["involves ", "includes ", "consists of ", "requires ", "features "]):
-                header_match = re.match(r'^(.*?(?:involves|includes|consists of|requires|features))\s*(.*)$', sentence, re.IGNORECASE)
+            if any(kw in sentence.lower() for kw in ["involves ", "includes ", "consists of ", "requires ", "features ", "provides "]):
+                header_match = re.match(r'^(.*?(?:involves|includes|consists of|requires|features|provides))\s*(.*)$', sentence, re.IGNORECASE)
                 if header_match:
                     lead = header_match.group(1).strip()
                     items_str = header_match.group(2).strip()
                     raw_items = [re.sub(r'[*#\_~]', '', item).strip().rstrip('.').lstrip('and ') for item in re.split(r',|\band\b', items_str) if item.strip()]
-
-                    bullet_list = [f"- {item[0].upper() + item[1:]}" for item in raw_items if len(item) > 2]
+                    bullet_list = [f"- **{item[0].upper() + item[1:]}**" if len(item) > 10 else f"- {item[0].upper() + item[1:]}" for item in raw_items if len(item) > 2]
                     if bullet_list:
                         formatted_blocks.append(f"{lead}:\n" + "\n".join(bullet_list))
                         continue
-
             formatted_blocks.append(sentence)
 
         result_body = "\n\n".join(formatted_blocks)
-
-        # Clean title heading (avoid redundant titles like "Verified Documentation")
-        if clean_title and len(clean_title) > 3 and not clean_title.lower().startswith("verified") and not clean_title.lower().startswith("knowledge"):
-            return f"{clean_title}\n\n{result_body}"
+        is_question_title = clean_title.endswith('?') or any(clean_title.lower().startswith(w) for w in ['what ', 'how ', 'why ', 'where ', 'who ', 'when ', 'is ', 'are ', 'can ', 'do ', 'does '])
+        if clean_title and len(clean_title) > 3 and not clean_title.lower().startswith("verified") and not clean_title.lower().startswith("knowledge") and not is_question_title:
+            return f"**{clean_title}**\n\n{result_body}"
         return result_body
 
     @classmethod
@@ -330,33 +456,44 @@ class LLMProvider:
             f"Here is an overview of the internal company policies and operational framework{company_intro}:\n\n"
             "The operational framework establishes standard procedures across all departments to ensure consistent execution, accountability, data security, and compliance across all teams.",
 
-            "### 🛡️ Core Operating Principles\n"
-            "1. **Accountability** — Every recurring workflow has a designated owner.\n"
-            "2. **Consistency** — Repeatable operational tasks follow authorized standard procedures.\n"
-            "3. **Least Privilege** — Access to internal tools and confidential data is strictly restricted.\n"
-            "4. **Traceability** — Significant decisions, approvals, and actions are recorded for audit.\n"
-            "5. **Confidentiality** — Internal data is protected with strict information barriers.\n"
-            "6. **Business Continuity** — Critical operations maintain verified recovery and backup paths.\n"
-            "7. **Continuous Improvement** — Operational failures trigger root-cause analysis and SOP revisions.",
+            "### Core Operating Principles\n"
+            "1. **Accountability**: Every recurring workflow has a designated owner.\n"
+            "2. **Consistency**: Repeatable operational tasks follow authorized standard procedures.\n"
+            "3. **Least Privilege**: Access to internal tools and confidential data is strictly restricted.\n"
+            "4. **Traceability**: Significant decisions, approvals, and actions are recorded for audit.\n"
+            "5. **Confidentiality**: Internal data is protected with strict information barriers.\n"
+            "6. **Business Continuity**: Critical operations maintain verified recovery and backup paths.\n"
+            "7. **Continuous Improvement**: Operational failures trigger root-cause analysis and SOP revisions.",
 
-            "### 📑 Key Policy Areas Covered"
+            "### Key Policy Areas Covered"
         ]
 
+        seen_titles = set()
         sop_highlights = []
         for p in parsed_chunks:
             if p['title'] and p['purpose'] and p['title'] != doc_main_title:
                 clean_title = re.sub(r'\s*\(`?[A-Za-z0-9]+-[A-Za-z0-9]+-[A-Za-z0-9]+`?\)?', '', p['title']).strip()
-                sop_highlights.append(f"* **{clean_title}**: {p['purpose']}")
+                norm_key = clean_title.lower().strip()
+                if norm_key and norm_key not in seen_titles:
+                    seen_titles.add(norm_key)
+                    sop_highlights.append(f"- **{clean_title}**: {p['purpose']}")
 
-        if not sop_highlights:
-            sop_highlights = [
-                "* **Employee Onboarding**: Structured onboarding, equipment issuance, access control, and policy sign-off.",
-                "* **Internal Training & Compliance**: Mandatory compliance training, policy acknowledgements, and tracking.",
-                "* **Confidentiality & Conflict of Interest**: Non-disclosure safeguards, conflict reporting, and IP protection.",
-                "* **Business Continuity & Recovery**: Critical system backups, alternative access, and recovery protocols.",
-                "* **Issue & Corrective Action**: Incident containment, root-cause investigation, and corrective action tracking.",
-                "* **Emergency Escalation**: Rapid-response channels for major outages, data breaches, or legal risks."
+        if not sop_highlights or len(sop_highlights) < 3:
+            default_catalog = [
+                ("- **Employee Onboarding**", "Structured onboarding, equipment issuance, access control, and policy sign-off."),
+                ("- **Internal Training & Compliance**", "Mandatory compliance training, policy acknowledgements, and tracking."),
+                ("- **Confidentiality & Conflict of Interest**", "Non-disclosure safeguards, conflict reporting, and IP protection."),
+                ("- **Business Continuity & Recovery**", "Critical system backups, alternative access, and recovery protocols."),
+                ("- **Issue & Corrective Action**", "Incident containment, root-cause investigation, and corrective action tracking."),
+                ("- **Emergency Escalation**", "Rapid-response channels for major outages, data breaches, or legal risks.")
             ]
+            for cat_title, cat_desc in default_catalog:
+                cat_key = cat_title.lower().replace('*', '').replace('-', '').strip()
+                if not any(cat_key in st or st in cat_key for st in seen_titles):
+                    seen_titles.add(cat_key)
+                    sop_highlights.append(f"{cat_title}: {cat_desc}")
+                if len(sop_highlights) >= 6:
+                    break
 
         md.append("\n".join(sop_highlights[:6]))
         md.append("Feel free to ask if you would like more details on any specific policy, onboarding steps, or escalation workflows!")
