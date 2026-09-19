@@ -53,71 +53,61 @@ export interface SemanticChunkView {
 function getSemanticChunks(text: string, chunkSize = 500, overlap = 50): SemanticChunkView[] {
   if (!text || !text.trim()) return [];
   const clean = text.trim();
-  const paragraphs = clean.split('\n\n').map(p => p.trim()).filter(Boolean);
   const chunks: SemanticChunkView[] = [];
   let currentChunk = '';
   let currentHeader = 'General Overview';
   let idx = 0;
 
-  for (const p of paragraphs) {
-    if (p.startsWith('#')) {
-      const h = p.replace(/^#+\s*/, '').trim();
-      if (h) currentHeader = h;
-      if (currentChunk.length >= 150) {
-        idx++;
-        chunks.push({
-          index: idx,
-          header: currentHeader,
-          text: currentChunk.trim(),
-          tokens: Math.max(1, Math.round(currentChunk.length / 4))
-        });
-        currentChunk = '';
+  const pushChunk = () => {
+    if (currentChunk.trim()) {
+      idx++;
+      chunks.push({
+        index: idx,
+        header: currentHeader,
+        text: currentChunk.trim(),
+        tokens: Math.max(1, Math.round(currentChunk.trim().length / 4))
+      });
+      currentChunk = '';
+    }
+  };
+
+  const lines = clean.split('\n');
+  for (let i = 0; i < lines.length; i++) {
+    const rawLine = lines[i];
+    const trimmed = rawLine.trim();
+
+    if (!trimmed) {
+      if (currentChunk.length >= chunkSize) {
+        pushChunk();
       }
       continue;
     }
 
-    const segments: string[] = [];
-    if (p.length > chunkSize) {
-      let rem = p;
-      while (rem.length > chunkSize) {
-        let pt = rem.slice(0, chunkSize).lastIndexOf('. ');
-        if (pt === -1 || pt < chunkSize / 3) pt = rem.slice(0, chunkSize).lastIndexOf('? ');
-        if (pt === -1 || pt < chunkSize / 3) pt = rem.slice(0, chunkSize).lastIndexOf('! ');
-        if (pt === -1 || pt < chunkSize / 3) pt = rem.slice(0, chunkSize).lastIndexOf(' ');
-        if (pt === -1) pt = chunkSize;
-        else pt += 1;
-        segments.push(rem.slice(0, pt).trim());
-        rem = rem.slice(Math.max(0, pt - overlap)).trim();
+    if (trimmed.startsWith('#')) {
+      if (currentChunk.length >= 80) {
+        pushChunk();
       }
-      if (rem) segments.push(rem);
-    } else {
-      segments.push(p);
+      const h = trimmed.replace(/^#+\s*/, '').trim();
+      if (h) currentHeader = h;
+      continue;
     }
 
-    for (const seg of segments) {
-      if (!seg) continue;
-      if (currentChunk && (currentChunk.length + seg.length + 2 > chunkSize)) {
-        idx++;
-        chunks.push({
-          index: idx,
-          header: currentHeader,
-          text: currentChunk.trim(),
-          tokens: Math.max(1, Math.round(currentChunk.length / 4))
-        });
-        currentChunk = seg;
-      } else {
-        currentChunk = currentChunk ? `${currentChunk}\n\n${seg}` : seg;
-      }
+    if (currentChunk && (currentChunk.length + trimmed.length + 1 > chunkSize)) {
+      pushChunk();
+      currentChunk = trimmed;
+    } else {
+      currentChunk = currentChunk ? `${currentChunk}\n${trimmed}` : trimmed;
     }
   }
 
-  if (currentChunk.trim()) {
-    idx++;
+  pushChunk();
+
+  if (chunks.length === 0 && clean) {
     chunks.push({
-      index: idx,
-      header: currentHeader,
-      text: currentChunk.trim(),
-      tokens: Math.max(1, Math.round(currentChunk.length / 4))
+      index: 1,
+      header: currentHeader || 'General Overview',
+      text: clean,
+      tokens: Math.max(1, Math.round(clean.length / 4))
     });
   }
 
