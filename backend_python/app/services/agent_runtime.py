@@ -108,7 +108,10 @@ class AgentRuntime:
                     session_id=request.session_id or "sess_live"
                 )
 
-        if "refund" in user_msg.lower():
+        # Distinguish between policy/informational questions and explicit transaction requests
+        is_informational_refund = any(q in user_msg.lower() for q in ["how", "what", "policy", "when", "can i", "process", "time", "days", "rules"])
+        has_explicit_action = any(act in user_msg.lower() for act in ["refund my", "refund order", "cancel and refund", "issue refund", "give me a refund", "process refund", "request refund"])
+        if (has_explicit_action or "ord-" in user_msg.lower()) and not is_informational_refund:
             ord_match = re.search(r'\b(ORD-[0-9A-Za-z]+)\b', user_msg, re.IGNORECASE) or re.search(r'(?:order|id)[:\s#]*([0-9A-Za-z_-]{4,})', user_msg, re.IGNORECASE)
             target_order = ord_match.group(1).upper() if ord_match else None
             reasoning_steps.append(ReasoningStep(
