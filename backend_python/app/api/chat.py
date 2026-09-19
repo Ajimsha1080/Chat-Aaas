@@ -115,7 +115,20 @@ async def process_chat_message(
     session_id = req.conversation_id or req.session_id or "anon"
     RateLimiter.check_chat_rate_limits(company_id, session_id)
 
-    stored_chunks = db.get_document_chunks_for_tenant(company_id, only_active=True)
+    # Auto-populate conversation history for contextual query rewriting
+    if not req.history and (req.conversation_id or req.session_id):
+        conv_lookup = req.conversation_id or req.session_id
+        db_msgs = db.get_messages_for_conversation(conv_lookup, company_id)
+        if db_msgs:
+            from app.schemas import ChatMessage
+            req.history = [
+                ChatMessage(
+                    role="user" if m.get("sender") == "user" else "assistant",
+                    content=m.get("text", "")
+                )
+                for m in db_msgs[-6:]
+                if m.get("text")
+            ]
 
     response = await AgentRuntime.process_message(
         request=req,
@@ -189,8 +202,20 @@ async def stream_chat_tokens(
             )
 
     # 1. Anti-spam & Cost Protection: Plan-based session and tenant-level aggregate rate limits
-    session_id = req.conversation_id or req.session_id or "anon"
-    RateLimiter.check_chat_rate_limits(company_id, session_id)
+    # Auto-populate conversation history for contextual query rewriting
+    if not req.history and (req.conversation_id or req.session_id):
+        conv_lookup = req.conversation_id or req.session_id
+        db_msgs = db.get_messages_for_conversation(conv_lookup, company_id)
+        if db_msgs:
+            from app.schemas import ChatMessage
+            req.history = [
+                ChatMessage(
+                    role="user" if m.get("sender") == "user" else "assistant",
+                    content=m.get("text", "")
+                )
+                for m in db_msgs[-6:]
+                if m.get("text")
+            ]
 
     stored_chunks = db.get_document_chunks_for_tenant(company_id, only_active=True)
     agent = db.get_agent_for_company(company_id) or {"name": "Coar AI", "model": "gpt-4o-mini"}

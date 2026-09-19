@@ -107,10 +107,21 @@ async def send_message(req: SendMessageRequest, ctx: TenantContext = Depends(get
             }
         }
 
-    # 3. Process through Agent Runtime
+    # 3. Process through Agent Runtime with Conversation History Context
     chunks = db.get_document_chunks_for_tenant(company_id, only_active=True)
     agent = db.get_agent_for_company(company_id) or {}
-    chat_req = ChatRequest(message=req.text, session_id=conv_id)
+    
+    from app.schemas import ChatMessage
+    prev_messages = db.get_messages_for_conversation(conv_id, company_id)
+    history_items = [
+        ChatMessage(
+            role="user" if m.get("sender") == "user" else "assistant",
+            content=m.get("text", "")
+        )
+        for m in prev_messages[-6:]
+        if m.get("text")
+    ]
+    chat_req = ChatRequest(message=req.text, session_id=conv_id, conversation_id=conv_id, history=history_items)
     runtime_res = await AgentRuntime.process_message(chat_req, company_id, agent, chunks)
 
     # 4. Agent Response Message
