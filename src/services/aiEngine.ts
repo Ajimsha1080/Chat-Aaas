@@ -599,19 +599,26 @@ export class AIAgentEngine {
     const isWhoQuestion = /^who (is|are)\b/i.test(qLower) || /(founder|ceo|leadership)/i.test(qLower);
     const isHoursSupport = /(night|weekend|24\/7|24\*7|hours|available|schedule|timing|time)/i.test(qLower) && /(support|help|service|customer service)/i.test(qLower);
 
-    // Case 0A: Main Points / Summary
+    // Case 0A: Main Points / Summary / Key Takeaways (Universal for ANY PDF)
     if (isMainPoints) {
-      const topPrinciples = rawSentences.filter(s => /^(accountability|consistency|least privilege|traceability|confidentiality|continuity|continuous improvement|operating principles)/i.test(s)).slice(0, 5);
-      if (topPrinciples.length > 0) {
-        return `Here are the core operating principles and main points from the verified documentation:\n\n${topPrinciples.map(p => `• ${p}`).join('\n')}`;
+      // Pick top information-dense bullet points or key sentences from the document
+      const bulletCandidates = rawSentences.filter(s => s.length >= 20 && s.length <= 250);
+      const selectedPoints = bulletCandidates.slice(0, 5);
+      if (selectedPoints.length > 0) {
+        return `Here are the key points from the verified documentation:\n\n${selectedPoints.map(p => `• ${p.replace(/^[-*•\s]+/, '').trim()}`).join('\n')}`;
       }
-      const genericTop = rawSentences.slice(0, 4);
-      return `Here are the key points from the documentation:\n\n${genericTop.map(p => `• ${p}`).join('\n')}`;
+      return `Here is a summary based on the documentation:\n\n${rawSentences.slice(0, 3).join(' ')}`;
     }
 
-    // Case 0B: List Which Are They / Procedures
-    if (isListWhichAreThey && operatingSections.length > 0) {
-      return `Based on the verified documentation, here are the key areas and standard procedures:\n\n${operatingSections.slice(0, 6).map(s => `• ${s}`).join('\n')}`;
+    // Case 0B: List / Which Are They / What Are The Options (Universal for ANY PDF)
+    if (isListWhichAreThey) {
+      if (operatingSections.length > 0) {
+        return `Based on the verified documentation, here are the listed sections:\n\n${operatingSections.slice(0, 8).map(s => `• ${s}`).join('\n')}`;
+      }
+      const listItems = rawSentences.filter(s => s.length >= 15 && s.length <= 200).slice(0, 6);
+      if (listItems.length > 0) {
+        return `Based on the verified documentation, here are the details:\n\n${listItems.map(s => `• ${s.replace(/^[-*•\s]+/, '').trim()}`).join('\n')}`;
+      }
     }
 
     // Score sentences
