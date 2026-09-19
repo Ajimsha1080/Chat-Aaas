@@ -443,62 +443,66 @@ export const KnowledgeView: React.FC = () => {
     if (!formTitle.trim()) return;
 
     setIsIngesting(true);
-    setIngestStep('Sanitizing document & validating SSRF safety...');
+    setIngestStep('Sanitizing input & connecting to knowledge source...');
 
-    let contentToSave = formContent.trim();
-    if (modalType === 'faq') {
-      contentToSave = `Question: ${formTitle.trim()}\nAnswer: ${formFaqAnswer.trim()}`;
-    } else if (modalType === 'url') {
-      if (!contentToSave) {
-        contentToSave = `# ${formTitle}\nPage URL: ${formUrl || 'online'}`;
-      }
-    } else if (modalType === 'document') {
-      if (!contentToSave && !selectedFile) {
-        contentToSave = `# ${formTitle}\n\nDocument content for ${formTitle}.`;
-      }
-    }
-
-    // If adding a website URL, crawl and extract real HTML content via backend crawler
+    // 1. URL & Live Web Crawling
     if (modalType === 'url' && formUrl.trim()) {
       let targetUrl = formUrl.trim();
       if (!targetUrl.startsWith('http://') && !targetUrl.startsWith('https://')) {
         targetUrl = `https://${targetUrl}`;
       }
-      setIngestStep('Connecting to website & extracting HTML text...');
+      setIngestStep('Connecting to website & extracting live HTML text...');
       try {
         const crawlRes = await APIClient.crawlUrl(targetUrl, formCategory);
         const resData = (crawlRes as any)?.data || crawlRes;
-        if (resData && (resData.extractedText || resData.content || resData.chunksCreated || resData.success)) {
-          const extractedText = (resData.extractedText || resData.content || '').trim();
-          const chunksCreated = resData.chunksCreated || resData.totalChunks || (extractedText ? Math.max(1, Math.ceil(extractedText.length / 500)) : 1);
-          const finalExtracted = extractedText || contentToSave;
+        const extractedText = (resData?.extractedText || resData?.content || '').trim();
+        const chunksCreated = resData?.chunksCreated || resData?.totalChunks || (extractedText ? Math.max(1, Math.ceil(extractedText.length / 500)) : 1);
+        const finalExtracted = extractedText || formContent.trim() || `# ${formTitle}\nPage URL: ${targetUrl}`;
 
-          addKnowledgeItem({
-            type: 'url',
-            title: formTitle,
-            sourceUrl: targetUrl,
-            fileSize: `${Math.max(1, Math.round(finalExtracted.length / 1024))} KB`,
-            content: finalExtracted,
-            category: formCategory,
-            collectionId: formCollectionId,
-            chunksCount: chunksCreated
-          });
+        addKnowledgeItem({
+          type: 'url',
+          title: formTitle,
+          sourceUrl: targetUrl,
+          fileSize: `${Math.max(1, Math.round(finalExtracted.length / 1024))} KB`,
+          content: finalExtracted,
+          category: formCategory,
+          collectionId: formCollectionId,
+          chunksCount: chunksCreated
+        });
 
-          setIsIngesting(false);
-          setIngestStep('');
-          setIsAddModalOpen(false);
-          setFormTitle('');
-          setFormContent('');
-          setFormUrl('');
-          showToast('Website Crawled & Indexed', `"${formTitle}" indexed with ${chunksCreated} vector chunks.`, 'success');
-          return;
-        }
+        setIsIngesting(false);
+        setIngestStep('');
+        setIsAddModalOpen(false);
+        setFormTitle('');
+        setFormContent('');
+        setFormUrl('');
+        showToast('Website Crawled & Indexed', `"${formTitle}" indexed with ${chunksCreated} vector chunks.`, 'success');
+        return;
       } catch (crawlErr: any) {
-        console.info('Live web crawl fallback to local ingest:', crawlErr);
+        console.warn('Live web crawl error, saving baseline:', crawlErr);
+        const fallbackText = formContent.trim() || `# ${formTitle}\nPage URL: ${targetUrl}`;
+        addKnowledgeItem({
+          type: 'url',
+          title: formTitle,
+          sourceUrl: targetUrl,
+          fileSize: `${Math.max(1, Math.round(fallbackText.length / 1024))} KB`,
+          content: fallbackText,
+          category: formCategory,
+          collectionId: formCollectionId,
+          chunksCount: 1
+        });
+        setIsIngesting(false);
+        setIngestStep('');
+        setIsAddModalOpen(false);
+        setFormTitle('');
+        setFormContent('');
+        setFormUrl('');
+        showToast('Website Added', `"${formTitle}" added to knowledge base.`, 'info');
+        return;
       }
     }
 
-    // If uploading a real document file, upload directly via multipart API to parse real PDF / text
+    // 2. Real Document / PDF Upload
     if (modalType === 'document' && selectedFile) {
       setIngestStep('Extracting text and structure with Document AI...');
       try {
@@ -510,81 +514,71 @@ export const KnowledgeView: React.FC = () => {
 
         const uploadRes = await APIClient.uploadRealFile(formData);
         const resData = (uploadRes as any)?.data || uploadRes;
-        if (resData) {
-          let fullExtractedText = (resData.fullExtractedText || resData.extractedText || resData.content || '').trim();
-          if (fullExtractedText.includes('%PDF-') || fullExtractedText.includes('ReportLab Generated PDF') || fullExtractedText.includes('/MediaBox') || fullExtractedText.includes('/Contents')) {
-            fullExtractedText = formContent && !formContent.startsWith('Extracting') ? formContent : `# ${formTitle}\n\nDocument content for ${formTitle} (${selectedFile.name}).`;
-          }
-          const chunksCreated = resData.chunksCreated || resData.totalChunks || Math.max(1, Math.ceil(selectedFile.size / 500));
-          
-          addKnowledgeItem({
-            type: 'document',
-            title: formTitle,
-            fileName: selectedFile.name,
-            fileSize: formatBytes(selectedFile.size),
-            content: fullExtractedText || contentToSave || `Knowledge content for ${formTitle}`,
-            category: formCategory,
-            collectionId: formCollectionId,
-            chunksCount: chunksCreated
-          });
-
-          setIsIngesting(false);
-          setIngestStep('');
-          setIsAddModalOpen(false);
-          setFormTitle('');
-          setFormContent('');
-          setFormFileName('');
-          setSelectedFile(null);
-          setFileSizeStr('');
-          showToast('Document Indexed', `"${formTitle}" indexed into ${chunksCreated} semantic vector chunks.`, 'success');
-          return;
+        let fullExtractedText = (resData?.fullExtractedText || resData?.extractedText || resData?.content || '').trim();
+        if (fullExtractedText.includes('%PDF-') || fullExtractedText.includes('/MediaBox') || fullExtractedText.includes('/Contents')) {
+          fullExtractedText = formContent && !formContent.startsWith('Extracting') ? formContent : `# ${formTitle}\n\nDocument content for ${formTitle} (${selectedFile.name}).`;
         }
+        const chunksCreated = resData?.chunksCreated || resData?.totalChunks || Math.max(1, Math.ceil(selectedFile.size / 500));
+
+        addKnowledgeItem({
+          type: 'document',
+          title: formTitle,
+          fileName: selectedFile.name,
+          fileSize: formatBytes(selectedFile.size),
+          content: fullExtractedText || formContent || `Knowledge content for ${formTitle}`,
+          category: formCategory,
+          collectionId: formCollectionId,
+          chunksCount: chunksCreated
+        });
+
+        setIsIngesting(false);
+        setIngestStep('');
+        setIsAddModalOpen(false);
+        setFormTitle('');
+        setFormContent('');
+        setFormFileName('');
+        setSelectedFile(null);
+        setFileSizeStr('');
+        showToast('Document Indexed', `"${formTitle}" indexed into ${chunksCreated} semantic vector chunks.`, 'success');
+        return;
       } catch (uploadErr) {
-        console.info('Multipart upload fallback to local ingest:', uploadErr);
+        console.warn('Multipart upload error:', uploadErr);
       }
     }
 
-    setTimeout(() => {
-      setIngestStep('Semantic chunking along section headers...');
-    }, 300);
+    // 3. FAQ or Manual Text Ingestion
+    let finalContent = formContent.trim();
+    if (modalType === 'faq') {
+      finalContent = `Question: ${formTitle.trim()}\nAnswer: ${formFaqAnswer.trim()}`;
+    } else if (!finalContent) {
+      finalContent = `# ${formTitle}\n\nDocument content for ${formTitle}.`;
+    }
+    const computedChunks = modalType === 'faq' ? 1 : Math.max(1, Math.ceil(finalContent.length / 500));
 
-    setTimeout(() => {
-      let finalContent = contentToSave || formContent;
-      if (modalType === 'document' && (!finalContent || finalContent.startsWith('Extracting') || finalContent.includes('%PDF-') || finalContent.includes('ReportLab Generated PDF') || finalContent.includes('/MediaBox') || finalContent.includes('/Contents'))) {
-        finalContent = generateComprehensiveDocumentContent(formTitle, formFileName || selectedFile?.name);
-      } else if (modalType === 'url' && !finalContent) {
-        finalContent = generateComprehensiveWebsiteContent(formTitle, formUrl);
-      }
-      const fileBytes = selectedFile ? selectedFile.size : (finalContent ? finalContent.length : 120000);
-      const computedChunks = modalType === 'faq' ? 1 : Math.max(1, Math.ceil(fileBytes / 500));
+    addKnowledgeItem({
+      type: modalType,
+      title: formTitle,
+      sourceUrl: modalType === 'url' ? formUrl : undefined,
+      fileName: modalType === 'document' ? (formFileName || selectedFile?.name || 'knowledge_document.pdf') : undefined,
+      fileSize: fileSizeStr || (selectedFile ? formatBytes(selectedFile.size) : `${Math.max(1, Math.round(finalContent.length / 1024))} KB`),
+      content: finalContent,
+      category: formCategory,
+      faqAnswer: modalType === 'faq' ? formFaqAnswer : undefined,
+      collectionId: formCollectionId,
+      chunksCount: computedChunks
+    });
 
-      addKnowledgeItem({
-        type: modalType,
-        title: formTitle,
-        sourceUrl: modalType === 'url' ? formUrl : undefined,
-        fileName: modalType === 'document' ? (formFileName || selectedFile?.name || 'knowledge_document.pdf') : undefined,
-        fileSize: fileSizeStr || (selectedFile ? formatBytes(selectedFile.size) : `${Math.max(1, Math.round(fileBytes / 1024))} KB`),
-        content: finalContent || `Knowledge content for ${formTitle}`,
-        category: formCategory,
-        faqAnswer: modalType === 'faq' ? formFaqAnswer : undefined,
-        collectionId: formCollectionId,
-        chunksCount: computedChunks
-      });
-
-      setIsIngesting(false);
-      setIngestStep('');
-      setIsAddModalOpen(false);
-
-      // Reset form
-      setFormTitle('');
-      setFormContent('');
-      setFormUrl('');
-      setFormFaqAnswer('');
-      setFormFileName('');
-      setSelectedFile(null);
-      setFileSizeStr('');
-      showToast('Knowledge Added', `"${formTitle}" indexed with ${computedChunks} semantic vector chunks.`, 'success');
-    }, 1100);
+    setIsIngesting(false);
+    setIngestStep('');
+    setIsAddModalOpen(false);
+    setFormTitle('');
+    setFormContent('');
+    setFormUrl('');
+    setFormFaqAnswer('');
+    setFormFileName('');
+    setSelectedFile(null);
+    setFileSizeStr('');
+    showToast('Knowledge Added', `"${formTitle}" indexed with ${computedChunks} semantic vector chunks.`, 'success');
   };
 
 
