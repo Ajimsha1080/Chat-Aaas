@@ -55,12 +55,14 @@ class AgentRuntime:
                 session_id=request.session_id or "sess_live"
             )
 
-        # 2. Human Escalation Trigger Check
-        escalation_keywords = [
-            "human", "live agent", "human agent", "support agent", "talk to agent", "speak to agent",
-            "representative", "manager", "support person", "call me", "talk to human", "speak to human"
+        # 2. Human Escalation Trigger Check (strictly explicit intent phrases, not feature queries)
+        is_feature_or_info_query = any(q in user_msg.lower() for q in ["how", "what", "does", "can", "is there", "support", "feature", "explain", "why"])
+        explicit_escalation_phrases = [
+            "talk to a human", "talk to human", "speak with a human", "speak to human", "speak to a person",
+            "transfer to a human", "transfer to human", "connect to human", "connect to a human",
+            "connect me to a representative", "let me speak to someone", "i want a human", "give me a human"
         ]
-        if any(kw in user_msg.lower() for kw in escalation_keywords):
+        if not is_feature_or_info_query and any(phrase in user_msg.lower() for phrase in explicit_escalation_phrases):
             reasoning_steps.append(ReasoningStep(
                 stage="Human Handoff Trigger",
                 detail="Customer explicitly requested human intervention. Initiating live transfer.",
@@ -183,8 +185,8 @@ class AgentRuntime:
             detail=f"Querying hybrid vector embeddings and semantic cosine similarity isolated strictly for tenant '{company_id}'.",
             timestamp=now_str
         ))
-        chunks = RAGEngine.search_chunks(user_msg, company_id, stored_chunks, threshold=0.30)
-        is_grounded, ground_msg = RAGEngine.evaluate_groundedness(chunks, threshold=0.35)
+        chunks = RAGEngine.search_chunks(user_msg, company_id, stored_chunks, threshold=0.15)
+        is_grounded, ground_msg = RAGEngine.evaluate_groundedness(chunks, threshold=0.20)
 
         reasoning_steps.append(ReasoningStep(
             stage="Anti-Hallucination Evaluator",
