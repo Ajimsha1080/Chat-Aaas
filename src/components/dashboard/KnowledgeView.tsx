@@ -367,7 +367,7 @@ export const KnowledgeView: React.FC = () => {
       reader.readAsText(file);
     } else {
       const cleanTitle = file.name.replace(/\.[^/.]+$/, '').replace(/[-_]/g, ' ');
-      setFormContent(generateComprehensiveDocumentContent(cleanTitle, file.name));
+      setFormContent(`Extracting text from ${file.name}...`);
 
       // Read array buffer to extract readable text strings from binary PDF / DOCX
       const reader = new FileReader();
@@ -393,7 +393,7 @@ export const KnowledgeView: React.FC = () => {
           }
           const gathered = extractedWords.join(' ').replace(/\s+/g, ' ').trim();
           if (gathered.length > 50) {
-            setFormContent(`# ${cleanTitle}\n\n${gathered}`);
+            setFormContent(gathered);
           }
         }
       };
@@ -414,7 +414,7 @@ export const KnowledgeView: React.FC = () => {
           }
         })
         .catch(() => {
-          // Keep clean documentation structure
+          // Keep clean extracted content
         });
     }
   };
@@ -511,9 +511,9 @@ export const KnowledgeView: React.FC = () => {
         const uploadRes = await APIClient.uploadRealFile(formData);
         const resData = (uploadRes as any)?.data || uploadRes;
         if (resData) {
-          let fullExtractedText = (resData.fullExtractedText || resData.extractedText || '').trim();
+          let fullExtractedText = (resData.fullExtractedText || resData.extractedText || resData.content || '').trim();
           if (fullExtractedText.includes('%PDF-') || fullExtractedText.includes('ReportLab Generated PDF') || fullExtractedText.includes('/MediaBox') || fullExtractedText.includes('/Contents')) {
-            fullExtractedText = `# ${formTitle}\n\nVerified enterprise documentation for ${formTitle} (${selectedFile.name}). Contains operational guidelines, technical specifications, and reference procedures.`;
+            fullExtractedText = formContent && !formContent.startsWith('Extracting') ? formContent : `# ${formTitle}\n\nDocument content for ${formTitle} (${selectedFile.name}).`;
           }
           const chunksCreated = resData.chunksCreated || resData.totalChunks || Math.max(1, Math.ceil(selectedFile.size / 500));
           
@@ -522,7 +522,7 @@ export const KnowledgeView: React.FC = () => {
             title: formTitle,
             fileName: selectedFile.name,
             fileSize: formatBytes(selectedFile.size),
-            content: fullExtractedText || contentToSave || `Verified enterprise knowledge for ${formTitle}`,
+            content: fullExtractedText || contentToSave || `Knowledge content for ${formTitle}`,
             category: formCategory,
             collectionId: formCollectionId,
             chunksCount: chunksCreated
@@ -549,8 +549,8 @@ export const KnowledgeView: React.FC = () => {
     }, 300);
 
     setTimeout(() => {
-      let finalContent = contentToSave;
-      if (modalType === 'document' && (!finalContent || finalContent.includes('%PDF-') || finalContent.includes('ReportLab Generated PDF') || finalContent.includes('/MediaBox') || finalContent.includes('/Contents') || (finalContent.includes('Verified enterprise documentation for') && finalContent.length < 350))) {
+      let finalContent = contentToSave || formContent;
+      if (modalType === 'document' && (!finalContent || finalContent.startsWith('Extracting') || finalContent.includes('%PDF-') || finalContent.includes('ReportLab Generated PDF') || finalContent.includes('/MediaBox') || finalContent.includes('/Contents'))) {
         finalContent = generateComprehensiveDocumentContent(formTitle, formFileName || selectedFile?.name);
       } else if (modalType === 'url' && (!finalContent || finalContent.startsWith('Official website and documentation for') || finalContent.includes('Verified company overview and documentation for'))) {
         finalContent = generateComprehensiveWebsiteContent(formTitle, formUrl);
