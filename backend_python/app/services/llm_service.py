@@ -163,14 +163,21 @@ class LLMProvider:
             # Handle bullet points
             lines = [l.strip() for l in p["body"].split("\n") if l.strip()]
             for line in lines:
-                # Remove boilerplate headers
-                if line.startswith("#") or line.lower().startswith("table of contents"):
+                # Remove boilerplate headers & metadata tags
+                if (
+                    line.startswith("#") or 
+                    line.lower().startswith("table of contents") or
+                    re.match(r'^(document title|document id|classification|effective date|version|review cycle|document owner|page url):', line, re.I)
+                ):
                     continue
                 # Split multi-sentence lines
                 s_list = re.split(r'(?<=[.?!])\s+', line)
                 for s in s_list:
                     s_clean = s.strip().lstrip("-*•□ \t0123456789.)")
-                    if len(s_clean) > 8:
+                    if (
+                        len(s_clean) > 8 and 
+                        not re.match(r'^(document title|document id|classification|effective date|version|review cycle|document owner|page url):', s_clean, re.I)
+                    ):
                         raw_sentences.append(s_clean)
 
         if not raw_sentences:

@@ -549,12 +549,27 @@ export class AIAgentEngine {
     // Extract sentences and clean them
     const lines = allText.split('\n').map(l => l.trim()).filter(l => l.length > 5);
     const rawSentences: string[] = [];
+    const operatingSections: string[] = [];
+    
     for (const line of lines) {
-      if (line.startsWith('#') || line.toLowerCase().startsWith('table of contents')) continue;
+      // Filter out boilerplate metadata headers
+      if (
+        line.startsWith('#') || 
+        line.toLowerCase().startsWith('table of contents') ||
+        /^(document title|document id|classification|effective date|version|review cycle|document owner|page url):/i.test(line)
+      ) {
+        if (line.startsWith('###') || line.startsWith('##')) {
+          operatingSections.push(line.replace(/^#+\s*/, '').trim());
+        }
+        continue;
+      }
       const sList = line.split(/(?<=[.?!])\s+/);
       for (const s of sList) {
         const sClean = s.replace(/^[-*•□\s\d.)]+/, '').trim();
-        if (sClean.length > 8) {
+        if (
+          sClean.length > 8 && 
+          !/^(document title|document id|classification|effective date|version|review cycle|document owner|page url):/i.test(sClean)
+        ) {
           rawSentences.push(sClean);
         }
       }
@@ -566,6 +581,7 @@ export class AIAgentEngine {
 
     // Stop words & tokens
     const stopWords = new Set([
+      "main", "pionts", "points", "piont", "point", "which", "are", "they", "them",
       "what", "is", "the", "a", "an", "in", "on", "at", "for", "to", "of", "and", "or",
       "are", "how", "do", "does", "did", "can", "could", "would", "should", "will", "tell", "me",
       "about", "our", "your", "you", "know", "this", "that", "these", "those", "explain", "please",
@@ -576,10 +592,27 @@ export class AIAgentEngine {
     const qTokens = (qLower.match(/\b[a-z0-9_-]+\b/g) || []).filter(t => !stopWords.has(t) && t.length > 1);
 
     const isWhatDoYouDo = /what does (your|the|this) company do|what (do|does) (you|the company|your company|this company) do|what is (your|the) company|what services (do you|does the company|are) provide|what are your services|tell me about (your company|the company)|who are you and what do you do/i.test(qLower);
+    const isMainPoints = /(main (point|points|piont|pionts)|key points|summary|overview|highlights|core principles)/i.test(qLower);
+    const isListWhichAreThey = /(which are (they|the)|what are (they|the)|list (them|all|the)|name (them|the)|procedures)/i.test(qLower);
     const isBoolean = /^(can i|can we|can customers|can users|can you|is there|are there|is it|are you|do you|does the|does your|do they|will you|is support|are refunds)\b/i.test(qLower);
     const isRefundDuration = /(refund|return|money back)/i.test(qLower) && /(how long|days|timeline|time limit|window|when|period|policy)/i.test(qLower);
     const isWhoQuestion = /^who (is|are)\b/i.test(qLower) || /(founder|ceo|leadership)/i.test(qLower);
     const isHoursSupport = /(night|weekend|24\/7|24\*7|hours|available|schedule|timing|time)/i.test(qLower) && /(support|help|service|customer service)/i.test(qLower);
+
+    // Case 0A: Main Points / Summary
+    if (isMainPoints) {
+      const topPrinciples = rawSentences.filter(s => /^(accountability|consistency|least privilege|traceability|confidentiality|continuity|continuous improvement|operating principles)/i.test(s)).slice(0, 5);
+      if (topPrinciples.length > 0) {
+        return `Here are the core operating principles and main points from the verified documentation:\n\n${topPrinciples.map(p => `• ${p}`).join('\n')}`;
+      }
+      const genericTop = rawSentences.slice(0, 4);
+      return `Here are the key points from the documentation:\n\n${genericTop.map(p => `• ${p}`).join('\n')}`;
+    }
+
+    // Case 0B: List Which Are They / Procedures
+    if (isListWhichAreThey && operatingSections.length > 0) {
+      return `Based on the verified documentation, here are the key areas and standard procedures:\n\n${operatingSections.slice(0, 6).map(s => `• ${s}`).join('\n')}`;
+    }
 
     // Score sentences
     const scored = rawSentences.map(sent => {
