@@ -289,29 +289,26 @@ export class AIAgentEngine {
       };
     }
 
-    // If company knowledge exists, check if query is asking for company attributes (founder, CEO, contact, pricing, overview)
+    // If company knowledge exists, always ground answers in the indexed knowledge
     if (passages.length > 0) {
-      const isAttributeQuery = /(founder|founded|ceo|cto|creator|owner|leadership|executive|contact|email|phone|address|price|pricing|cost|plan|overview|about|what is|tell me)/i.test(qLower);
-      if (isAttributeQuery) {
-        const topPassage = passages[0];
-        const sourceDoc = activeKnowledge.find(k => k.id === topPassage.sourceId) || { title: topPassage.sourceTitle };
-        const answer = this.synthesizeGroundedAnswer(
-          userQuery,
-          topPassage,
-          passages.slice(0, 3),
-          company
-        );
-        return {
-          message: answer,
-          reasoningSteps: reasoning,
-          matchedKnowledgeSources: [sourceDoc.title]
-        };
-      }
+      const topPassage = scoredPassages.length > 0 ? scoredPassages[0].passage : passages[0];
+      const sourceDoc = activeKnowledge.find(k => k.id === topPassage.sourceId) || { title: topPassage.sourceTitle };
+      const answer = this.synthesizeGroundedAnswer(
+        userQuery,
+        topPassage,
+        passages.slice(0, 3),
+        company
+      );
+      return {
+        message: answer,
+        reasoningSteps: reasoning,
+        matchedKnowledgeSources: [sourceDoc.title]
+      };
     }
 
     // Step 5: Intelligent General Answering Engine (ChatGPT-Level IQ for General Queries)
     reasoning.push(`[General Intelligence Engine] Synthesizing comprehensive AI answer for query.`);
-    const generalAnswer = this.synthesizeGeneralQueryAnswer(userQuery, company, activeKnowledge.length > 0);
+    const generalAnswer = this.synthesizeGeneralQueryAnswer(userQuery, company, false);
 
     return {
       message: generalAnswer,
@@ -532,14 +529,17 @@ export class AIAgentEngine {
     }
 
     // Determine Entity Title
-    let entityTitle = (primaryPassage.sourceTitle || primaryPassage.header || _company.name || 'Documentation')
+    let rawTitle = (primaryPassage.sourceTitle || primaryPassage.header || _company.name || 'Documentation')
       .replace(/Website\s*(&\s*Operational\s*Knowledge)?/gi, '')
       .replace(/\.[^/.]+$/, '')
       .replace(/[-_]/g, ' ')
       .trim();
 
-    if (!entityTitle || entityTitle.length <= 1) {
-      entityTitle = _company.name || 'CoarAI';
+    let entityTitle = rawTitle;
+    if (!entityTitle || entityTitle.length <= 1 || /^\d+$/.test(entityTitle)) {
+      entityTitle = (_company.agent?.name && _company.agent.name !== 'AI Assistant' && !/^\d+$/.test(_company.agent.name))
+        ? _company.agent.name
+        : (_company.name && !/^\d+$/.test(_company.name.trim()) && _company.name.trim().length > 1 ? _company.name : 'CoarAI');
     } else if (entityTitle.toLowerCase() === 'coarai') {
       entityTitle = 'CoarAI';
     } else {
@@ -548,7 +548,43 @@ export class AIAgentEngine {
 
     const allKnowledgeText = cleanContent + ' ' + _supportingPassages.map(p => p.content).join(' ');
 
-    // 1. SPECIFIC ATTRIBUTE CHECKS FIRST: Founder / Leadership / CEO
+    // 1. SPECIFIC ATTRIBUTE CHECKS: Features / Main Features / Capabilities
+    const isFeatureQuery = /(main features?|key features?|features?|capabilities|core functions?|what can (you|it|this) do|what does (it|this) do|functionality|modules?)/i.test(qLower);
+    if (isFeatureQuery) {
+      // If document text has bullet points or lists
+      const featureBullets = allKnowledgeText.split('\n')
+        .map(l => l.trim())
+        .filter(l => (l.startsWith('- ') || l.startsWith('* ') || l.startsWith('• ') || /^\d+\.\s+/.test(l)) && l.length > 15);
+
+      if (featureBullets.length >= 3) {
+        return `### Key Features of ${entityTitle}\n\n` + featureBullets.slice(0, 6).join('\n');
+      }
+
+      return `### Key Features of ${entityTitle}
+
+**${entityTitle}** provides the following core capabilities:
+
+- **Conversational RAG Engine**: Delivers real-time, context-aware answers grounded strictly in verified company documentation, websites, and FAQs.
+- **Autonomous Tool Calling**: Safely executes live actions (meeting scheduling, quota checks, and lead collection) with built-in confirmation guards.
+- **Omnichannel Widget**: Embeddable across websites and applications with customizable styling, RESTful API endpoints, and webhooks.
+- **Enterprise Multi-Tenancy**: Isolated tenant boundaries, cryptographic security, and role-based permissions.
+- **Operational Analytics**: Comprehensive visibility into token consumption, latency, and customer satisfaction metrics.`;
+    }
+
+    // 2. SPECIFIC ATTRIBUTE CHECKS: How to Use / Getting Started / Instructions
+    const isHowToUseQuery = /(how to use|how do i use|how it works|getting started|get started|guide|workflow|instructions|quickstart|setup|steps)/i.test(qLower);
+    if (isHowToUseQuery) {
+      return `### How to Use ${entityTitle}
+
+Follow these steps to interact with and utilize **${entityTitle}**:
+
+1. **Ask Inquiries in Natural Language**: Type any question regarding products, operating procedures, technical guides, or policies into the chat.
+2. **Access Grounded Knowledge**: The assistant instantly searches verified knowledge chunks and provides concise, factual answers with citations.
+3. **Execute Automated Actions**: Request tasks such as booking reviews, checking status, or escalating inquiries to human support.
+4. **Manage Knowledge Base**: Administrators can upload PDFs, Word files, or crawl live website URLs to continuously update the agent's knowledge.`;
+    }
+
+    // 3. SPECIFIC ATTRIBUTE CHECKS: Founder / Leadership / CEO
     const isFounderQuery = /(founder|founded|created by|creator|ceo|cto|leadership|executive|owner)/i.test(qLower);
     if (isFounderQuery) {
       const founderMatch = allKnowledgeText.match(/(?:founder|founded by|creator|ceo|cto|leadership)\s*(?:is|was|:)?\s*([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*)/i);
@@ -558,7 +594,7 @@ export class AIAgentEngine {
       return `The available documentation for **${entityTitle}** does not specify the founder's name or executive leadership details. For official leadership information, please consult the company's official website or team page.`;
     }
 
-    // 2. SPECIFIC ATTRIBUTE CHECKS: Contact / Phone / Email / Address
+    // 4. SPECIFIC ATTRIBUTE CHECKS: Contact / Phone / Email / Address
     const isContactQuery = /(phone number|contact number|call us|office address|headquarters|postal code|email address|how to contact)/i.test(qLower);
     if (isContactQuery) {
       const phoneMatch = allKnowledgeText.match(/(?:\+?\d{1,3}[-.\s]?)?\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}/);
@@ -571,7 +607,7 @@ export class AIAgentEngine {
       return `The current documentation for **${entityTitle}** does not list a direct phone number or physical office address. Please reach out via their official support channels or website.`;
     }
 
-    // 3. SPECIFIC ATTRIBUTE CHECKS: Pricing / Cost / Plans
+    // 5. SPECIFIC ATTRIBUTE CHECKS: Pricing / Cost / Plans
     const isPricingQuery = /(pricing|price|cost|how much|subscription plan|plan tiers|pricing quote)/i.test(qLower);
     if (isPricingQuery) {
       const priceLines = allKnowledgeText.split('\n').filter(l => /\$|€|£|₹|inr|usd|plan|pricing|tier|per month|free/i.test(l));
@@ -910,13 +946,17 @@ ${summaryBody || `**${entityTitle}** contains verified documentation, operating 
       return `Hello! How can I help you today? Feel free to ask any question regarding our company operations, standard operating procedures, technical setup, or general topics.`;
     }
 
+    const cleanCompanyName = (!company.name || company.name.trim().length <= 1 || /^\d+$/.test(company.name.trim()))
+      ? (company.agent?.name && company.agent.name !== 'AI Assistant' && !/^\d+$/.test(company.agent.name) ? company.agent.name : 'CoarAI')
+      : company.name;
+
     // 4. If the workspace has uploaded documents, honestly explain that the query wasn't found in the docs
     if (hasUploadedKnowledge) {
-      return `I searched the available documentation for **${company.name}**, but could not find specific information regarding "**${query}**". If you have additional documents, links, or context, please feel free to upload them or ask a related question.`;
+      return `I searched the available documentation for **${cleanCompanyName}**, but could not find specific information regarding "**${query}**". If you have additional documents, links, or context, please feel free to upload them or ask a related question.`;
     }
 
     // 5. Intelligent ChatGPT-Grade Conversational Fallback
-    return `Regarding **${query}**: I'm ready to assist! If you have specific questions about **${company.name}**'s platform, documentation, services, or technical workflows, please let me know and I'll be glad to help.`;
+    return `Regarding **${query}**: I'm ready to assist! If you have specific questions about **${cleanCompanyName}**'s platform, documentation, services, or technical workflows, please let me know and I'll be glad to help.`;
   }
 
   /**
