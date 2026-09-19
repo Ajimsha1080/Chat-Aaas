@@ -130,6 +130,8 @@ async def process_chat_message(
                 if m.get("text")
             ]
 
+    stored_chunks = db.get_document_chunks_for_tenant(company_id, only_active=True)
+
     response = await AgentRuntime.process_message(
         request=req,
         company_id=company_id,
@@ -202,6 +204,9 @@ async def stream_chat_tokens(
             )
 
     # 1. Anti-spam & Cost Protection: Plan-based session and tenant-level aggregate rate limits
+    session_id = req.conversation_id or req.session_id or "anon"
+    RateLimiter.check_chat_rate_limits(company_id, session_id)
+
     # Auto-populate conversation history for contextual query rewriting
     if not req.history and (req.conversation_id or req.session_id):
         conv_lookup = req.conversation_id or req.session_id
