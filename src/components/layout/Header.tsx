@@ -5,7 +5,6 @@ import {
   Plus, 
   Play, 
   Check, 
-  HelpCircle, 
   ShieldAlert, 
   ArrowLeft, 
   Menu
@@ -133,7 +132,7 @@ export const Header: React.FC<HeaderProps> = ({
           <span className="hidden sm:inline">Test Assistant</span>
         </button>
 
-        {/* Direct 1-Click Super Admin / Customer Experience Switcher */}
+        {/* Exit/Super Admin button */}
         {currentExperience === 'admin' ? (
           <button
             onClick={() => {
@@ -157,17 +156,6 @@ export const Header: React.FC<HeaderProps> = ({
           >
             <ShieldAlert className="w-4 h-4 text-rose-400" />
             <span className="hidden sm:inline">Super Admin</span>
-          </button>
-        )}
-
-        {/* Help Center */}
-        {onOpenHelp && (
-          <button
-            onClick={onOpenHelp}
-            className="p-2 text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-xl transition-colors cursor-pointer"
-            title="Help & Documentation"
-          >
-            <HelpCircle className="w-5 h-5" />
           </button>
         )}
       </div>

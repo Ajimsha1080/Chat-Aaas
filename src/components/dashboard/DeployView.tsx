@@ -372,26 +372,6 @@ export default function App() {
         className="hidden" 
       />
 
-      {/* Header */}
-      <div className="bg-white rounded-2xl p-6 sm:p-7 border border-slate-200/90 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-5">
-        <div>
-          <h1 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">Deploy Assistant</h1>
-          <p className="text-sm sm:text-base text-slate-600 mt-1">
-            Embed <strong>{currentCompany.agent.name}</strong> on your website via JavaScript widget, React SDK, or REST API.
-          </p>
-        </div>
-
-        <div className="flex items-center gap-3">
-          <button
-            onClick={() => setIsQuickTestOpen(true)}
-            className="px-4 py-2.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-sm font-semibold flex items-center gap-2 transition-colors shadow-sm cursor-pointer"
-          >
-            <Sparkles className="w-4 h-4 text-pink-400" />
-            <span>Test Assistant</span>
-          </button>
-        </div>
-      </div>
-
       {/* Main Card with Navigation Tabs */}
       <div className="bg-white rounded-2xl p-6 sm:p-7 border border-slate-200/90 shadow-sm">
         {/* Navigation Tabs Bar */}

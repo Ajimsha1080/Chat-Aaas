@@ -1044,9 +1044,6 @@ export const KnowledgeView: React.FC = () => {
               <h1 className="text-xl sm:text-2xl font-extrabold text-slate-900 tracking-tight">
                 {getTabTitle()}
               </h1>
-              <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-indigo-700 bg-indigo-50 border border-indigo-200 px-3 py-1 rounded-full">
-                <Sparkles className="w-3.5 h-3.5 text-indigo-600" /> {totalChunks} Chunks Vectorized
-              </span>
             </div>
             <p className="text-xs sm:text-sm text-slate-500 mt-1">
               Showing verified company knowledge grounding <strong>{currentCompany.agent.name}</strong>.
