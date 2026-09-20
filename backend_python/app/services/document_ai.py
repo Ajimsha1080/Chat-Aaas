@@ -134,7 +134,8 @@ class DocumentAIService:
                     })
                     current_block_lines = []
                     is_in_table = False
-                current_section = h2_match.group(1).strip()
+                parent_section = h2_match.group(1).strip()
+                current_section = parent_section
                 continue
 
             if h3_match:
@@ -148,7 +149,7 @@ class DocumentAIService:
                     })
                     current_block_lines = []
                     is_in_table = False
-                current_section = f"{current_section} > {h3_match.group(1).strip()}"
+                current_section = f"{parent_section} > {h3_match.group(1).strip()}"
                 continue
 
             # Check for Markdown table rows: starts and ends with '|'
