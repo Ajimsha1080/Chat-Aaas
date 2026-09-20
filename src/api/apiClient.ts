@@ -20,7 +20,7 @@ export interface TestResult {
 export class APIClient {
   private static token: string | null = null;
   private static adminToken: string | null = null;
-  private static currentCompanyId = '';
+  private static currentCompanyId = 'comp-techflow';
   private static baseUrl = (typeof import.meta !== 'undefined' && import.meta.env?.VITE_API_BASE_URL) || '';
 
   public static setAuth(token: string | null, companyId: string): void {
