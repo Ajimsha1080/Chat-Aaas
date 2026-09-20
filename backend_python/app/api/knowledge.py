@@ -556,6 +556,7 @@ async def upload_real_file_document(
 
 # ================= 3. WEBSITE & URL CRAWL ================= #
 
+@router.post("/website", status_code=status.HTTP_201_CREATED)
 @router.post("/websites", status_code=status.HTTP_201_CREATED)
 @router.post("/crawl", status_code=status.HTTP_201_CREATED)
 async def crawl_and_ingest_website(req: IngestWebsiteRequest, ctx: TenantContext = Depends(get_tenant_context)):

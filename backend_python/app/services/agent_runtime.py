@@ -215,7 +215,7 @@ class AgentRuntime:
             company_id=company_id,
             stored_chunks=stored_chunks,
             threshold=0.15,
-            top_k=6
+            top_k=15
         )
 
         # Cross-Encoder Reranking
@@ -229,7 +229,7 @@ class AgentRuntime:
                 )
                 for c in raw_chunks
             ]
-            rerank_req = RerankRequest(query=retrieval_query, candidates=candidates, top_k=3)
+            rerank_req = RerankRequest(query=retrieval_query, candidates=candidates, top_k=8)
             rerank_res = RerankingService.rerank_candidates(rerank_req)
             chunks = [
                 ChunkSearchResult(
@@ -273,7 +273,7 @@ class AgentRuntime:
         if model_name == 'sarvam-2b':
             model_name = settings.DEFAULT_LLM_MODEL
 
-        retrieved_context = "\n\n".join([f"Source ({getattr(c, 'title', 'Knowledge Base')}): {c.content}" for c in chunks[:3]])
+        retrieved_context = "\n\n".join([f"Source ({getattr(c, 'title', 'Knowledge Base')}): {c.content}" for c in chunks[:8]])
 
         history_str = ""
         if conversation_history:
