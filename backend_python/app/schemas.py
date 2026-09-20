@@ -86,7 +86,7 @@ class RAGDiagnostics(BaseModel):
 class DocumentProcessRequest(BaseModel):
     title: str
     raw_text: str
-    doc_type: Literal["pdf", "docx", "txt", "faq", "url", "markdown", "file", "document", "website"]
+    doc_type: str = "txt"
     chunk_size: int = 500
     chunk_overlap: int = 50
     metadata: Optional[Dict[str, Any]] = None

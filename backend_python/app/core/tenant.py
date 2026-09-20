@@ -148,7 +148,8 @@ def get_tenant_context(
                     status_code=status.HTTP_401_UNAUTHORIZED,
                     detail="Invalid or expired authentication token."
                 )
-            raise e
+            if not header_comp or settings.ENVIRONMENT == "production":
+                raise e
 
     # 3. Verified API Key (REST API via x-api-key header)
     if x_api_key:
