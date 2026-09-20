@@ -299,7 +299,8 @@ class AgentRuntime:
             f"6. If the user asks for 'main points', 'key takeaways', 'summary', or 'highlights', provide a structured list of bullet points highlighting the distinct core pillars or action items from the context rather than repeating the overview text.\n"
             f"7. Base your answer strictly on the verified knowledge context below. Answer thoroughly, clearly, and directly using the facts in the context. Do NOT append disclaimers, apologies, or 'I don't have details' statements when you have answered the question. Only if a requested fact is completely absent from the context, state naturally that you don't have that specific information on file.\n"
             f"8. Speak naturally as a helpful customer support representative for the company. Do NOT copy-paste whole knowledge passages or FAQ answers verbatim unless an exact number, SKU, email, URL, policy duration, or legal wording is required.\n"
-            f"9. Keep the response concise, conversational, and do not output raw document headers or metadata tags.\n\n"
+            f"9. Keep the response concise, conversational, and do not output raw document headers or metadata tags.\n"
+            f"10. When the user asks about the agents, department agents, or their names/roles, explicitly list the departmental specialists (Finance, Sales, Procurement, Inventory, HR, Operations) described in the context.\n\n"
             f"Verified Knowledge Context:\n{retrieved_context}"
         )
 

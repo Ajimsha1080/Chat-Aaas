@@ -196,10 +196,12 @@ class DocumentAIService:
             b_page = block["page_number"]
             b_is_table = block["is_table"]
 
-            # If section changed and we have existing chunk content, flush it
-            if current_chunk_text and current_header and b_sec != current_header:
+            # If parent section changed or current chunk exceeds chunk_size, flush it
+            parent_changed = (b_parent != current_parent) if current_parent else (b_sec != current_header)
+            size_exceeded = (len(current_chunk_text) + len(b_content)) > chunk_size
+            if current_chunk_text and (parent_changed or size_exceeded):
                 chunk_idx += 1
-                prefix = f"[Document: {doc_title} | Section: {current_header}]\n" if current_header != "General" else f"[Document: {doc_title}]\n"
+                prefix = f"[Document: {doc_title} | Section: {current_parent or current_header}]\n" if (current_parent or current_header) != "General" else f"[Document: {doc_title}]\n"
                 full_body = f"{prefix}{current_chunk_text.strip()}" if not current_chunk_text.startswith("[Document:") else current_chunk_text.strip()
                 chunks.append(ProcessedChunk(
                     chunk_id=f"chk_{uuid.uuid4().hex[:8]}",
