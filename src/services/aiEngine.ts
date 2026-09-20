@@ -62,6 +62,10 @@ export class AIAgentEngine {
 
     // Attempt Live FastAPI Backend / LLM API Chat
     try {
+      if (company?.id) {
+        APIClient.setAuth(null, company.id);
+      }
+
       const historyPayload = conversationHistory.slice(-6).map(m => ({
         role: (m.sender === 'user' ? 'user' : 'assistant') as 'user' | 'assistant',
         content: m.text
