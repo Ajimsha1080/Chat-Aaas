@@ -20,6 +20,7 @@ class QueryRewriter:
         r'^(how|what|why|where|when|who)\s+(about|with|for)\s+',
         r'^(how much|how many|how long|how often|how so)\??$',
         r'^(tell me more|more details|explain more|elaborate)\??$',
+        r'^(main points|key points|bullet points|summary|takeaways|core points|highlights)\??$',
         r'^(is it|can it|does it|will it|are they|do they|can they)\b',
         r'^(what about|and for|how about)\b',
     ]
