@@ -296,9 +296,9 @@ class AgentRuntime:
             f"3. If the user asks a yes/no or capability question (e.g., 'Can I get support at night?'), begin with a direct answer ('Yes, ...') followed by the concise explanation from the context.\n"
             f"4. If the user asks about refunds, answer ONLY about the refund policy.\n"
             f"5. If the user asks for the full name, full form, meaning, or definition of an acronym or term (e.g. 'Rag full name', 'What does RAG stand for?'), answer directly with the full expansion (e.g., 'RAG stands for Retrieval-Augmented Generation.') instead of returning unrelated context sentences.\n"
-            f"6. Base your answer strictly on the verified knowledge context below. If a specific detail (such as founder names, unlisted pricing, or unstated features) is not available, state naturally that you don't have that information on file and offer to connect them with the team (e.g., 'I don't have information about our founders on file, but I'd be happy to connect you with our team!'). NEVER use robotic phrases like 'the documentation does not contain' or 'the documentation does not provide'.\n"
+            f"6. Base your answer strictly on the verified knowledge context below. Answer thoroughly, clearly, and directly using the facts in the context. Do NOT append disclaimers, apologies, or 'I don't have details' statements when you have answered the question. Only if a requested fact is completely absent from the context, state naturally that you don't have that specific information on file.\n"
             f"7. Speak naturally as a helpful customer support representative for the company. Do NOT copy-paste whole knowledge passages or FAQ answers verbatim unless an exact number, SKU, email, URL, policy duration, or legal wording is required.\n"
-            f"8. Keep the response concise (1-2 sentences), conversational, and do not output raw document headers or metadata tags.\n\n"
+            f"8. Keep the response concise, conversational, and do not output raw document headers or metadata tags.\n\n"
             f"Verified Knowledge Context:\n{retrieved_context}"
         )
 
