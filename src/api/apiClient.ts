@@ -193,8 +193,23 @@ export class APIClient {
     return this.request(`/api/v1/knowledge${q}`, 'GET');
   }
 
-  public static async ingestFile(data: { title: string; content: string; fileName?: string; docType?: string; collectionId?: string; category?: string }) {
-    return this.request('/api/v1/knowledge/files', 'POST', data);
+  public static async getKnowledgeSources(params?: { collectionId?: string; sourceType?: string; status?: string; lifecycleState?: string; search?: string }) {
+    const query = new URLSearchParams();
+    if (params?.collectionId) query.append('collection_id', params.collectionId);
+    if (params?.sourceType) query.append('source_type', params.sourceType);
+    if (params?.status) query.append('status', params.status);
+    if (params?.lifecycleState) query.append('lifecycle_state', params.lifecycleState);
+    if (params?.search) query.append('search', params.search);
+    const qs = query.toString() ? `?${query.toString()}` : '';
+    return this.request(`/api/v1/knowledge${qs}`, 'GET');
+  }
+
+  public static async getKnowledgeTrash() {
+    return this.request('/api/v1/knowledge/trash', 'GET');
+  }
+
+  public static async getKnowledgeSourceDetails(sourceId: string) {
+    return this.request(`/api/v1/knowledge/sources/${sourceId}`, 'GET');
   }
 
   public static async uploadRealFile(formData: FormData) {
@@ -438,83 +453,6 @@ export class APIClient {
 
   public static async sendOperatorReply(conversationId: string, text: string, operatorName?: string) {
     return this.request(`/api/v1/conversations/${conversationId}/reply`, 'POST', { text, operatorName });
-  }
-
-  // ================= KNOWLEDGE BASE & INGESTION ================= //
-  public static async getKnowledge(params?: { collectionId?: string; sourceType?: string; status?: string; lifecycleState?: string; search?: string }) {
-    const res: any = await this.getKnowledgeSources(params);
-    return res?.data || res;
-  }
-
-  public static async getKnowledgeSources(params?: { collectionId?: string; sourceType?: string; status?: string; lifecycleState?: string; search?: string }) {
-    const query = new URLSearchParams();
-    if (params?.collectionId) query.append('collection_id', params.collectionId);
-    if (params?.sourceType) query.append('source_type', params.sourceType);
-    if (params?.status) query.append('status', params.status);
-    if (params?.lifecycleState) query.append('lifecycle_state', params.lifecycleState);
-    if (params?.search) query.append('search', params.search);
-    const qs = query.toString() ? `?${query.toString()}` : '';
-    return this.request(`/api/v1/knowledge${qs}`, 'GET');
-  }
-
-  public static async getKnowledgeTrash() {
-    return this.request('/api/v1/knowledge/trash', 'GET');
-  }
-
-  public static async getKnowledgeSourceDetails(sourceId: string) {
-    return this.request(`/api/v1/knowledge/sources/${sourceId}`, 'GET');
-  }
-
-  public static async ingestFile(data: { title: string; content: string; fileName?: string; docType?: string; collectionId?: string; category?: string }) {
-    return this.request('/api/v1/knowledge/files', 'POST', data);
-  }
-
-  public static async uploadRealFile(formData: FormData) {
-    return this.request('/api/v1/knowledge/upload-file', 'POST', formData);
-  }
-
-  public static async ingestWebsite(data: { url: string; collectionId?: string; category?: string; maxPages?: number }) {
-    return this.request('/api/v1/knowledge/website', 'POST', data);
-  }
-
-  public static async ingestFaq(data: { question: string; answer: string; collectionId?: string; category?: string }) {
-    return this.request('/api/v1/knowledge/faq', 'POST', data);
-  }
-
-  public static async reprocessKnowledgeSource(sourceId: string) {
-    return this.request(`/api/v1/knowledge/sources/${sourceId}/reprocess`, 'POST');
-  }
-
-  public static async restoreKnowledgeSource(sourceId: string) {
-    return this.request(`/api/v1/knowledge/sources/${sourceId}/restore`, 'POST');
-  }
-
-  public static async disableKnowledgeSource(sourceId: string) {
-    return this.request(`/api/v1/knowledge/sources/${sourceId}/disable`, 'POST');
-  }
-
-  public static async enableKnowledgeSource(sourceId: string) {
-    return this.request(`/api/v1/knowledge/sources/${sourceId}/enable`, 'POST');
-  }
-
-  public static async trashKnowledgeSource(sourceId: string) {
-    return this.request(`/api/v1/knowledge/sources/${sourceId}/trash`, 'POST');
-  }
-
-  public static async deleteKnowledgeSource(sourceId: string, permanent: boolean = false) {
-    return this.request(`/api/v1/knowledge/sources/${sourceId}${permanent ? '/permanent' : ''}`, 'DELETE');
-  }
-
-  public static async testRag(query: string, top_k: number = 3) {
-    return this.request('/api/v1/knowledge/test-rag', 'POST', { query, top_k });
-  }
-
-  public static async getKnowledgeCollections() {
-    return this.request('/api/v1/knowledge/collections', 'GET');
-  }
-
-  public static async createKnowledgeCollection(data: { name: string; description?: string; icon?: string; color?: string }) {
-    return this.request('/api/v1/knowledge/collections', 'POST', data);
   }
 
   // ================= DEPLOYMENTS ================= //
