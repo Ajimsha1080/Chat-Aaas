@@ -182,12 +182,12 @@ class LLMProvider:
             rewritten_items = [rewrite_sentence(item) for item in cleaned_items[:4]]
 
             if mode == "list":
-                return "Based on the uploaded knowledge, here are the relevant details:\n\n" + "\n".join(
+                return "Here are the relevant details:\n\n" + "\n".join(
                     [f"- {item}." for item in rewritten_items]
                 )
 
             if mode == "comparison" and len(rewritten_items) >= 2:
-                return f"Based on the uploaded knowledge, the main difference is: {rewritten_items[0]}, while {rewritten_items[1]}."
+                return f"The main difference is: {rewritten_items[0]}, while {rewritten_items[1]}."
 
             if any(ql.startswith(prefix) for prefix in ["can ", "do ", "does ", "is ", "are ", "will "]):
                 answer_prefix = "Yes"
@@ -565,8 +565,8 @@ class LLMProvider:
         if is_who_question:
             has_person_info = any(score > 1.0 and any(w in sent.lower() for w in ["ceo", "founder", "founded by", "president", "director"]) for score, sent, _ in scored_sentences)
             if not has_person_info:
-                target_role = "the CEO" if "ceo" in q_lower else ("the founder" if "founder" in q_lower else "leadership")
-                return f"I don't have information about {target_role} available in verified documentation."
+                target_role = "the CEO" if "ceo" in q_lower else ("our founders" if "founder" in q_lower else "leadership")
+                return f"I don't have information about {target_role} on file, but I'd be happy to connect you with our team if you need more details!"
 
         # Case E: Boolean / Yes-No / Capability Question
         if is_boolean_question:

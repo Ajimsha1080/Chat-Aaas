@@ -296,8 +296,8 @@ class AgentRuntime:
             f"3. If the user asks a yes/no or capability question (e.g., 'Can I get support at night?'), begin with a direct answer ('Yes, ...') followed by the concise explanation from the context.\n"
             f"4. If the user asks about refunds, answer ONLY about the refund policy.\n"
             f"5. If the user asks for the full name, full form, meaning, or definition of an acronym or term (e.g. 'Rag full name', 'What does RAG stand for?'), answer directly with the full expansion (e.g., 'RAG stands for Retrieval-Augmented Generation.') instead of returning unrelated context sentences.\n"
-            f"6. Base your answer strictly on the verified knowledge context below. If a specific detail (such as a founder's name or pricing) is not mentioned in the context, state clearly that the documentation does not contain that information.\n"
-            f"7. Use the uploaded knowledge as evidence, but write the final response in a natural human voice. Do NOT copy-paste whole knowledge passages or FAQ answers verbatim unless an exact number, SKU, email, URL, policy duration, or legal wording is required.\n"
+            f"6. Base your answer strictly on the verified knowledge context below. If a specific detail (such as founder names, unlisted pricing, or unstated features) is not available, state naturally that you don't have that information on file and offer to connect them with the team (e.g., 'I don't have information about our founders on file, but I'd be happy to connect you with our team!'). NEVER use robotic phrases like 'the documentation does not contain' or 'the documentation does not provide'.\n"
+            f"7. Speak naturally as a helpful customer support representative for the company. Do NOT copy-paste whole knowledge passages or FAQ answers verbatim unless an exact number, SKU, email, URL, policy duration, or legal wording is required.\n"
             f"8. Keep the response concise (1-2 sentences), conversational, and do not output raw document headers or metadata tags.\n\n"
             f"Verified Knowledge Context:\n{retrieved_context}"
         )
@@ -337,8 +337,29 @@ class AgentRuntime:
             timestamp=now_str
         ))
 
+        # Natural response sanitization for customer-facing AI
+        llm_response = re.sub(
+            r'^(?:The\s+)?documentation\s+(?:does\s+not\s+(?:contain|provide)|doesn\'t\s+(?:contain|provide))\s+(?:information\s+(?:about|on|regarding)\s+)?([^.]+)\.?\s*',
+            r"I don't have information about \1 on file, but I'd be happy to connect you with our team for more details!",
+            llm_response,
+            flags=re.IGNORECASE
+        ).strip()
+        llm_response = re.sub(r"about (?:that information|the founder's name|founder's name) on file", "about our founders on file", llm_response, flags=re.IGNORECASE)
+        llm_response = re.sub(
+            r'^(?:The\s+)?(?:provided\s+|uploaded\s+)?documentation\s+(?:does\s+not|doesn\'t)\s+.*',
+            "I don't have that specific information on file, but I'd be happy to connect you with our team for more details!",
+            llm_response,
+            flags=re.IGNORECASE
+        ).strip()
+        llm_response = re.sub(
+            r'Based on the (?:uploaded|provided|verified)\s+(?:knowledge|documentation|context),\s*',
+            "",
+            llm_response,
+            flags=re.IGNORECASE
+        ).strip()
+
         if not grounding_eval.is_safe and not is_refusal:
-            llm_response = "I found related information in the uploaded knowledge, but I cannot verify enough detail to answer that safely. Please add a more specific FAQ or document section for this question."
+            llm_response = "I don't have enough verified information to answer that question accurately. I can connect you with our team if you'd like!"
             is_refusal = True
             completion_tokens = LLMProvider.count_tokens(llm_response, model=model_name)
             total_tokens = prompt_tokens + completion_tokens
@@ -488,8 +509,8 @@ class AgentRuntime:
             f"3. If the user asks a yes/no or capability question (e.g., 'Can I get support at night?'), begin with a direct answer ('Yes, ...') followed by the concise explanation from the context.\n"
             f"4. If the user asks about refunds, answer ONLY about the refund policy.\n"
             f"5. If the user asks for the full name, full form, meaning, or definition of an acronym or term (e.g. 'Rag full name', 'What does RAG stand for?'), answer directly with the full expansion (e.g., 'RAG stands for Retrieval-Augmented Generation.') instead of returning unrelated context sentences.\n"
-            f"6. Base your answer strictly on the verified knowledge context below. If a specific detail (such as a founder's name or pricing) is not mentioned in the context, state clearly that the documentation does not contain that information.\n"
-            f"7. Use the uploaded knowledge as evidence, but write the final response in a natural human voice. Do NOT copy-paste whole knowledge passages or FAQ answers verbatim unless an exact number, SKU, email, URL, policy duration, or legal wording is required.\n"
+            f"6. Base your answer strictly on the verified knowledge context below. If a specific detail (such as founder names, unlisted pricing, or unstated features) is not available, state naturally that you don't have that information on file and offer to connect them with the team (e.g., 'I don't have information about our founders on file, but I'd be happy to connect you with our team!'). NEVER use robotic phrases like 'the documentation does not contain' or 'the documentation does not provide'.\n"
+            f"7. Speak naturally as a helpful customer support representative for the company. Do NOT copy-paste whole knowledge passages or FAQ answers verbatim unless an exact number, SKU, email, URL, policy duration, or legal wording is required.\n"
             f"8. Keep the response concise (1-2 sentences), conversational, and do not output raw document headers or metadata tags.\n\n"
             f"Verified Knowledge Context:\n{retrieved_context}"
         )
