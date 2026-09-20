@@ -95,20 +95,27 @@ class QueryRewriter:
                     if clean_lm not in extracted_list_items:
                         extracted_list_items.append(clean_lm)
 
-            # Look for capitalized words/acronyms (e.g., TARKSHA, AWS, Azure, TechFlow, CoarAI)
+            # Look for specific noun phrases after "about", "is", "for", "called", "named"
+            about_matches = re.findall(r'(?:about|is|for|called|named)\s+([A-Za-z0-9\s_-]{2,35}?)(?:\?|\.|,|$|\n)', text, re.IGNORECASE)
+            for am in about_matches:
+                clean_am = re.sub(r'^(the|a|an|our|your)\s+', '', am.strip(), flags=re.IGNORECASE).strip()
+                if clean_am and clean_am.lower() not in {"it", "that", "this", "what", "you", "me", "us", "them"}:
+                    if clean_am not in extracted_entities:
+                        extracted_entities.append(clean_am)
+
+            # Look for multi-word Capitalized phrases first (e.g. Enterprise Cloud, Enterprise AI Gateway, Starter Plan)
+            multi_caps = re.findall(r'\b[A-Z][A-Za-z0-9_-]*(?:\s+[A-Z][A-Za-z0-9_-]*)+\b', text)
+            for mc in multi_caps:
+                if mc.lower() not in {"what is", "who is", "tell me", "thank you", "hello there"}:
+                    if mc not in extracted_entities:
+                        extracted_entities.append(mc)
+
+            # Fallback to single capitalized words/acronyms (e.g., TARKSHA, AWS, Azure, TechFlow, CoarAI)
             caps = re.findall(r'\b[A-Z][A-Za-z0-9_-]{2,}\b', text)
             for cap in caps:
-                if cap.lower() not in {"what", "when", "where", "which", "how", "this", "that", "there", "here", "hello", "thank", "thanks", "please", "yes", "sure", "the", "for", "with"}:
+                if cap.lower() not in {"what", "when", "where", "which", "how", "this", "that", "there", "here", "hello", "thank", "thanks", "please", "yes", "sure", "the", "for", "with", "plan"}:
                     if cap not in extracted_entities:
                         extracted_entities.append(cap)
-
-            # Look for specific noun phrases after "about", "is", "for"
-            about_matches = re.findall(r'(?:about|is|for|called|named)\s+([A-Za-z0-9\s_-]{2,25}?)(?:\?|\.|,|$|\n)', text, re.IGNORECASE)
-            for am in about_matches:
-                am_clean = am.strip()
-                if am_clean and am_clean.lower() not in {"it", "that", "this", "what", "you", "me", "us", "them"}:
-                    if am_clean not in extracted_entities:
-                        extracted_entities.append(am_clean)
 
         # Sort ORDINAL_MAP by key length descending so longer phrases match first
         if has_ordinal and extracted_list_items:
