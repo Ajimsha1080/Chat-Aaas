@@ -24,6 +24,14 @@ class QueryRewriter:
         r'^(what about|and for|how about)\b',
     ]
 
+    ORDINAL_MAP = {
+        "first": 0, "1st": 0, "the first one": 0, "the first": 0,
+        "second": 1, "2nd": 1, "the second one": 1, "the second": 1,
+        "third": 2, "3rd": 2, "the third one": 2, "the third": 2,
+        "fourth": 3, "4th": 3, "the fourth one": 3, "the fourth": 3,
+        "last": -1, "the last one": -1, "the latter": -1, "the former": 0
+    }
+
     @classmethod
     def rewrite_query(
         cls,
@@ -31,7 +39,7 @@ class QueryRewriter:
         conversation_history: Optional[List[Any]] = None
     ) -> str:
         """
-        Rewrites current_question if it contains coreferential ambiguity or ellipsis referencing
+        Rewrites current_question if it contains coreferential ambiguity, ordinals, or ellipsis referencing
         prior conversational turns.
         """
         if not current_question or not current_question.strip():
@@ -64,24 +72,33 @@ class QueryRewriter:
         q_lower = q_clean.lower()
         q_words = re.findall(r'\b[a-zA-Z0-9_-]+\b', q_lower)
 
-        # Check if question contains pronouns/ambiguous references or matches elliptical pattern
+        # Check if question has an ordinal reference
+        has_ordinal = any(k in q_lower for k in cls.ORDINAL_MAP)
         has_pronoun = any(p in q_words for p in cls.PRONOUNS_AND_REFERENCES)
         is_elliptical = any(re.search(pat, q_lower) for pat in cls.ELLIPTICAL_PATTERNS) or len(q_words) <= 3
 
-        if not has_pronoun and not is_elliptical:
+        if not has_pronoun and not is_elliptical and not has_ordinal:
             return q_clean
 
-        # Extract salient entities/topics from recent turns (last 4 messages)
+        # Extract salient entities/topics and list items from recent turns (last 4 messages)
         recent_turns = history_msgs[-4:]
         extracted_entities = []
+        extracted_list_items = []
 
-        # Find named entities or capitalized terms in previous user queries and assistant responses
         for turn in reversed(recent_turns):
             text = turn["content"]
+            # Extract bullet/numbered list items using MULTILINE
+            list_matches = re.findall(r'^[ \t]*(?:[-*•□]|\d+[.)])\s+\**([A-Za-z0-9\s_\-]{2,40}?)\**(?:\:|\.|\n|$)', text, flags=re.MULTILINE)
+            for lm in list_matches:
+                clean_lm = lm.strip()
+                if clean_lm and clean_lm.lower() not in {"note", "warning", "features", "details"}:
+                    if clean_lm not in extracted_list_items:
+                        extracted_list_items.append(clean_lm)
+
             # Look for capitalized words/acronyms (e.g., TARKSHA, AWS, Azure, TechFlow, CoarAI)
             caps = re.findall(r'\b[A-Z][A-Za-z0-9_-]{2,}\b', text)
             for cap in caps:
-                if cap.lower() not in {"what", "when", "where", "which", "how", "this", "that", "there", "here", "hello", "thank", "thanks", "please", "yes", "sure"}:
+                if cap.lower() not in {"what", "when", "where", "which", "how", "this", "that", "there", "here", "hello", "thank", "thanks", "please", "yes", "sure", "the", "for", "with"}:
                     if cap not in extracted_entities:
                         extracted_entities.append(cap)
 
@@ -93,13 +110,24 @@ class QueryRewriter:
                     if am_clean not in extracted_entities:
                         extracted_entities.append(am_clean)
 
-        primary_entity = extracted_entities[0] if extracted_entities else None
+        # Sort ORDINAL_MAP by key length descending so longer phrases match first
+        if has_ordinal and extracted_list_items:
+            for ord_key in sorted(cls.ORDINAL_MAP.keys(), key=len, reverse=True):
+                ord_idx = cls.ORDINAL_MAP[ord_key]
+                if ord_key in q_lower:
+                    if 0 <= ord_idx < len(extracted_list_items) or (ord_idx == -1 and extracted_list_items):
+                        target_item = extracted_list_items[ord_idx]
+                        rewritten = re.sub(rf'\b{re.escape(ord_key)}\b', target_item, q_clean, flags=re.IGNORECASE)
+                        if target_item.lower() not in rewritten.lower():
+                            rewritten = f"{rewritten.rstrip('?')} regarding {target_item}?"
+                        return rewritten.strip()
+
+        primary_entity = extracted_entities[0] if extracted_entities else (extracted_list_items[0] if extracted_list_items else None)
 
         if not primary_entity:
             # Look at the most recent user question
             last_user_msg = next((t["content"] for t in reversed(history_msgs) if t["role"] == "user"), None)
             if last_user_msg:
-                # Remove question words and stop words
                 clean_prev = re.sub(r'^(what is|who is|tell me about|explain|how does)\s+', '', last_user_msg.strip(), flags=re.IGNORECASE).rstrip('?.,')
                 if len(clean_prev.split()) <= 4 and clean_prev.strip():
                     primary_entity = clean_prev.strip()
@@ -109,12 +137,11 @@ class QueryRewriter:
 
         # Perform pronoun substitution or prefixing
         rewritten = q_clean
-        # Replace 'it' / 'they' / 'that' / 'this' if appropriate
         rewritten = re.sub(r'\b(it|this|that)\b', primary_entity, rewritten, flags=re.IGNORECASE)
         rewritten = re.sub(r'\b(its|their)\b', f"{primary_entity}'s", rewritten, flags=re.IGNORECASE)
         rewritten = re.sub(r'\b(they|them)\b', primary_entity, rewritten, flags=re.IGNORECASE)
 
-        # If question was purely elliptical like "How much?" or "What about pricing?", append entity
+        # If question was purely elliptical like "How much?", "What about pricing?", append entity
         if is_elliptical and primary_entity.lower() not in rewritten.lower():
             rewritten = f"{rewritten.rstrip('?')} for {primary_entity}?"
 

@@ -310,7 +310,9 @@ export class APIClient {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`
+        'Authorization': `Bearer ${token}`,
+        'x-company-id': this.currentCompanyId,
+        'x-correlation-id': `cli-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`
       },
       body: JSON.stringify({
         message,
@@ -728,4 +730,3 @@ export class APIClient {
     return this.request(`/api/v1/admin/plans/${planId}`, 'PATCH', { priceMonthlyINR, priceAnnualINR });
   }
 }
-

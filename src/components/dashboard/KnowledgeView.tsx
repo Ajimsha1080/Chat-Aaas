@@ -37,7 +37,6 @@ import { APIClient } from '../../api/apiClient';
 import { KnowledgeItem, KnowledgeType, KnowledgeCollection, KnowledgeGap, RagTestResponse } from '../../types';
 import { GlobalActionMenu, ActionMenuItem } from '../common/GlobalActionMenu';
 import { DeleteConfirmationModal } from '../common/DeleteConfirmationModal';
-import { generateComprehensiveDocumentContent, generateComprehensiveWebsiteContent } from '../../utils/documentGenerator';
 
 type SidebarTab = 'all' | 'active' | 'disabled' | 'trash' | 'published' | 'draft' | 'archived' | 'document' | 'faq' | 'url' | 'gaps';
 
@@ -50,7 +49,7 @@ export interface SemanticChunkView {
   tokens: number;
 }
 
-function getSemanticChunks(text: string, chunkSize = 500, overlap = 50): SemanticChunkView[] {
+function getSemanticChunks(text: string, chunkSize = 500, _overlap = 50): SemanticChunkView[] {
   if (!text || !text.trim()) return [];
   const clean = text.trim();
   const chunks: SemanticChunkView[] = [];
@@ -305,7 +304,7 @@ export const KnowledgeView: React.FC = () => {
   const docCount = knowledgeItems.filter(i => i.type === 'document' && i.lifecycleState !== 'trash').length;
   const faqCount = knowledgeItems.filter(i => i.type === 'faq' && i.lifecycleState !== 'trash').length;
   const websiteCount = knowledgeItems.filter(i => i.type === 'url' && i.lifecycleState !== 'trash').length;
-  const totalChunks = knowledgeItems.filter(i => (i.lifecycleState || 'active') === 'active').reduce((acc, curr) => acc + (curr.chunksCount || 1), 0);
+  const _totalChunks = knowledgeItems.filter(i => (i.lifecycleState || 'active') === 'active').reduce((acc, curr) => acc + (curr.chunksCount || 1), 0);
 
   const filteredItems = knowledgeItems.filter(item => {
     const itemStatus = getItemStatus(item);

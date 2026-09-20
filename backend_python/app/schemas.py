@@ -70,6 +70,18 @@ class EvaluateResponse(BaseModel):
     reasoning: str
     matched_citations: List[str] = []
 
+class RAGDiagnostics(BaseModel):
+    query: str
+    standalone_query: str
+    dense_results: List[Dict[str, Any]] = []
+    keyword_results: List[Dict[str, Any]] = []
+    fusion_results: List[Dict[str, Any]] = []
+    reranked_results: List[Dict[str, Any]] = []
+    context_tokens: int = 0
+    llm_latency_ms: float = 0.0
+    faithfulness_score: float = 1.0
+    citations: List[str] = []
+
 # 4. Document Intelligence & Chunking Pipeline
 class DocumentProcessRequest(BaseModel):
     title: str
@@ -85,6 +97,9 @@ class ProcessedChunk(BaseModel):
     content: str
     token_count: int
     section_header: Optional[str] = None
+    page_number: Optional[int] = None
+    parent_header: Optional[str] = None
+    metadata: Optional[Dict[str, Any]] = None
 
 class DocumentProcessResponse(BaseModel):
     success: bool
@@ -234,6 +249,7 @@ class ChatResponse(BaseModel):
     tokens_used: int = 120
     generation_mode: Optional[Literal["llm", "template_fallback"]] = "llm"
     generationMode: Optional[Literal["llm", "template_fallback"]] = "llm"
+    diagnostics: Optional[RAGDiagnostics] = None
 
 class ROIAnalyticsResponse(BaseModel):
     automation_rate_percent: float

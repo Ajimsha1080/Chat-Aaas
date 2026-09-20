@@ -1,7 +1,8 @@
 import math
 import re
-from typing import List, Dict, Any, Tuple
-from app.schemas import ChunkSearchResult
+import time
+from typing import List, Dict, Any, Tuple, Optional
+from app.schemas import ChunkSearchResult, RAGDiagnostics
 from app.services.embedding_service import EmbeddingService, UNIVERSAL_SEMANTIC_BASINS
 
 class RAGEngine:
@@ -52,21 +53,94 @@ class RAGEngine:
         query: str,
         company_id: str,
         stored_chunks: List[Dict[str, Any]],
-        threshold: float = 0.25,
-        top_k: int = 3
+        threshold: float = 0.15,
+        top_k: int = 6
     ) -> List[ChunkSearchResult]:
         """
         Hybrid Semantic Retrieval Engine:
         - Dense Vector Cosine Similarity (semantic conceptual matching & paraphrasing).
-        - Lexical BM25/keyword stemming & exact phrase match as precision tiebreaker/boost.
-        - Strict tenant boundary filtering by company_id.
+        - Lexical BM25/keyword scoring & exact phrase match as precision tiebreaker/boost.
+        - Reciprocal Rank Fusion (RRF) to combine dense and sparse rankings.
+        - Strict tenant boundary filtering by company_id and lifecycle state.
         """
-        if not query or not query.strip():
-            return []
+        results, _ = cls.search_chunks_with_diagnostics(
+            query=query,
+            standalone_query=query,
+            company_id=company_id,
+            stored_chunks=stored_chunks,
+            threshold=threshold,
+            top_k=top_k
+        )
+        return results
 
-        # 1. Compute dense query embedding vector
-        query_vec = EmbeddingService.compute_dense_vector(query, dimensions=1536, normalize=True)
+    @classmethod
+    def search_chunks_with_diagnostics(
+        cls,
+        query: str,
+        standalone_query: str,
+        company_id: str,
+        stored_chunks: List[Dict[str, Any]],
+        threshold: float = 0.15,
+        top_k: int = 6
+    ) -> Tuple[List[ChunkSearchResult], RAGDiagnostics]:
+        """
+        Hybrid Semantic Retrieval Engine with full telemetry diagnostics.
+        """
+        diagnostics = RAGDiagnostics(
+            query=query,
+            standalone_query=standalone_query,
+            dense_results=[],
+            keyword_results=[],
+            fusion_results=[],
+            reranked_results=[],
+            context_tokens=0,
+            llm_latency_ms=0.0,
+            faithfulness_score=1.0,
+            citations=[]
+        )
 
+        if not standalone_query or not standalone_query.strip():
+            return [], diagnostics
+
+        # 1. Filter chunks by tenant and active lifecycle
+        valid_chunks: List[Dict[str, Any]] = []
+        for chk in stored_chunks:
+            chunk_company = chk.get("companyId") or chk.get("company_id")
+            if chunk_company != company_id:
+                continue
+            # Check lifecycle status
+            lifecycle = chk.get("lifecycleState") or chk.get("status") or "active"
+            if lifecycle in ["trash", "archived", "disabled", "deleted"]:
+                continue
+            valid_chunks.append(chk)
+
+        if not valid_chunks:
+            return [], diagnostics
+
+        # 2. Dense Vector Search
+        query_vec = EmbeddingService.compute_dense_vector(standalone_query, dimensions=1536, normalize=True)
+        dense_scored: List[Tuple[float, Dict[str, Any]]] = []
+
+        for chk in valid_chunks:
+            content = chk.get("content", "")
+            title = chk.get("metadata", {}).get("title") or chk.get("title") or "Knowledge Base"
+            section = chk.get("sectionHeader") or ""
+            full_chunk_text = f"{content} {title} {section}".lower()
+
+            chunk_vec = chk.get("embedding")
+            if not chunk_vec or len(chunk_vec) != 1536:
+                chunk_vec = EmbeddingService.compute_dense_vector(full_chunk_text, dimensions=1536, normalize=True)
+
+            v_sim = cls.cosine_similarity(query_vec, chunk_vec)
+            dense_scored.append((v_sim, chk))
+
+        dense_scored.sort(key=lambda x: x[0], reverse=True)
+        diagnostics.dense_results = [
+            {"id": chk.get("id", ""), "title": chk.get("metadata", {}).get("title", ""), "score": round(score, 4)}
+            for score, chk in dense_scored[:10]
+        ]
+
+        # 3. Lexical BM25 Keyword Search
         stop_words = {
             "what", "is", "the", "a", "an", "in", "on", "at", "for", "to", "of", "and", "or",
             "are", "how", "do", "does", "did", "can", "could", "would", "should", "will", "tell", "me",
@@ -74,7 +148,7 @@ class RAGEngine:
             "who", "where", "when", "why", "which", "have", "has", "had", "think", "with", "from",
             "give", "information", "info", "details", "detail", "overview", "summary", "provide", "show", "list", "help"
         }
-        all_query_words = set(re.findall(r'\w+', query.lower()))
+        all_query_words = set(re.findall(r'\w+', standalone_query.lower()))
         meaningful_query_words = {w for w in all_query_words if w not in stop_words and len(w) > 1} or all_query_words
 
         def stem(w: str) -> str:
@@ -85,74 +159,102 @@ class RAGEngine:
             return w
 
         stemmed_query_words = {stem(w) for w in meaningful_query_words}
-        # Expand synonym stems from universal basins
         expanded_synonym_stems: set = set()
         for basin in UNIVERSAL_SEMANTIC_BASINS:
             if any(w in basin or stem(w) in {stem(b) for b in basin} for w in meaningful_query_words):
                 expanded_synonym_stems.update({stem(b) for b in basin})
 
-        results: List[ChunkSearchResult] = []
-
-        for chunk in stored_chunks:
-            # Enforce strict multi-tenant boundary
-            chunk_company = chunk.get("companyId") or chunk.get("company_id")
-            if chunk_company != company_id:
-                continue
-
-            content = chunk.get("content", "")
-            title = chunk.get("metadata", {}).get("title") or chunk.get("title") or "Knowledge Base"
-            section = chunk.get("sectionHeader") or ""
+        bm25_scored: List[Tuple[float, Dict[str, Any]]] = []
+        for chk in valid_chunks:
+            content = chk.get("content", "")
+            title = chk.get("metadata", {}).get("title") or chk.get("title") or "Knowledge Base"
+            section = chk.get("sectionHeader") or ""
             full_chunk_text = f"{content} {title} {section}".lower()
 
-            # A. Vector Cosine Similarity
-            chunk_vec = chunk.get("embedding")
-            if not chunk_vec or len(chunk_vec) != 1536:
-                chunk_vec = EmbeddingService.compute_dense_vector(full_chunk_text, dimensions=1536, normalize=True)
-
-            vector_sim = cls.cosine_similarity(query_vec, chunk_vec)
-
-            # B. Lexical Overlap Score (Direct match + Synonym match)
             chunk_raw_words = set(re.findall(r'\w+', full_chunk_text))
             chunk_stemmed_words = {stem(w) for w in chunk_raw_words}
+
             direct_overlap = len(stemmed_query_words.intersection(chunk_stemmed_words))
             synonym_overlap = len(expanded_synonym_stems.intersection(chunk_stemmed_words)) if expanded_synonym_stems else 0
 
-            direct_keyword_score = (direct_overlap / max(1, len(stemmed_query_words))) if stemmed_query_words else 0.0
-            synonym_keyword_score = min(1.0, synonym_overlap / max(1, len(stemmed_query_words))) if stemmed_query_words else 0.0
-            keyword_score = max(direct_keyword_score, synonym_keyword_score * 0.85)
+            direct_score = (direct_overlap / max(1, len(stemmed_query_words))) if stemmed_query_words else 0.0
+            synonym_score = min(1.0, synonym_overlap / max(1, len(stemmed_query_words))) if stemmed_query_words else 0.0
+            lexical_score = max(direct_score, synonym_score * 0.85)
 
-            # C. Hybrid Fusion Score
-            # If there is strong semantic vector similarity, even without literal keyword match, score remains high
-            hybrid_score = (vector_sim * 0.70) + (keyword_score * 0.30)
-
-            # Context & exact match boosts
+            # Boost exact substring matches and header matches
+            if standalone_query.lower().strip() in full_chunk_text:
+                lexical_score = max(lexical_score, 0.95)
             if any(w in section.lower() or w in title.lower() for w in stemmed_query_words if len(w) >= 3):
-                hybrid_score = min(1.0, hybrid_score + 0.10)
-            if query.lower().strip() in full_chunk_text:
-                hybrid_score = max(hybrid_score, 0.95)
+                lexical_score = min(1.0, lexical_score + 0.15)
 
-            final_score = min(1.0, max(0.0, hybrid_score))
+            bm25_scored.append((lexical_score, chk))
 
-            if final_score >= threshold:
+        bm25_scored.sort(key=lambda x: x[0], reverse=True)
+        diagnostics.keyword_results = [
+            {"id": chk.get("id", ""), "title": chk.get("metadata", {}).get("title", ""), "score": round(score, 4)}
+            for score, chk in bm25_scored[:10]
+        ]
+
+        # 4. Reciprocal Rank Fusion (RRF)
+        # RRF_Score(d) = sum(w / (k + rank)) where k = 60
+        k_rrf = 60
+        rrf_map: Dict[str, Dict[str, Any]] = {}
+
+        for rank, (score, chk) in enumerate(dense_scored):
+            cid = chk.get("id", f"chk_{rank}")
+            if cid not in rrf_map:
+                rrf_map[cid] = {"chunk": chk, "rrf_score": 0.0, "dense_score": score, "bm25_score": 0.0}
+            rrf_map[cid]["rrf_score"] += 0.70 / (k_rrf + rank + 1)
+            rrf_map[cid]["dense_score"] = score
+
+        for rank, (score, chk) in enumerate(bm25_scored):
+            cid = chk.get("id", f"chk_{rank}")
+            if cid not in rrf_map:
+                rrf_map[cid] = {"chunk": chk, "rrf_score": 0.0, "dense_score": 0.0, "bm25_score": score}
+            rrf_map[cid]["rrf_score"] += 0.30 / (k_rrf + rank + 1)
+            rrf_map[cid]["bm25_score"] = score
+
+        # Normalize RRF scores and apply direct cosine + lexical composite
+        fusion_list = list(rrf_map.values())
+        max_rrf = max((item["rrf_score"] for item in fusion_list), default=1.0) or 1.0
+
+        for item in fusion_list:
+            norm_rrf = item["rrf_score"] / max_rrf
+            composite = (item["dense_score"] * 0.65) + (item["bm25_score"] * 0.35)
+            # Combine RRF rank stability with raw similarity confidence
+            item["final_score"] = round(min(1.0, max(norm_rrf * 0.40 + composite * 0.60, item["dense_score"] * 0.80)), 4)
+
+        fusion_list.sort(key=lambda x: x["final_score"], reverse=True)
+        diagnostics.fusion_results = [
+            {"id": item["chunk"].get("id", ""), "title": item["chunk"].get("metadata", {}).get("title", ""), "score": item["final_score"]}
+            for item in fusion_list[:10]
+        ]
+
+        # Filter by threshold and top_k
+        results: List[ChunkSearchResult] = []
+        for item in fusion_list:
+            if item["final_score"] >= threshold and len(results) < top_k:
+                chk = item["chunk"]
+                content = chk.get("content", "")
+                title = chk.get("metadata", {}).get("title") or chk.get("title") or "Knowledge Base"
                 results.append(ChunkSearchResult(
-                    chunk_id=chunk.get("id", "chk_1"),
-                    knowledge_source_id=chunk.get("knowledgeSourceId") or chunk.get("knowledge_source_id", "src_1"),
+                    chunk_id=chk.get("id", "chk_1"),
+                    knowledge_source_id=chk.get("knowledgeSourceId") or chk.get("knowledge_source_id", "src_1"),
                     content=content,
                     title=title,
-                    similarity_score=round(final_score, 3)
+                    similarity_score=item["final_score"]
                 ))
 
-        results.sort(key=lambda x: x.similarity_score, reverse=True)
-        return results[:top_k]
+        return results, diagnostics
 
     @staticmethod
-    def evaluate_groundedness(chunks: List[ChunkSearchResult], threshold: float = 0.60) -> Tuple[bool, str]:
+    def evaluate_groundedness(chunks: List[ChunkSearchResult], threshold: float = 0.50) -> Tuple[bool, str]:
         """Evaluates whether retrieved chunks provide sufficient evidence to answer without hallucination."""
         if not chunks:
             return False, "I couldn't find enough information in your knowledge to answer this confidently."
         top_score = chunks[0].similarity_score
         if top_score < threshold:
-            return False, "I couldn't find enough information in your knowledge to answer this confidently."
+            return False, f"Retrieved confidence {top_score} is below groundedness threshold {threshold}."
         return True, f"Grounded response with confidence score {top_score}."
 
     @classmethod
@@ -178,12 +280,12 @@ class RAGEngine:
         3. Prompt injection containment fences
         4. LLM synthesis & citations formatting
         """
-        chunks = cls.search_chunks(query, company_id, stored_chunks, threshold=0.1, top_k=top_k)
-        is_grounded, ground_msg = cls.evaluate_groundedness(chunks, threshold=0.45)
+        chunks, diag = cls.search_chunks_with_diagnostics(query, query, company_id, stored_chunks, threshold=0.10, top_k=top_k)
+        is_grounded, ground_msg = cls.evaluate_groundedness(chunks, threshold=0.30)
 
         citations = []
         for c in chunks:
-            if c.similarity_score >= 0.45:
+            if c.similarity_score >= 0.30:
                 citations.append({
                     "chunkId": c.chunk_id,
                     "sourceId": c.knowledge_source_id,

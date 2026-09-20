@@ -3,7 +3,7 @@ import json
 import logging
 import httpx
 import re
-from typing import AsyncGenerator, Dict, List, Optional, Tuple
+from typing import Any, AsyncGenerator, Dict, List, Optional, Tuple
 from app.core.config import settings
 
 logger = logging.getLogger(__name__)
@@ -112,8 +112,9 @@ class LLMProvider:
     @classmethod
     def synthesize_grounded_answer(cls, prompt: str, system_instruction: str) -> str:
         """
-        Synthesizes a clean, natural, ChatGPT-style response directly answering the user's question,
+        Synthesizes a clean, natural, human-like response directly answering the user's question,
         strictly grounded in the verified knowledge context.
+        Handles: Factual, Semantic, Summary, Comparison, Reasoning, Numerical/Table, and Multi-document queries.
         """
         if not system_instruction or "Verified Knowledge Context:" not in system_instruction:
             return f"Regarding your inquiry about '{prompt}', our team is available to assist."
@@ -142,49 +143,153 @@ class LLMProvider:
             clean_passages.append({"title": title, "body": body_clean.strip()})
 
         if not clean_passages:
-            return f"I don't have enough verified information in our company knowledge base to answer that. I can connect you with our team if you'd like!"
+            return "I don't have enough verified information in our company knowledge base to answer that. I can connect you with our team if you'd like!"
 
         combined_context = "\n\n".join([p["body"] for p in clean_passages])
+        q_clean = prompt.strip()
+        q_lower = q_clean.lower()
+
+        def compose_natural_answer(evidence: List[str], mode: str = "direct", subject: str = "the company") -> str:
+            cleaned_items: List[str] = []
+            for item in evidence:
+                clean = re.sub(r'^(Question|Q|Answer|A):\s*', '', item.strip(), flags=re.I)
+                clean = re.sub(r'\s+', ' ', clean)
+                clean = clean.strip(" -*•\t\n")
+                if clean:
+                    cleaned_items.append(clean.rstrip("."))
+
+            cleaned_items = deduplicate(cleaned_items) if "deduplicate" in locals() else cleaned_items
+            if not cleaned_items:
+                return "I don't have enough verified information in the company knowledge base to answer that."
+
+            def rewrite_sentence(sentence: str) -> str:
+                rewritten = sentence.strip()
+                replacements = [
+                    (r'^our company\s+', f'{subject.capitalize()} '),
+                    (r'^we provide\s+', f'{subject.capitalize()} provides '),
+                    (r'^we offer\s+', f'{subject.capitalize()} offers '),
+                    (r'^we support\s+', f'{subject.capitalize()} supports '),
+                    (r'^customers are eligible for\s+', 'Customers can receive '),
+                    (r'^customers may\s+', 'Customers can '),
+                    (r'^the platform\s+', f'{subject.capitalize()} '),
+                ]
+                for pattern, replacement in replacements:
+                    rewritten = re.sub(pattern, replacement, rewritten, flags=re.I)
+                rewritten = rewritten[0].upper() + rewritten[1:] if rewritten else rewritten
+                return rewritten.rstrip(".")
+
+            ql = prompt.lower()
+            rewritten_items = [rewrite_sentence(item) for item in cleaned_items[:4]]
+
+            if mode == "list":
+                return "Based on the uploaded knowledge, here are the relevant details:\n\n" + "\n".join(
+                    [f"- {item}." for item in rewritten_items]
+                )
+
+            if mode == "comparison" and len(rewritten_items) >= 2:
+                return f"Based on the uploaded knowledge, the main difference is: {rewritten_items[0]}, while {rewritten_items[1]}."
+
+            if any(ql.startswith(prefix) for prefix in ["can ", "do ", "does ", "is ", "are ", "will "]):
+                answer_prefix = "Yes"
+                joined = " ".join(rewritten_items[:2])
+                if re.search(r'\b(no|not|cannot|can not|isn\'t|is not|aren\'t|are not|disabled|unavailable)\b', joined, re.I):
+                    answer_prefix = "No"
+                return f"{answer_prefix}. {joined}."
+
+            if mode == "summary":
+                return "In simple terms, " + " ".join([f"{item}." for item in rewritten_items[:2]])
+
+            return " ".join([f"{item}." for item in rewritten_items[:2]])
 
         # 0. Check for explicit FAQ entry match
         for p in clean_passages:
             faq_pattern = r'(?:Question|Q):\s*(.+?)\s*(?:Answer|A):\s*([\s\S]+?)(?=(?:\n(?:Question|Q):|$))'
             for match in re.finditer(faq_pattern, p["body"], re.IGNORECASE):
                 fq, fa = match.group(1).strip(), match.group(2).strip()
-                # Check overlap between user prompt and FAQ question
-                p_terms = set(re.findall(r'\w+', prompt.lower()))
+                p_terms = set(re.findall(r'\w+', q_lower))
                 fq_terms = set(re.findall(r'\w+', fq.lower()))
                 if len(p_terms.intersection(fq_terms)) >= max(1, len(p_terms) * 0.5):
-                    return fa
+                    return compose_natural_answer([fa], subject="the company")
+
+        # 0B. Parse Markdown Tables from context
+        table_rows_parsed: List[Dict[str, Any]] = []
+        for p in clean_passages:
+            lines = [l.strip() for l in p["body"].split("\n") if l.strip()]
+            table_lines = [l for l in lines if l.startswith("|") and l.endswith("|")]
+            if len(table_lines) >= 2:
+                headers = [c.strip() for c in table_lines[0].strip("|").split("|")]
+                for r_line in table_lines[1:]:
+                    if re.match(r'^[|\s:-]+$', r_line):
+                        continue
+                    cells = [c.strip() for c in r_line.strip("|").split("|")]
+                    if cells:
+                        row_dict = {headers[i] if i < len(headers) else f"col_{i}": cells[i] for i in range(len(cells))}
+                        row_dict["_raw"] = " | ".join(cells)
+                        row_dict["_doc"] = p["title"]
+                        table_rows_parsed.append(row_dict)
+
+        # 0C. Handle Table-specific lookups (e.g. "What is the price of Pro tier?", "What is SKU for X?")
+        if table_rows_parsed:
+            q_words = set(re.findall(r'\w+', q_lower))
+            for row in table_rows_parsed:
+                row_text_lower = " ".join([str(v).lower() for v in row.values()])
+                # If key entities from query match this row
+                matching_keys = [w for w in q_words if w in row_text_lower and len(w) > 2 and w not in ["what", "price", "cost", "plan", "tier", "table", "details"]]
+                if matching_keys:
+                    # Found relevant table row
+                    items_desc = [f"**{k}**: {v}" for k, v in row.items() if not k.startswith("_") and v]
+                    if items_desc:
+                        row_name = matching_keys[0].capitalize()
+                        return compose_natural_answer(
+                            [f"For {row_name}, " + ", ".join(items_desc)],
+                            subject="the company"
+                        )
+
+        # 0D. Handle Comparison Queries ("Compare X and Y", "Difference between X and Y", "versus")
+        is_comparison = any(k in q_lower for k in ["compare", "comparison", "difference between", "versus", " vs "])
+        if is_comparison:
+            comp_entities = re.findall(r'\b([A-Z][a-zA-Z0-9_\-]+)\b', prompt)
+            if not comp_entities or len(comp_entities) < 2:
+                # Look for common comparison targets
+                comp_match = re.search(r'(?:between|compare)\s+([A-Za-z0-9\s_-]+?)\s+(?:and|with|to|vs|versus)\s+([A-Za-z0-9\s_-]+?)(?:\?|\.|$)', prompt, re.IGNORECASE)
+                if comp_match:
+                    comp_entities = [comp_match.group(1).strip(), comp_match.group(2).strip()]
+
+            if comp_entities and len(comp_entities) >= 2:
+                ent_a, ent_b = comp_entities[0], comp_entities[1]
+                sents_a = [s.strip() for s in re.split(r'(?<=[.?!])\s+|\n+', combined_context) if ent_a.lower() in s.lower() and len(s.strip()) > 15]
+                sents_b = [s.strip() for s in re.split(r'(?<=[.?!])\s+|\n+', combined_context) if ent_b.lower() in s.lower() and len(s.strip()) > 15]
+
+                if sents_a and sents_b:
+                    clean_a = sents_a[0].lstrip("-*• ")
+                    clean_b = sents_b[0].lstrip("-*• ")
+                    return compose_natural_answer([clean_a, clean_b], mode="comparison", subject="the company")
 
         # 2. Extract individual factual sentences from all context
         raw_sentences = []
         for p in clean_passages:
-            # Handle bullet points
             lines = [l.strip() for l in p["body"].split("\n") if l.strip()]
             for line in lines:
-                # Remove boilerplate headers & metadata tags
                 if (
                     line.startswith("#") or 
                     line.lower().startswith("table of contents") or
-                    re.match(r'^(document title|document id|classification|effective date|version|review cycle|document owner|page url):', line, re.I)
+                    re.match(r'^(document title|document id|classification|effective date|version|review cycle|document owner|page url):', line, re.I) or
+                    re.search(r'https?://|\.app/|\.com/|\.io/|r\.jina\.ai|^[\w.-]+\.(app|com|io|net|org|ai)/', line, re.I)
                 ):
                     continue
-                # Split multi-sentence lines
                 s_list = re.split(r'(?<=[.?!])\s+', line)
                 for s in s_list:
                     s_clean = s.strip().lstrip("-*•□ \t0123456789.)")
                     if (
-                        len(s_clean) > 8 and 
-                        not re.match(r'^(document title|document id|classification|effective date|version|review cycle|document owner|page url):', s_clean, re.I)
+                        len(s_clean) >= 15 and 
+                        not re.match(r'^(document title|document id|classification|effective date|version|review cycle|document owner|page url):', s_clean, re.I) and
+                        not re.search(r'https?://|\.app/|\.com/|\.io/|r\.jina\.ai|^[\w.-]+\.(app|com|io|net|org|ai)/\S*$', s_clean, re.I)
                     ):
                         raw_sentences.append(s_clean)
 
         if not raw_sentences:
             return "I don't have enough verified information in our company knowledge base to answer that."
 
-        q_clean = prompt.strip()
-        q_lower = q_clean.lower()
         stop_words = {
             "what", "is", "the", "a", "an", "in", "on", "at", "for", "to", "of", "and", "or",
             "are", "how", "do", "does", "did", "can", "could", "would", "should", "will", "tell", "me",
@@ -195,6 +300,8 @@ class LLMProvider:
 
         q_tokens = re.findall(r'\b[a-zA-Z0-9_-]+\b', q_lower)
         meaningful_tokens = [t for t in q_tokens if t not in stop_words and len(t) > 1] or q_tokens
+        company_brand_names = {"coarai", "brightforge", "coar", "ai", "platform", "company", "app"}
+        topic_tokens = [t for t in meaningful_tokens if t.lower() not in company_brand_names]
 
         def stem(w: str) -> str:
             w = w.lower()
@@ -203,10 +310,36 @@ class LLMProvider:
                     return w[:-len(suffix)]
             return w
 
-        stemmed_q_tokens = [stem(t) for t in meaningful_tokens]
+        def is_valid_complete_sentence(text: str) -> bool:
+            clean = re.sub(r'^[-*•□\s\d.)]+', '', text).strip()
+            if len(clean) < 15 or clean.endswith(':'):
+                return False
+            if re.match(r'^(platform status|document title|classification|effective date|version|page url):', clean, re.I):
+                return False
+            words = clean.split()
+            if len(words) < 4:
+                return False
+            if re.search(r'^[\w.-]+\.(app|com|io|net|org|ai)/\S*$', clean, re.I):
+                return False
+            if re.search(r'^(new hire offer|explore the agents|request a demo|sign in|sign up)$', clean, re.I):
+                return False
+            return True
+
+        def deduplicate(items: List[str]) -> List[str]:
+            seen = set()
+            result = []
+            for item in items:
+                k = re.sub(r'[^a-z0-9]', '', item.lower())
+                if k not in seen:
+                    seen.add(k)
+                    result.append(item)
+            return result
+
+        active_tokens = topic_tokens if topic_tokens else meaningful_tokens
+        stemmed_q_tokens = [stem(t) for t in active_tokens]
 
         # 3. Classify Question Intent
-        is_what_do_you_do = any(re.search(pat, q_lower) for pat in [
+        is_company_overview = any(re.search(pat, q_lower) for pat in [
             r'what does (your|the|this) company do',
             r'what (do|does) (you|the company|your company|this company) do',
             r'what is (your|the) company',
@@ -214,8 +347,18 @@ class LLMProvider:
             r'what are your services',
             r'what is your product',
             r'tell me about (your company|the company|yourself)',
-            r'who are you and what do you do'
-        ])
+            r'who are you and what do you do',
+            r'explain (\w+\s+)?(coarai|brightforge|coar\s*ai|the platform|the company|your platform|yourself)',
+            r'what is (coarai|brightforge|coar\s*ai)',
+            r'tell me about (coarai|brightforge|coar\s*ai)',
+            r'about (coarai|brightforge|coar\s*ai)',
+            r'overview of (coarai|brightforge|coar\s*ai|the platform)',
+            r'describe (coarai|brightforge|coar\s*ai|the platform)'
+        ]) or q_lower in ["coarai", "what is coarai", "explain coarai", "explain about coarai", "about coarai", "tell me about coarai", "coarai overview"]
+
+        is_security_query = any(k in q_lower for k in ["security", "secure", "soc2", "hipaa", "gdpr", "compliance", "encryption", "aes", "tls", "privacy", "data protection", "rbac"])
+        is_pricing_query = any(k in q_lower for k in ["price", "pricing", "cost", "costs", "plan", "plans", "tier", "tiers", "subscription", "billing", "fee", "fees", "rates"])
+        is_integrations_query = any(k in q_lower for k in ["integration", "integrations", "connect", "connector", "connectors", "slack", "whatsapp", "crm", "erp", "webhook", "webhooks", "api"])
 
         is_boolean_question = any(q_lower.startswith(w) for w in [
             "can i", "can we", "can customers", "can users", "can you",
@@ -227,22 +370,20 @@ class LLMProvider:
         is_who_question = q_lower.startswith("who is") or q_lower.startswith("who are") or "founder" in q_lower or "ceo" in q_lower or "leadership" in q_lower
         is_hours_or_time_support = any(k in q_lower for k in ["night", "weekend", "24/7", "24*7", "hours", "available", "schedule", "timing", "time"]) and any(k in q_lower for k in ["support", "help", "service", "customer service"])
 
-        # 4. Sentence Scoring against Query
+        # 4. Sentence Scoring strictly against Query Topic
         scored_sentences = []
         for sent in raw_sentences:
             s_lower = sent.lower()
             s_tokens = re.findall(r'\b[a-zA-Z0-9_-]+\b', s_lower)
             s_stems = [stem(t) for t in s_tokens]
 
-            match_count = sum(1 for st in stemmed_q_tokens if st in s_stems or any(st in target for target in s_stems if len(st) >= 4))
+            topic_match_count = sum(1 for st in stemmed_q_tokens if st in s_stems or any(st in target for target in s_stems if len(st) >= 4))
 
-            # Phrase bonus
             phrase_bonus = 0.0
-            if any(token in s_lower for token in meaningful_tokens):
-                phrase_bonus += 0.2
+            if any(token in s_lower for token in active_tokens):
+                phrase_bonus += 0.3
 
-            # Specific intent boosts
-            if is_what_do_you_do and any(w in s_lower for w in ["provides", "provide", "offers", "specializes in", "services", "cloud", "platform", "solution", "workforce"]):
+            if is_company_overview and any(w in s_lower for w in ["provides", "provide", "offers", "specializes in", "services", "cloud", "platform", "solution", "workforce"]):
                 phrase_bonus += 0.8
             if is_hours_or_time_support and any(w in s_lower for w in ["24/7", "24*7", "support", "customer support", "round-the-clock", "night", "day"]):
                 phrase_bonus += 0.9
@@ -251,14 +392,15 @@ class LLMProvider:
             if is_who_question and any(w in s_lower for w in ["ceo", "founder", "founded by", "president", "director", "lead", "officer"]):
                 phrase_bonus += 0.9
 
-            total_score = match_count + phrase_bonus
-            scored_sentences.append((total_score, sent))
+            total_score = topic_match_count * 1.5 + phrase_bonus
+            if is_valid_complete_sentence(sent):
+                total_score += 0.5
+            scored_sentences.append((total_score, sent, topic_match_count))
 
+        scored_sentences = [s for s in scored_sentences if is_valid_complete_sentence(s[1])]
         scored_sentences.sort(key=lambda x: x[0], reverse=True)
 
-        # 5. Formulate Question-Specific Response
-
-        # Case 0: Full Name / Full Form / Acronym Definition (e.g., "Rag full name", "SLA full form", "What does API stand for?")
+        # Case 0: Full Name / Full Form / Acronym Definition
         is_acronym_or_definition = any(k in q_lower for k in ["full name", "full form", "stand for", "stands for", "meaning of", "definition of"]) or (q_lower.startswith("what is") and len(meaningful_tokens) == 1)
         if is_acronym_or_definition:
             candidate_terms = [t for t in meaningful_tokens if t.lower() not in ["full", "name", "form", "stand", "stands", "mean", "meaning", "definition", "what", "term"]]
@@ -285,78 +427,228 @@ class LLMProvider:
                     if m4 and m4.group(1):
                         return f"{term.upper()} stands for **{m4.group(1).strip()}**."
 
+        entity_name = "The platform"
+        if system_instruction:
+            ent_m = re.search(r'company\s+([A-Za-z0-9_\-]+)', system_instruction, re.I)
+            if ent_m:
+                entity_name = ent_m.group(1).capitalize()
+
+        # Case 0B: Security & Compliance Intent
+        if is_security_query:
+            sec_sents = [
+                s for s in raw_sentences
+                if any(k in s.lower() for k in ["soc2", "hipaa", "gdpr", "encryption", "256-bit", "aes", "tls", "zero-trust", "iso27001", "compliance", "security", "rbac", "data protection"]) and not s.lower().startswith("platform status:")
+            ]
+            if sec_sents:
+                clean_points = []
+                for s in sec_sents:
+                    cl = re.sub(r'Platform Status:[^|]+\|\s*Tier:[^|]+\|\s*', '', s, flags=re.I)
+                    cl = re.sub(r'^(Security|Compliance):\s*', '', cl, flags=re.I).strip().lstrip("-*• ")
+                    if cl.endswith(':'):
+                        continue
+                    if len(cl) >= 12 and cl not in clean_points:
+                        clean_points.append(cl)
+                clean_points = deduplicate(clean_points)[:4]
+                if len(clean_points) == 1:
+                    return compose_natural_answer(clean_points, subject=entity_name)
+                if clean_points:
+                    return compose_natural_answer(clean_points, mode="list", subject=entity_name)
+
+        # Case 0C: Pricing & Plans Intent
+        if is_pricing_query:
+            price_sents = [
+                s for s in raw_sentences
+                if (
+                    re.search(r'[\$€£₹]|/mo|/month|/year|/yr|pricing plan|pricing model|subscription fee|free tier|starter:|pro:|growth:|enterprise:\s*[\$€£₹\d]|per user', s, re.I) or
+                    (any(k in s.lower() for k in ["pricing", "subscription plan", "billing tier"]) and any(k in s.lower() for k in ["cost", "price", "$", "inr", "usd", "month", "free"]))
+                ) and not s.lower().startswith("platform status:")
+            ]
+            if price_sents:
+                clean_pts = []
+                for s in price_sents:
+                    cl = re.sub(r'^(Pricing Plans|Pricing|Plans):\s*', '', s, flags=re.I).strip().lstrip("-*• ")
+                    if cl.endswith(':'):
+                        continue
+                    if len(cl) >= 6 and cl not in clean_pts:
+                        clean_pts.append(cl)
+                clean_pts = deduplicate(clean_pts)[:4]
+                if clean_pts:
+                    return compose_natural_answer(clean_pts, mode="list", subject=entity_name)
+
+        # Case 0D: Integrations Intent
+        if is_integrations_query:
+            int_sents = [
+                s for s in raw_sentences
+                if any(k in s.lower() for k in ["integration", "connector", "slack", "whatsapp", "crm", "erp", "webhook", "api", "salesforce", "hubspot", "zendesk"]) and not s.lower().startswith("platform status:")
+            ]
+            if int_sents:
+                clean_pts = []
+                for s in int_sents:
+                    cl = re.sub(r'^(Integrations|Supported Integrations):\s*', '', s, flags=re.I).strip().lstrip("-*• ")
+                    if cl.endswith(':'):
+                        continue
+                    if len(cl) >= 8 and cl not in clean_pts:
+                        clean_pts.append(cl)
+                clean_pts = deduplicate(clean_pts)[:4]
+                if clean_pts:
+                    return compose_natural_answer(clean_pts, mode="list", subject=entity_name)
+
+        # Case 0E: Contact & Reachability Intent
+        is_contact_query = any(re.search(pat, q_lower) for pat in [
+            r'contact', r'email', r'phone', r'reach (us|out|support)', r'support email', r'helpline', r'office', r'address', r'location'
+        ])
+        if is_contact_query:
+            email_matches = re.findall(r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b', combined_context)
+            phone_matches = re.findall(r'\b(?:\+?\d{1,3}[-.\s]?)?\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}\b', combined_context)
+            contact_points = []
+            if email_matches:
+                contact_points.append(f"Email: **{deduplicate(email_matches)[0]}**")
+            if phone_matches:
+                contact_points.append(f"Phone: **{deduplicate(phone_matches)[0]}**")
+            if contact_points:
+                return compose_natural_answer(contact_points, mode="list", subject=entity_name)
+
         # Case A: "What does your company do?" / Company Overview
-        if is_what_do_you_do:
-            for score, sent in scored_sentences:
+        if is_company_overview:
+            overview_candidates = [
+                s for s in raw_sentences
+                if is_valid_complete_sentence(s) and
+                re.search(r'\b(platform|agent-as-a-service|engineered to|enterprise|provides|offers|automates|intelligence|service|services|solution|solutions|product|products|helps|built|designed|software|system|business|customer)\b', s, re.I) and
+                not re.search(r'expand agents as you trust', s, re.I) and
+                not re.search(r'new hire offer', s, re.I)
+            ]
+            if overview_candidates:
+                deduped = deduplicate(overview_candidates)[:2]
+                return compose_natural_answer(deduped, mode="summary", subject=entity_name)
+
+            valid_raw = deduplicate([s for s in raw_sentences if is_valid_complete_sentence(s)])[:2]
+            if valid_raw:
+                return compose_natural_answer(valid_raw, mode="summary", subject=entity_name)
+
+            for score, sent, _ in scored_sentences:
                 s_lower = sent.lower()
                 if any(w in s_lower for w in ["provides", "provide", "offers", "offer", "specializes", "services", "cloud", "platform", "solutions"]):
-                    # Transform cleanly to conversational answer
                     clean_ans = sent.strip().rstrip('.')
                     if clean_ans.lower().startswith("our company"):
-                        return f"The company {clean_ans[11:].strip()}."
+                        return f"{entity_name} {clean_ans[11:].strip()}."
                     elif clean_ans.lower().startswith("we provide"):
-                        return f"The company provides {clean_ans[10:].strip()}."
+                        return f"{entity_name} provides {clean_ans[10:].strip()}."
                     elif clean_ans.lower().startswith("we offer"):
-                        return f"The company offers {clean_ans[8:].strip()}."
+                        return f"{entity_name} offers {clean_ans[8:].strip()}."
                     else:
-                        return f"{clean_ans}."
+                        return compose_natural_answer([clean_ans], subject=entity_name)
             if scored_sentences and scored_sentences[0][0] > 0.5:
-                return f"{scored_sentences[0][1].strip()}."
+                return compose_natural_answer([scored_sentences[0][1]], subject=entity_name)
 
-        # Case B: Support at Night / 24/7 Hours ("Can I get support at night?", "Is support 24/7?")
+        # Case B: Support at Night / 24/7 Hours
         if is_hours_or_time_support:
-            for score, sent in scored_sentences:
+            for score, sent, _ in scored_sentences:
                 s_lower = sent.lower()
                 if "24/7" in s_lower or "round-the-clock" in s_lower or "24 hours" in s_lower:
                     if "night" in q_lower or "weekend" in q_lower or "anytime" in q_lower or "can i" in q_lower:
-                        return "Yes. The company provides 24/7 customer support, so assistance is available at night."
-                    return f"Yes. {sent.strip()}."
+                        return f"Yes. {entity_name} provides 24/7 customer support, so assistance is available at night."
+                    return compose_natural_answer([sent], subject=entity_name)
                 elif "support" in s_lower:
-                    return f"{sent.strip()}."
+                    return compose_natural_answer([sent], subject=entity_name)
 
-        # Case C: Refund Window / Policy ("How long do I have to ask for a refund?", "Can I request refunds?")
+        # Case C: Refund Window / Policy
         if is_refund_duration:
-            for score, sent in scored_sentences:
+            for score, sent, _ in scored_sentences:
                 s_lower = sent.lower()
                 if any(w in s_lower for w in ["refund", "return", "days", "money back"]):
                     clean_ans = sent.strip()
                     if is_boolean_question and not clean_ans.lower().startswith("yes"):
-                        return f"Yes. {clean_ans}"
-                    return clean_ans
+                        return compose_natural_answer([clean_ans], subject=entity_name)
+                    return compose_natural_answer([clean_ans], subject=entity_name)
 
-        # Case D: Specific Entity / Person Query ("Who is the CEO?", "Who is the founder?")
+        # Case D: Specific Entity / Person Query
         if is_who_question:
-            has_person_info = any(score > 1.0 and any(w in sent.lower() for w in ["ceo", "founder", "founded by", "president", "director"]) for score, sent in scored_sentences)
+            has_person_info = any(score > 1.0 and any(w in sent.lower() for w in ["ceo", "founder", "founded by", "president", "director"]) for score, sent, _ in scored_sentences)
             if not has_person_info:
                 target_role = "the CEO" if "ceo" in q_lower else ("the founder" if "founder" in q_lower else "leadership")
-                return f"I don't have information about {target_role} available."
+                return f"I don't have information about {target_role} available in verified documentation."
 
         # Case E: Boolean / Yes-No / Capability Question
         if is_boolean_question:
-            top_score, top_sent = scored_sentences[0] if scored_sentences else (0, "")
+            top_score, top_sent, _ = scored_sentences[0] if scored_sentences else (0, "", 0)
             if top_score >= 1.0:
                 s_lower = top_sent.lower()
-                # Check if sentence positively confirms the query concept
                 if not s_lower.startswith("yes") and not s_lower.startswith("no"):
-                    return f"Yes. {top_sent.strip()}"
-                return top_sent.strip()
+                    return compose_natural_answer([top_sent], subject=entity_name)
+                return compose_natural_answer([top_sent], subject=entity_name)
+
+        # Extract all named agent entities from documentation
+        known_agent_matches = [
+            m.title() for m in re.findall(r'\b(Finance|Procurement|Sales|Inventory|HR|Operations|Support|Billing|Customer Success|Marketing|Executive)\s+Agent\b', combined_context, re.I)
+        ]
+        all_agent_entities = deduplicate(known_agent_matches)
+
+        is_list_which_are_they = any(re.search(pat, q_lower) for pat in [
+            r'which are (they|the)',
+            r'what are (they|the)',
+            r'list (them|all|the)',
+            r'name (them|the)',
+            r'what agents',
+            r'which agents'
+        ])
+
+        if is_list_which_are_they:
+            if all_agent_entities:
+                return compose_natural_answer(all_agent_entities, mode="list", subject=entity_name)
+
+        # Case E2: Universal Quantity / Counting Questions
+        is_count_query = any(k in q_lower for k in ["how many", "how much", "number of", "total count", "count of"])
+        if is_count_query:
+            if any(k in q_lower for k in ["agent", "module", "department"]) and all_agent_entities:
+                return f"{entity_name} provides {len(all_agent_entities)} specialized department agents: {', '.join(all_agent_entities)}."
+            for score, sent, _ in scored_sentences:
+                s_lower = sent.lower()
+                if (any(num in s_lower for num in ["one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten", "eleven", "twelve"]) or any(char.isdigit() for char in s_lower)) and is_valid_complete_sentence(sent):
+                    return compose_natural_answer([sent], subject=entity_name)
+
+        # Case E3: Agent & Module Inquiries
+        if any(k in q_lower for k in ["agent", "agents", "module", "modules"]):
+            agent_sentences = deduplicate([
+                s for s in raw_sentences
+                if re.search(r'agent|agents|module|modules', s, re.I) and
+                is_valid_complete_sentence(s) and
+                not re.search(r'expand agents as you trust', s, re.I) and
+                not re.search(r'new hire offer', s, re.I)
+            ])
+            if agent_sentences:
+                primary = next((
+                    s for s in agent_sentences
+                    if re.search(r'\b(understand|execute|workflows|action|finance|sales|procurement|inventory|hr|operations|department)\b', s, re.I)
+                ), agent_sentences[0])
+                supporting = [s for s in agent_sentences if s != primary][:1]
+                if supporting:
+                    return compose_natural_answer([primary, supporting[0]], subject=entity_name)
+                return compose_natural_answer([primary], subject=entity_name)
 
         # Case F: Specific multi-sentence or topic match
-        if scored_sentences and scored_sentences[0][0] >= 0.8:
+        if scored_sentences and scored_sentences[0][0] >= 0.5:
             selected_sents = []
             seen = set()
-            for score, s in scored_sentences:
-                if score < 0.5 or len(selected_sents) >= 3:
+            for score, s, t_match in scored_sentences:
+                if len(selected_sents) >= 2:
                     break
                 s_key = s.lower().strip()
-                if s_key not in seen:
+                if s_key not in seen and len(s.strip()) >= 15 and is_valid_complete_sentence(s):
                     seen.add(s_key)
-                    selected_sents.append(s)
+                    selected_sents.append(s.strip().rstrip('.'))
 
-            return "\n\n".join(selected_sents)
+            if len(selected_sents) == 1:
+                return compose_natural_answer(selected_sents, subject=entity_name)
+            if len(selected_sents) > 1:
+                return compose_natural_answer(selected_sents, subject=entity_name)
+
+        # Fallback: Top informative sentences from raw_sentences
+        fallback_sents = deduplicate([s for s in raw_sentences if is_valid_complete_sentence(s)])[:2]
+        if fallback_sents:
+            return compose_natural_answer(fallback_sents, subject=entity_name)
 
         # Fallback Grounded Statement
-        return "I don't have enough specific information to answer that. I can connect you with our team if you'd like!"
+        return "I don't have enough specific information in the company knowledge base to answer that. I can connect you with our team if you'd like!"
 
     @classmethod
     async def stream_chat_completion(

@@ -137,7 +137,7 @@ export class AIAgentEngine {
       };
     }
 
-    if (identityQueries.includes(cleanQuery)) {
+    if (identityQueries.some(q => cleanQuery.includes(q)) || /(who are you|what can you do|what do you do|help me|what is your name)/i.test(cleanQuery)) {
       return {
         message: `I'm **${company.agent.name}**, the dedicated AI assistant for **${company.name}**!\n\n### What I can help you with:\n- **Answers from Verified Knowledge**: Instant, accurate facts from our company documentation, policies, and FAQs.\n- **Product & Service Inquiries**: Detailed explanations of features, specifications, and workflows.\n- **Action Execution**: Booking review sessions, checking order/account statuses, and handling requests.\n- **General Assistance**: Answering technical questions, synthesizing summaries, and troubleshooting issues.\n\nWhat would you like to explore today?`,
         reasoningSteps: [`[Conversational Intent] Recognized identity query.`]
@@ -547,6 +547,7 @@ export class AIAgentEngine {
     }
 
     // Helper to strip markdown and check if a line is metadata boilerplate
+    // Helper to strip markdown and check if a line is metadata boilerplate
     const isMetadataHeader = (text: string): boolean => {
       const clean = text.replace(/[*_#`~:\-\s]+/g, ' ').trim().toLowerCase();
       return (
@@ -564,6 +565,51 @@ export class AIAgentEngine {
       );
     };
 
+    const isValidCompleteSentence = (text: string): boolean => {
+      const clean = text.replace(/^[-*•□\s\d.)]+/, '').trim();
+      if (clean.length < 15) return false;
+      if (clean.endsWith(':')) return false;
+      if (/^(platform status|document title|classification|effective date|version|page url):/i.test(clean)) return false;
+      const words = clean.split(/\s+/).filter(Boolean);
+      if (words.length < 4) return false;
+      if (/^[\w.-]+\.(app|com|io|net|org|ai)\/\S*$/i.test(clean)) return false;
+      if (/^(new hire offer|explore the agents|request a demo|sign in|sign up|all six department agents)$/i.test(clean)) return false;
+      const hasVerb = /\b(is|are|was|were|provides|provide|offers|offer|automates|automate|operates|operate|supports|support|allows|allow|enables|enable|features|feature|includes|include|delivers|deliver|deploys|deploy|understands|understand|executes|execute|has|have|connects|connect|empowers|empower|built|designed|engineered|scales|scale|handles|handle|helps|help|serves|serve|uses|use|runs|run|monitors|monitor|gives|give|creates|create|contains|contain|consists|consist|specializes|specialized)\b/i.test(clean);
+      return hasVerb;
+    };
+
+    const isValidNamedSection = (title: string): boolean => {
+      const clean = title.trim();
+      if (clean.length < 3 || clean.length > 35) return false;
+      if (/[.!?]$/.test(clean)) return false; // Exclude sentences/slogans
+      if (/\b(should|from|your|with|into|more|how|why|when|where|what|for)\b/i.test(clean)) return false; // Exclude slogan clauses
+      if (/^(sign in|sign up|request demo|explore|table of contents|overview|document title)$/i.test(clean)) return false;
+      return true;
+    };
+
+    const deduplicate = (list: string[]): string[] => {
+      const seen = new Set<string>();
+      const result: string[] = [];
+      for (const item of list) {
+        const key = item.toLowerCase().replace(/[^a-z0-9]/g, '');
+        if (!seen.has(key)) {
+          seen.add(key);
+          result.push(item);
+        }
+      }
+      return result;
+    };
+
+    const cleanLineArtifacts = (str: string): string => {
+      return str
+        .replace(/Page URL:\s*https?:\/\/\S+/gi, '')
+        .replace(/https?:\/\/\S+/gi, '')
+        .replace(/r\.jina\.ai\S*/gi, '')
+        .replace(/\b[\w.-]+\.(app|com|io|net|org|ai)\/\S*/gi, '')
+        .replace(/\s+/g, ' ')
+        .trim();
+    };
+
     // Extract sentences and clean them
     const lines = allText.split('\n').map(l => l.trim()).filter(l => l.length > 5);
     const rawSentences: string[] = [];
@@ -571,25 +617,36 @@ export class AIAgentEngine {
     
     for (const line of lines) {
       if (isMetadataHeader(line)) continue;
-      if (line.startsWith('#') || line.toLowerCase().startsWith('table of contents')) {
-        if (line.startsWith('###') || line.startsWith('##')) {
-          const secTitle = line.replace(/^#+\s*/, '').trim();
-          if (!isMetadataHeader(secTitle)) {
+      const cleanLine = cleanLineArtifacts(line);
+      if (!cleanLine || cleanLine.length < 10) continue;
+
+      if (cleanLine.startsWith('#') || cleanLine.toLowerCase().startsWith('table of contents')) {
+        if (cleanLine.startsWith('###') || cleanLine.startsWith('##')) {
+          const secTitle = cleanLine.replace(/^#+\s*/, '').trim();
+          if (!isMetadataHeader(secTitle) && isValidNamedSection(secTitle)) {
             operatingSections.push(secTitle);
           }
         }
         continue;
       }
-      const sList = line.split(/(?<=[.?!])\s+/);
+      const sList = cleanLine.split(/(?<=[.?!])\s+/);
       for (const s of sList) {
         const sClean = s.replace(/^[-*•□\s\d.)]+/, '').trim();
-        if (sClean.length > 8 && !isMetadataHeader(sClean)) {
+        if (
+          sClean.length >= 15 && 
+          !isMetadataHeader(sClean) &&
+          isValidCompleteSentence(sClean)
+        ) {
           rawSentences.push(sClean);
         }
       }
     }
 
     if (rawSentences.length === 0) {
+      const fallbackDesc = _company?.agent?.description || _company?.agent?.systemInstructions;
+      if (fallbackDesc) {
+        return `${_company.name || 'Our platform'} is ${fallbackDesc.trim()}`;
+      }
       return `I don't have enough verified information in our company knowledge base to answer that.`;
     }
 
@@ -604,23 +661,36 @@ export class AIAgentEngine {
     ]);
 
     const qTokens = (qLower.match(/\b[a-z0-9_-]+\b/g) || []).filter(t => !stopWords.has(t) && t.length > 1);
+    const companyBrandNames = new Set([
+      'coarai', 'brightforge', 'coar', 'ai', 'platform', 'company', 'app', 
+      ...(_company?.name ? _company.name.toLowerCase().split(/\s+/) : [])
+    ]);
+    const topicTokens = qTokens.filter(t => !companyBrandNames.has(t));
 
-    const isWhatDoYouDo = /what does (your|the|this) company do|what (do|does) (you|the company|your company|this company) do|what is (your|the) company|what services (do you|does the company|are) provide|what are your services|tell me about (your company|the company)|who are you and what do you do/i.test(qLower);
+    const isCompanyOverview = /(explain(\s+about)?|what is|tell me about|about|overview of|describe|what does)\s*(coarai|brightforge|coar\s*ai|the platform|the company|your company|this company|platform|company|yourself)?\b/i.test(qLower) || /^(coarai|what is coarai|explain coarai|explain about coarai|about coarai|tell me about coarai|coarai overview|who are you)$/i.test(qLower.trim());
+    const isAgentInquiry = /agent|agents|module|modules/i.test(qLower);
+    const isSecurityQuery = /(security|secure|soc2|hipaa|gdpr|compliance|encryption|aes|tls|privacy|data protection|rbac)/i.test(qLower);
+    const isPricingQuery = /(price|pricing|cost|costs|plan|plans|tier|tiers|subscription|billing|fee|fees|rates)/i.test(qLower);
+    const isIntegrationsQuery = /(integration|integrations|connect|connector|connectors|slack|whatsapp|crm|erp|webhook|webhooks|api)/i.test(qLower);
     const isMainPoints = /(main (point|points|piont|pionts)|key points|summary|overview|highlights|core principles|operating principles)/i.test(qLower);
-    const isListWhichAreThey = /(which are (they|the)|what are (they|the)|list (them|all|the)|name (them|the)|procedures)/i.test(qLower);
+    const isListWhichAreThey = /(which are (they|the)|what are (they|the)|list (them|all|the)|name (them|the)|procedures|what agents|which agents)/i.test(qLower);
     const isBoolean = /^(can i|can we|can customers|can users|can you|is there|are there|is it|are you|do you|does the|does your|do they|will you|is support|are refunds)\b/i.test(qLower);
     const isRefundDuration = /(refund|return|money back)/i.test(qLower) && /(how long|days|timeline|time limit|window|when|period|policy)/i.test(qLower);
     const isWhoQuestion = /^who (is|are)\b/i.test(qLower) || /(founder|ceo|leadership)/i.test(qLower);
     const isHoursSupport = /(night|weekend|24\/7|24\*7|hours|available|schedule|timing|time)/i.test(qLower) && /(support|help|service|customer service)/i.test(qLower);
 
+    // Extract all named agent entities from documentation
+    const knownAgentMatches = (allText.match(/\b(Finance|Procurement|Sales|Inventory|HR|Operations|Support|Billing|Customer Success|Marketing|Executive)\s+Agent\b/gi) || [])
+      .map(a => a.trim().replace(/\b\w/g, c => c.toUpperCase()));
+    const allAgentEntities = deduplicate(knownAgentMatches.concat(operatingSections.filter(s => /agent\b/i.test(s))));
+
     // Case 0A: Main Points / Summary / Key Takeaways (Universal for ANY PDF)
     if (isMainPoints) {
-      // Find substantive sentences from the document
       const informative = rawSentences.filter(s => {
         const lower = s.toLowerCase();
-        return !isMetadataHeader(s) && lower.length >= 20 && !lower.startsWith('source') && !lower.startsWith('page');
+        return isValidCompleteSentence(s) && lower.length >= 20 && !lower.startsWith('source') && !lower.startsWith('page');
       });
-      const selectedPoints = informative.slice(0, 5);
+      const selectedPoints = deduplicate(informative).slice(0, 5);
       if (selectedPoints.length > 0) {
         return `Here are the core principles and main takeaways:\n\n${selectedPoints.map(p => `• ${p.replace(/^[-*•\s]+/, '').trim()}`).join('\n')}`;
       }
@@ -629,17 +699,20 @@ export class AIAgentEngine {
 
     // Case 0B: List / Which Are They / What Are The Options (Universal for ANY PDF)
     if (isListWhichAreThey) {
-      if (operatingSections.length > 0) {
-        return `Here are the main areas and procedures:\n\n${operatingSections.slice(0, 8).map(s => `• ${s}`).join('\n')}`;
+      if (allAgentEntities.length > 0) {
+        return `The department agents include:\n\n${allAgentEntities.map(a => `• **${a}**`).join('\n')}`;
       }
-      const listItems = rawSentences.filter(s => s.length >= 15 && s.length <= 200 && !isMetadataHeader(s)).slice(0, 6);
+      if (operatingSections.length > 0) {
+        return `Here are the key areas and procedures:\n\n${operatingSections.slice(0, 8).map(s => `• ${s}`).join('\n')}`;
+      }
+      const listItems = deduplicate(rawSentences.filter(s => isValidCompleteSentence(s))).slice(0, 6);
       if (listItems.length > 0) {
         return `Here are the details:\n\n${listItems.map(s => `• ${s.replace(/^[-*•\s]+/, '').trim()}`).join('\n')}`;
       }
     }
 
     // Case 0C: Full Name / Full Form / Acronym Definition
-    const isAcronymOrDefinition = /(full\s*name|full\s*form|stand[s]?\s*for|mean[s]?\b|meaning\s*of|definition\s*of)/i.test(qLower) || (/^what\s+is\s+([a-zA-Z0-9_\-\/]+)\??$/i.test(qLower.trim()) && qTokens.length === 1);
+    const isAcronymOrDefinition = /(full\s*name|full\s*form|stand[s]?\s*for|mean[s]?\b|meaning\s*of|definition\s*of)/i.test(qLower) || (/^what\s+is\s+([a-zA-Z0-9_\-/]+)\??$/i.test(qLower.trim()) && qTokens.length === 1);
     if (isAcronymOrDefinition) {
       const candidateTerms = qTokens.filter((t: string) => !['full', 'name', 'form', 'stand', 'stands', 'mean', 'meaning', 'definition', 'what', 'term'].includes(t.toLowerCase()));
       for (const term of candidateTerms) {
@@ -663,46 +736,187 @@ export class AIAgentEngine {
       }
     }
 
-    // Score sentences
+    const entityName = _company?.name || 'The platform';
+
+    // Case 0D: Security & Compliance Intent
+    if (isSecurityQuery) {
+      const securitySentences = rawSentences.filter(s => {
+        const sl = s.toLowerCase();
+        return (
+          sl.includes('soc2') || 
+          sl.includes('hipaa') || 
+          sl.includes('gdpr') || 
+          sl.includes('encryption') || 
+          sl.includes('256-bit') ||
+          sl.includes('aes') || 
+          sl.includes('tls') || 
+          sl.includes('zero-trust') ||
+          sl.includes('iso27001') ||
+          sl.includes('compliance') || 
+          sl.includes('security') || 
+          sl.includes('rbac') || 
+          sl.includes('data protection')
+        ) && !isMetadataHeader(s) && !sl.startsWith('platform status:');
+      });
+
+      if (securitySentences.length > 0) {
+        const cleanPoints = securitySentences.map(s => {
+          let clean = s.replace(/Platform Status:[^|]+\|\s*Tier:[^|]+\|\s*/i, '');
+          clean = clean.replace(/^(Security|Compliance):\s*/i, '');
+          return clean.replace(/^[-*•\s]+/, '').trim();
+        }).filter(s => s.length >= 12 && !s.endsWith(':'));
+
+        const deduped = deduplicate(cleanPoints).slice(0, 4);
+        if (deduped.length === 1) {
+          return `${entityName} security standards: **${deduped[0]}**.`;
+        }
+        if (deduped.length > 0) {
+          return `**${entityName} Security & Compliance Highlights:**\n\n${deduped.map(p => `- ${p}`).join('\n')}`;
+        }
+      }
+    }
+
+    // Case 0E: Pricing & Plans Intent
+    if (isPricingQuery) {
+      const pricingSentences = rawSentences.filter(s => {
+        const sl = s.toLowerCase();
+        return (
+          /[$€£₹]|(\/mo|\/month|\/year|\/yr|pricing plan|pricing model|subscription fee|free tier|starter:|pro:|growth:|enterprise:\s*[$€£₹\d]|per user)/i.test(s) ||
+          ((sl.includes('pricing') || sl.includes('subscription plan') || sl.includes('billing tier')) && (sl.includes('cost') || sl.includes('price') || sl.includes('$') || sl.includes('inr') || sl.includes('usd') || sl.includes('month') || sl.includes('free')))
+        ) && !isMetadataHeader(s) && !sl.startsWith('platform status:');
+      });
+      if (pricingSentences.length > 0) {
+        const cleanPoints = pricingSentences.map(s => {
+          let clean = s.replace(/^(Pricing Plans|Pricing|Plans):\s*/i, '');
+          return clean.replace(/^[-*•\s]+/, '').trim();
+        }).filter(s => s.length >= 6 && !s.endsWith(':'));
+        const deduped = deduplicate(cleanPoints).slice(0, 4);
+        if (deduped.length > 0) {
+          return `**${entityName} Pricing & Plan Details:**\n\n${deduped.map(p => `- ${p}`).join('\n')}`;
+        }
+      }
+    }
+
+    // Case 0F: Integrations Intent
+    if (isIntegrationsQuery) {
+      const integrationSentences = rawSentences.filter(s => {
+        const sl = s.toLowerCase();
+        return (
+          sl.includes('integration') || 
+          sl.includes('connector') || 
+          sl.includes('slack') || 
+          sl.includes('whatsapp') || 
+          sl.includes('crm') || 
+          sl.includes('erp') || 
+          sl.includes('webhook') || 
+          sl.includes('api') ||
+          sl.includes('salesforce') ||
+          sl.includes('hubspot') ||
+          sl.includes('zendesk')
+        ) && !isMetadataHeader(s) && !sl.startsWith('platform status:');
+      });
+      if (integrationSentences.length > 0) {
+        const cleanPoints = integrationSentences.map(s => {
+          let clean = s.replace(/^(Integrations|Supported Integrations):\s*/i, '');
+          return clean.replace(/^[-*•\s]+/, '').trim();
+        }).filter(s => s.length >= 8 && !s.endsWith(':'));
+        const deduped = deduplicate(cleanPoints).slice(0, 4);
+        if (deduped.length > 0) {
+          return `**${entityName} Supported Integrations:**\n\n${deduped.map(p => `- ${p}`).join('\n')}`;
+        }
+      }
+    }
+
+    // Case 0G: Contact & Support Reachability Intent
+    const isContactQuery = /(contact|email|phone|reach (us|out|support)|support email|helpline|office|address|location)\b/i.test(qLower);
+    if (isContactQuery) {
+      const emailMatches = allText.match(/\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b/g);
+      const phoneMatches = allText.match(/\b(?:\+?\d{1,3}[-.\s]?)?\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}\b/g);
+      const contactPoints: string[] = [];
+      if (emailMatches && emailMatches.length > 0) {
+        contactPoints.push(`Email: **${deduplicate(emailMatches)[0]}**`);
+      }
+      if (phoneMatches && phoneMatches.length > 0) {
+        contactPoints.push(`Phone: **${deduplicate(phoneMatches)[0]}**`);
+      }
+      if (contactPoints.length > 0) {
+        return `You can reach **${entityName}** via:\n\n${contactPoints.map(p => `• ${p}`).join('\n')}`;
+      }
+    }
+
+    // Case 1: Company / Platform Overview (e.g. 'explain about coarai', 'what is coarai', 'explain coarai')
+    if (isCompanyOverview) {
+      const overviewCandidates = rawSentences.filter(s => 
+        isValidCompleteSentence(s) &&
+        /\b(platform|agent-as-a-service|engineered to|enterprise|provides|offers|automates|intelligence|service|services|solution|solutions|product|products|helps|built|designed|software|system|business|customer)\b/i.test(s) &&
+        !/expand agents as you trust/i.test(s) &&
+        !/new hire offer/i.test(s)
+      );
+
+      if (overviewCandidates.length > 0) {
+        const deduped = deduplicate(overviewCandidates).slice(0, 2);
+        return deduped.join(' ');
+      }
+
+      const validRaw = deduplicate(rawSentences.filter(s => isValidCompleteSentence(s))).slice(0, 2);
+      if (validRaw.length > 0) {
+        return validRaw.join(' ');
+      }
+
+      const fallbackDesc = _company?.agent?.description || _company?.agent?.systemInstructions;
+      if (fallbackDesc) {
+        return `${entityName} is ${fallbackDesc.trim()}`;
+      }
+    }
+
+    // Case 1B: Agent & Module Inquiries (e.g. 'agents in coarai', 'what are the agents', 'tell me about agents')
+    if (isAgentInquiry) {
+      const agentSentences = deduplicate(
+        rawSentences.filter(s => 
+          /agent|agents|module|modules/i.test(s) && 
+          isValidCompleteSentence(s) &&
+          !/expand agents as you trust/i.test(s) &&
+          !/new hire offer/i.test(s)
+        )
+      );
+
+      if (agentSentences.length > 0) {
+        const primary = agentSentences.find(s => 
+          /\b(understand|execute|workflows|action|finance|sales|procurement|inventory|hr|operations|department)\b/i.test(s)
+        ) || agentSentences[0];
+
+        const supporting = agentSentences.filter(s => s !== primary).slice(0, 1);
+        if (supporting.length > 0) {
+          return `${primary}\n\n${supporting[0]}`;
+        }
+        return primary;
+      }
+    }
+
+    // Score sentences strictly against topic keywords
+    const activeKeywords = topicTokens.length > 0 ? topicTokens : qTokens;
     const scored = rawSentences.map(sent => {
       const sLower = sent.toLowerCase();
-      let score = 0;
-      for (const t of qTokens) {
-        if (sLower.includes(t)) score += 1;
+      let topicMatches = 0;
+      for (const t of activeKeywords) {
+        if (sLower.includes(t)) topicMatches += 1;
       }
-      if (isWhatDoYouDo && /(provides|provide|offers|offer|specializes in|services|cloud|platform|solution|workforce)/i.test(sLower)) score += 0.8;
+
+      let score = topicMatches * 1.5;
+      if (isValidCompleteSentence(sent)) score += 0.5;
       if (isHoursSupport && /(24\/7|24\*7|support|customer support|round-the-clock|night|day)/i.test(sLower)) score += 0.9;
       if (isRefundDuration && /(refund|refunds|30 days|14 days|return|money-back|guarantee)/i.test(sLower)) score += 0.9;
       if (isWhoQuestion && /(ceo|founder|founded by|president|director|lead|officer)/i.test(sLower)) score += 0.9;
-      return { sent, score };
-    }).sort((a, b) => b.score - a.score);
+      return { sent, score, topicMatches };
+    }).filter(s => s.score > 0 && isValidCompleteSentence(s.sent)).sort((a, b) => b.score - a.score);
 
-    // Case 1: What does your company do
-    if (isWhatDoYouDo) {
-      for (const { sent } of scored) {
-        const sLower = sent.toLowerCase();
-        if (/(provides|provide|offers|offer|specializes|services|cloud|platform|solutions)/i.test(sLower)) {
-          let ans = sent.replace(/\.$/, '').trim();
-          if (ans.toLowerCase().startsWith('our company')) {
-            return `The company ${ans.slice(11).trim()}.`;
-          } else if (ans.toLowerCase().startsWith('we provide')) {
-            return `The company provides ${ans.slice(10).trim()}.`;
-          } else if (ans.toLowerCase().startsWith('we offer')) {
-            return `The company offers ${ans.slice(8).trim()}.`;
-          }
-          return `${ans}.`;
-        }
-      }
-      if (scored.length > 0 && scored[0].score > 0) return `${scored[0].sent.trim()}.`;
-    }
-
-    // Case 2: Support at night
+    // Case 2: Support at night / Operating Hours
     if (isHoursSupport) {
       for (const { sent } of scored) {
         const sLower = sent.toLowerCase();
         if (sLower.includes('24/7') || sLower.includes('round-the-clock') || sLower.includes('24 hours')) {
           if (/(night|weekend|anytime|can i)/i.test(qLower)) {
-            return `Yes. The company provides 24/7 customer support, so assistance is available at night.`;
+            return `Yes. ${entityName} provides 24/7 customer support, so assistance is available at night.`;
           }
           return `Yes. ${sent.trim()}.`;
         } else if (sLower.includes('support')) {
@@ -711,7 +925,7 @@ export class AIAgentEngine {
       }
     }
 
-    // Case 3: Refund Duration
+    // Case 3: Refund Duration & Policy
     if (isRefundDuration) {
       for (const { sent } of scored) {
         const sLower = sent.toLowerCase();
@@ -729,7 +943,7 @@ export class AIAgentEngine {
       const hasPerson = scored.some(s => s.score > 1.0 && /(ceo|founder|founded by|president|director)/i.test(s.sent.toLowerCase()));
       if (!hasPerson) {
         const targetRole = qLower.includes('ceo') ? 'the CEO' : (qLower.includes('founder') ? 'the founder' : 'leadership');
-        return `I don't have information about ${targetRole} available.`;
+        return `I don't have information about ${targetRole} available in verified documentation.`;
       }
     }
 
@@ -742,22 +956,52 @@ export class AIAgentEngine {
       return top;
     }
 
-    // Case 6: Generic Top Matches
-    if (scored.length > 0 && scored[0].score >= 0.8) {
-      const selected = [];
-      const seen = new Set();
-      for (const s of scored) {
-        if (s.score < 0.5 || selected.length >= 3) break;
-        const key = s.sent.toLowerCase().trim();
-        if (!seen.has(key)) {
-          seen.add(key);
-          selected.push(s.sent);
+    // Case 5B: Universal Quantity / Counting Questions
+    const isCountQuery = /(how many|how much|number of|total count|count of)/i.test(qLower);
+    if (isCountQuery) {
+      if (/agent|module|department/i.test(qLower) && allAgentEntities.length > 0) {
+        return `${entityName} provides ${allAgentEntities.length} specialized department agents: ${allAgentEntities.join(', ')}.`;
+      }
+      for (const { sent } of scored) {
+        const sLower = sent.toLowerCase();
+        if (/\b(one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|\d+)\b/i.test(sLower) && isValidCompleteSentence(sent)) {
+          return `${sent.trim()}`;
         }
       }
-      return selected.join('\n\n');
     }
 
-    return `I don't have enough specific information to answer that. I can connect you with our team if you'd like!`;
+    // Case 6: Generic Top Matches (Strictly complete, topic-matching sentences only)
+    if (scored.length > 0 && scored[0].score >= 0.5) {
+      const selected: string[] = [];
+      const seen = new Set<string>();
+      for (const s of scored) {
+        if (selected.length >= 2) break;
+        const key = s.sent.toLowerCase().trim();
+        if (!seen.has(key) && s.sent.length >= 15 && isValidCompleteSentence(s.sent)) {
+          seen.add(key);
+          selected.push(s.sent.trim().replace(/\.$/, ''));
+        }
+      }
+      if (selected.length === 1) {
+        return `${selected[0]}.`;
+      }
+      if (selected.length > 1) {
+        return `${selected.map(s => `${s}.`).join(' ')}`;
+      }
+    }
+
+    // Fallback: If we have valid indexed content, present the top summary sentences rather than refusing to answer
+    const fallbackSentences = deduplicate(rawSentences.filter(s => isValidCompleteSentence(s))).slice(0, 2);
+    if (fallbackSentences.length > 0) {
+      return fallbackSentences.join(' ');
+    }
+
+    const fallbackCompanyDesc = _company?.agent?.description || _company?.agent?.systemInstructions;
+    if (fallbackCompanyDesc) {
+      return `${entityName}: ${fallbackCompanyDesc.trim()}`;
+    }
+
+    return `I don't have enough specific information in the company knowledge base to answer that. I can connect you with our team if you'd like!`;
   }
 
   /**

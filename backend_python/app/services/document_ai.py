@@ -1,6 +1,6 @@
 import re
 import uuid
-from typing import List
+from typing import List, Dict, Any, Optional
 from app.schemas import DocumentProcessRequest, ProcessedChunk, DocumentProcessResponse
 
 class DocumentAIService:
@@ -8,15 +8,22 @@ class DocumentAIService:
     def process_document(request: DocumentProcessRequest) -> DocumentProcessResponse:
         """
         Extracts, cleans, and semantically chunks raw document text (PDF, DOCX, TXT, FAQ, URLs).
-        Normalizes whitespace and breaks text along paragraph/header boundaries.
+        Preserves Markdown tables, hierarchy, page markers, and embeds parent context headers.
         """
         # 1. Cleaning & normalization
         cleaned = DocumentAIService._clean_text(request.raw_text)
 
-        # 2. Semantic Chunking
+        # 2. Hierarchical Semantic Chunking
         chunk_size = request.chunk_size or 500
         overlap = request.chunk_overlap or 50
-        chunks = DocumentAIService._create_chunks(cleaned, chunk_size, overlap)
+        chunks = DocumentAIService._create_chunks(
+            text=cleaned,
+            doc_title=request.title,
+            doc_type=request.doc_type,
+            chunk_size=chunk_size,
+            overlap=overlap,
+            metadata=request.metadata or {}
+        )
 
         total_tokens = sum(c.token_count for c in chunks)
         preview = cleaned[:200] + "..." if len(cleaned) > 200 else cleaned
@@ -42,71 +49,219 @@ class DocumentAIService:
         return text.strip()
 
     @staticmethod
-    def _create_chunks(text: str, chunk_size: int = 500, overlap: int = 50) -> List[ProcessedChunk]:
+    def _create_chunks(
+        text: str,
+        doc_title: str = "Document",
+        doc_type: str = "document",
+        chunk_size: int = 500,
+        overlap: int = 50,
+        metadata: Optional[Dict[str, Any]] = None
+    ) -> List[ProcessedChunk]:
         if not text or not text.strip():
             return []
 
-        chunk_size = max(20, chunk_size)
+        chunk_size = max(50, chunk_size)
         overlap = max(0, min(overlap, chunk_size // 2))
+        meta_base = metadata or {}
 
-        # Split into lines first so single-line headings don't swallow subsequent content
+        # Parse lines into hierarchical blocks: (content, section_header, parent_header, page_number, is_table)
         raw_lines = [line.strip() for line in text.split('\n')]
-        paragraphs: List[tuple[str, str]] = []
-        current_block: List[str] = []
-        current_header = "General"
+        blocks: List[Dict[str, Any]] = []
+        current_block_lines: List[str] = []
+        current_section = "General"
+        parent_section = doc_title or "Overview"
+        current_page = 1
+        is_in_table = False
 
         for line in raw_lines:
             if not line:
-                if current_block:
-                    paragraphs.append(("\n".join(current_block), current_header))
-                    current_block = []
+                if current_block_lines:
+                    blocks.append({
+                        "content": "\n".join(current_block_lines),
+                        "section": current_section,
+                        "parent_section": parent_section,
+                        "page_number": current_page,
+                        "is_table": is_in_table
+                    })
+                    current_block_lines = []
+                    is_in_table = False
                 continue
 
-            heading_match = re.match(r'^#{1,6}\s+(.+)$', line)
-            if heading_match:
-                if current_block:
-                    paragraphs.append(("\n".join(current_block), current_header))
-                    current_block = []
-                current_header = heading_match.group(1).strip()
-            else:
-                current_block.append(line)
+            # Check for page markers
+            page_match = re.match(r'^##?\s*Page\s*(\d+)', line, re.I)
+            if page_match:
+                if current_block_lines:
+                    blocks.append({
+                        "content": "\n".join(current_block_lines),
+                        "section": current_section,
+                        "parent_section": parent_section,
+                        "page_number": current_page,
+                        "is_table": is_in_table
+                    })
+                    current_block_lines = []
+                    is_in_table = False
+                current_page = int(page_match.group(1))
+                continue
 
-        if current_block:
-            paragraphs.append(("\n".join(current_block), current_header))
+            # Check for Markdown headings
+            h1_match = re.match(r'^#\s+(.+)$', line)
+            h2_match = re.match(r'^##\s+(.+)$', line)
+            h3_match = re.match(r'^###\s+(.+)$', line)
+
+            if h1_match:
+                if current_block_lines:
+                    blocks.append({
+                        "content": "\n".join(current_block_lines),
+                        "section": current_section,
+                        "parent_section": parent_section,
+                        "page_number": current_page,
+                        "is_table": is_in_table
+                    })
+                    current_block_lines = []
+                    is_in_table = False
+                parent_section = h1_match.group(1).strip()
+                current_section = parent_section
+                continue
+
+            if h2_match:
+                if current_block_lines:
+                    blocks.append({
+                        "content": "\n".join(current_block_lines),
+                        "section": current_section,
+                        "parent_section": parent_section,
+                        "page_number": current_page,
+                        "is_table": is_in_table
+                    })
+                    current_block_lines = []
+                    is_in_table = False
+                current_section = h2_match.group(1).strip()
+                continue
+
+            if h3_match:
+                if current_block_lines:
+                    blocks.append({
+                        "content": "\n".join(current_block_lines),
+                        "section": current_section,
+                        "parent_section": parent_section,
+                        "page_number": current_page,
+                        "is_table": is_in_table
+                    })
+                    current_block_lines = []
+                    is_in_table = False
+                current_section = f"{current_section} > {h3_match.group(1).strip()}"
+                continue
+
+            # Check for Markdown table rows: starts and ends with '|'
+            if line.startswith('|') and line.endswith('|'):
+                is_in_table = True
+                current_block_lines.append(line)
+            else:
+                if is_in_table:
+                    # End of table
+                    blocks.append({
+                        "content": "\n".join(current_block_lines),
+                        "section": current_section,
+                        "parent_section": parent_section,
+                        "page_number": current_page,
+                        "is_table": True
+                    })
+                    current_block_lines = []
+                    is_in_table = False
+                current_block_lines.append(line)
+
+        if current_block_lines:
+            blocks.append({
+                "content": "\n".join(current_block_lines),
+                "section": current_section,
+                "parent_section": parent_section,
+                "page_number": current_page,
+                "is_table": is_in_table
+            })
 
         chunks: List[ProcessedChunk] = []
-        current_chunk = ""
-        current_chunk_header = ""
+        current_chunk_text = ""
+        current_header = ""
+        current_parent = ""
+        current_page_num = 1
         chunk_idx = 0
 
-        for p_strip, p_header in paragraphs:
-            if not p_strip.strip():
+        for block in blocks:
+            b_content = block["content"].strip()
+            if not b_content:
                 continue
 
-            # If header changed and we already have accumulated content, flush the previous section chunk
-            if current_chunk and current_chunk_header and p_header != current_chunk_header:
+            b_sec = block["section"]
+            b_parent = block["parent_section"]
+            b_page = block["page_number"]
+            b_is_table = block["is_table"]
+
+            # If section changed and we have existing chunk content, flush it
+            if current_chunk_text and current_header and b_sec != current_header:
                 chunk_idx += 1
+                prefix = f"[Document: {doc_title} | Section: {current_header}]\n" if current_header != "General" else f"[Document: {doc_title}]\n"
+                full_body = f"{prefix}{current_chunk_text.strip()}" if not current_chunk_text.startswith("[Document:") else current_chunk_text.strip()
                 chunks.append(ProcessedChunk(
                     chunk_id=f"chk_{uuid.uuid4().hex[:8]}",
                     chunk_index=chunk_idx,
-                    content=current_chunk.strip(),
-                    token_count=max(1, len(current_chunk) // 4),
-                    section_header=current_chunk_header
+                    content=full_body,
+                    token_count=max(1, len(full_body) // 4),
+                    section_header=current_header,
+                    page_number=current_page_num,
+                    parent_header=current_parent,
+                    metadata={**meta_base, "title": doc_title, "doc_type": doc_type, "section": current_header, "page": current_page_num}
                 ))
-                current_chunk = ""
+                current_chunk_text = ""
 
-            current_chunk_header = p_header
+            current_header = b_sec
+            current_parent = b_parent
+            current_page_num = b_page
 
-            # If the paragraph itself exceeds chunk_size, split into sub-segments along sentence boundaries
+            # If the block is a table, keep it atomic unless larger than 2x chunk_size
+            if b_is_table:
+                if current_chunk_text and (len(current_chunk_text) + len(b_content) > chunk_size):
+                    chunk_idx += 1
+                    prefix = f"[Document: {doc_title} | Section: {current_header}]\n" if current_header != "General" else f"[Document: {doc_title}]\n"
+                    full_body = f"{prefix}{current_chunk_text.strip()}" if not current_chunk_text.startswith("[Document:") else current_chunk_text.strip()
+                    chunks.append(ProcessedChunk(
+                        chunk_id=f"chk_{uuid.uuid4().hex[:8]}",
+                        chunk_index=chunk_idx,
+                        content=full_body,
+                        token_count=max(1, len(full_body) // 4),
+                        section_header=current_header,
+                        page_number=current_page_num,
+                        parent_header=current_parent,
+                        metadata={**meta_base, "title": doc_title, "doc_type": doc_type, "section": current_header, "page": current_page_num}
+                    ))
+                    current_chunk_text = ""
+
+                # Treat table as atomic chunk unit
+                chunk_idx += 1
+                prefix = f"[Document: {doc_title} | Section: {current_header} | Table]\n"
+                full_body = f"{prefix}{b_content}"
+                chunks.append(ProcessedChunk(
+                    chunk_id=f"chk_{uuid.uuid4().hex[:8]}",
+                    chunk_index=chunk_idx,
+                    content=full_body,
+                    token_count=max(1, len(full_body) // 4),
+                    section_header=current_header,
+                    page_number=current_page_num,
+                    parent_header=current_parent,
+                    metadata={**meta_base, "title": doc_title, "doc_type": doc_type, "section": current_header, "page": current_page_num, "is_table": True}
+                ))
+                continue
+
+            # Standard text paragraph splitting
             segments: List[str] = []
-            if len(p_strip) > chunk_size:
-                rem = p_strip
+            if len(b_content) > chunk_size:
+                rem = b_content
                 while len(rem) > chunk_size:
                     split_point = rem[:chunk_size].rfind('. ')
                     if split_point == -1 or split_point < chunk_size // 3:
                         split_point = rem[:chunk_size].rfind('? ')
                     if split_point == -1 or split_point < chunk_size // 3:
                         split_point = rem[:chunk_size].rfind('! ')
+                    if split_point == -1 or split_point < chunk_size // 3:
+                        split_point = rem[:chunk_size].rfind('\n')
                     if split_point == -1 or split_point < chunk_size // 3:
                         split_point = rem[:chunk_size].rfind(' ')
                     if split_point == -1:
@@ -118,48 +273,62 @@ class DocumentAIService:
                 if rem:
                     segments.append(rem)
             else:
-                segments = [p_strip]
+                segments = [b_content]
 
             for seg in segments:
                 if not seg:
                     continue
-                if current_chunk and (len(current_chunk) + len(seg) + 2 > chunk_size):
+                if current_chunk_text and (len(current_chunk_text) + len(seg) + 2 > chunk_size):
                     chunk_idx += 1
+                    prefix = f"[Document: {doc_title} | Section: {current_header}]\n" if current_header != "General" else f"[Document: {doc_title}]\n"
+                    full_body = f"{prefix}{current_chunk_text.strip()}" if not current_chunk_text.startswith("[Document:") else current_chunk_text.strip()
                     chunks.append(ProcessedChunk(
                         chunk_id=f"chk_{uuid.uuid4().hex[:8]}",
                         chunk_index=chunk_idx,
-                        content=current_chunk.strip(),
-                        token_count=max(1, len(current_chunk) // 4),
-                        section_header=current_chunk_header
+                        content=full_body,
+                        token_count=max(1, len(full_body) // 4),
+                        section_header=current_header,
+                        page_number=current_page_num,
+                        parent_header=current_parent,
+                        metadata={**meta_base, "title": doc_title, "doc_type": doc_type, "section": current_header, "page": current_page_num}
                     ))
-                    if overlap > 0 and len(current_chunk) > overlap:
-                        overlap_tail = current_chunk[-overlap:].strip()
+                    if overlap > 0 and len(current_chunk_text) > overlap:
+                        overlap_tail = current_chunk_text[-overlap:].strip()
                         space_idx = overlap_tail.find(' ')
                         if space_idx != -1:
                             overlap_tail = overlap_tail[space_idx + 1:]
-                        current_chunk = f"{overlap_tail}\n\n{seg}" if overlap_tail else seg
+                        current_chunk_text = f"{overlap_tail}\n\n{seg}" if overlap_tail else seg
                     else:
-                        current_chunk = seg
+                        current_chunk_text = seg
                 else:
-                    current_chunk = f"{current_chunk}\n\n{seg}" if current_chunk else seg
+                    current_chunk_text = f"{current_chunk_text}\n\n{seg}" if current_chunk_text else seg
 
-        if current_chunk and current_chunk.strip():
+        if current_chunk_text and current_chunk_text.strip():
             chunk_idx += 1
+            prefix = f"[Document: {doc_title} | Section: {current_header}]\n" if (current_header and current_header != "General") else f"[Document: {doc_title}]\n"
+            full_body = f"{prefix}{current_chunk_text.strip()}" if not current_chunk_text.startswith("[Document:") else current_chunk_text.strip()
             chunks.append(ProcessedChunk(
                 chunk_id=f"chk_{uuid.uuid4().hex[:8]}",
                 chunk_index=chunk_idx,
-                content=current_chunk.strip(),
-                token_count=max(1, len(current_chunk) // 4),
-                section_header=current_chunk_header or "General"
+                content=full_body,
+                token_count=max(1, len(full_body) // 4),
+                section_header=current_header or "General",
+                page_number=current_page_num,
+                parent_header=current_parent or doc_title,
+                metadata={**meta_base, "title": doc_title, "doc_type": doc_type, "section": current_header, "page": current_page_num}
             ))
 
         if not chunks and text.strip():
+            full_body = f"[Document: {doc_title}]\n{text.strip()[:chunk_size]}"
             chunks.append(ProcessedChunk(
                 chunk_id=f"chk_{uuid.uuid4().hex[:8]}",
                 chunk_index=1,
-                content=text.strip()[:chunk_size],
-                token_count=max(1, len(text.strip()[:chunk_size]) // 4),
-                section_header="General"
+                content=full_body,
+                token_count=max(1, len(full_body) // 4),
+                section_header="General",
+                page_number=1,
+                parent_header=doc_title,
+                metadata={**meta_base, "title": doc_title, "doc_type": doc_type}
             ))
 
         return chunks

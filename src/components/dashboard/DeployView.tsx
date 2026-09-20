@@ -37,7 +37,6 @@ export const DeployView: React.FC = () => {
     updateCompany,
     updateWidgetSettings, 
     updateAgentConfig,
-    setIsQuickTestOpen,
     deployments,
     createDeployment,
     disableDeployment,

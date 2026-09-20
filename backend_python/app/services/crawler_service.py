@@ -181,28 +181,63 @@ class CrawlerService:
 
     @staticmethod
     def clean_html_content(raw_html: str) -> str:
-        """Strips HTML tags, scripts, and stylesheets safely while preserving headings and paragraphs for semantic chunking."""
+        """
+        Strips HTML noise (scripts, styles, nav, footer, cookie banners, ads) safely
+        while converting tables into Markdown tables, headings into Markdown headers,
+        and list items into Markdown bullet points for high-fidelity semantic chunking.
+        """
         import re
         import html
+
+        # 1. Strip script, style, svg, noscript, iframe, forms
         text = re.sub(r'<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>', '', raw_html, flags=re.IGNORECASE)
         text = re.sub(r'<style\b[^<]*(?:(?!<\/style>)<[^<]*)*<\/style>', '', text, flags=re.IGNORECASE)
         text = re.sub(r'<svg\b[^<]*(?:(?!<\/svg>)<[^<]*)*<\/svg>', '', text, flags=re.IGNORECASE)
+        text = re.sub(r'<noscript\b[^<]*(?:(?!<\/noscript>)<[^<]*)*<\/noscript>', '', text, flags=re.IGNORECASE)
+        text = re.sub(r'<iframe\b[^<]*(?:(?!<\/iframe>)<[^<]*)*<\/iframe>', '', text, flags=re.IGNORECASE)
+        text = re.sub(r'<form\b[^<]*(?:(?!<\/form>)<[^<]*)*<\/form>', '', text, flags=re.IGNORECASE)
 
-        # Convert headings to markdown headings so section structure is preserved
+        # 2. Strip noisy navigational, footer, and cookie banner tags
+        text = re.sub(r'<(?:nav|footer|aside)\b[^>]*>[\s\S]*?<\/(?:nav|footer|aside)>', '', text, flags=re.IGNORECASE)
+        text = re.sub(r'<div\b[^>]*(?:cookie|consent|banner|popup|modal|ad-container|advertisement)[^>]*>[\s\S]*?<\/div>', '', text, flags=re.IGNORECASE)
+
+        # 3. Convert HTML tables to Markdown tables
+        def table_replacer(match: re.Match) -> str:
+            table_html = match.group(0)
+            rows = re.findall(r'<tr\b[^>]*>([\s\S]*?)<\/tr>', table_html, flags=re.IGNORECASE)
+            if not rows:
+                return ''
+            md_rows = []
+            for r_idx, row in enumerate(rows):
+                cells = re.findall(r'<(?:th|td)\b[^>]*>([\s\S]*?)<\/(?:th|td)>', row, flags=re.IGNORECASE)
+                clean_cells = [re.sub(r'<[^>]+>', '', c).strip() for c in cells]
+                if clean_cells:
+                    md_rows.append(f"| {' | '.join(clean_cells)} |")
+                    if r_idx == 0:
+                        md_rows.append(f"| {' | '.join(['---'] * len(clean_cells))} |")
+            return '\n\n' + '\n'.join(md_rows) + '\n\n' if md_rows else ''
+
+        text = re.sub(r'<table\b[^>]*>[\s\S]*?<\/table>', table_replacer, text, flags=re.IGNORECASE)
+
+        # 4. Convert headings to markdown headings
         for h in range(1, 7):
-            text = re.sub(rf'<h{h}\b[^>]*>(.*?)</h{h}>', r'\n\n# \1\n\n', text, flags=re.IGNORECASE | re.DOTALL)
+            hashes = '#' * h
+            text = re.sub(rf'<h{h}\b[^>]*>(.*?)</h{h}>', rf'\n\n{hashes} \1\n\n', text, flags=re.IGNORECASE | re.DOTALL)
 
-        # Convert block-level elements and linebreaks into clean paragraph breaks
-        text = re.sub(r'<(?:p|section|article|header|footer|nav|aside|li|tr|blockquote)\b[^>]*>', '\n\n', text, flags=re.IGNORECASE)
+        # 5. Convert lists to markdown bullets
+        text = re.sub(r'<li\b[^>]*>(.*?)<\/li>', r'\n- \1', text, flags=re.IGNORECASE | re.DOTALL)
+
+        # 6. Convert block-level elements and linebreaks into clean paragraph breaks
+        text = re.sub(r'<(?:p|section|article|blockquote)\b[^>]*>', '\n\n', text, flags=re.IGNORECASE)
         text = re.sub(r'<(?:br|hr)\s*/?>', '\n', text, flags=re.IGNORECASE)
 
-        # Strip remaining tags
+        # 7. Strip remaining tags
         text = re.sub(r'<[^>]+>', ' ', text)
 
-        # Unescape HTML entities (&amp;, &nbsp;, etc.)
+        # 8. Unescape HTML entities (&amp;, &nbsp;, etc.)
         text = html.unescape(text)
 
-        # Clean up whitespace per line and assemble clean paragraph breaks
+        # 9. Clean up whitespace per line and deduplicate empty lines
         lines = [re.sub(r'[ \t]+', ' ', line).strip() for line in text.split('\n')]
         clean_lines = [l for l in lines if l]
         text = '\n\n'.join(clean_lines)

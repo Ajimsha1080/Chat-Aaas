@@ -9,13 +9,15 @@ from app.schemas import (
     ReasoningStep,
     ChunkSearchResult,
     RerankRequest,
-    RerankCandidate
+    RerankCandidate,
+    EvaluateRequest
 )
 from app.services.rag_engine import RAGEngine
 from app.services.reranking_service import RerankingService
 from app.services.query_rewriter import QueryRewriter
 from app.services.tool_registry import ToolRegistry
 from app.services.llm_service import LLMProvider
+from app.services.evaluation_service import EvaluationService
 from app.core.config import settings
 
 class AgentRuntime:
@@ -204,10 +206,17 @@ class AgentRuntime:
         # 5. Hybrid RAG Knowledge Search
         reasoning_steps.append(ReasoningStep(
             stage="RAG Knowledge Retrieval",
-            detail=f"Querying hybrid vector embeddings and semantic cosine similarity isolated strictly for tenant '{company_id}'.",
+            detail=f"Querying hybrid dense vector embeddings and BM25 with Reciprocal Rank Fusion (RRF) isolated strictly for tenant '{company_id}'.",
             timestamp=now_str
         ))
-        raw_chunks = RAGEngine.search_chunks(retrieval_query, company_id, stored_chunks, threshold=0.15, top_k=6)
+        raw_chunks, diagnostics = RAGEngine.search_chunks_with_diagnostics(
+            query=current_user_question,
+            standalone_query=retrieval_query,
+            company_id=company_id,
+            stored_chunks=stored_chunks,
+            threshold=0.15,
+            top_k=6
+        )
 
         # Cross-Encoder Reranking
         if raw_chunks:
@@ -232,6 +241,10 @@ class AgentRuntime:
                 )
                 for item in rerank_res.results
             ]
+            diagnostics.reranked_results = [
+                {"id": r.id, "title": r.metadata.get("title", ""), "score": r.relevance_score}
+                for r in rerank_res.results
+            ]
         else:
             chunks = []
 
@@ -251,6 +264,7 @@ class AgentRuntime:
                 confidence_score=0.35,
                 is_refusal=True,
                 tokens_used=t_count,
+                diagnostics=diagnostics,
                 session_id=request.session_id or "sess_live"
             )
 
@@ -283,22 +297,56 @@ class AgentRuntime:
             f"4. If the user asks about refunds, answer ONLY about the refund policy.\n"
             f"5. If the user asks for the full name, full form, meaning, or definition of an acronym or term (e.g. 'Rag full name', 'What does RAG stand for?'), answer directly with the full expansion (e.g., 'RAG stands for Retrieval-Augmented Generation.') instead of returning unrelated context sentences.\n"
             f"6. Base your answer strictly on the verified knowledge context below. If a specific detail (such as a founder's name or pricing) is not mentioned in the context, state clearly that the documentation does not contain that information.\n"
-            f"7. Keep the response concise (1-2 sentences), conversational, and do not output raw document headers or metadata tags.\n\n"
+            f"7. Use the uploaded knowledge as evidence, but write the final response in a natural human voice. Do NOT copy-paste whole knowledge passages or FAQ answers verbatim unless an exact number, SKU, email, URL, policy duration, or legal wording is required.\n"
+            f"8. Keep the response concise (1-2 sentences), conversational, and do not output raw document headers or metadata tags.\n\n"
             f"Verified Knowledge Context:\n{retrieved_context}"
         )
 
+        start_llm = time.time()
         llm_response, gen_mode = await LLMProvider.generate_response_with_mode(
             prompt=current_user_question,
             system_instruction=sys_instruction,
             model=model_name,
             temperature=float(agent_config.get('creativityLevel', 0.3)) if isinstance(agent_config.get('creativityLevel'), (int, float)) else 0.3
         )
+        llm_duration_ms = (time.time() - start_llm) * 1000
 
         prompt_tokens = LLMProvider.count_tokens(current_user_question + "\n" + sys_instruction, model=model_name)
         completion_tokens = LLMProvider.count_tokens(llm_response, model=model_name)
         total_tokens = prompt_tokens + completion_tokens
 
+        is_refusal = any(phrase in llm_response.lower() for phrase in [
+            "cannot verify", "can't verify", "do not have information", "don't have information",
+            "couldn't find enough information", "not mentioned in", "does not contain information",
+            "does not provide information", "no information available", "not available in the provided",
+            "unable to verify", "i don't have enough", "cannot provide information", "can't provide information",
+            "not present in", "not found in", "no mention of", "not covered in", "unable to find",
+            "documentation does not contain", "not contain that information"
+        ])
+
         citations = [getattr(c, "title", "Knowledge Base") for c in chunks[:3]]
+        grounding_eval = EvaluationService.evaluate_rag_response(EvaluateRequest(
+            query=current_user_question,
+            answer=llm_response,
+            grounding_contexts=[c.content for c in chunks[:3]],
+            company_id=company_id
+        ))
+        reasoning_steps.append(ReasoningStep(
+            stage="Grounding Verification",
+            detail=f"Final natural answer faithfulness={grounding_eval.faithfulness_score}; hallucination risk={grounding_eval.hallucination_risk}.",
+            timestamp=now_str
+        ))
+
+        if not grounding_eval.is_safe and not is_refusal:
+            llm_response = "I found related information in the uploaded knowledge, but I cannot verify enough detail to answer that safely. Please add a more specific FAQ or document section for this question."
+            is_refusal = True
+            completion_tokens = LLMProvider.count_tokens(llm_response, model=model_name)
+            total_tokens = prompt_tokens + completion_tokens
+
+        diagnostics.context_tokens = prompt_tokens
+        diagnostics.llm_latency_ms = round(llm_duration_ms, 2)
+        diagnostics.citations = citations
+        diagnostics.faithfulness_score = grounding_eval.faithfulness_score
 
         return ChatResponse(
             message=llm_response,
@@ -308,6 +356,8 @@ class AgentRuntime:
             citations=citations,
             generation_mode=gen_mode,
             generationMode=gen_mode,
+            diagnostics=diagnostics,
+            is_refusal=is_refusal,
             session_id=request.session_id or "sess_live"
         )
 
@@ -439,7 +489,8 @@ class AgentRuntime:
             f"4. If the user asks about refunds, answer ONLY about the refund policy.\n"
             f"5. If the user asks for the full name, full form, meaning, or definition of an acronym or term (e.g. 'Rag full name', 'What does RAG stand for?'), answer directly with the full expansion (e.g., 'RAG stands for Retrieval-Augmented Generation.') instead of returning unrelated context sentences.\n"
             f"6. Base your answer strictly on the verified knowledge context below. If a specific detail (such as a founder's name or pricing) is not mentioned in the context, state clearly that the documentation does not contain that information.\n"
-            f"7. Keep the response concise (1-2 sentences), conversational, and do not output raw document headers or metadata tags.\n\n"
+            f"7. Use the uploaded knowledge as evidence, but write the final response in a natural human voice. Do NOT copy-paste whole knowledge passages or FAQ answers verbatim unless an exact number, SKU, email, URL, policy duration, or legal wording is required.\n"
+            f"8. Keep the response concise (1-2 sentences), conversational, and do not output raw document headers or metadata tags.\n\n"
             f"Verified Knowledge Context:\n{retrieved_context}"
         )
 

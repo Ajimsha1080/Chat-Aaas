@@ -49,7 +49,7 @@ import {
 } from '../data/mockData';
 import { AIAgentEngine } from '../services/aiEngine';
 import { APIClient } from '../api/apiClient';
-import { generateComprehensiveDocumentContent, generateComprehensiveWebsiteContent } from '../utils/documentGenerator';
+import { generateComprehensiveDocumentContent } from '../utils/documentGenerator';
 import { AppContext, normalizeCompany, normalizeConversation, normalizeKnowledgeItem } from './AppContextDefinition';
 
 const LOCAL_STORAGE_KEY = 'coarai_platform_state_v9';

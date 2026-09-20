@@ -19,7 +19,7 @@ interface HeaderProps {
 
 export const Header: React.FC<HeaderProps> = ({ 
   onOpenOnboarding, 
-  onOpenHelp, 
+  onOpenHelp: _onOpenHelp, 
   onToggleMobileNav
 }) => {
   const { 

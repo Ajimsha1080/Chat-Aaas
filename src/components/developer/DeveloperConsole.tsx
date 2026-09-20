@@ -98,7 +98,7 @@ export const DeveloperConsole: React.FC = () => {
 
     try {
       await APIClient.streamChatMessage(
-        'Explain how to scale deployment pods.',
+        sseTestInput.trim() || 'Explain how to scale deployment pods.',
         (chunk: any) => {
           setSseOutput(prev => [...prev, `data: ${JSON.stringify(chunk)}\n\n`]);
         },
