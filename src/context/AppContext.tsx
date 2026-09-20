@@ -1207,6 +1207,20 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const updateKnowledgeItem = (id: string, updates: Partial<KnowledgeItem>) => {
+    APIClient.setAuth(null, currentCompanyId);
+    const existing = (knowledgeMap[currentCompanyId] || []).find(k => k.id === id);
+    const title = updates.title || existing?.title || 'Updated Document';
+    const content = updates.content || updates.faqAnswer || existing?.content || '';
+    if (content && content.trim()) {
+      APIClient.ingestFile({
+        title,
+        content,
+        fileName: updates.fileName || existing?.fileName || updates.sourceUrl || existing?.sourceUrl,
+        docType: (existing?.type === 'url' ? 'website' : existing?.type) || 'document',
+        category: updates.category || existing?.category
+      }).catch(e => console.info('Backend update sync notice:', e));
+    }
+
     setKnowledgeMap(prev => ({
       ...prev,
       [currentCompanyId]: (prev[currentCompanyId] || []).map(k =>
@@ -1268,6 +1282,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     const finalContent = crawledContent || existing.content;
     const finalChunks = crawledChunks;
+
+    if (finalContent && finalContent.trim()) {
+      APIClient.setAuth(null, currentCompanyId);
+      APIClient.ingestFile({
+        title: existing.title,
+        content: finalContent,
+        fileName: existing.fileName || existing.sourceUrl,
+        docType: existing.type === 'url' ? 'website' : existing.type,
+        category: existing.category
+      }).catch(e => console.info('Backend reprocess ingest sync notice:', e));
+    }
 
     setKnowledgeMap(prev => ({
       ...prev,
