@@ -567,13 +567,14 @@ export class AIAgentEngine {
 
     const isValidCompleteSentence = (text: string): boolean => {
       const clean = text.replace(/^[-*•□\s\d.)]+/, '').trim();
-      if (clean.length < 15) return false;
+      if (clean.length < 20) return false;
       if (clean.endsWith(':')) return false;
       if (/^(platform status|document title|classification|effective date|version|page url):/i.test(clean)) return false;
       const words = clean.split(/\s+/).filter(Boolean);
-      if (words.length < 4) return false;
+      if (words.length < 5) return false;
       if (/^[\w.-]+\.(app|com|io|net|org|ai)\/\S*$/i.test(clean)) return false;
-      if (/^(new hire offer|explore the agents|request a demo|sign in|sign up|all six department agents)$/i.test(clean)) return false;
+      if (/^(new hire offer|explore the agents|request a demo|sign in|sign up|all six department agents|your business already has software)$/i.test(clean)) return false;
+      if (/^(your business already has software|get started today|contact us for more|see it in action|why choose us|join our team)\.?$/i.test(clean)) return false;
       const hasVerb = /\b(is|are|was|were|provides|provide|offers|offer|automates|automate|operates|operate|supports|support|allows|allow|enables|enable|features|feature|includes|include|delivers|deliver|deploys|deploy|understands|understand|executes|execute|has|have|connects|connect|empowers|empower|built|designed|engineered|scales|scale|handles|handle|helps|help|serves|serve|uses|use|runs|run|monitors|monitor|gives|give|creates|create|contains|contain|consists|consist|specializes|specialized)\b/i.test(clean);
       return hasVerb;
     };
@@ -633,7 +634,7 @@ export class AIAgentEngine {
       for (const s of sList) {
         const sClean = s.replace(/^[-*•□\s\d.)]+/, '').trim();
         if (
-          sClean.length >= 15 && 
+          sClean.length >= 20 && 
           !isMetadataHeader(sClean) &&
           isValidCompleteSentence(sClean)
         ) {
@@ -846,26 +847,41 @@ export class AIAgentEngine {
 
     // Case 1: Company / Platform Overview (e.g. 'explain about coarai', 'what is coarai', 'explain coarai')
     if (isCompanyOverview) {
-      const overviewCandidates = rawSentences.filter(s => 
+      const primarySentence = rawSentences.find(s => 
         isValidCompleteSentence(s) &&
-        /\b(platform|agent-as-a-service|engineered to|enterprise|provides|offers|automates|intelligence|service|services|solution|solutions|product|products|helps|built|designed|software|system|business|customer)\b/i.test(s) &&
-        !/expand agents as you trust/i.test(s) &&
-        !/new hire offer/i.test(s)
+        /\b(platform|agent|agents|autonomous|understand|execute|workflows|enterprise|solution|system|provides|offers|automates)\b/i.test(s) &&
+        s.length >= 35 &&
+        !/your business already has software/i.test(s)
       );
 
-      if (overviewCandidates.length > 0) {
-        const deduped = deduplicate(overviewCandidates).slice(0, 2);
-        return deduped.join(' ');
+      const supportingFeatures = deduplicate(
+        rawSentences.filter(s => 
+          s !== primarySentence &&
+          isValidCompleteSentence(s) &&
+          s.length >= 25 &&
+          !/your business already has software/i.test(s) &&
+          /\b(finance|sales|procurement|inventory|hr|operations|support|security|integration|workflow|automate|approval)\b/i.test(s)
+        )
+      ).slice(0, 3);
+
+      if (primarySentence) {
+        let answer = primarySentence;
+        if (!answer.endsWith('.')) answer += '.';
+
+        if (supportingFeatures.length > 0) {
+          answer += `\n\n### Key Highlights:\n` + supportingFeatures.map(f => `• ${f.replace(/^[-*•\s]+/, '').trim()}`).join('\n');
+        }
+        return answer;
       }
 
-      const validRaw = deduplicate(rawSentences.filter(s => isValidCompleteSentence(s))).slice(0, 2);
+      const validRaw = deduplicate(rawSentences.filter(s => isValidCompleteSentence(s) && s.length >= 25 && !/your business already has software/i.test(s))).slice(0, 2);
       if (validRaw.length > 0) {
-        return validRaw.join(' ');
+        return `**${entityName}** overview:\n\n` + validRaw.map(v => `• ${v}`).join('\n');
       }
 
       const fallbackDesc = _company?.agent?.description || _company?.agent?.systemInstructions;
       if (fallbackDesc) {
-        return `${entityName} is ${fallbackDesc.trim()}`;
+        return `**${entityName}** is ${fallbackDesc.trim()}`;
       }
     }
 
