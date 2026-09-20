@@ -300,7 +300,9 @@ class AgentRuntime:
             f"7. Base your answer strictly on the verified knowledge context below. Answer thoroughly, clearly, and directly using the facts in the context. Do NOT append disclaimers, apologies, or 'I don't have details' statements when you have answered the question. Only if a requested fact is completely absent from the context, state naturally that you don't have that specific information on file.\n"
             f"8. Speak naturally as a helpful customer support representative for the company. Do NOT copy-paste whole knowledge passages or FAQ answers verbatim unless an exact number, SKU, email, URL, policy duration, or legal wording is required.\n"
             f"9. Keep the response concise, conversational, and do not output raw document headers or metadata tags.\n"
-            f"10. When the user asks about the agents, department agents, or their names/roles, explicitly list the departmental specialists (Finance, Sales, Procurement, Inventory, HR, Operations) described in the context.\n\n"
+            f"10. When the user asks about the agents, department agents, or their names/roles, explicitly list the departmental specialists (Finance, Sales, Procurement, Inventory, HR, Operations) described in the context.\n"
+            f"11. Never begin answers with robotic meta-phrases like 'According to our verified records', 'Based on our records', 'According to our knowledge base', or 'According to the provided documents'. Start your answer directly, naturally, and authoritatively.\n"
+            f"12. Do NOT append boilerplate closing sentences like 'If you need any further assistance, I can connect you with our team' to regular answers.\n\n"
             f"Verified Knowledge Context:\n{retrieved_context}"
         )
 
@@ -354,7 +356,16 @@ class AgentRuntime:
             flags=re.IGNORECASE
         ).strip()
         llm_response = re.sub(
-            r'Based on the (?:uploaded|provided|verified)\s+(?:knowledge|documentation|context),\s*',
+            r'^(?:According to|Based on|As per)\s+(?:the\s+|our\s+)?(?:verified\s+)?(?:records|knowledge|documentation|context|information|files|data),?\s*',
+            "",
+            llm_response.strip(),
+            flags=re.IGNORECASE
+        ).strip()
+        if llm_response and llm_response[0].islower():
+            llm_response = llm_response[0].upper() + llm_response[1:]
+
+        llm_response = re.sub(
+            r'\n*\s*(?:If you need any further assistance,?\s*(?:I can connect you with our team|please let me know|feel free to ask)\.?)\s*$',
             "",
             llm_response,
             flags=re.IGNORECASE
