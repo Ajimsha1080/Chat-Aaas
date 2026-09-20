@@ -858,22 +858,34 @@ export class AIAgentEngine {
         !/your business already has software/i.test(s)
       );
 
-      const supportingFeatures = deduplicate(
-        rawSentences.filter(s => 
-          s !== primarySentence &&
-          isValidCompleteSentence(s) &&
-          s.length >= 25 &&
-          !/your business already has software/i.test(s) &&
-          /\b(finance|sales|procurement|inventory|hr|operations|support|security|integration|workflow|automate|approval)\b/i.test(s)
-        )
-      ).slice(0, 3);
+      // Extract and clean individual bullet highlights
+      const cleanHighlights: string[] = [];
+      for (const s of rawSentences) {
+        if (s === primarySentence) continue;
+        if (!isValidCompleteSentence(s)) continue;
+        if (/your business already has software/i.test(s)) continue;
+
+        // If multiple unpunctuated phrases are jammed together (e.g. "No migration required Human approval on critical actions Works with what you already run")
+        const jammedPhrases = s.split(/(?<=[a-z0-9])\s+(?=[A-Z][a-z]+)/).map(p => p.trim()).filter(p => p.length >= 10);
+        if (jammedPhrases.length > 1) {
+          for (const jp of jammedPhrases) {
+            if (jp.length >= 12 && !/your business already has software/i.test(jp)) {
+              cleanHighlights.push(jp);
+            }
+          }
+        } else if (/\b(finance|sales|procurement|inventory|hr|operations|support|security|integration|workflow|automate|approval|erp)\b/i.test(s)) {
+          cleanHighlights.push(s);
+        }
+      }
+
+      const dedupedHighlights = deduplicate(cleanHighlights).slice(0, 4);
 
       if (primarySentence) {
         let answer = primarySentence;
         if (!answer.endsWith('.')) answer += '.';
 
-        if (supportingFeatures.length > 0) {
-          answer += `\n\n### Key Highlights:\n` + supportingFeatures.map(f => `• ${f.replace(/^[-*•\s]+/, '').trim()}`).join('\n');
+        if (dedupedHighlights.length > 0) {
+          answer += `\n\n### Key Highlights:\n` + dedupedHighlights.map(f => `• ${f.replace(/^[-*•\s]+/, '').trim()}`).join('\n');
         }
         return answer;
       }

@@ -1091,6 +1091,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }));
 
     // Real-time backend ingestion & dynamic chunk count sync
+    APIClient.setAuth(null, currentCompanyId);
+
+    if (item.content && item.content.trim()) {
+      APIClient.ingestFile({
+        title: item.title,
+        content: item.content,
+        fileName: item.fileName || item.sourceUrl,
+        docType: item.type === 'url' ? 'website' : (item.type || 'document'),
+        category: item.category
+      }).catch(e => console.info('Backend direct ingest sync notice:', e));
+    }
+
     if (item.type === 'faq' && item.faqAnswer) {
       APIClient.ingestFaq({ question: item.title, answer: item.faqAnswer, category: item.category }).catch(e => console.info('Backend FAQ ingest error:', e));
     } else if (item.type === 'url' && item.sourceUrl) {
@@ -1113,19 +1125,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           }
         })
         .catch(e => console.info('Backend website ingest error:', e));
-    } else {
-      APIClient.ingestFile({ title: item.title, content: item.content, fileName: item.fileName, category: item.category })
-        .then(res => {
-          const data = (res as any)?.data || res;
-          if (data) {
-            const chunks = data.chunksCreated || data.totalChunks || Math.max(1, Math.ceil((item.content.length || 500) / 500));
-            setKnowledgeMap(prev => ({
-              ...prev,
-              [currentCompanyId]: (prev[currentCompanyId] || []).map(k => k.id === newItem.id ? { ...k, chunksCount: chunks, tokenCount: chunks * 65 } : k)
-            }));
-          }
-        })
-        .catch(e => console.info('Backend file ingest error:', e));
     }
 
     addAuditLog('KNOWLEDGE_INGESTED', `Ingested knowledge item: "${newItem.title}" (${newItem.type})`);
