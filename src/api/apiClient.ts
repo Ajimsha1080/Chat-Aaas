@@ -56,11 +56,27 @@ export class APIClient {
     }
 
     try {
-      const response = await fetch(`${this.baseUrl}${path}`, {
-        method,
-        headers,
-        body: body ? JSON.stringify(body) : undefined
-      });
+      let url = `${this.baseUrl}${path}`;
+      let response: Response;
+      try {
+        response = await fetch(url, {
+          method,
+          headers,
+          body: body ? JSON.stringify(body) : undefined
+        });
+      } catch (networkErr: any) {
+        // If relative URL failed (e.g. dev proxy dropped), retry directly to localhost:8000
+        if (!this.baseUrl && (typeof window !== 'undefined')) {
+          url = `http://127.0.0.1:8000${path}`;
+          response = await fetch(url, {
+            method,
+            headers,
+            body: body ? JSON.stringify(body) : undefined
+          });
+        } else {
+          throw networkErr;
+        }
+      }
 
       if (!response.ok) {
         const errJson = await response.json().catch(() => ({ detail: `HTTP ${response.status} Error` }));
