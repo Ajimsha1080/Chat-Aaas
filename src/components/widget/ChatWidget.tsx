@@ -203,7 +203,7 @@ export const ChatWidget: React.FC<ChatWidgetProps> = ({ isInlinePreview = false 
               const isUser = msg.sender === 'user';
 
               return (
-                <div key={msg.id} className={`flex flex-col ${isUser ? 'items-end' : 'items-start'}`}>
+                <div key={msg.id} className={`flex flex-col ${isUser ? 'items-end' : 'items-start'} animate-in fade-in slide-in-from-bottom-2 duration-300`}>
                   <div className="flex items-start gap-2.5 max-w-[85%]">
                     {!isUser && (
                       <img 
@@ -216,10 +216,16 @@ export const ChatWidget: React.FC<ChatWidgetProps> = ({ isInlinePreview = false 
                       <div
                         style={{
                           backgroundColor: isUser ? settings.primaryColor : (isDarkMode ? '#1e293b' : '#ffffff'),
-                          color: isUser ? '#ffffff' : (isDarkMode ? '#f8fafc' : '#0f172a')
+                          color: isUser ? '#ffffff' : (isDarkMode ? '#f8fafc' : '#0f172a'),
+                          borderLeft: !isUser ? `3.5px solid ${settings.primaryColor || '#4f46e5'}` : undefined,
+                          boxShadow: !isUser 
+                            ? `0 4px 14px -2px ${settings.primaryColor ? settings.primaryColor + '25' : 'rgba(79, 70, 229, 0.15)'}` 
+                            : undefined
                         }}
-                        className={`p-3.5 rounded-2xl leading-relaxed text-sm ${
-                          isUser ? 'rounded-br-xs shadow-xs' : (isDarkMode ? 'border border-slate-800 shadow-xs rounded-bl-xs' : 'border border-slate-200/80 shadow-xs rounded-bl-xs')
+                        className={`p-3.5 rounded-2xl leading-relaxed text-sm transition-all duration-300 ${
+                          isUser 
+                            ? 'rounded-br-xs shadow-xs' 
+                            : (isDarkMode ? 'border border-slate-800 rounded-bl-xs' : 'border border-slate-200/90 rounded-bl-xs')
                         }`}
                       >
                         <div>{renderFormattedMessage(msg.text)}</div>

@@ -205,6 +205,7 @@ export const PlaygroundView: React.FC = () => {
 
   const isAssistantActive = currentCompany?.agent?.status === 'active';
   const lifecycleStatus = currentCompany?.agent?.lifecycleStatus || 'published';
+  const brandColor = currentCompany?.widgetSettings?.primaryColor || '#4f46e5';
 
   return (
     <div className="space-y-4 animate-in fade-in duration-150">
@@ -330,12 +331,18 @@ export const PlaygroundView: React.FC = () => {
 
                     {/* Bubble */}
                     <div 
-                      className={`p-3.5 rounded-2xl text-xs sm:text-sm leading-relaxed transition-all ${
+                      style={!isUser ? {
+                        borderLeft: `3.5px solid ${brandColor}`,
+                        boxShadow: `0 4px 14px -2px ${brandColor}25`
+                      } : {
+                        backgroundColor: brandColor
+                      }}
+                      className={`p-3.5 rounded-2xl text-xs sm:text-sm leading-relaxed transition-all duration-300 animate-in fade-in slide-in-from-bottom-2 ${
                         isUser
-                          ? 'bg-slate-900 text-white rounded-tr-xs'
-                          : `bg-white border rounded-tl-xs shadow-xs text-slate-800 cursor-pointer ${
+                          ? 'text-white rounded-tr-xs shadow-xs'
+                          : `bg-white border rounded-tl-xs text-slate-800 cursor-pointer ${
                               isSelected 
-                                ? 'border-indigo-500 ring-2 ring-indigo-500/20' 
+                                ? 'ring-2 ring-indigo-500/20' 
                                 : 'border-slate-200/90 hover:border-slate-300'
                             }`
                       }`}
