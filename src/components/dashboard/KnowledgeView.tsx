@@ -51,10 +51,16 @@ export interface SemanticChunkView {
 
 function getSemanticChunks(text: string, chunkSize = 500, _overlap = 50): SemanticChunkView[] {
   if (!text || !text.trim()) return [];
-  const clean = text.trim();
+  
+  // Clean raw crawler wrapper boilerplate if present
+  let clean = text
+    .replace(/^Title:\s*[^\n]+\n(?:URL Source|Source|URL):\s*[^\n]+\n(?:Markdown Content:\s*)?/i, '')
+    .trim();
+  if (!clean) clean = text.trim();
+
   const chunks: SemanticChunkView[] = [];
   let currentChunk = '';
-  let currentHeader = 'General Overview';
+  let currentHeader = 'Platform Overview';
   let idx = 0;
 
   const pushChunk = () => {
@@ -104,7 +110,7 @@ function getSemanticChunks(text: string, chunkSize = 500, _overlap = 50): Semant
   if (chunks.length === 0 && clean) {
     chunks.push({
       index: 1,
-      header: currentHeader || 'General Overview',
+      header: currentHeader || 'Platform Overview',
       text: clean,
       tokens: Math.max(1, Math.round(clean.length / 4))
     });
