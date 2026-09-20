@@ -706,6 +706,7 @@ class DatabaseStore:
                     content=chunk.get("content", ""),
                     token_count=chunk.get("tokenCount") or chunk.get("token_count", 0),
                     section_header=chunk.get("sectionHeader") or chunk.get("section_header"),
+                    embedding=chunk.get("embedding"),
                     metadata_json=chunk.get("metadata") or chunk.get("metadata_json", {}),
                     created_at=chunk.get("createdAt") or chunk.get("created_at", time.strftime("%Y-%m-%dT%H:%M:%SZ"))
                 ))
@@ -1256,6 +1257,8 @@ class DatabaseStore:
                         "chunkIndex": r["chunk_index"],
                         "content": r["content"],
                         "tokenCount": r["token_count"],
+                        "sectionHeader": r.get("section_header"),
+                        "embedding": r.get("embedding"),
                         "metadata": r["metadata_json"] or {},
                         "createdAt": r["created_at"]
                     }

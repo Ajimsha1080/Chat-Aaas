@@ -326,11 +326,11 @@ class AgentRuntime:
             "documentation does not contain", "not contain that information"
         ])
 
-        citations = [getattr(c, "title", "Knowledge Base") for c in chunks[:3]]
+        citations = list(dict.fromkeys([getattr(c, "title", "Knowledge Base") for c in chunks[:8]]))
         grounding_eval = EvaluationService.evaluate_rag_response(EvaluateRequest(
             query=current_user_question,
             answer=llm_response,
-            grounding_contexts=[c.content for c in chunks[:3]],
+            grounding_contexts=[c.content for c in chunks[:8]],
             company_id=company_id
         ))
         reasoning_steps.append(ReasoningStep(

@@ -143,6 +143,7 @@ def disable_knowledge_source(source_id: str, ctx: TenantContext = Depends(get_te
     source["lifecycleState"] = "disabled"
     source["status"] = "disabled"
     source["updatedAt"] = time.strftime("%Y-%m-%dT%H:%M:%SZ")
+    db.save_knowledge_source(source)
 
     return {
         "status": 200,
@@ -165,6 +166,7 @@ def enable_knowledge_source(source_id: str, ctx: TenantContext = Depends(get_ten
     source["lifecycleState"] = "active"
     source["status"] = "ready"
     source["updatedAt"] = time.strftime("%Y-%m-%dT%H:%M:%SZ")
+    db.save_knowledge_source(source)
 
     return {
         "status": 200,
@@ -188,6 +190,7 @@ def move_knowledge_source_to_trash(source_id: str, ctx: TenantContext = Depends(
     source["status"] = "trash"
     source["deletedAt"] = time.strftime("%Y-%m-%dT%H:%M:%SZ")
     source["updatedAt"] = time.strftime("%Y-%m-%dT%H:%M:%SZ")
+    db.save_knowledge_source(source)
 
     return {
         "status": 200,
@@ -211,6 +214,7 @@ def restore_knowledge_source_from_trash(source_id: str, ctx: TenantContext = Dep
     source["status"] = "ready"
     source["deletedAt"] = None
     source["updatedAt"] = time.strftime("%Y-%m-%dT%H:%M:%SZ")
+    db.save_knowledge_source(source)
 
     return {
         "status": 200,
@@ -396,7 +400,7 @@ def ingest_file_document(req: IngestFileRequest, ctx: TenantContext = Depends(ge
         "lastSyncedAt": time.strftime("%Y-%m-%dT%H:%M:%S.000Z", time.gmtime()),
         "createdAt": time.strftime("%Y-%m-%dT%H:%M:%S.000Z", time.gmtime())
     }
-    db.knowledge_sources[src_id] = new_source
+    db.save_knowledge_source(new_source)
 
     # 3. Store Chunks
     created_chunk_ids = []
@@ -420,7 +424,7 @@ def ingest_file_document(req: IngestFileRequest, ctx: TenantContext = Depends(ge
                 "docType": req.docType
             }
         }
-        db.document_chunks[chunk_id] = new_chunk
+        db.save_document_chunk(new_chunk)
         created_chunk_ids.append(chunk_id)
 
     return {
@@ -510,7 +514,7 @@ async def upload_real_file_document(
         "lastSyncedAt": time.strftime("%Y-%m-%dT%H:%M:%S.000Z", time.gmtime()),
         "createdAt": time.strftime("%Y-%m-%dT%H:%M:%S.000Z", time.gmtime())
     }
-    db.knowledge_sources[src_id] = new_source
+    db.save_knowledge_source(new_source)
 
     # Store all chunks into tenant vector store
     created_chunk_ids = []
@@ -534,7 +538,7 @@ async def upload_real_file_document(
                 "docType": doc_type
             }
         }
-        db.document_chunks[chunk_id] = new_chunk
+        db.save_document_chunk(new_chunk)
         created_chunk_ids.append(chunk_id)
 
     return {
@@ -635,7 +639,7 @@ async def crawl_and_ingest_website(req: IngestWebsiteRequest, ctx: TenantContext
         "lastSyncedAt": time.strftime("%Y-%m-%dT%H:%M:%S.000Z", time.gmtime()),
         "createdAt": time.strftime("%Y-%m-%dT%H:%M:%S.000Z", time.gmtime())
     }
-    db.knowledge_sources[src_id] = new_source
+    db.save_knowledge_source(new_source)
 
     created_chunk_ids = []
     if chunks_to_save:
@@ -654,7 +658,7 @@ async def crawl_and_ingest_website(req: IngestWebsiteRequest, ctx: TenantContext
                 "sectionHeader": c.section_header or title,
                 "metadata": {"title": title, "category": req.category, "url": req.url}
             }
-            db.document_chunks[chk_id] = chk
+            db.save_document_chunk(chk)
             created_chunk_ids.append(chk_id)
     else:
         chk_id = f"chk-{ctx.company_id}-{uuid.uuid4().hex[:8]}"
@@ -671,7 +675,7 @@ async def crawl_and_ingest_website(req: IngestWebsiteRequest, ctx: TenantContext
             "sectionHeader": title,
             "metadata": {"title": title, "category": req.category, "url": req.url}
         }
-        db.document_chunks[chk_id] = chk
+        db.save_document_chunk(chk)
         created_chunk_ids.append(chk_id)
 
     return {
@@ -722,7 +726,7 @@ def create_faq_knowledge(req: IngestFaqRequest, ctx: TenantContext = Depends(get
         "lastSyncedAt": time.strftime("%Y-%m-%dT%H:%M:%S.000Z", time.gmtime()),
         "createdAt": time.strftime("%Y-%m-%dT%H:%M:%S.000Z", time.gmtime())
     }
-    db.knowledge_sources[src_id] = new_source
+    db.save_knowledge_source(new_source)
 
     chunk_id = f"chk-{ctx.company_id}-{uuid.uuid4().hex[:8]}"
     chk_emb = EmbeddingService.compute_dense_vector(content, dimensions=1536, normalize=True)
@@ -738,7 +742,7 @@ def create_faq_knowledge(req: IngestFaqRequest, ctx: TenantContext = Depends(get
         "sectionHeader": "FAQ",
         "metadata": {"title": req.question, "category": req.category, "faq": True}
     }
-    db.document_chunks[chunk_id] = new_chunk
+    db.save_document_chunk(new_chunk)
 
     return {
         "status": 201,
