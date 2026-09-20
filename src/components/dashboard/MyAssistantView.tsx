@@ -397,9 +397,45 @@ export const MyAssistantView: React.FC = () => {
             </div>
           </div>
 
+          {/* AI Intelligence & Speed Tier */}
+          <div className="pt-4 border-t border-slate-100">
+            <h3 className="text-base font-bold text-slate-900">Model Intelligence Tier</h3>
+            <p className="text-sm text-slate-500 mt-1">Choose the balance between response speed and deep multi-step reasoning.</p>
 
-
-
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 mt-4">
+              {[
+                { id: 'automatic', name: 'Automatic (Recommended)', desc: 'Smart routing between fast embeddings and deep reasoning.', badge: 'Optimal' },
+                { id: 'fast', name: 'Fast & Lightweight', desc: 'Ultra-low latency (<300ms) for quick FAQs and greetings.', badge: '< 300ms' },
+                { id: 'balanced', name: 'Balanced', desc: 'High accuracy with low token consumption.', badge: 'Standard' },
+                { id: 'advanced', name: 'Advanced Deep Reasoning', desc: 'Maximum comprehension for complex technical troubleshooting.', badge: 'Deep Reasoning' }
+              ].map(tier => {
+                const isSel = (formState.modelTier || 'automatic') === tier.id;
+                return (
+                  <button
+                    key={tier.id}
+                    type="button"
+                    onClick={() => {
+                      setFormState(prev => ({ ...prev, modelTier: tier.id as any }));
+                      updateAgentConfig({ modelTier: tier.id as any });
+                    }}
+                    className={`p-4 rounded-xl border text-left transition-colors cursor-pointer ${
+                      isSel ? 'bg-slate-50 border-slate-900 ring-1 ring-slate-900 shadow-xs' : 'border-slate-200 hover:bg-slate-50'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between mb-1.5">
+                      <span className="font-bold text-slate-900 text-sm">{tier.name}</span>
+                      <span className={`text-xs font-mono font-semibold px-2 py-0.5 rounded-md ${
+                        isSel ? 'bg-slate-900 text-white' : 'bg-slate-100 text-slate-700'
+                      }`}>
+                        {tier.badge}
+                      </span>
+                    </div>
+                    <p className="text-xs sm:text-sm text-slate-600 leading-relaxed">{tier.desc}</p>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
 
           <div className="flex justify-end pt-2">
             <button

@@ -57,7 +57,7 @@ export class APIClient {
 
     try {
       let url = `${this.baseUrl}${path}`;
-      let response: Response;
+      let response!: Response;
       try {
         response = await fetch(url, {
           method,
