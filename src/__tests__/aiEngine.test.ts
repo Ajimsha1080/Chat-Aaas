@@ -1,8 +1,9 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { AIAgentEngine } from '../services/aiEngine';
+import { APIClient } from '../api/apiClient';
 import { Company, KnowledgeItem } from '../types';
 
-describe('AIAgentEngine Frontend Intelligence Suite', () => {
+describe('AIAgentEngine Frontend Gateway Suite', () => {
   const mockCompany: Company = {
     id: 'comp_client_test',
     name: 'BrightForge Technologies',
@@ -67,6 +68,10 @@ describe('AIAgentEngine Frontend Intelligence Suite', () => {
     }
   };
 
+  beforeEach(() => {
+    vi.restoreAllMocks();
+  });
+
   it('should handle greetings and identity queries naturally', async () => {
     const resGreeting = await AIAgentEngine.processMessage('Hello!', mockCompany, [], [], []);
     expect(resGreeting.message).toContain('BrightBot');
@@ -76,7 +81,14 @@ describe('AIAgentEngine Frontend Intelligence Suite', () => {
     expect(resIdentity.message).toContain('BrightForge Technologies');
   });
 
-  it('should ground answers accurately in client knowledge items', async () => {
+  it('should route knowledge questions directly to the FastAPI backend and return structured answers', async () => {
+    vi.spyOn(APIClient, 'sendChatMessage').mockResolvedValueOnce({
+      message: 'The refund window is 30 calendar days from purchase.',
+      answer: 'The refund window is 30 calendar days from purchase.',
+      citations: ['Refund Policy'],
+      tokens_used: 42
+    });
+
     const mockKnowledge: KnowledgeItem[] = [
       {
         id: 'k1',
@@ -92,12 +104,13 @@ describe('AIAgentEngine Frontend Intelligence Suite', () => {
     ];
 
     const res = await AIAgentEngine.processMessage('What is your refund policy window?', mockCompany, mockKnowledge, [], []);
-    expect(res.message).toContain('30');
-    expect(res.message.toLowerCase()).toContain('refund');
+    expect(res.message).toContain('30 calendar days');
+    expect(res.matchedKnowledgeSources).toEqual(['Refund Policy']);
   });
 
   it('should trigger human escalation on explicit handoff request', async () => {
     const res = await AIAgentEngine.processMessage('I want to talk to a human agent please', mockCompany, [], [], []);
     expect(res.shouldEscalateToHuman).toBe(true);
+    expect(res.message).toContain('Connecting you to support');
   });
 });
