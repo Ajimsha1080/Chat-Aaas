@@ -65,14 +65,31 @@ export class APIClient {
           body: body ? JSON.stringify(body) : undefined
         });
       } catch (networkErr: any) {
-        // If relative URL failed (e.g. dev proxy dropped), retry directly to localhost:8000
-        if (!this.baseUrl && (typeof window !== 'undefined')) {
-          url = `http://127.0.0.1:8000${path}`;
-          response = await fetch(url, {
-            method,
-            headers,
-            body: body ? JSON.stringify(body) : undefined
-          });
+        // If initial fetch failed (e.g. wrong port configured or proxy dropped), retry directly to localhost:8000 and 127.0.0.1:8000
+        if (typeof window !== 'undefined') {
+          const alternateUrls = [
+            `http://localhost:8000${path}`,
+            `http://127.0.0.1:8000${path}`
+          ];
+          let altSuccess = false;
+          for (const altUrl of alternateUrls) {
+            if (altUrl !== url) {
+              try {
+                response = await fetch(altUrl, {
+                  method,
+                  headers,
+                  body: body ? JSON.stringify(body) : undefined
+                });
+                altSuccess = true;
+                break;
+              } catch {
+                // Continue to next alternate URL
+              }
+            }
+          }
+          if (!altSuccess) {
+            throw networkErr;
+          }
         } else {
           throw networkErr;
         }
