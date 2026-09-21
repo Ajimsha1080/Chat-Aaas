@@ -193,8 +193,11 @@ def update_company_by_id(company_id: str, req: UpdateCompanyRequest, ctx: Tenant
         if agent:
             agent.update({k: v for k, v in req.agent.items() if v is not None})
             agent["updatedAt"] = time.strftime("%Y-%m-%dT%H:%M:%SZ")
+            db.save_agent(agent)
 
     comp["updatedAt"] = time.strftime("%Y-%m-%dT%H:%M:%SZ")
+    db.save_company(comp)
+
     c = _sanitize_company(comp)
     agent = db.get_agent_for_company(company_id)
     if agent:
