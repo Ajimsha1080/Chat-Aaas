@@ -306,8 +306,11 @@ class DatabaseStore:
                     "lastUsedAt": "5 minutes ago",
                     "createdAt": now_str
                 }
-        # Ensure single SuperAdmin owns the primary platform workspaces
-        if "usr-root-admin" not in self.users:
+        # Ensure legacy demo accounts are purged
+        self.users.pop("usr-alex", None)
+        self.memberships.pop("mem-alex", None)
+
+        if not self.users or "usr-root-admin" not in self.users:
             self.save_user({
                 "id": "usr-root-admin",
                 "email": "admin@chataaas.internal",
@@ -317,34 +320,14 @@ class DatabaseStore:
                 "isSuspended": False,
                 "createdAt": now_str
             })
-
-        for cid in ["comp-coarai", "comp-techflow"]:
-            mem_id = f"mem-root-admin-{cid}"
-            if mem_id not in self.memberships:
-                self.save_membership({
-                    "id": mem_id,
-                    "userId": "usr-root-admin",
-                    "companyId": cid,
-                    "role": "super_admin",
-                    "status": "active",
-                    "createdAt": now_str
-                })
-
-        # Purge any residual demo user accounts
-        if "usr-alex" in self.users:
-            del self.users["usr-alex"]
-            try:
-                with self.get_session() as session:
-                    session.execute(text("DELETE FROM users WHERE id = 'usr-alex' OR email = 'alex@techflow.io'"))
-            except Exception:
-                pass
-        if "mem-alex" in self.memberships:
-            del self.memberships["mem-alex"]
-            try:
-                with self.get_session() as session:
-                    session.execute(text("DELETE FROM memberships WHERE id = 'mem-alex' OR user_id = 'usr-alex'"))
-            except Exception:
-                pass
+            self.save_membership({
+                "id": "mem-root-admin",
+                "userId": "usr-root-admin",
+                "companyId": "comp-coarai",
+                "role": "super_admin",
+                "status": "active",
+                "createdAt": now_str
+            })
 
     def seed_agent_versions(self):
         if "ver-tf-v1" not in self.agent_versions:

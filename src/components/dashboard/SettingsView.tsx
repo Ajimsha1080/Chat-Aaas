@@ -195,7 +195,7 @@ export const SettingsView: React.FC = () => {
               <div>
                 <label className="font-semibold text-slate-800 block mb-1.5">Workspace Role</label>
                 <span className="inline-block px-3 py-2 bg-indigo-50 text-indigo-700 font-mono font-bold text-xs uppercase rounded-xl border border-indigo-200/60">
-                  {currentUserProfile?.role || 'owner'}
+                  {currentUserProfile?.role || 'super_admin'}
                 </span>
               </div>
               <div>
