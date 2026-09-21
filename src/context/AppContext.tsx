@@ -1915,9 +1915,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     showToast('Plan Price Updated', `Monthly price for ${planId} updated to ₹${monthlyINR.toLocaleString('en-IN')}`, 'success');
   };
 
+  const logout = () => {
+    APIClient.logout();
+    setCurrentUserProfile(null);
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new Event('auth_logout'));
+    }
+  };
+
   return (
     <AppContext.Provider
       value={{
+        logout,
         currentExperience,
         setCurrentExperience,
         currentTab,

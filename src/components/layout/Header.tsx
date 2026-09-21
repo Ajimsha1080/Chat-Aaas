@@ -7,7 +7,8 @@ import {
   Check, 
   ShieldAlert, 
   ArrowLeft, 
-  Menu
+  Menu,
+  LogOut
 } from 'lucide-react';
 import { useApp } from '../../context';
 
@@ -31,7 +32,8 @@ export const Header: React.FC<HeaderProps> = ({
     setIsQuickTestOpen,
     currentExperience,
     setCurrentExperience,
-    showToast
+    showToast,
+    logout
   } = useApp();
 
   const [isCompanyDropdownOpen, setIsCompanyDropdownOpen] = useState(false);
@@ -158,6 +160,19 @@ export const Header: React.FC<HeaderProps> = ({
             <span className="hidden sm:inline">Super Admin</span>
           </button>
         )}
+
+        {/* Sign Out */}
+        <button
+          onClick={() => {
+            logout();
+            showToast('Signed Out', 'You have been logged out successfully.', 'info');
+          }}
+          className="flex items-center gap-1.5 px-3 py-2 bg-slate-100 hover:bg-rose-50 hover:text-rose-600 text-slate-600 rounded-xl text-sm font-semibold transition-colors cursor-pointer border border-slate-200/80"
+          title="Sign Out of CoarAI"
+        >
+          <LogOut className="w-4 h-4" />
+          <span className="hidden sm:inline">Sign Out</span>
+        </button>
       </div>
     </header>
   );
