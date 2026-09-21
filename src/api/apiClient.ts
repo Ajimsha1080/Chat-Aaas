@@ -20,7 +20,7 @@ export interface TestResult {
 export class APIClient {
   private static token: string | null = null;
   private static adminToken: string | null = null;
-  private static currentCompanyId = 'comp-coarai';
+  private static currentCompanyId = '';
   private static baseUrl = (typeof window !== 'undefined' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1')
     ? ''
     : ((typeof import.meta !== 'undefined' && import.meta.env?.VITE_API_BASE_URL) || '');

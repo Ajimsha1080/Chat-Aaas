@@ -81,20 +81,20 @@ const defaultWidgetSettings: WidgetCustomization = {
 };
 
 export const createDefaultCompany = (): Company => ({
-  id: 'comp-coarai',
-  name: 'CoarAI Platform',
-  slug: 'coarai-platform',
+  id: '',
+  name: 'No Workspace Selected',
+  slug: '',
   domain: '',
-  industry: 'Enterprise AI',
+  industry: '',
   createdAt: new Date().toISOString(),
-  planId: 'business',
+  planId: 'starter',
   billingCycle: 'monthly',
   planStatus: 'active',
   currentPeriodStart: new Date().toISOString(),
   currentPeriodEnd: new Date(Date.now() + 30 * 86400000).toISOString(),
   agent: { ...defaultAgent },
   widgetSettings: { ...defaultWidgetSettings },
-  apiKey: 'aas_live_default',
+  apiKey: '',
   apiSecretMasked: '••••••••••••',
   isSuspended: false,
   stats: { ...defaultStats }
