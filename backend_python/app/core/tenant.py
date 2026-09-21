@@ -181,16 +181,23 @@ def get_tenant_context(
             correlation_id=correlation_id
         )
 
-    # 5. Direct Company Header (Permitted ONLY in non-production environments when explicit header is passed)
-    if header_comp and settings.ENVIRONMENT != "production":
+    # 5. Direct Company Header (Public visitor access to existing tenant workspaces)
+    if header_comp:
         effective_comp = header_comp.strip()
         comp = db.companies.get(effective_comp)
-        if comp and comp.get("isSuspended"):
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="Company workspace is suspended."
+        if comp:
+            if comp.get("isSuspended"):
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="Company workspace is suspended."
+                )
+            return TenantContext(
+                company_id=effective_comp,
+                user_id=f"visitor_{int(time.time())}",
+                role="visitor",
+                correlation_id=correlation_id
             )
-        if not comp:
+        elif settings.ENVIRONMENT != "production":
             db.companies[effective_comp] = {
                 "id": effective_comp,
                 "name": effective_comp.replace("comp-", "").replace("comp_", "").replace("-", " ").title() or "Workspace",
@@ -198,12 +205,12 @@ def get_tenant_context(
                 "planId": "plan_enterprise",
                 "createdAt": time.strftime("%Y-%m-%dT%H:%M:%SZ")
             }
-        return TenantContext(
-            company_id=effective_comp,
-            user_id=f"usr-{effective_comp}-owner",
-            role="owner",
-            correlation_id=correlation_id
-        )
+            return TenantContext(
+                company_id=effective_comp,
+                user_id=f"usr-{effective_comp}-owner",
+                role="owner",
+                correlation_id=correlation_id
+            )
 
     # No valid authentication or tenant could be resolved
     raise HTTPException(

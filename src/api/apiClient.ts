@@ -21,7 +21,9 @@ export class APIClient {
   private static token: string | null = null;
   private static adminToken: string | null = null;
   private static currentCompanyId = 'comp-techflow';
-  private static baseUrl = (typeof import.meta !== 'undefined' && import.meta.env?.VITE_API_BASE_URL) || '';
+  private static baseUrl = (typeof window !== 'undefined' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1')
+    ? ''
+    : ((typeof import.meta !== 'undefined' && import.meta.env?.VITE_API_BASE_URL) || '');
 
   public static setAuth(token: string | null, companyId: string): void {
     this.token = token;
@@ -69,9 +71,11 @@ export class APIClient {
           body: isFormData ? body : (body ? JSON.stringify(body) : undefined)
         });
       } catch (networkErr: any) {
-        // If initial fetch failed (e.g. wrong port configured or proxy dropped), retry directly to localhost:8000 and 127.0.0.1:8000
+        // If initial fetch failed (e.g. wrong port configured or proxy dropped), retry via relative path or local endpoints
         if (typeof window !== 'undefined') {
           const alternateUrls = [
+            path,
+            `${window.location.origin}${path}`,
             `http://localhost:8000${path}`,
             `http://127.0.0.1:8000${path}`
           ];
