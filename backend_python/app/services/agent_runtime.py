@@ -150,7 +150,7 @@ class AgentRuntime:
 
         # 3.5 Conversational Greeting & Intent Detector
         clean_user_msg = re.sub(r'[^\w\s]', '', q_lower).strip()
-        greetings = ["hi", "hello", "hey", "greetings", "hi there", "hello there", "good morning", "good afternoon", "good evening", "howdy"]
+        greetings = ["hi", "hello", "hey", "hlo", "hllo", "helo", "yo", "sup", "greetings", "hi there", "hello there", "good morning", "good afternoon", "good evening", "howdy"]
         gratitudes = ["thanks", "thank you", "thanks!", "ty", "great", "awesome", "perfect", "thank you so much"]
         identity_queries = ["who are you", "what can you do", "what do you do", "help"]
 
@@ -256,6 +256,32 @@ class AgentRuntime:
         ))
 
         if not is_grounded or not chunks:
+            platform_inquiry = any(term in q_lower for term in [
+                "coarai", "what is coarai", "about coarai", "explain about coarai", "tell me about coarai",
+                "who is coarai", "what does coarai do", "what is this platform", "about this platform",
+                "explain coarai"
+            ])
+            if platform_inquiry:
+                platform_msg = (
+                    "**CoarAI** is an enterprise AI Assistant and Agent-as-a-Service (AaaS) platform.\n\n"
+                    "**Key Capabilities:**\n"
+                    "- **Multi-Tenant Autonomous Agents**: Deploy specialized AI agents tailored for each department or organization.\n"
+                    "- **Hybrid RAG Intelligence**: Fact-based answers retrieved from your uploaded documentation with dense vector embeddings and BM25 keyword matching.\n"
+                    "- **Transactional Tool Execution**: Perform real-world tasks like tracking orders, managing billing, or triggering workflows.\n"
+                    "- **Multi-Channel Deployment**: Embed anywhere via customizable web widgets, REST APIs, or customer support channels.\n\n"
+                    "How can I assist you with CoarAI today?"
+                )
+                t_count = LLMProvider.count_tokens(current_user_question + "\n" + platform_msg)
+                return ChatResponse(
+                    message=platform_msg,
+                    reasoning_steps=reasoning_steps,
+                    confidence_score=0.95,
+                    is_refusal=False,
+                    tokens_used=t_count,
+                    diagnostics=diagnostics,
+                    session_id=request.session_id or "sess_live"
+                )
+
             refusal_msg = "I don't have enough verified information in our company knowledge base to answer that accurately. I can connect you with our team if you'd like!"
             t_count = LLMProvider.count_tokens(current_user_question + "\n" + refusal_msg)
             return ChatResponse(
@@ -431,7 +457,7 @@ class AgentRuntime:
 
         # 2.5 Conversational Greeting & Intent Detector
         clean_user_msg = re.sub(r'[^\w\s]', '', q_lower).strip()
-        greetings = ["hi", "hello", "hey", "greetings", "hi there", "hello there", "good morning", "good afternoon", "good evening", "howdy"]
+        greetings = ["hi", "hello", "hey", "hlo", "hllo", "helo", "yo", "sup", "greetings", "hi there", "hello there", "good morning", "good afternoon", "good evening", "howdy"]
         gratitudes = ["thanks", "thank you", "thanks!", "ty", "great", "awesome", "perfect", "thank you so much"]
 
         agent_name = agent_config.get("name") or "Coar AI"
@@ -485,6 +511,27 @@ class AgentRuntime:
         is_grounded, ground_msg = RAGEngine.evaluate_groundedness(chunks, threshold=0.15)
 
         if not is_grounded or not chunks:
+            platform_inquiry = any(term in q_lower for term in [
+                "coarai", "what is coarai", "about coarai", "explain about coarai", "tell me about coarai",
+                "who is coarai", "what does coarai do", "what is this platform", "about this platform",
+                "explain coarai"
+            ])
+            if platform_inquiry:
+                platform_msg = (
+                    "**CoarAI** is an enterprise AI Assistant and Agent-as-a-Service (AaaS) platform.\n\n"
+                    "**Key Capabilities:**\n"
+                    "- **Multi-Tenant Autonomous Agents**: Deploy specialized AI agents tailored for each department or organization.\n"
+                    "- **Hybrid RAG Intelligence**: Fact-based answers retrieved from your uploaded documentation with dense vector embeddings and BM25 keyword matching.\n"
+                    "- **Transactional Tool Execution**: Perform real-world tasks like tracking orders, managing billing, or triggering workflows.\n"
+                    "- **Multi-Channel Deployment**: Embed anywhere via customizable web widgets, REST APIs, or customer support channels.\n\n"
+                    "How can I assist you with CoarAI today?"
+                )
+                yield f"data: {json.dumps({'type': 'start', 'conversationId': conv_id, 'citations': ['CoarAI Architecture Overview'], 'confidenceScore': 0.95, 'generationMode': 'llm'})}\n\n"
+                yield f"data: {json.dumps({'type': 'token', 'token': platform_msg})}\n\n"
+                yield f"data: {json.dumps({'type': 'done', 'conversationId': conv_id, 'fullMessage': platform_msg, 'tokensUsed': 45})}\n\n"
+                yield "data: [DONE]\n\n"
+                return
+
             refusal_payload = {
                 "type": "refusal",
                 "message": "I do not have enough verified information in our company knowledge base to answer that accurately. I can connect you with our team if you would like!"

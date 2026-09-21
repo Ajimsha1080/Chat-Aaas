@@ -365,15 +365,19 @@ export class APIClient {
       isTestMode?: boolean;
     }
   ) {
-    const token = localStorage.getItem('auth_token') || 'demo_token_123';
+    const token = localStorage.getItem('auth_token');
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+      'x-company-id': this.currentCompanyId,
+      'x-correlation-id': `cli-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`
+    };
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+
     const response = await fetch(`${this.baseUrl}/api/v1/chat/stream`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`,
-        'x-company-id': this.currentCompanyId,
-        'x-correlation-id': `cli-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`
-      },
+      headers,
       body: JSON.stringify({
         message,
         conversation_id: options?.conversationId,
