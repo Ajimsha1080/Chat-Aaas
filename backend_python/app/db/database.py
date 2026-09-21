@@ -211,51 +211,7 @@ class DatabaseStore:
             }
 
     def seed_deployment_guide(self):
-        if "ks-tf-3" not in self.knowledge_sources:
-            now_str = time.strftime("%Y-%m-%dT%H:%M:%SZ")
-            self.knowledge_sources["ks-tf-3"] = {
-                "id": "ks-tf-3",
-                "companyId": "comp-techflow",
-                "collectionId": "col-tf-1",
-                "title": "Production Deployment & Architecture Guide",
-                "sourceType": "document",
-                "fileName": "techflow_deployment_guide.md",
-                "fileSizeBytes": 4500,
-                "mimeType": "text/markdown",
-                "version": 1,
-                "category": "Deployment",
-                "status": "ready",
-                "lifecycleState": "active",
-                "processingStage": "indexed",
-                "retentionDays": 30,
-                "lastIndexedAt": now_str,
-                "chunkCount": 2,
-                "totalTokens": 180,
-                "lastSyncedAt": now_str,
-                "createdAt": now_str
-            }
-            self.document_chunks["chk-tf-3"] = {
-                "id": "chk-tf-3",
-                "knowledgeSourceId": "ks-tf-3",
-                "companyId": "comp-techflow",
-                "collectionId": "col-tf-1",
-                "chunkIndex": 0,
-                "content": "TechFlow Cloud production deployment utilizes automated CI/CD pipelines, containerized microservices via Docker, and zero-downtime rolling deployments on multi-region Kubernetes clusters with automated health probes and SSL termination.",
-                "tokenCount": 35,
-                "sectionHeader": "Production Deployment Overview",
-                "metadata": {"title": "Production Deployment & Architecture Guide", "category": "Deployment", "fileName": "techflow_deployment_guide.md", "page": 1}
-            }
-            self.document_chunks["chk-tf-4"] = {
-                "id": "chk-tf-4",
-                "knowledgeSourceId": "ks-tf-3",
-                "companyId": "comp-techflow",
-                "collectionId": "col-tf-1",
-                "chunkIndex": 1,
-                "content": "To deploy into production: 1. Push code to the release branch to trigger automated unit and integration testing. 2. Build and scan immutable Docker container images. 3. Deploy to production Kubernetes clusters with canary traffic shifting (10% -> 50% -> 100%). 4. Automated rollback initiates immediately if error rates exceed 0.1% or latency degrades.",
-                "tokenCount": 55,
-                "sectionHeader": "Deployment Steps & Verification",
-                "metadata": {"title": "Production Deployment & Architecture Guide", "category": "Deployment", "fileName": "techflow_deployment_guide.md", "page": 2}
-            }
+        pass
 
     @contextmanager
     def get_session(self, company_id: Optional[str] = None, is_super_admin: bool = False):
@@ -1424,7 +1380,7 @@ class DatabaseStore:
             pass
 
     def seed_demo_data(self):
-        # 1. TechFlow Cloud Tenant (Tenant A)
+        # 1. TechFlow Cloud Production Baseline Tenant
         self.companies["comp-techflow"] = {
             "id": "comp-techflow",
             "name": "TechFlow Cloud Systems",
@@ -1439,39 +1395,6 @@ class DatabaseStore:
             "apiSecretEncrypted": "enc_kms_sec_techflow_prod",
             "createdAt": "2026-08-01T00:00:00.000Z"
         }
-
-        # 2. UrbanCraft Living Tenant (Tenant B)
-        self.companies["comp-urbancraft"] = {
-            "id": "comp-urbancraft",
-            "name": "UrbanCraft Living",
-            "slug": "urbancraft-living",
-            "domain": "urbancraft.in",
-            "industry": "Home & Decor",
-            "planId": "growth",
-            "billingCycle": "monthly",
-            "planStatus": "active",
-            "isSuspended": False,
-            "apiKey": "aas_live_uc_481029418911",
-            "apiSecretEncrypted": "enc_kms_sec_urbancraft_prod",
-            "createdAt": "2026-08-05T00:00:00.000Z"
-        }
-
-        # 3. FinScale Technologies (Tenant C)
-        self.companies["comp-finscale"] = {
-            "id": "comp-finscale",
-            "name": "FinScale Technologies",
-            "slug": "finscale-tech",
-            "domain": "finscale.io",
-            "industry": "Fintech & Payments",
-            "planId": "starter",
-            "billingCycle": "annual",
-            "planStatus": "active",
-            "isSuspended": False,
-            "apiKey": "aas_live_fs_112093849102",
-            "apiSecretEncrypted": "enc_kms_sec_finscale_prod",
-            "createdAt": "2026-08-10T00:00:00.000Z"
-        }
-
 
         self.users["usr-root-admin"] = {
             "id": "usr-root-admin",
@@ -1503,40 +1426,6 @@ class DatabaseStore:
             "id": "mem-alex",
             "userId": "usr-alex",
             "companyId": "comp-techflow",
-            "role": "owner",
-            "status": "active"
-        }
-
-        self.users["usr-urban-owner"] = {
-            "id": "usr-urban-owner",
-            "email": "owner@urbancraft.in",
-            "passwordHash": hash_password("Password123!"),
-            "fullName": "UrbanCraft Admin",
-            "isEmailVerified": True,
-            "isSuspended": False,
-            "createdAt": "2026-08-05T00:00:00.000Z"
-        }
-        self.memberships["mem-urban-owner"] = {
-            "id": "mem-urban-owner",
-            "userId": "usr-urban-owner",
-            "companyId": "comp-urbancraft",
-            "role": "owner",
-            "status": "active"
-        }
-
-        self.users["usr-fin-owner"] = {
-            "id": "usr-fin-owner",
-            "email": "owner@finscale.io",
-            "passwordHash": hash_password("Password123!"),
-            "fullName": "FinScale Admin",
-            "isEmailVerified": True,
-            "isSuspended": False,
-            "createdAt": "2026-08-10T00:00:00.000Z"
-        }
-        self.memberships["mem-fin-owner"] = {
-            "id": "mem-fin-owner",
-            "userId": "usr-fin-owner",
-            "companyId": "comp-finscale",
             "role": "owner",
             "status": "active"
         }
@@ -1582,153 +1471,6 @@ class DatabaseStore:
             "createdAt": "2026-08-15T10:00:00.000Z"
         }
 
-        # Collections
-        self.knowledge_collections["col-tf-1"] = {
-            "id": "col-tf-1",
-            "companyId": "comp-techflow",
-            "name": "Customer Support & SLA",
-            "description": "Public SLA guarantees, incident resolution procedures, and contact paths.",
-            "icon": "ShieldCheck",
-            "color": "indigo",
-            "sourceCount": 2,
-            "createdAt": "2026-08-15T10:00:00.000Z"
-        }
-        self.knowledge_collections["col-tf-2"] = {
-            "id": "col-tf-2",
-            "companyId": "comp-techflow",
-            "name": "Pricing & Billing",
-            "description": "Subscription plans, add-ons, refund policies, and GST tax computation.",
-            "icon": "CreditCard",
-            "color": "emerald",
-            "sourceCount": 1,
-            "createdAt": "2026-08-15T10:00:00.000Z"
-        }
-
-        # Knowledge Sources
-        self.knowledge_sources["ks-tf-1"] = {
-            "id": "ks-tf-1",
-            "companyId": "comp-techflow",
-            "collectionId": "col-tf-1",
-            "title": "TechFlow SLA & Uptime Guarantee",
-            "sourceType": "file",
-            "fileName": "techflow_sla_2026.pdf",
-            "fileSizeBytes": 142000,
-            "mimeType": "application/pdf",
-            "version": 1,
-            "category": "SLA",
-            "status": "ready",
-            "lifecycleState": "active",
-            "processingStage": "indexed",
-            "retentionDays": 30,
-            "lastIndexedAt": "2026-09-06T10:00:00.000Z",
-            "chunkCount": 1,
-            "totalTokens": 20,
-            "lastSyncedAt": "2026-09-06T10:00:00.000Z",
-            "createdAt": "2026-08-15T10:00:00.000Z"
-        }
-        self.knowledge_sources["ks-tf-2"] = {
-            "id": "ks-tf-2",
-            "companyId": "comp-techflow",
-            "collectionId": "col-tf-2",
-            "title": "Refund & Cancellation Policy",
-            "sourceType": "faq",
-            "fileName": None,
-            "fileSizeBytes": 2400,
-            "mimeType": "text/plain",
-            "version": 1,
-            "category": "Billing",
-            "status": "ready",
-            "lifecycleState": "active",
-            "processingStage": "indexed",
-            "retentionDays": 30,
-            "lastIndexedAt": "2026-09-06T10:00:00.000Z",
-            "chunkCount": 1,
-            "totalTokens": 15,
-            "lastSyncedAt": "2026-09-06T10:00:00.000Z",
-            "createdAt": "2026-08-15T10:00:00.000Z"
-        }
-
-        self.knowledge_sources["ks-tf-3"] = {
-            "id": "ks-tf-3",
-            "companyId": "comp-techflow",
-            "collectionId": "col-tf-1",
-            "title": "Production Deployment & Architecture Guide",
-            "sourceType": "document",
-            "fileName": "techflow_deployment_guide.md",
-            "fileSizeBytes": 4500,
-            "mimeType": "text/markdown",
-            "version": 1,
-            "category": "Deployment",
-            "status": "ready",
-            "lifecycleState": "active",
-            "processingStage": "indexed",
-            "retentionDays": 30,
-            "lastIndexedAt": "2026-09-06T10:00:00.000Z",
-            "chunkCount": 2,
-            "totalTokens": 180,
-            "lastSyncedAt": "2026-09-06T10:00:00.000Z",
-            "createdAt": "2026-08-15T10:00:00.000Z"
-        }
-
-        # Document Chunks
-        self.document_chunks["chk-tf-1"] = {
-            "id": "chk-tf-1",
-            "knowledgeSourceId": "ks-tf-1",
-            "companyId": "comp-techflow",
-            "collectionId": "col-tf-1",
-            "chunkIndex": 0,
-            "content": "TechFlow Cloud guarantees a 99.99% monthly uptime SLA across all multi-region Kubernetes clusters. If uptime falls below 99.99%, enterprise customers are entitled to service credits of 10% to 25% of their monthly bill.",
-            "tokenCount": 35,
-            "sectionHeader": "SLA & Availability",
-            "metadata": {"title": "TechFlow SLA & Uptime Guarantee", "category": "SLA", "fileName": "techflow_sla_2026.pdf", "page": 1}
-        }
-        self.document_chunks["chk-tf-2"] = {
-            "id": "chk-tf-2",
-            "knowledgeSourceId": "ks-tf-2",
-            "companyId": "comp-techflow",
-            "collectionId": "col-tf-2",
-            "chunkIndex": 0,
-            "content": "Standard refund policy allows a full refund within 14 days of purchase. To initiate a refund, customers must submit an order cancellation request through the portal or speak with support.",
-            "tokenCount": 30,
-            "sectionHeader": "Refund Window",
-            "metadata": {"title": "Refund & Cancellation Policy", "category": "Billing", "faq": True}
-        }
-        self.document_chunks["chk-tf-3"] = {
-            "id": "chk-tf-3",
-            "knowledgeSourceId": "ks-tf-3",
-            "companyId": "comp-techflow",
-            "collectionId": "col-tf-1",
-            "chunkIndex": 0,
-            "content": "TechFlow Cloud production deployment utilizes automated CI/CD pipelines, containerized microservices via Docker, and zero-downtime rolling deployments on multi-region Kubernetes clusters with automated health probes and SSL termination.",
-            "tokenCount": 35,
-            "sectionHeader": "Production Deployment Overview",
-            "metadata": {"title": "Production Deployment & Architecture Guide", "category": "Deployment", "fileName": "techflow_deployment_guide.md", "page": 1}
-        }
-        self.document_chunks["chk-tf-4"] = {
-            "id": "chk-tf-4",
-            "knowledgeSourceId": "ks-tf-3",
-            "companyId": "comp-techflow",
-            "collectionId": "col-tf-1",
-            "chunkIndex": 1,
-            "content": "To deploy into production: 1. Push code to the release branch to trigger automated unit and integration testing. 2. Build and scan immutable Docker container images. 3. Deploy to production Kubernetes clusters with canary traffic shifting (10% -> 50% -> 100%). 4. Automated rollback initiates immediately if error rates exceed 0.1% or latency degrades.",
-            "tokenCount": 55,
-            "sectionHeader": "Deployment Steps & Verification",
-            "metadata": {"title": "Production Deployment & Architecture Guide", "category": "Deployment", "fileName": "techflow_deployment_guide.md", "page": 2}
-        }
-
-        # Knowledge Gaps
-        self.knowledge_gaps["gap-tf-1"] = {
-            "id": "gap-tf-1",
-            "companyId": "comp-techflow",
-            "query": "Do you offer on-premise air-gapped deployments?",
-            "occurrences": 8,
-            "lastAskedAt": "2026-09-06T09:30:00.000Z",
-            "status": "unresolved",
-            "suggestedCategory": "Deployment",
-            "createdAt": "2026-09-05T12:00:00.000Z"
-        }
-
-
         self.agent_tools["act-tf-1"] = {
             "id": "act-tf-1",
             "companyId": "comp-techflow",
@@ -1738,7 +1480,9 @@ class DatabaseStore:
             "riskLevel": "read_only",
             "requiresUserConfirmation": False,
             "enabled": True,
-            "parameters": [{"name": "order_id", "type": "string", "description": "Order ID", "required": True}]
+            "parameters": [{"name": "order_id", "type": "string", "description": "Order ID", "required": True}],
+            "endpointConfig": {},
+            "createdAt": "2026-08-01T00:00:00.000Z"
         }
         self.agent_tools["act-tf-2"] = {
             "id": "act-tf-2",
@@ -1753,87 +1497,11 @@ class DatabaseStore:
             "parameters": [
                 {"name": "order_id", "type": "string", "description": "Order identifier", "required": True},
                 {"name": "amount", "type": "string", "description": "Refund amount in INR", "required": True}
-            ]
+            ],
+            "endpointConfig": {},
+            "createdAt": "2026-08-01T00:00:00.000Z"
         }
 
-        self.conversations["conv-tf-101"] = {
-            "id": "conv-tf-101",
-            "companyId": "comp-techflow",
-            "customerSessionId": "sess-99120",
-            "customerName": "Rohan Mehta",
-            "customerEmail": "rohan@enterprise-client.in",
-            "channel": "website_widget",
-            "status": "active",
-            "sentiment": "neutral",
-            "totalTokensUsed": 380,
-            "tags": ["Kubernetes", "SLA"],
-            "startedAt": "2026-09-01T10:00:00.000Z",
-            "lastMessageAt": "2026-09-01T10:05:00.000Z"
-        }
-
-        # 2. Apex Health Tenant (Tenant B)
-        self.companies["comp-apex-health"] = {
-            "id": "comp-apex-health",
-            "name": "Apex Health Care",
-            "slug": "apex-health",
-            "domain": "apexhealth.org",
-            "industry": "Healthcare",
-            "planId": "growth",
-            "billingCycle": "monthly",
-            "planStatus": "active",
-            "isSuspended": False,
-            "apiKey": "aas_live_apex_3381920",
-            "apiSecretEncrypted": "enc_kms_sec_apex_prod",
-            "createdAt": "2026-08-10T00:00:00.000Z"
-        }
-
-        self.users["usr-apex-1"] = {
-            "id": "usr-apex-1",
-            "email": "dr.sarah@apexhealth.org",
-            "passwordHash": hash_password("Password123!"),
-            "fullName": "Dr. Sarah Jenkins",
-            "isEmailVerified": True,
-            "createdAt": "2026-08-10T00:00:00.000Z"
-        }
-        self.memberships["mem-apex-1"] = {
-            "id": "mem-apex-1",
-            "userId": "usr-apex-1",
-            "companyId": "comp-apex-health",
-            "role": "owner",
-            "status": "active"
-        }
-
-        self.agents["agent-apex-1"] = {
-            "id": "agent-apex-1",
-            "companyId": "comp-apex-health",
-            "name": "CoarAI Clinical Assistant",
-            "description": "HIPAA-compliant Patient Support Agent",
-            "avatarUrl": "https://images.unsplash.com/photo-1594824813593-35f12e9b8979",
-            "status": "active",
-            "tone": "empathetic",
-            "activeVersionId": "ver-apex-v1",
-            "draftVersionId": "ver-apex-v1",
-            "createdAt": "2026-08-10T00:00:00.000Z"
-        }
-        self.agent_versions["ver-apex-v1"] = {
-            "id": "ver-apex-v1",
-            "agentId": "agent-apex-1",
-            "companyId": "comp-apex-health",
-            "versionNumber": 1,
-            "status": "published",
-            "systemInstructions": "You are CoarAI Clinical Assistant, patient triaging assistant for Apex Health.",
-            "greetingMessage": "Hello, welcome to Apex Health Telemedicine.",
-            "fallbackMessage": "Connecting you to an on-call clinical nurse.",
-            "tone": "empathetic",
-            "allowedActionIds": [],
-            "escalationSettings": {"enabled": True},
-            "customSafetyRules": ["Never dispense prescription advice without physician sign-off."],
-            "changeSummary": "Initial clinical setup",
-            "publishedAt": "2026-08-10T00:00:00.000Z",
-            "createdAt": "2026-08-10T00:00:00.000Z"
-        }
-
-        # 3. Deployments
         self.deployments["dep-tf-widget"] = {
             "id": "dep-tf-widget",
             "companyId": "comp-techflow",
@@ -1859,7 +1527,6 @@ class DatabaseStore:
             "createdAt": "2026-08-20T10:00:00.000Z"
         }
 
-        # 4. API Keys (Safe Metadata)
         self.api_keys["key-tf-prod"] = {
             "id": "key-tf-prod",
             "companyId": "comp-techflow",
@@ -1873,7 +1540,6 @@ class DatabaseStore:
             "createdAt": "2026-08-01T00:00:00.000Z"
         }
 
-        # 5. Webhooks
         self.webhooks["hook-tf-prod"] = {
             "id": "hook-tf-prod",
             "companyId": "comp-techflow",
@@ -1886,16 +1552,7 @@ class DatabaseStore:
             "responseTimeMs": 182,
             "lastDeliveredAt": "2 minutes ago",
             "failureCount": 0,
-            "deliveryHistory": [
-                {
-                    "id": "del-1",
-                    "event": "handoff.triggered",
-                    "statusCode": 200,
-                    "responseTimeMs": 182,
-                    "timestamp": "2 minutes ago",
-                    "success": True
-                }
-            ],
+            "deliveryHistory": [],
             "createdAt": "2026-08-15T10:00:00.000Z"
         }
 
