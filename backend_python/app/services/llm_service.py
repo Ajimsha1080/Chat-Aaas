@@ -20,10 +20,12 @@ class LLMProvider:
     @classmethod
     def _normalize_model_name(cls, model: Optional[str]) -> str:
         """Maps frontend UI tiers ('automatic', 'balanced', 'fast', 'advanced', etc.) to actual upstream model IDs."""
-        # Sarvam AI upstream ONLY accepts 'sarvam-105b' or 'sarvam-105b-conversations'
         if settings.CUSTOM_LLM_API_URL and "sarvam.ai" in settings.CUSTOM_LLM_API_URL:
             if not model or model.lower() not in ["sarvam-105b", "sarvam-105b-conversations"]:
-                return settings.DEFAULT_LLM_MODEL or "sarvam-105b-conversations"
+                fallback = settings.DEFAULT_LLM_MODEL
+                if not fallback or fallback.lower() not in ["sarvam-105b", "sarvam-105b-conversations"]:
+                    fallback = "sarvam-105b-conversations"
+                return fallback
             return model
 
         if not model or model.lower() in ["automatic", "fast", "balanced", "advanced", "enterprise-rag", "sarvam-2b", "default", "none"]:
