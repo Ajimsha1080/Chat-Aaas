@@ -133,14 +133,15 @@ class DatabaseStore:
 
     def ensure_baseline_tenant(self):
         """
-        Ensures SuperAdmin platform account exists.
-        Purges all hardcoded/mock company entities (comp-coarai, comp-techflow) so the database
-        contains 0 tenant companies until created by real users upon registration.
+        Guarantees the baseline workspace (comp-coarai) and default agent (agent-coarai-1)
+        exist in both memory and PostgreSQL so public visitor widgets, chat streaming,
+        and multi-tenant routing function immediately upon deployment in all environments.
+        Purges legacy template mock comp-techflow and agent-tf-1 completely.
         """
         now_str = "2026-08-01T00:00:00.000Z"
 
-        # 0. Completely purge hardcoded/mock companies and agents
-        for mock_cid in ["comp-coarai", "comp-techflow"]:
+        # 0. Completely purge legacy mock comp-techflow and agent-tf-1 artifacts
+        for mock_cid in ["comp-techflow"]:
             self.companies.pop(mock_cid, None)
             if self.engine:
                 try:
@@ -151,7 +152,7 @@ class DatabaseStore:
                 except Exception:
                     pass
 
-        for mock_aid in ["agent-coarai-1", "agent-tf-1"]:
+        for mock_aid in ["agent-tf-1"]:
             self.agents.pop(mock_aid, None)
             if self.engine:
                 try:
@@ -160,7 +161,7 @@ class DatabaseStore:
                 except Exception:
                     pass
 
-        for mock_vid in ["ver-agent-coarai-1-v1", "ver-tf-v1", "ver-agent-tf-1-v1"]:
+        for mock_vid in ["ver-tf-v1", "ver-agent-tf-1-v1"]:
             self.agent_versions.pop(mock_vid, None)
             if self.engine:
                 try:
@@ -169,13 +170,153 @@ class DatabaseStore:
                 except Exception:
                     pass
 
-        self.memberships = {k: v for k, v in self.memberships.items() if v.get("companyId") not in ["comp-coarai", "comp-techflow"]}
-        self.deployments = {k: v for k, v in self.deployments.items() if v.get("companyId") not in ["comp-coarai", "comp-techflow"]}
-        self.api_keys = {k: v for k, v in self.api_keys.items() if v.get("companyId") not in ["comp-coarai", "comp-techflow"]}
-        self.webhooks = {k: v for k, v in self.webhooks.items() if v.get("companyId") not in ["comp-coarai", "comp-techflow"]}
-        self.agent_tools = {k: v for k, v in self.agent_tools.items() if v.get("companyId") not in ["comp-coarai", "comp-techflow"]}
+        self.memberships = {k: v for k, v in self.memberships.items() if v.get("companyId") != "comp-techflow"}
+        self.deployments = {k: v for k, v in self.deployments.items() if v.get("companyId") != "comp-techflow"}
+        self.api_keys = {k: v for k, v in self.api_keys.items() if v.get("companyId") != "comp-techflow"}
+        self.webhooks = {k: v for k, v in self.webhooks.items() if v.get("companyId") != "comp-techflow"}
+        self.agent_tools = {k: v for k, v in self.agent_tools.items() if v.get("companyId") != "comp-techflow"}
 
-        # Ensure SuperAdmin account exists
+        # 1. Ensure CoarAI Platform workspace
+        cid = "comp-coarai"
+        cname = "CoarAI Platform"
+        if cid not in self.companies or self.companies[cid].get("name") in ["TechFlow Cloud Systems", "Acme Global"]:
+            self.save_company({
+                "id": cid,
+                "name": cname,
+                "slug": "coarai-platform",
+                "domain": "coarai.internal",
+                "industry": "Enterprise AI",
+                "planId": "business",
+                "billingCycle": "monthly",
+                "planStatus": "active",
+                "isSuspended": False,
+                "apiKey": f"aas_live_{cid}_9941",
+                "apiSecretEncrypted": "enc_kms_sec_coarai_prod",
+                "createdAt": now_str
+            })
+
+        # 2. Ensure CoarAI Assistant agent
+        aid = "agent-coarai-1"
+        if aid not in self.agents or self.agents[aid].get("name") in ["FlowBot AI Specialist", "AcmeBot"]:
+            self.save_agent({
+                "id": aid,
+                "companyId": cid,
+                "name": "CoarAI Assistant",
+                "description": "Enterprise Autonomous Assistant",
+                "avatarUrl": "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe",
+                "status": "active",
+                "lifecycleStatus": "published",
+                "publishedVersionNumber": 1,
+                "draftVersionNumber": 1,
+                "lastPublishedAt": "2026-08-15T10:00:00.000Z",
+                "tone": "professional",
+                "activeVersionId": f"ver-{aid}-v1",
+                "draftVersionId": f"ver-{aid}-v1",
+                "createdAt": now_str
+            })
+        vid = f"ver-{aid}-v1"
+        if vid not in self.agent_versions or "FlowBot" in self.agent_versions[vid].get("greetingMessage", "") or "Acme" in self.agent_versions[vid].get("greetingMessage", ""):
+            self.save_agent_version({
+                "id": vid,
+                "agentId": aid,
+                "companyId": cid,
+                "versionNumber": 1,
+                "status": "published",
+                "systemInstructions": "You are the CoarAI Assistant, the enterprise AI Q&A specialist for CoarAI Platform.",
+                "greetingMessage": "Hello! 👋 I'm your CoarAI Assistant. How can I help you today?",
+                "fallbackMessage": "I do not have verified knowledge on this topic. Connecting you to staff.",
+                "tone": "professional",
+                "allowedActionIds": ["act-coarai-1", "act-coarai-2"],
+                "escalationSettings": {
+                    "enabled": True,
+                    "triggerKeywords": ["human", "agent", "manager", "refund", "talk to person"],
+                    "maxUnansweredQueriesBeforeEscalation": 2,
+                    "notifyEmail": "support@coarai.internal",
+                    "escalationMessage": "Transferring you to a live support representative.",
+                    "requireHumanApprovalForRefund": True
+                },
+                "customSafetyRules": ["Never fabricate SLA figures without context."],
+                "changeSummary": "Initial production version release",
+                "publishedAt": "2026-08-15T10:00:00.000Z",
+                "createdAt": now_str
+            })
+
+        # 3. Ensure tools and deployments for comp-coarai
+        if "act-coarai-1" not in self.agent_tools:
+            self.save_agent_tool({
+                "id": "act-coarai-1",
+                "companyId": cid,
+                "code": "check_order_status",
+                "name": "Check Order Status",
+                "description": "Retrieves real-time status of compute cluster provisioning.",
+                "riskLevel": "read_only",
+                "requiresUserConfirmation": False,
+                "enabled": True,
+                "parameters": [{"name": "order_id", "type": "string", "description": "Order ID", "required": True}],
+                "endpointConfig": {},
+                "createdAt": now_str
+            })
+        if "act-coarai-2" not in self.agent_tools:
+            self.save_agent_tool({
+                "id": "act-coarai-2",
+                "companyId": cid,
+                "code": "execute_refund",
+                "name": "Process Customer Refund",
+                "description": "Issues financial refund to customer balance.",
+                "riskLevel": "high_risk",
+                "requiresUserConfirmation": True,
+                "confirmationPrompt": "Are you certain you wish to issue a refund for this order?",
+                "enabled": True,
+                "parameters": [
+                    {"name": "order_id", "type": "string", "description": "Order identifier", "required": True},
+                    {"name": "amount", "type": "string", "description": "Refund amount in INR", "required": True}
+                ],
+                "endpointConfig": {},
+                "createdAt": now_str
+            })
+        dep_w_id = f"dep-{cid}-widget"
+        if dep_w_id not in self.deployments:
+            self.deployments[dep_w_id] = {
+                "id": dep_w_id,
+                "companyId": cid,
+                "name": "Production Website Widget",
+                "channel": "website_widget",
+                "status": "active",
+                "assistantVersion": "v1",
+                "domain": "coarai.internal",
+                "config": {"theme": "dark", "position": "bottom-right"},
+                "lastActiveAt": "2026-09-12T02:30:00.000Z",
+                "createdAt": "2026-08-15T10:00:00.000Z"
+            }
+        dep_api_id = f"dep-{cid}-api"
+        if dep_api_id not in self.deployments:
+            self.deployments[dep_api_id] = {
+                "id": dep_api_id,
+                "companyId": cid,
+                "name": "Customer Support REST API",
+                "channel": "rest_api",
+                "status": "active",
+                "assistantVersion": "v1",
+                "domain": "api.coarai.internal",
+                "config": {"rateLimitPerMin": 120},
+                "lastActiveAt": "2026-09-12T02:15:00.000Z",
+                "createdAt": "2026-08-20T10:00:00.000Z"
+            }
+        key_id = f"key-{cid}-prod"
+        if key_id not in self.api_keys:
+            self.api_keys[key_id] = {
+                "id": key_id,
+                "companyId": cid,
+                "name": "Production API Key",
+                "keyPrefix": f"aas_live_{cid[:4]}",
+                "keyHash": "hash_coarai_live_9941",
+                "secretMasked": f"aas_live_{cid[:4]}_••••••••1824",
+                "scopes": ["chat:read", "chat:write"],
+                "status": "active",
+                "lastUsedAt": "5 minutes ago",
+                "createdAt": now_str
+            }
+        # Ensure legacy demo accounts are purged
         self.users.pop("usr-alex", None)
         self.memberships.pop("mem-alex", None)
 
@@ -189,12 +330,76 @@ class DatabaseStore:
                 "isSuspended": False,
                 "createdAt": now_str
             })
+            self.save_membership({
+                "id": "mem-root-admin",
+                "userId": "usr-root-admin",
+                "companyId": "comp-coarai",
+                "role": "super_admin",
+                "status": "active",
+                "createdAt": now_str
+            })
 
     def seed_agent_versions(self):
-        pass
+        if "ver-agent-coarai-1-v1" not in self.agent_versions:
+            self.agent_versions["ver-agent-coarai-1-v1"] = {
+                "id": "ver-agent-coarai-1-v1",
+                "agentId": "agent-coarai-1",
+                "companyId": "comp-coarai",
+                "versionNumber": 1,
+                "status": "published",
+                "systemInstructions": "You are the CoarAI Assistant, the enterprise AI Q&A specialist for CoarAI Platform.",
+                "greetingMessage": "Hello! 👋 I'm your CoarAI Assistant. How can I help you today?",
+                "fallbackMessage": "I do not have verified knowledge on this topic. Connecting you to staff.",
+                "tone": "professional",
+                "allowedActionIds": ["act-coarai-1", "act-coarai-2"],
+                "escalationSettings": {
+                    "enabled": True,
+                    "triggerKeywords": ["human", "agent", "manager", "refund", "talk to person"],
+                    "maxUnansweredQueriesBeforeEscalation": 2,
+                    "notifyEmail": "support@coarai.internal",
+                    "escalationMessage": "Transferring you to a live support representative.",
+                    "requireHumanApprovalForRefund": True
+                },
+                "customSafetyRules": ["Never fabricate SLA figures without context."],
+                "changeSummary": "Initial production version release",
+                "publishedAt": "2026-08-15T10:00:00.000Z",
+                "createdAt": "2026-08-15T10:00:00.000Z"
+            }
 
     def seed_agent_tools(self):
-        pass
+        now_str = time.strftime("%Y-%m-%dT%H:%M:%SZ")
+        if "act-coarai-1" not in self.agent_tools:
+            self.agent_tools["act-coarai-1"] = {
+                "id": "act-coarai-1",
+                "companyId": "comp-coarai",
+                "code": "check_order_status",
+                "name": "Check Order Status",
+                "description": "Retrieves real-time status of compute cluster provisioning.",
+                "riskLevel": "read_only",
+                "requiresUserConfirmation": False,
+                "enabled": True,
+                "parameters": [{"name": "order_id", "type": "string", "description": "Order ID", "required": True}],
+                "endpointConfig": {},
+                "createdAt": now_str
+            }
+        if "act-coarai-2" not in self.agent_tools:
+            self.agent_tools["act-coarai-2"] = {
+                "id": "act-coarai-2",
+                "companyId": "comp-coarai",
+                "code": "execute_refund",
+                "name": "Process Customer Refund",
+                "description": "Issues financial refund to customer balance.",
+                "riskLevel": "high_risk",
+                "requiresUserConfirmation": True,
+                "confirmationPrompt": "Are you certain you wish to issue a refund for this order?",
+                "enabled": True,
+                "parameters": [
+                    {"name": "order_id", "type": "string", "description": "Order identifier", "required": True},
+                    {"name": "amount", "type": "string", "description": "Refund amount in INR", "required": True}
+                ],
+                "endpointConfig": {},
+                "createdAt": now_str
+            }
 
     def seed_deployment_guide(self):
         pass
@@ -1366,17 +1571,164 @@ class DatabaseStore:
             pass
 
     def seed_demo_data(self):
-        now_str = "2026-08-01T00:00:00.000Z"
-        if "usr-root-admin" not in self.users:
-            self.users["usr-root-admin"] = {
-                "id": "usr-root-admin",
-                "email": "admin@chataaas.internal",
-                "passwordHash": hash_password("SuperAdmin123!"),
-                "fullName": "Platform Super Administrator",
-                "isEmailVerified": True,
-                "isSuspended": False,
-                "createdAt": now_str
-            }
+        # 1. CoarAI Platform Production Baseline Tenant
+        self.companies["comp-coarai"] = {
+            "id": "comp-coarai",
+            "name": "CoarAI Platform",
+            "slug": "coarai-platform",
+            "domain": "coarai.internal",
+            "industry": "Enterprise AI",
+            "planId": "business",
+            "billingCycle": "monthly",
+            "planStatus": "active",
+            "isSuspended": False,
+            "apiKey": "aas_live_coarai_9941",
+            "apiSecretEncrypted": "enc_kms_sec_coarai_prod",
+            "createdAt": "2026-08-01T00:00:00.000Z"
+        }
+
+        self.users["usr-root-admin"] = {
+            "id": "usr-root-admin",
+            "email": "admin@chataaas.internal",
+            "passwordHash": hash_password("SuperAdmin123!"),
+            "fullName": "Platform Super Administrator",
+            "isEmailVerified": True,
+            "isSuspended": False,
+            "createdAt": "2026-08-01T00:00:00.000Z"
+        }
+        self.memberships["mem-root-admin"] = {
+            "id": "mem-root-admin",
+            "userId": "usr-root-admin",
+            "companyId": "comp-coarai",
+            "role": "super_admin",
+            "status": "active"
+        }
+
+        self.agents["agent-coarai-1"] = {
+            "id": "agent-coarai-1",
+            "companyId": "comp-coarai",
+            "name": "CoarAI Assistant",
+            "description": "Enterprise Autonomous Assistant",
+            "avatarUrl": "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe",
+            "status": "active",
+            "lifecycleStatus": "published",
+            "publishedVersionNumber": 1,
+            "draftVersionNumber": 1,
+            "lastPublishedAt": "2026-08-15T10:00:00.000Z",
+            "tone": "professional",
+            "activeVersionId": "ver-agent-coarai-1-v1",
+            "draftVersionId": "ver-agent-coarai-1-v1",
+            "createdAt": "2026-08-01T00:00:00.000Z"
+        }
+        self.agent_versions["ver-agent-coarai-1-v1"] = {
+            "id": "ver-agent-coarai-1-v1",
+            "agentId": "agent-coarai-1",
+            "companyId": "comp-coarai",
+            "versionNumber": 1,
+            "status": "published",
+            "systemInstructions": "You are the CoarAI Assistant, the enterprise AI Q&A specialist for CoarAI Platform.",
+            "greetingMessage": "Hello! 👋 I'm your CoarAI Assistant. How can I help you today?",
+            "fallbackMessage": "I do not have verified knowledge on this topic. Connecting you to staff.",
+            "tone": "professional",
+            "allowedActionIds": ["act-coarai-1", "act-coarai-2"],
+            "escalationSettings": {
+                "enabled": True,
+                "triggerKeywords": ["human", "agent", "manager", "refund", "talk to person"],
+                "maxUnansweredQueriesBeforeEscalation": 2,
+                "notifyEmail": "support@coarai.internal",
+                "escalationMessage": "Transferring you to a live support representative.",
+                "requireHumanApprovalForRefund": True
+            },
+            "customSafetyRules": ["Never fabricate SLA figures without context."],
+            "changeSummary": "Initial production version release",
+            "publishedAt": "2026-08-15T10:00:00.000Z",
+            "createdAt": "2026-08-15T10:00:00.000Z"
+        }
+
+        self.agent_tools["act-coarai-1"] = {
+            "id": "act-coarai-1",
+            "companyId": "comp-coarai",
+            "code": "check_order_status",
+            "name": "Check Order Status",
+            "description": "Retrieves real-time status of compute cluster provisioning.",
+            "riskLevel": "read_only",
+            "requiresUserConfirmation": False,
+            "enabled": True,
+            "parameters": [{"name": "order_id", "type": "string", "description": "Order ID", "required": True}],
+            "endpointConfig": {},
+            "createdAt": "2026-08-01T00:00:00.000Z"
+        }
+        self.agent_tools["act-coarai-2"] = {
+            "id": "act-coarai-2",
+            "companyId": "comp-coarai",
+            "code": "execute_refund",
+            "name": "Process Customer Refund",
+            "description": "Issues financial refund to customer balance.",
+            "riskLevel": "high_risk",
+            "requiresUserConfirmation": True,
+            "confirmationPrompt": "Are you certain you wish to issue a refund for this order?",
+            "enabled": True,
+            "parameters": [
+                {"name": "order_id", "type": "string", "description": "Order identifier", "required": True},
+                {"name": "amount", "type": "string", "description": "Refund amount in INR", "required": True}
+            ],
+            "endpointConfig": {},
+            "createdAt": "2026-08-01T00:00:00.000Z"
+        }
+
+        self.deployments["dep-coarai-widget"] = {
+            "id": "dep-coarai-widget",
+            "companyId": "comp-coarai",
+            "name": "Production Website Widget",
+            "channel": "website_widget",
+            "status": "active",
+            "assistantVersion": "v1",
+            "domain": "coarai.internal",
+            "config": {"theme": "dark", "position": "bottom-right"},
+            "lastActiveAt": "2026-09-12T02:30:00.000Z",
+            "createdAt": "2026-08-15T10:00:00.000Z"
+        }
+        self.deployments["dep-coarai-api"] = {
+            "id": "dep-coarai-api",
+            "companyId": "comp-coarai",
+            "name": "Customer Support REST API",
+            "channel": "rest_api",
+            "status": "active",
+            "assistantVersion": "v1",
+            "domain": "api.coarai.internal",
+            "config": {"rateLimitPerMin": 120},
+            "lastActiveAt": "2026-09-12T02:15:00.000Z",
+            "createdAt": "2026-08-20T10:00:00.000Z"
+        }
+
+        self.api_keys["key-coarai-prod"] = {
+            "id": "key-coarai-prod",
+            "companyId": "comp-coarai",
+            "name": "Production API Key",
+            "keyPrefix": "aas_live_coarai",
+            "keyHash": "hash_coarai_live_9941",
+            "secretMasked": "aas_live_coar••••••••1824",
+            "scopes": ["chat:read", "chat:write"],
+            "status": "active",
+            "lastUsedAt": "5 minutes ago",
+            "createdAt": "2026-08-01T00:00:00.000Z"
+        }
+
+        self.webhooks["hook-coarai-prod"] = {
+            "id": "hook-coarai-prod",
+            "companyId": "comp-coarai",
+            "targetUrl": "https://api.coarai.internal/webhooks/ai-events",
+            "events": ["conversation.started", "handoff.triggered", "rag.fallback"],
+            "description": "Production event listener",
+            "secret": "whsec_live_coarai_98124",
+            "status": "active",
+            "lastDeliveryStatus": "200 OK",
+            "responseTimeMs": 182,
+            "lastDeliveredAt": "2 minutes ago",
+            "failureCount": 0,
+            "deliveryHistory": [],
+            "createdAt": "2026-08-15T10:00:00.000Z"
+        }
 
     def get_messages_for_conversation(self, conversation_id: str, company_id: str) -> List[Dict[str, Any]]:
         try:

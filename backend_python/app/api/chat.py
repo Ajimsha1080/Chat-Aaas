@@ -88,12 +88,6 @@ async def process_chat_message(
         )
 
     company_id = ctx.company_id
-    if not company_id or company_id not in db.companies:
-        return ChatResponse(
-            message="Welcome to CoarAI! No tenant organization or AI agent has been configured yet. Please sign up to create your company workspace.",
-            tokens_used=0,
-            confidence=1.0
-        )
     company = db.companies.get(company_id, {})
 
     # Validate origin domain if configured
@@ -194,12 +188,6 @@ async def stream_chat_tokens(
         )
 
     company_id = ctx.company_id
-    if not company_id or company_id not in db.companies:
-        async def empty_stream():
-            yield f"data: {json.dumps({'type': 'chunk', 'text': 'Welcome to CoarAI! No tenant organization or AI agent has been configured yet. Please sign up to create your company workspace.'})}\n\n"
-            yield "data: [DONE]\n\n"
-        return StreamingResponse(empty_stream(), media_type="text/event-stream")
-
     company = db.companies.get(company_id, {})
 
     # Validate origin domain if configured

@@ -41,21 +41,16 @@ class AuthService:
 
         membership = db.get_membership_for_user(user["id"])
         if not membership:
-            if user.get("id") == "usr-root-admin" or norm_email == "admin@chataaas.internal":
-                company_id = ""
-                role = "super_admin"
-            else:
-                raise HTTPException(
-                    status_code=status.HTTP_403_FORBIDDEN,
-                    detail="User account is not linked to an active workspace company."
-                )
-        else:
-            company_id = membership["companyId"]
-            role = membership.get("role", "member")
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="User account is not linked to an active workspace company."
+            )
 
         # Successful authentication: Clear account failure counter
         RateLimiter.clear_failed_logins(norm_email)
 
+        company_id = membership["companyId"]
+        role = membership.get("role", "member")
         token = create_jwt_token(user["id"], company_id, role)
         refresh_token = create_refresh_token(user["id"], company_id, role)
 
