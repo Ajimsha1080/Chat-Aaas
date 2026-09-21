@@ -196,9 +196,9 @@ def get_tenant_context(
     if header_comp:
         effective_comp = header_comp.strip()
         comp = db.companies.get(effective_comp)
-        if not comp and effective_comp in ["comp-coarai", "comp-techflow"]:
+        if not comp and effective_comp == "comp-coarai":
             db.ensure_baseline_tenant()
-            comp = db.companies.get(effective_comp) or db.companies.get("comp-coarai")
+            comp = db.companies.get("comp-coarai")
 
         if comp:
             if comp.get("isSuspended"):
@@ -227,7 +227,7 @@ def get_tenant_context(
                 correlation_id=correlation_id
             )
         else:
-            fallback_cid = "comp-coarai" if "comp-coarai" in db.companies else "comp-techflow"
+            fallback_cid = "comp-coarai"
             return TenantContext(
                 company_id=fallback_cid,
                 user_id=f"visitor_{int(time.time())}",
