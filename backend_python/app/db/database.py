@@ -133,52 +133,87 @@ class DatabaseStore:
 
     def ensure_baseline_tenant(self):
         """
-        Guarantees the baseline workspace (comp-techflow) and default agent (agent-tf-1)
+        Guarantees the baseline workspace (comp-coarai) and default agent (agent-coarai-1)
         exist in both memory and PostgreSQL so public visitor widgets, chat streaming,
         and multi-tenant routing function immediately upon deployment in all environments.
+        Also registers comp-techflow as an alias for seamless backward compatibility.
         """
         now_str = "2026-08-01T00:00:00.000Z"
-        if "comp-techflow" not in self.companies:
-            self.save_company({
-                "id": "comp-techflow",
-                "name": "TechFlow Cloud Systems",
-                "slug": "techflow-cloud",
-                "domain": "techflow.cloud",
-                "industry": "Cloud Infrastructure",
-                "planId": "business",
-                "billingCycle": "monthly",
-                "planStatus": "active",
-                "isSuspended": False,
-                "apiKey": "aas_live_tf_994102941824",
-                "apiSecretEncrypted": "enc_kms_sec_techflow_prod",
-                "createdAt": now_str
-            })
-        if "agent-tf-1" not in self.agents:
-            self.save_agent({
-                "id": "agent-tf-1",
-                "companyId": "comp-techflow",
-                "name": "FlowBot AI Specialist",
-                "description": "Autonomous Technical Support Specialist",
-                "avatarUrl": "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe",
-                "status": "active",
-                "lifecycleStatus": "published",
-                "publishedVersionNumber": 1,
-                "draftVersionNumber": 1,
-                "lastPublishedAt": "2026-08-15T10:00:00.000Z",
-                "tone": "professional",
-                "activeVersionId": "ver-tf-v1",
-                "draftVersionId": "ver-tf-v1",
-                "createdAt": now_str
-            })
+
+        # 1. Ensure CoarAI Platform workspace (and legacy alias comp-techflow)
+        for cid, cname in [("comp-coarai", "CoarAI Platform"), ("comp-techflow", "CoarAI Platform")]:
+            if cid not in self.companies:
+                self.save_company({
+                    "id": cid,
+                    "name": cname,
+                    "slug": "coarai-platform",
+                    "domain": "coarai.internal",
+                    "industry": "Enterprise AI",
+                    "planId": "business",
+                    "billingCycle": "monthly",
+                    "planStatus": "active",
+                    "isSuspended": False,
+                    "apiKey": f"aas_live_{cid}_9941",
+                    "apiSecretEncrypted": "enc_kms_sec_coarai_prod",
+                    "createdAt": now_str
+                })
+
+        # 2. Ensure CoarAI Assistant agents
+        for aid, cid in [("agent-coarai-1", "comp-coarai"), ("agent-tf-1", "comp-techflow"), ("agent-tf-1", "comp-coarai")]:
+            if aid not in self.agents:
+                self.save_agent({
+                    "id": aid,
+                    "companyId": cid,
+                    "name": "CoarAI Assistant",
+                    "description": "Enterprise Autonomous Assistant",
+                    "avatarUrl": "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe",
+                    "status": "active",
+                    "lifecycleStatus": "published",
+                    "publishedVersionNumber": 1,
+                    "draftVersionNumber": 1,
+                    "lastPublishedAt": "2026-08-15T10:00:00.000Z",
+                    "tone": "professional",
+                    "activeVersionId": f"ver-{aid}-v1",
+                    "draftVersionId": f"ver-{aid}-v1",
+                    "createdAt": now_str
+                })
+            vid = f"ver-{aid}-v1"
+            if vid not in self.agent_versions:
+                self.save_agent_version({
+                    "id": vid,
+                    "agentId": aid,
+                    "companyId": cid,
+                    "versionNumber": 1,
+                    "status": "published",
+                    "systemInstructions": "You are the CoarAI Assistant, the enterprise AI Q&A specialist for CoarAI Platform.",
+                    "greetingMessage": "Hello! 👋 I'm your CoarAI Assistant. How can I help you today?",
+                    "fallbackMessage": "I do not have verified knowledge on this topic. Connecting you to staff.",
+                    "tone": "professional",
+                    "allowedActionIds": ["act-tf-1", "act-tf-2"],
+                    "escalationSettings": {
+                        "enabled": True,
+                        "triggerKeywords": ["human", "agent", "manager", "refund", "talk to person"],
+                        "maxUnansweredQueriesBeforeEscalation": 2,
+                        "notifyEmail": "support@coarai.internal",
+                        "escalationMessage": "Transferring you to a live support representative.",
+                        "requireHumanApprovalForRefund": True
+                    },
+                    "customSafetyRules": ["Never fabricate SLA figures without context."],
+                    "changeSummary": "Initial production version release",
+                    "publishedAt": "2026-08-15T10:00:00.000Z",
+                    "createdAt": now_str
+                })
+
+        # Also support legacy ver-tf-v1 lookup
         if "ver-tf-v1" not in self.agent_versions:
             self.save_agent_version({
                 "id": "ver-tf-v1",
                 "agentId": "agent-tf-1",
-                "companyId": "comp-techflow",
+                "companyId": "comp-coarai",
                 "versionNumber": 1,
                 "status": "published",
-                "systemInstructions": "You are FlowBot, the enterprise AI Q&A assistant for TechFlow Cloud.",
-                "greetingMessage": "Hello! I am FlowBot, your TechFlow Cloud engineering specialist. How can I assist you with our services, pricing, or policies today?",
+                "systemInstructions": "You are the CoarAI Assistant, the enterprise AI Q&A specialist for CoarAI Platform.",
+                "greetingMessage": "Hello! 👋 I'm your CoarAI Assistant. How can I help you today?",
                 "fallbackMessage": "I do not have verified knowledge on this topic. Connecting you to staff.",
                 "tone": "professional",
                 "allowedActionIds": ["act-tf-1", "act-tf-2"],
@@ -186,7 +221,7 @@ class DatabaseStore:
                     "enabled": True,
                     "triggerKeywords": ["human", "agent", "manager", "refund", "talk to person"],
                     "maxUnansweredQueriesBeforeEscalation": 2,
-                    "notifyEmail": "support-team@techflow.cloud",
+                    "notifyEmail": "support@coarai.internal",
                     "escalationMessage": "Transferring you to a live support representative.",
                     "requireHumanApprovalForRefund": True
                 },
@@ -195,77 +230,82 @@ class DatabaseStore:
                 "publishedAt": "2026-08-15T10:00:00.000Z",
                 "createdAt": now_str
             })
-        if "act-tf-1" not in self.agent_tools:
-            self.save_agent_tool({
-                "id": "act-tf-1",
-                "companyId": "comp-techflow",
-                "code": "check_order_status",
-                "name": "Check Order Status",
-                "description": "Retrieves real-time status of compute cluster provisioning.",
-                "riskLevel": "read_only",
-                "requiresUserConfirmation": False,
-                "enabled": True,
-                "parameters": [{"name": "order_id", "type": "string", "description": "Order ID", "required": True}],
-                "endpointConfig": {},
-                "createdAt": now_str
-            })
-        if "act-tf-2" not in self.agent_tools:
-            self.save_agent_tool({
-                "id": "act-tf-2",
-                "companyId": "comp-techflow",
-                "code": "execute_refund",
-                "name": "Process Customer Refund",
-                "description": "Issues financial refund to customer balance.",
-                "riskLevel": "high_risk",
-                "requiresUserConfirmation": True,
-                "confirmationPrompt": "Are you certain you wish to issue a refund for this order?",
-                "enabled": True,
-                "parameters": [
-                    {"name": "order_id", "type": "string", "description": "Order identifier", "required": True},
-                    {"name": "amount", "type": "string", "description": "Refund amount in INR", "required": True}
-                ],
-                "endpointConfig": {},
-                "createdAt": now_str
-            })
-        if "dep-tf-widget" not in self.deployments:
-            self.deployments["dep-tf-widget"] = {
-                "id": "dep-tf-widget",
-                "companyId": "comp-techflow",
-                "name": "Production Website Widget",
-                "channel": "website_widget",
-                "status": "active",
-                "assistantVersion": "v1",
-                "domain": "techflow.cloud",
-                "config": {"theme": "dark", "position": "bottom-right"},
-                "lastActiveAt": "2026-09-12T02:30:00.000Z",
-                "createdAt": "2026-08-15T10:00:00.000Z"
-            }
-        if "dep-tf-api" not in self.deployments:
-            self.deployments["dep-tf-api"] = {
-                "id": "dep-tf-api",
-                "companyId": "comp-techflow",
-                "name": "Customer Support REST API",
-                "channel": "rest_api",
-                "status": "active",
-                "assistantVersion": "v1",
-                "domain": "api.techflow.cloud",
-                "config": {"rateLimitPerMin": 120},
-                "lastActiveAt": "2026-09-12T02:15:00.000Z",
-                "createdAt": "2026-08-20T10:00:00.000Z"
-            }
-        if "key-tf-prod" not in self.api_keys:
-            self.api_keys["key-tf-prod"] = {
-                "id": "key-tf-prod",
-                "companyId": "comp-techflow",
-                "name": "Production API Key",
-                "keyPrefix": "aas_live_tf",
-                "keyHash": "hash_tf_live_9941",
-                "secretMasked": "aas_live_tf_••••••••1824",
-                "scopes": ["chat:read", "chat:write"],
-                "status": "active",
-                "lastUsedAt": "5 minutes ago",
-                "createdAt": now_str
-            }
+
+        for cid in ["comp-coarai", "comp-techflow"]:
+            if "act-tf-1" not in self.agent_tools:
+                self.save_agent_tool({
+                    "id": "act-tf-1",
+                    "companyId": cid,
+                    "code": "check_order_status",
+                    "name": "Check Order Status",
+                    "description": "Retrieves real-time status of compute cluster provisioning.",
+                    "riskLevel": "read_only",
+                    "requiresUserConfirmation": False,
+                    "enabled": True,
+                    "parameters": [{"name": "order_id", "type": "string", "description": "Order ID", "required": True}],
+                    "endpointConfig": {},
+                    "createdAt": now_str
+                })
+            if "act-tf-2" not in self.agent_tools:
+                self.save_agent_tool({
+                    "id": "act-tf-2",
+                    "companyId": cid,
+                    "code": "execute_refund",
+                    "name": "Process Customer Refund",
+                    "description": "Issues financial refund to customer balance.",
+                    "riskLevel": "high_risk",
+                    "requiresUserConfirmation": True,
+                    "confirmationPrompt": "Are you certain you wish to issue a refund for this order?",
+                    "enabled": True,
+                    "parameters": [
+                        {"name": "order_id", "type": "string", "description": "Order identifier", "required": True},
+                        {"name": "amount", "type": "string", "description": "Refund amount in INR", "required": True}
+                    ],
+                    "endpointConfig": {},
+                    "createdAt": now_str
+                })
+            dep_w_id = f"dep-{cid}-widget"
+            if dep_w_id not in self.deployments and "dep-tf-widget" not in self.deployments:
+                self.deployments[dep_w_id] = {
+                    "id": dep_w_id,
+                    "companyId": cid,
+                    "name": "Production Website Widget",
+                    "channel": "website_widget",
+                    "status": "active",
+                    "assistantVersion": "v1",
+                    "domain": "coarai.internal",
+                    "config": {"theme": "dark", "position": "bottom-right"},
+                    "lastActiveAt": "2026-09-12T02:30:00.000Z",
+                    "createdAt": "2026-08-15T10:00:00.000Z"
+                }
+            dep_api_id = f"dep-{cid}-api"
+            if dep_api_id not in self.deployments and "dep-tf-api" not in self.deployments:
+                self.deployments[dep_api_id] = {
+                    "id": dep_api_id,
+                    "companyId": cid,
+                    "name": "Customer Support REST API",
+                    "channel": "rest_api",
+                    "status": "active",
+                    "assistantVersion": "v1",
+                    "domain": "api.coarai.internal",
+                    "config": {"rateLimitPerMin": 120},
+                    "lastActiveAt": "2026-09-12T02:15:00.000Z",
+                    "createdAt": "2026-08-20T10:00:00.000Z"
+                }
+            key_id = f"key-{cid}-prod"
+            if key_id not in self.api_keys and "key-tf-prod" not in self.api_keys:
+                self.api_keys[key_id] = {
+                    "id": key_id,
+                    "companyId": cid,
+                    "name": "Production API Key",
+                    "keyPrefix": f"aas_live_{cid[:4]}",
+                    "keyHash": "hash_coarai_live_9941",
+                    "secretMasked": f"aas_live_{cid[:4]}_••••••••1824",
+                    "scopes": ["chat:read", "chat:write"],
+                    "status": "active",
+                    "lastUsedAt": "5 minutes ago",
+                    "createdAt": now_str
+                }
         if not self.users:
             self.save_user({
                 "id": "usr-root-admin",

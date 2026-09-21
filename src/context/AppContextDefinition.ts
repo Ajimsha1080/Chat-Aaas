@@ -40,25 +40,25 @@ const defaultStats = {
 };
 
 const defaultAgent: AgentConfig = {
-  name: 'AI Assistant',
+  name: 'CoarAI Assistant',
   status: 'active',
   lifecycleStatus: 'published',
   publishedVersionNumber: 1,
   draftVersionNumber: 1,
   avatarUrl: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe',
-  description: 'AI Support Specialist',
+  description: 'Enterprise Autonomous Assistant',
   tone: 'professional',
   creativityLevel: 0.3,
-  systemInstructions: 'Assist users accurately.',
-  businessInstructions: 'Be polite and helpful.',
-  greetingMessage: 'Hello! How can I help you today?',
-  fallbackMessage: 'I do not have verified knowledge on this topic.',
+  systemInstructions: 'You are the CoarAI Assistant, the enterprise AI Q&A specialist for CoarAI Platform.',
+  businessInstructions: 'Be polite, accurate, and helpful.',
+  greetingMessage: "Hello! 👋 I'm your CoarAI Assistant. How can I help you today?",
+  fallbackMessage: 'I do not have verified knowledge on this topic. Connecting you to staff.',
   allowedActions: [],
   escalationSettings: {
     enabled: true,
     triggerKeywords: ['talk to human', 'speak to person', 'human representative', 'transfer to human'],
     maxUnansweredQueriesBeforeEscalation: 2,
-    notifyEmail: 'support@company.com',
+    notifyEmail: 'support@coarai.internal',
     escalationMessage: 'Connecting you to a team member.',
     requireHumanApprovalForRefund: true
   },
@@ -81,13 +81,13 @@ const defaultWidgetSettings: WidgetCustomization = {
 };
 
 export const createDefaultCompany = (): Company => ({
-  id: 'comp-workspace',
-  name: 'My Workspace',
-  slug: 'my-workspace',
+  id: 'comp-coarai',
+  name: 'CoarAI Platform',
+  slug: 'coarai-platform',
   domain: '',
-  industry: 'Technology',
+  industry: 'Enterprise AI',
   createdAt: new Date().toISOString(),
-  planId: 'growth',
+  planId: 'business',
   billingCycle: 'monthly',
   planStatus: 'active',
   currentPeriodStart: new Date().toISOString(),

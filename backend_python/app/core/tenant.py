@@ -89,7 +89,7 @@ def get_tenant_context(
     correlation_id = request_id_str or f"req_{int(time.time() * 1000)}"
     header_comp = comp_id_str or tenant_id_str
     if not header_comp and not auth_str and not api_key_str and not internal_token_str and not deployment_id_str:
-        header_comp = "comp-techflow"
+        header_comp = "comp-coarai"
 
     # 1. Internal Service Worker
     if internal_token_str and internal_token_str == settings.INTERNAL_SERVICE_SECRET:
@@ -196,9 +196,9 @@ def get_tenant_context(
     if header_comp:
         effective_comp = header_comp.strip()
         comp = db.companies.get(effective_comp)
-        if not comp and effective_comp == "comp-techflow":
+        if not comp and effective_comp in ["comp-coarai", "comp-techflow"]:
             db.ensure_baseline_tenant()
-            comp = db.companies.get(effective_comp)
+            comp = db.companies.get(effective_comp) or db.companies.get("comp-coarai")
 
         if comp:
             if comp.get("isSuspended"):
@@ -207,7 +207,7 @@ def get_tenant_context(
                     detail="Company workspace is suspended."
                 )
             return TenantContext(
-                company_id=effective_comp,
+                company_id=comp.get("id", effective_comp),
                 user_id=f"visitor_{int(time.time())}",
                 role="visitor",
                 correlation_id=correlation_id
@@ -227,8 +227,9 @@ def get_tenant_context(
                 correlation_id=correlation_id
             )
         else:
+            fallback_cid = "comp-coarai" if "comp-coarai" in db.companies else "comp-techflow"
             return TenantContext(
-                company_id="comp-techflow",
+                company_id=fallback_cid,
                 user_id=f"visitor_{int(time.time())}",
                 role="visitor",
                 correlation_id=correlation_id
