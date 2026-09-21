@@ -49,7 +49,7 @@ export const SettingsView: React.FC = () => {
   const [showApiKey, setShowApiKey] = useState(false);
 
   // User Profile Form State
-  const [profileName, setProfileName] = useState(currentUserProfile?.fullName || 'Alex Morgan');
+  const [profileName, setProfileName] = useState(currentUserProfile?.fullName || 'Super Administrator');
   const [profileAvatar, setProfileAvatar] = useState(currentUserProfile?.avatarUrl || '');
   const [isSavingProfile, setIsSavingProfile] = useState(false);
 
@@ -201,7 +201,7 @@ export const SettingsView: React.FC = () => {
               <div>
                 <label className="font-semibold text-slate-800 block mb-1.5">User ID</label>
                 <span className="inline-block px-3 py-2 bg-slate-100 text-slate-700 font-mono text-xs rounded-xl border border-slate-200">
-                  {currentUserProfile?.id || 'usr-alex'}
+                  {currentUserProfile?.id || 'usr-root-admin'}
                 </span>
               </div>
             </div>

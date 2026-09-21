@@ -306,7 +306,8 @@ class DatabaseStore:
                     "lastUsedAt": "5 minutes ago",
                     "createdAt": now_str
                 }
-        if not self.users:
+        # Ensure single SuperAdmin owns the primary platform workspaces
+        if "usr-root-admin" not in self.users:
             self.save_user({
                 "id": "usr-root-admin",
                 "email": "admin@chataaas.internal",
@@ -316,31 +317,34 @@ class DatabaseStore:
                 "isSuspended": False,
                 "createdAt": now_str
             })
-            self.save_membership({
-                "id": "mem-root-admin",
-                "userId": "usr-root-admin",
-                "companyId": "comp-techflow",
-                "role": "super_admin",
-                "status": "active",
-                "createdAt": now_str
-            })
-            self.save_user({
-                "id": "usr-alex",
-                "email": "alex@techflow.io",
-                "passwordHash": hash_password("Password123!"),
-                "fullName": "Alex Vance",
-                "isEmailVerified": True,
-                "isSuspended": False,
-                "createdAt": now_str
-            })
-            self.save_membership({
-                "id": "mem-alex",
-                "userId": "usr-alex",
-                "companyId": "comp-techflow",
-                "role": "owner",
-                "status": "active",
-                "createdAt": now_str
-            })
+
+        for cid in ["comp-coarai", "comp-techflow"]:
+            mem_id = f"mem-root-admin-{cid}"
+            if mem_id not in self.memberships:
+                self.save_membership({
+                    "id": mem_id,
+                    "userId": "usr-root-admin",
+                    "companyId": cid,
+                    "role": "super_admin",
+                    "status": "active",
+                    "createdAt": now_str
+                })
+
+        # Purge any residual demo user accounts
+        if "usr-alex" in self.users:
+            del self.users["usr-alex"]
+            try:
+                with self.get_session() as session:
+                    session.execute(text("DELETE FROM users WHERE id = 'usr-alex' OR email = 'alex@techflow.io'"))
+            except Exception:
+                pass
+        if "mem-alex" in self.memberships:
+            del self.memberships["mem-alex"]
+            try:
+                with self.get_session() as session:
+                    session.execute(text("DELETE FROM memberships WHERE id = 'mem-alex' OR user_id = 'usr-alex'"))
+            except Exception:
+                pass
 
     def seed_agent_versions(self):
         if "ver-tf-v1" not in self.agent_versions:
@@ -1602,25 +1606,8 @@ class DatabaseStore:
         self.memberships["mem-root-admin"] = {
             "id": "mem-root-admin",
             "userId": "usr-root-admin",
-            "companyId": "comp-techflow",
+            "companyId": "comp-coarai",
             "role": "super_admin",
-            "status": "active"
-        }
-
-        self.users["usr-alex"] = {
-            "id": "usr-alex",
-            "email": "alex@techflow.io",
-            "passwordHash": hash_password("Password123!"),
-            "fullName": "Alex Vance",
-            "isEmailVerified": True,
-            "isSuspended": False,
-            "createdAt": "2026-08-01T00:00:00.000Z"
-        }
-        self.memberships["mem-alex"] = {
-            "id": "mem-alex",
-            "userId": "usr-alex",
-            "companyId": "comp-techflow",
-            "role": "owner",
             "status": "active"
         }
 
