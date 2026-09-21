@@ -142,7 +142,7 @@ class DatabaseStore:
 
         # 1. Ensure CoarAI Platform workspace (and legacy alias comp-techflow)
         for cid, cname in [("comp-coarai", "CoarAI Platform"), ("comp-techflow", "CoarAI Platform")]:
-            if cid not in self.companies:
+            if cid not in self.companies or self.companies[cid].get("name") in ["TechFlow Cloud Systems", "Acme Global"]:
                 self.save_company({
                     "id": cid,
                     "name": cname,
@@ -160,7 +160,7 @@ class DatabaseStore:
 
         # 2. Ensure CoarAI Assistant agents
         for aid, cid in [("agent-coarai-1", "comp-coarai"), ("agent-tf-1", "comp-techflow"), ("agent-tf-1", "comp-coarai")]:
-            if aid not in self.agents:
+            if aid not in self.agents or self.agents[aid].get("name") in ["FlowBot AI Specialist", "AcmeBot"]:
                 self.save_agent({
                     "id": aid,
                     "companyId": cid,
@@ -178,7 +178,7 @@ class DatabaseStore:
                     "createdAt": now_str
                 })
             vid = f"ver-{aid}-v1"
-            if vid not in self.agent_versions:
+            if vid not in self.agent_versions or "FlowBot" in self.agent_versions[vid].get("greetingMessage", "") or "Acme" in self.agent_versions[vid].get("greetingMessage", ""):
                 self.save_agent_version({
                     "id": vid,
                     "agentId": aid,
@@ -205,7 +205,7 @@ class DatabaseStore:
                 })
 
         # Also support legacy ver-tf-v1 lookup
-        if "ver-tf-v1" not in self.agent_versions:
+        if "ver-tf-v1" not in self.agent_versions or "FlowBot" in self.agent_versions["ver-tf-v1"].get("greetingMessage", ""):
             self.save_agent_version({
                 "id": "ver-tf-v1",
                 "agentId": "agent-tf-1",
