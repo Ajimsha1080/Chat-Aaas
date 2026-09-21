@@ -348,7 +348,7 @@ export default function App() {
   -d '{
     "message": "Hello! What is your return policy?",
     "customerId": "usr_9941",
-    "customerEmail": "alex@enterprise.com"
+    "customerEmail": "customer@company.com"
   }'`;
 
   const isDarkMode = (localSettings.themeMode || 'dark') === 'dark';
@@ -717,7 +717,7 @@ export default function App() {
                         setBrandName(e.target.value);
                         updateCompany({ name: e.target.value });
                       }}
-                      placeholder="e.g. Acme Corporation"
+                      placeholder="e.g. CoarAI Platform"
                       className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm font-semibold text-slate-900 focus:bg-white focus:ring-1 focus:ring-slate-900 focus:outline-hidden"
                     />
                   </div>
@@ -1098,7 +1098,7 @@ export default function App() {
                         type="text"
                         value={localSettings.headerTitle}
                         onChange={(e) => setLocalSettings({ ...localSettings, headerTitle: e.target.value })}
-                        placeholder="e.g. ACME Support"
+                        placeholder="e.g. Customer Support"
                         className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm font-medium focus:bg-white focus:ring-1 focus:ring-slate-900 focus:outline-hidden"
                       />
                     </div>

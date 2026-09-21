@@ -63,7 +63,7 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({ isOpen, onClos
 
   const handleComplete = () => {
     const finalName = `${businessName || 'Coar AI'} Assistant`;
-    const finalDomain = websiteUrl.trim() || `${(businessName || 'acme').toLowerCase().replace(/[^a-z0-9]/g, '')}.com`;
+    const finalDomain = websiteUrl.trim() || `${(businessName || 'mycompany').toLowerCase().replace(/[^a-z0-9]/g, '')}.com`;
 
     createCompanyWorkspace(
       businessName || 'My Business',
@@ -145,7 +145,7 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({ isOpen, onClos
                 <label className="block font-bold text-slate-900 mb-1.5 text-sm">Business Name *</label>
                 <input
                   type="text"
-                  placeholder="e.g. Acme Cloud Systems"
+                  placeholder="e.g. CoarAI Systems"
                   value={businessName}
                   onChange={e => setBusinessName(e.target.value)}
                   className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 shadow-xs"
