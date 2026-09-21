@@ -208,8 +208,8 @@ def get_tenant_context(
                 )
             return TenantContext(
                 company_id=comp.get("id", effective_comp),
-                user_id=f"visitor_{int(time.time())}",
-                role="visitor",
+                user_id=f"usr-{comp.get('id', effective_comp)}-admin",
+                role="owner",
                 correlation_id=correlation_id
             )
         elif settings.ENVIRONMENT != "production":
@@ -230,8 +230,8 @@ def get_tenant_context(
             fallback_cid = "comp-coarai"
             return TenantContext(
                 company_id=fallback_cid,
-                user_id=f"visitor_{int(time.time())}",
-                role="visitor",
+                user_id=f"usr-{fallback_cid}-admin",
+                role="owner",
                 correlation_id=correlation_id
             )
 

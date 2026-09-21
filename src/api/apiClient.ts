@@ -25,9 +25,13 @@ export class APIClient {
     ? ''
     : ((typeof import.meta !== 'undefined' && import.meta.env?.VITE_API_BASE_URL) || '');
 
-  public static setAuth(token: string | null, companyId: string): void {
-    this.token = token;
-    this.currentCompanyId = companyId;
+  public static setAuth(token?: string | null, companyId?: string): void {
+    if (token !== undefined && token !== null) {
+      this.token = token;
+    }
+    if (companyId) {
+      this.currentCompanyId = companyId;
+    }
   }
 
   public static setAdminAuth(token: string | null): void {
