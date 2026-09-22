@@ -16,8 +16,8 @@ COPY tsconfig*.json vite.config.ts index.html ./
 COPY src/ ./src/
 COPY public/ ./public/
 
-# Build optimized production bundle directly with Vite (ultra-fast esbuild)
-RUN npx vite build
+# Build optimized production bundle directly with Vite
+RUN npm run build
 
 # ----------------- Stage 2: Nginx Static Server -----------------
 FROM nginx:alpine AS runner
