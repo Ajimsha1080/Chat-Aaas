@@ -9,7 +9,7 @@ WORKDIR /app
 
 # Cache package installation
 COPY package*.json ./
-RUN --mount=type=cache,target=/root/.npm npm ci --prefer-offline
+RUN --mount=type=cache,target=/root/.npm npm install --prefer-offline --no-audit --no-fund
 
 # Copy application source only
 COPY tsconfig*.json vite.config.ts index.html ./
