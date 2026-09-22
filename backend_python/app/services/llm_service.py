@@ -63,7 +63,37 @@ class LLMProvider:
         target_model = cls._normalize_model_name(model)
         custom_url = settings.CUSTOM_LLM_API_URL
 
-        # 1. Dispatch to Custom In-House Product / Sarvam API if configured with API key
+        # 1. Dispatch to OpenAI / Gemini / Anthropic / Custom In-House Product / Sarvam API if configured
+        api_key = settings.OPENAI_API_KEY or settings.GEMINI_API_KEY or settings.ANTHROPIC_API_KEY or settings.CUSTOM_LLM_API_KEY or settings.SARVAM_API_KEY
+        
+        # OpenAI Direct / Compatible Endpoint
+        if settings.OPENAI_API_KEY:
+            try:
+                headers = {
+                    "Content-Type": "application/json",
+                    "Authorization": f"Bearer {settings.OPENAI_API_KEY}"
+                }
+                payload = {
+                    "model": "gpt-4o-mini",
+                    "messages": [
+                        *([{"role": "system", "content": system_instruction}] if system_instruction else []),
+                        {"role": "user", "content": prompt}
+                    ],
+                    "temperature": temperature,
+                    "max_tokens": max_tokens
+                }
+                async with httpx.AsyncClient(timeout=30.0) as client:
+                    resp = await client.post("https://api.openai.com/v1/chat/completions", headers=headers, json=payload)
+                    if resp.status_code == 200:
+                        data = resp.json()
+                        if "choices" in data and len(data["choices"]) > 0:
+                            content = data["choices"][0].get("message", {}).get("content", "")
+                            if content:
+                                return content.strip(), "llm"
+            except Exception as e:
+                logger.error(f"[OpenAI API Exception]: {e}")
+
+        # Custom / Sarvam API Endpoint
         if custom_url and settings.CUSTOM_LLM_API_KEY:
             try:
                 headers = {"Content-Type": "application/json"}
