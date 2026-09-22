@@ -151,8 +151,9 @@ class LLMProvider:
                 body = split_parts[1]
                 doc_titles.append(title)
 
-            # Clean markup artifacts, URLs, and page markers
-            body_clean = re.sub(r'Page URL:\s*https?://\S+', '', body, flags=re.I)
+            # Clean markup artifacts, URLs, page markers, and Document/Section headers
+            body_clean = re.sub(r'\[Document:[^\]]+\]', '', body, flags=re.I)
+            body_clean = re.sub(r'Page URL:\s*https?://\S+', '', body_clean, flags=re.I)
             body_clean = re.sub(r'https?://\S+', '', body_clean)
             body_clean = re.sub(r'##\s*Page\s*\d+', '', body_clean, flags=re.I)
             clean_passages.append({"title": title, "body": body_clean.strip()})
@@ -167,7 +168,8 @@ class LLMProvider:
         def compose_natural_answer(evidence: List[str], mode: str = "direct", subject: str = "the company") -> str:
             cleaned_items: List[str] = []
             for item in evidence:
-                clean = re.sub(r'^(Question|Q|Answer|A):\s*', '', item.strip(), flags=re.I)
+                clean = re.sub(r'\[Document:[^\]]+\]', '', item.strip(), flags=re.I)
+                clean = re.sub(r'^(Question|Q|Answer|A):\s*', '', clean, flags=re.I)
                 clean = re.sub(r'\s+', ' ', clean)
                 clean = clean.strip(" -*•\t\n")
                 if clean:
@@ -294,7 +296,7 @@ class LLMProvider:
                     continue
                 s_list = re.split(r'(?<=[.?!])\s+', line)
                 for s in s_list:
-                    s_clean = s.strip().lstrip("-*•□ \t0123456789.)")
+                    s_clean = re.sub(r'\[Document:[^\]]+\]', '', s).strip().lstrip("-*•□ \t0123456789.)")
                     if (
                         len(s_clean) >= 15 and 
                         not re.match(r'^(document title|document id|classification|effective date|version|review cycle|document owner|page url):', s_clean, re.I) and
@@ -442,11 +444,15 @@ class LLMProvider:
                     if m4 and m4.group(1):
                         return f"{term.upper()} stands for **{m4.group(1).strip()}**."
 
-        entity_name = "The platform"
+        entity_name = "CoarAI"
         if system_instruction:
             ent_m = re.search(r'company\s+([A-Za-z0-9_\-]+)', system_instruction, re.I)
             if ent_m:
-                entity_name = ent_m.group(1).capitalize()
+                raw_c = ent_m.group(1).lower()
+                if "coarai" in raw_c:
+                    entity_name = "CoarAI"
+                else:
+                    entity_name = ent_m.group(1).replace("comp-", "").capitalize()
 
         # Case 0B: Security & Compliance Intent
         if is_security_query:
@@ -523,6 +529,21 @@ class LLMProvider:
             if contact_points:
                 return compose_natural_answer(contact_points, mode="list", subject=entity_name)
 
+        # Case 0F: Main Points / Summary / Highlights Intent
+        is_main_points = any(re.search(pat, q_lower) for pat in [
+            r'main point', r'key takeaway', r'summary', r'highlights', r'core point', r'overview point', r'bullet point'
+        ]) or q_lower in ["main points", "key points", "summary", "overview", "highlights"]
+        if is_main_points:
+            informative_sents = [
+                s for s in raw_sentences
+                if is_valid_complete_sentence(s) and
+                len(s) >= 20 and
+                not re.search(r'expand agents as you trust|new hire offer|explore the agents|request a demo', s, re.I)
+            ]
+            if informative_sents:
+                clean_pts = deduplicate(informative_sents)[:4]
+                return compose_natural_answer(clean_pts, mode="list", subject=entity_name)
+
         # Case A: "What does your company do?" / Company Overview
         if is_company_overview:
             overview_candidates = [
@@ -594,7 +615,7 @@ class LLMProvider:
 
         # Extract all named agent entities from documentation
         known_agent_matches = [
-            m.title() for m in re.findall(r'\b(Finance|Procurement|Sales|Inventory|HR|Operations|Support|Billing|Customer Success|Marketing|Executive)\s+Agent\b', combined_context, re.I)
+            m.title() for m in re.findall(r'\b(Finance|Procurement|Sales|Inventory|HR|Operations|Support|Billing|Customer Success|Marketing|Executive)(?:\s+Agent)?\b', combined_context, re.I)
         ]
         all_agent_entities = deduplicate(known_agent_matches)
 
@@ -612,9 +633,9 @@ class LLMProvider:
                 return compose_natural_answer(all_agent_entities, mode="list", subject=entity_name)
 
         # Case E2: Universal Quantity / Counting Questions
-        is_count_query = any(k in q_lower for k in ["how many", "how much", "number of", "total count", "count of"])
+        is_count_query = any(k in q_lower for k in ["how many", "how much", "number of", "total count", "count of"]) or re.search(r'how many (agents|specialists|modules)', q_lower)
         if is_count_query:
-            if any(k in q_lower for k in ["agent", "module", "department"]) and all_agent_entities:
+            if any(k in q_lower for k in ["agent", "agents", "specialist", "specialists", "module", "department"]) and all_agent_entities:
                 return f"{entity_name} provides {len(all_agent_entities)} specialized department agents: {', '.join(all_agent_entities)}."
             for score, sent, _ in scored_sentences:
                 s_lower = sent.lower()
