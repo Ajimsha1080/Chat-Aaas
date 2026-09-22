@@ -229,9 +229,9 @@ class LLMProvider:
             rewritten_items = [rewrite_sentence(item) for item in cleaned_items[:4]]
 
             if mode == "list":
-                return "Here are the relevant details:\n\n" + "\n".join(
-                    [f"- {item}." for item in rewritten_items]
-                )
+                if len(rewritten_items) == 1:
+                    return f"{rewritten_items[0]}."
+                return " ".join([f"{item}." for item in rewritten_items[:3]])
 
             if mode == "comparison" and len(rewritten_items) >= 2:
                 return f"The main difference is: {rewritten_items[0]}, while {rewritten_items[1]}."
@@ -483,6 +483,23 @@ class LLMProvider:
                     entity_name = "CoarAI"
                 else:
                     entity_name = ent_m.group(1).replace("comp-", "").capitalize()
+
+        # Case 0A2: How It Works & Workflow Intent
+        is_how_it_works = any(phrase in q_lower for phrase in [
+            "how it works", "how it work", "how does it work", "how to use", "how do i use", "how do we use", "how to get started", "how to work", "workflow", "process", "how coarai works"
+        ]) or q_lower.strip() in ["how it works", "how it work", "how to use", "how use", "workflow", "work"]
+        if is_how_it_works:
+            work_sents = deduplicate([
+                s for s in raw_sentences
+                if re.search(r'\b(connect|erp|webhook|integrate|workflow|monitors|plain language|natural language|execute|steps|api|sap|netsuite|odoo|quickbooks|direct your workforce)\b', s, re.I) and
+                is_valid_complete_sentence(s) and
+                not re.search(r'platform status:', s, re.I)
+            ])
+            if work_sents:
+                primary = next((s for s in work_sents if re.search(r'\b(connect|erp|webhook|workflow)\b', s, re.I)), work_sents[0])
+                supporting = [s for s in work_sents if s != primary][:2]
+                all_s = [primary, *supporting]
+                return compose_natural_answer(all_s, subject=entity_name)
 
         # Case 0B: Security & Compliance Intent
         if is_security_query:
