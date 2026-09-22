@@ -31,6 +31,7 @@ import { WidgetCustomization, DeploymentItem } from '../../types';
 import { soundService } from '../../services/soundService';
 import { GlobalActionMenu } from '../common/GlobalActionMenu';
 import { DeleteConfirmationModal } from '../common/DeleteConfirmationModal';
+import { copyToClipboard } from '../../utils/clipboard';
 
 export const DeployView: React.FC = () => {
   const { 
@@ -45,7 +46,8 @@ export const DeployView: React.FC = () => {
     removeDeployment,
     knowledgeItems,
     integrations,
-    actions
+    actions,
+    showToast
   } = useApp();
 
   const [brandName, setBrandName] = useState(currentCompany.name || '');
@@ -255,9 +257,10 @@ export const DeployView: React.FC = () => {
     ]);
   };
 
-  const handleCopy = (text: string, keyName: string) => {
-    navigator.clipboard.writeText(text);
+  const handleCopy = async (text: string, keyName: string) => {
+    await copyToClipboard(text);
     setCopiedKey(keyName);
+    showToast('Copied to Clipboard', 'Widget installation snippet copied.', 'success');
     setTimeout(() => setCopiedKey(null), 2500);
   };
 

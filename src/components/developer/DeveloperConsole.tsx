@@ -27,6 +27,7 @@ import {
 import { useApp } from '../../context';
 import { DeveloperNavigationTab, ApiKeyMetadata, WebhookEndpoint } from '../../types';
 import { DeleteConfirmationModal } from '../common/DeleteConfirmationModal';
+import { copyToClipboard } from '../../utils/clipboard';
 
 export const DeveloperConsole: React.FC = () => {
   const { 
@@ -71,8 +72,8 @@ export const DeveloperConsole: React.FC = () => {
   const [sseOutput, setSseOutput] = useState<string[]>([]);
   const [isSseStreaming, setIsSseStreaming] = useState(false);
 
-  const handleCopy = (text: string, id: string) => {
-    navigator.clipboard.writeText(text);
+  const handleCopy = async (text: string, id: string) => {
+    await copyToClipboard(text);
     setCopiedKey(id);
     setTimeout(() => setCopiedKey(null), 2000);
   };

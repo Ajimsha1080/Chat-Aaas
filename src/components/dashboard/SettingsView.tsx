@@ -20,6 +20,7 @@ import {
 import { useApp } from '../../context';
 import { TeamMember } from '../../types';
 import { InvoiceModal } from '../common/InvoiceModal';
+import { copyToClipboard } from '../../utils/clipboard';
 
 export const SettingsView: React.FC = () => {
   const { 
@@ -66,9 +67,10 @@ export const SettingsView: React.FC = () => {
   const [agentGreeting, setAgentGreeting] = useState(currentCompany?.agent?.greetingMessage || 'Hello!');
   const [modelTier, setModelTier] = useState(currentCompany?.agent?.modelTier || 'automatic');
 
-  const handleCopy = (text: string, keyName: string) => {
-    navigator.clipboard.writeText(text);
+  const handleCopy = async (text: string, keyName: string) => {
+    await copyToClipboard(text);
     setCopiedKey(keyName);
+    showToast('Copied to Clipboard', 'Text copied successfully.', 'success');
     setTimeout(() => setCopiedKey(null), 2500);
   };
 
