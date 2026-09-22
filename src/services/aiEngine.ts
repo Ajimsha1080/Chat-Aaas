@@ -53,30 +53,14 @@ export class AIAgentEngine {
       };
     }
 
-    // 2. Immediate Conversational Greeting & Identity Shortcuts
+    // 2. Immediate Conversational Greeting Shortcut
     const cleanQuery = qLower.replace(/[^\w\s]/g, '').trim();
     const greetings = ['hi', 'hello', 'hey', 'hlo', 'hllo', 'helo', 'yo', 'sup', 'greetings', 'hi there', 'hello there', 'good morning', 'good afternoon', 'good evening'];
-    const identityQueries = ['who are you', 'what can you do', 'what do you do', 'help me', 'what is your name'];
-    const platformQueries = ['coarai', 'what is coarai', 'explain about coarai', 'tell me about coarai', 'about coarai', 'who is coarai', 'what does coarai do', 'what is this platform', 'about this platform', 'explain coarai'];
 
     if (greetings.includes(cleanQuery)) {
       return {
         message: company.agent.greetingMessage || `Hello! 👋 I'm **${company.agent.name}**, your AI assistant for **${company.name}**. How can I help you today?`,
         reasoningSteps: [`[Conversational Intent] Recognized greeting. Returning persona welcome message.`]
-      };
-    }
-
-    if (platformQueries.some(q => cleanQuery.includes(q)) || /(what is coarai|explain about coarai|about coarai|tell me about coarai)/i.test(cleanQuery)) {
-      return {
-        message: `**CoarAI** is an enterprise AI Assistant and Agent-as-a-Service (AaaS) platform.\n\n### Core Capabilities:\n- **Multi-Tenant Autonomous Agents**: Deploy specialized AI agents tailored for each department or organization.\n- **Hybrid RAG Intelligence**: Fact-based answers retrieved from your uploaded documentation with dense vector embeddings and BM25 keyword matching.\n- **Transactional Tool Execution**: Perform real-world tasks like tracking orders, managing billing, or triggering workflows.\n- **Multi-Channel Deployment**: Embed anywhere via customizable web widgets, REST APIs, or customer support channels.\n\nHow can I help you get started with CoarAI today?`,
-        reasoningSteps: [`[Conversational Intent] Recognized CoarAI platform inquiry.`]
-      };
-    }
-
-    if (identityQueries.some(q => cleanQuery.includes(q)) || /(who are you|what can you do|what do you do|help me|what is your name)/i.test(cleanQuery)) {
-      return {
-        message: `I'm **${company.agent.name}**, the dedicated AI assistant for **${company.name}**!\n\n### What I can help you with:\n- **Instant Answers**: Fast, factually grounded answers from verified company documentation, pricing, and FAQs.\n- **Product & Service Inquiries**: Detailed explanations of features, workflows, and specifications.\n- **Workflow Automation**: Executing authorized actions and querying connected business systems.\n\nHow may I assist you today?`,
-        reasoningSteps: [`[Conversational Intent] Recognized identity query.`]
       };
     }
 
