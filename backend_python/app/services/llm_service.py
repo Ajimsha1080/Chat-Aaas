@@ -48,6 +48,17 @@ class LLMProvider:
         except Exception:
             return max(1, (len(text) + 3) // 4)
 
+    _http_client: Optional[httpx.AsyncClient] = None
+
+    @classmethod
+    def _get_http_client(cls) -> httpx.AsyncClient:
+        if cls._http_client is None or cls._http_client.is_closed:
+            cls._http_client = httpx.AsyncClient(
+                timeout=httpx.Timeout(18.0, connect=4.0),
+                limits=httpx.Limits(max_keepalive_connections=30, max_connections=100, keepalive_expiry=60.0)
+            )
+        return cls._http_client
+
     @classmethod
     async def generate_response_with_mode(
         cls,
@@ -55,7 +66,7 @@ class LLMProvider:
         system_instruction: Optional[str] = None,
         model: Optional[str] = None,
         temperature: float = 0.3,
-        max_tokens: int = 1000
+        max_tokens: int = 600
     ) -> Tuple[str, str]:
         """
         Generates a model response and returns (response_text, generation_mode).
@@ -66,6 +77,7 @@ class LLMProvider:
 
         # 1. Dispatch to OpenAI / Gemini / Anthropic / Custom In-House Product / Sarvam API if configured
         api_key = settings.OPENAI_API_KEY or settings.GEMINI_API_KEY or settings.ANTHROPIC_API_KEY or settings.CUSTOM_LLM_API_KEY or settings.SARVAM_API_KEY
+        client = cls._get_http_client()
         
         # OpenAI Direct / Compatible Endpoint
         if settings.OPENAI_API_KEY:
@@ -83,14 +95,13 @@ class LLMProvider:
                     "temperature": temperature,
                     "max_tokens": max_tokens
                 }
-                async with httpx.AsyncClient(timeout=30.0) as client:
-                    resp = await client.post("https://api.openai.com/v1/chat/completions", headers=headers, json=payload)
-                    if resp.status_code == 200:
-                        data = resp.json()
-                        if "choices" in data and len(data["choices"]) > 0:
-                            content = data["choices"][0].get("message", {}).get("content", "")
-                            if content:
-                                return content.strip(), "llm"
+                resp = await client.post("https://api.openai.com/v1/chat/completions", headers=headers, json=payload)
+                if resp.status_code == 200:
+                    data = resp.json()
+                    if "choices" in data and len(data["choices"]) > 0:
+                        content = data["choices"][0].get("message", {}).get("content", "")
+                        if content:
+                            return content.strip(), "llm"
             except Exception as e:
                 logger.error(f"[OpenAI API Exception]: {e}")
 
@@ -125,21 +136,20 @@ class LLMProvider:
                     "max_tokens": max_tokens
                 }
 
-                async with httpx.AsyncClient(timeout=30.0) as client:
-                    resp = await client.post(sarvam_url, headers=headers, json=payload)
-                    if resp.status_code == 200:
-                        data = resp.json()
-                        # Extract response from standard choices or custom response key
-                        if "choices" in data and len(data["choices"]) > 0:
-                            content = data["choices"][0].get("message", {}).get("content", "")
-                            if content:
-                                return content.strip(), "llm"
-                        elif "response" in data and data["response"]:
-                            return str(data["response"]).strip(), "llm"
-                        elif "message" in data and data["message"]:
-                            return str(data["message"]).strip(), "llm"
-                    else:
-                        logger.error(f"[LLM API Error] Upstream {sarvam_url} returned HTTP {resp.status_code}: {resp.text}")
+                resp = await client.post(sarvam_url, headers=headers, json=payload)
+                if resp.status_code == 200:
+                    data = resp.json()
+                    # Extract response from standard choices or custom response key
+                    if "choices" in data and len(data["choices"]) > 0:
+                        content = data["choices"][0].get("message", {}).get("content", "")
+                        if content:
+                            return content.strip(), "llm"
+                    elif "response" in data and data["response"]:
+                        return str(data["response"]).strip(), "llm"
+                    elif "message" in data and data["message"]:
+                        return str(data["message"]).strip(), "llm"
+                else:
+                    logger.error(f"[LLM API Error] Upstream {sarvam_url} returned HTTP {resp.status_code}: {resp.text}")
             except Exception as e:
                 logger.error(f"[LLM API Exception] Failed to call LLM provider: {type(e).__name__} - {e}")
 
