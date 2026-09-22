@@ -61,6 +61,7 @@ export const SettingsView: React.FC = () => {
   };
 
   // Assistant Form State
+  const [agentName, setAgentName] = useState(currentCompany?.agent?.name || 'CoarAI Assistant');
   const [agentTone, setAgentTone] = useState(currentCompany?.agent?.tone || 'professional');
   const [agentGreeting, setAgentGreeting] = useState(currentCompany?.agent?.greetingMessage || 'Hello!');
   const [modelTier, setModelTier] = useState(currentCompany?.agent?.modelTier || 'automatic');
@@ -74,12 +75,12 @@ export const SettingsView: React.FC = () => {
   const handleSaveAssistant = (e: React.FormEvent) => {
     e.preventDefault();
     updateAgentConfig({
-      name: 'Coar AI',
+      name: agentName.trim() || currentCompany?.agent?.name || 'CoarAI Assistant',
       tone: agentTone,
       greetingMessage: agentGreeting,
       modelTier: modelTier as any
     });
-    showToast('Assistant Updated', 'AI Assistant tone, model, and greeting saved.', 'success');
+    showToast('Assistant Updated', 'AI Assistant settings saved successfully.', 'success');
   };
 
   const handleInvite = (e: React.FormEvent) => {
@@ -228,7 +229,18 @@ export const SettingsView: React.FC = () => {
           </div>
 
           <form onSubmit={handleSaveAssistant} className="space-y-5 text-sm">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div>
+                <label className="font-semibold text-slate-800 block mb-1.5">Assistant Name</label>
+                <input
+                  type="text"
+                  required
+                  value={agentName}
+                  onChange={(e) => setAgentName(e.target.value)}
+                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl font-medium text-slate-900 focus:ring-1 focus:ring-slate-900 focus:outline-hidden"
+                />
+              </div>
+
               <div>
                 <label className="font-semibold text-slate-800 block mb-1.5">Conversation Tone</label>
                 <select
