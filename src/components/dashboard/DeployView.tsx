@@ -24,6 +24,7 @@ import {
   Power,
   AlertTriangle
 } from 'lucide-react';
+import { AIAgentEngine } from '../../services/aiEngine';
 import { useApp } from '../../context';
 import { renderFormattedMessage } from '../../utils/formatMessage';
 import { WidgetCustomization, DeploymentItem } from '../../types';
@@ -41,7 +42,10 @@ export const DeployView: React.FC = () => {
     createDeployment,
     disableDeployment,
     enableDeployment,
-    removeDeployment
+    removeDeployment,
+    knowledgeItems,
+    integrations,
+    actions
   } = useApp();
 
   const [brandName, setBrandName] = useState(currentCompany.name || '');
@@ -198,17 +202,51 @@ export const DeployView: React.FC = () => {
     setLocalSettings(prev => ({ ...prev, starterQuestions: updated }));
   };
 
-  const handlePreviewStarterClick = (question: string) => {
-    setPreviewChat(prev => [
-      ...prev,
-      { sender: 'user', text: question },
-      { sender: 'agent', text: `Here is information regarding "${question}" based on ${brandName || currentCompany.name}'s verified knowledge base.` }
-    ]);
+  const [previewInputText, setPreviewInputText] = useState('');
+  const [isPreviewLoading, setIsPreviewLoading] = useState(false);
+
+  const handleSendPreviewMessage = async (textToSend?: string) => {
+    const text = (textToSend || previewInputText).trim();
+    if (!text || isPreviewLoading) return;
+
+    setPreviewChat(prev => [...prev, { sender: 'user', text }]);
+    setPreviewInputText('');
+    setIsPreviewLoading(true);
+
     if (localSettings.enableSound) {
-      setTimeout(() => {
-        soundService.playMessageSound();
-      }, 150);
+      soundService.playMessageSound();
     }
+
+    try {
+      const response = await AIAgentEngine.processMessage(
+        text,
+        currentCompany,
+        knowledgeItems || [],
+        integrations || [],
+        actions || [],
+        []
+      );
+
+      setPreviewChat(prev => [
+        ...prev,
+        { sender: 'agent', text: response.message }
+      ]);
+
+      if (localSettings.enableSound) {
+        soundService.playMessageSound();
+      }
+    } catch (err: any) {
+      setPreviewChat(prev => [
+        ...prev,
+        { sender: 'agent', text: fallbackMessage || "I'm having trouble retrieving that information right now." }
+      ]);
+    } finally {
+      setIsPreviewLoading(false);
+    }
+  };
+
+  const handlePreviewStarterClick = (question: string) => {
+    handleSendPreviewMessage(question);
   };
 
   const handleResetPreview = () => {
@@ -1475,6 +1513,18 @@ export default function App() {
                         </div>
                       ))}
 
+                      {isPreviewLoading && (
+                        <div 
+                          style={{
+                            backgroundColor: isDarkMode ? '#1e293b' : '#f1f5f9',
+                            color: isDarkMode ? '#94a3b8' : '#64748b'
+                          }}
+                          className="p-2.5 rounded-2xl max-w-[88%] font-medium text-left border border-white/5 shadow-xs italic animate-pulse"
+                        >
+                          Thinking...
+                        </div>
+                      )}
+
                       {/* Starter Questions Chips */}
                       {starterQuestions.length > 0 && (
                         <div className="pt-2 space-y-1.5">
@@ -1486,8 +1536,9 @@ export default function App() {
                               <button
                                 key={qIdx}
                                 type="button"
+                                disabled={isPreviewLoading}
                                 onClick={() => handlePreviewStarterClick(q)}
-                                className={`text-left px-3 py-2 rounded-xl text-xs font-medium transition-colors cursor-pointer border ${
+                                className={`text-left px-3 py-2 rounded-xl text-xs font-medium transition-colors cursor-pointer border disabled:opacity-50 disabled:cursor-not-allowed ${
                                   isDarkMode 
                                     ? 'bg-slate-900/90 hover:bg-slate-800/90 text-slate-200 border-slate-800' 
                                     : 'bg-white hover:bg-slate-100 text-slate-700 border-slate-200'
@@ -1525,19 +1576,34 @@ export default function App() {
                         }
 
                         return (
-                          <div className={`p-1.5 rounded-2xl flex items-center justify-between border shadow-xs ${
-                            isDarkMode ? 'bg-slate-900 text-slate-300 border-slate-800' : 'bg-slate-100 text-slate-700 border-slate-200'
-                          }`}>
-                            <span className={`text-xs font-medium px-3 ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
-                              Send us a message...
-                            </span>
-                            <div 
-                              className="w-8 h-8 rounded-xl flex items-center justify-center text-white shrink-0 shadow-2xs"
+                          <form 
+                            onSubmit={(e) => {
+                              e.preventDefault();
+                              handleSendPreviewMessage();
+                            }}
+                            className={`p-1.5 rounded-2xl flex items-center justify-between border shadow-xs transition-all ${
+                              isDarkMode ? 'bg-slate-900 text-slate-300 border-slate-800 focus-within:border-slate-700' : 'bg-slate-100 text-slate-700 border-slate-200 focus-within:border-slate-300'
+                            }`}
+                          >
+                            <input
+                              type="text"
+                              value={previewInputText}
+                              onChange={(e) => setPreviewInputText(e.target.value)}
+                              placeholder="Send us a message..."
+                              disabled={isPreviewLoading}
+                              className={`flex-1 bg-transparent px-3 text-xs outline-none ${
+                                isDarkMode ? 'text-white placeholder:text-slate-500' : 'text-slate-900 placeholder:text-slate-400'
+                              }`}
+                            />
+                            <button 
+                              type="submit"
+                              disabled={!previewInputText.trim() || isPreviewLoading}
+                              className="w-8 h-8 rounded-xl flex items-center justify-center text-white shrink-0 shadow-2xs cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed transition-transform hover:scale-105"
                               style={{ backgroundColor: localSettings.primaryColor }}
                             >
                               <Send className="w-3.5 h-3.5" />
-                            </div>
-                          </div>
+                            </button>
+                          </form>
                         );
                       })()}
 
