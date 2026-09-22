@@ -244,7 +244,7 @@ class LLMProvider:
                 return f"{answer_prefix}. {joined}."
 
             if mode == "summary":
-                return "In simple terms, " + " ".join([f"{item}." for item in rewritten_items[:2]])
+                return " ".join([f"{item}." for item in rewritten_items[:2]])
 
             return " ".join([f"{item}." for item in rewritten_items[:2]])
 
