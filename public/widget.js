@@ -9,8 +9,8 @@
  */
 
 (function () {
-  const currentScript = document.currentScript || document.querySelector('script[data-agent-key]');
-  const _widgetToken = currentScript?.getAttribute('data-agent-key') || 'pub_live_widget_key';
+  const currentScript = document.currentScript || document.querySelector('script[data-agent-key]') || document.querySelector('script[data-agent-id]');
+  const _widgetToken = currentScript?.getAttribute('data-agent-key') || currentScript?.getAttribute('data-agent-id') || 'pub_live_widget_key';
   const primaryColor = currentScript?.getAttribute('data-primary-color') || '#4f46e5';
   const position = currentScript?.getAttribute('data-position') || 'bottom_right';
   const launcherIcon = currentScript?.getAttribute('data-launcher-icon') || 'chat';
@@ -255,8 +255,13 @@
 
   const form = container.querySelector('.aaas-widget-input-row');
   const inputEl = container.querySelector('.aaas-widget-input');
-  const messagesEl = container.querySelector('.aaas-widget-messages');
-  const apiUrl = currentScript?.getAttribute('data-api-url') || (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' ? 'http://127.0.0.1:8001' : window.location.origin);
+  let inferredOrigin = window.location.origin;
+  if (currentScript && currentScript.src) {
+    try {
+      inferredOrigin = new URL(currentScript.src).origin;
+    } catch (_) {}
+  }
+  const apiUrl = currentScript?.getAttribute('data-api-url') || (inferredOrigin.includes('localhost') || inferredOrigin.includes('127.0.0.1') ? 'http://127.0.0.1:8001' : inferredOrigin);
   const sessionId = 'widget_sess_' + Math.random().toString(36).substring(2, 9);
 
   form.addEventListener('submit', async (e) => {

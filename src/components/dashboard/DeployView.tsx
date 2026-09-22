@@ -296,16 +296,17 @@ const SwirlIcon: React.FC<{ className?: string }> = ({ className = "w-4.5 h-4.5"
     }
   };
 
-  const origin = typeof window !== 'undefined' ? window.location.origin : 'https://cdn.coarai.com';
+  const origin = typeof window !== 'undefined' ? window.location.origin : 'http://3.228.224.237';
   const isLocal = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
-  const widgetScriptSrc = isLocal ? `${origin}/widget.js` : 'https://cdn.coarai.com/v1/widget.js';
-  const apiEndpointUrl = isLocal ? 'http://127.0.0.1:8001/api/v1/chat' : 'https://api.coarai.com/api/v1/chat';
+  const widgetScriptSrc = `${origin}/widget.js`;
+  const apiEndpointUrl = isLocal ? 'http://127.0.0.1:8001/api/v1/chat' : `${origin}/api/v1/chat`;
 
   const isLogoSelected = localSettings.launcherIcon === 'logo' || localSettings.launcherIcon === 'custom';
   const scriptSnippet = `<!-- CoarAI AI Assistant Widget for ${currentCompany.name} -->
 <script
   src="${widgetScriptSrc}"
   data-agent-key="${currentCompany.apiKey}"
+  data-api-url="${origin}"
   data-position="${localSettings.position}"
   data-primary-color="${localSettings.primaryColor}"
   data-bottom-padding="${localSettings.bottomPadding ?? 20}"
@@ -322,6 +323,7 @@ export default function App() {
       {/* Your App Content */}
       <AssistantChatWidget
         apiKey="${currentCompany.apiKey}"
+        apiUrl="${origin}"
         primaryColor="${localSettings.primaryColor}"
         position="${localSettings.position}"
         bottomPadding={${localSettings.bottomPadding ?? 20}}
@@ -334,7 +336,7 @@ export default function App() {
 }`;
 
   const iframeSnippet = `<iframe
-  src="https://embed.coarai.com/chat/${currentCompany.slug}?key=${currentCompany.apiKey}"
+  src="${origin}/chat/${currentCompany.slug}?key=${currentCompany.apiKey}"
   width="400"
   height="620"
   frameborder="0"
