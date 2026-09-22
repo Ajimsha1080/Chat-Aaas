@@ -329,16 +329,16 @@ class LLMProvider:
 
         def is_valid_complete_sentence(text: str) -> bool:
             clean = re.sub(r'^[-*•□\s\d.)]+', '', text).strip()
-            if len(clean) < 15 or clean.endswith(':'):
+            if len(clean) < 15 or clean.endswith(':') or clean.endswith('?'):
                 return False
-            if re.match(r'^(platform status|document title|classification|effective date|version|page url):', clean, re.I):
+            if re.match(r'^(platform status|document title|classification|effective date|version|page url|document id):', clean, re.I):
                 return False
             words = clean.split()
             if len(words) < 4:
                 return False
             if re.search(r'^[\w.-]+\.(app|com|io|net|org|ai)/\S*$', clean, re.I):
                 return False
-            if re.search(r'^(new hire offer|explore the agents|request a demo|sign in|sign up)$', clean, re.I):
+            if re.search(r'^(new hire offer|explore the agents|request a demo|sign in|sign up|ai business operating system|coarai  your erp should do the work|# your erp should)$', clean, re.I):
                 return False
             return True
 
@@ -544,22 +544,39 @@ class LLMProvider:
                 clean_pts = deduplicate(informative_sents)[:4]
                 return compose_natural_answer(clean_pts, mode="list", subject=entity_name)
 
+        # Case 0G: How it Works Intent
+        is_how_it_works = any(re.search(pat, q_lower) for pat in [
+            r'how (it|this|the platform|the system) works',
+            r'how does (it|this|coarai|the system) work',
+            r'workflow',
+            r'architecture',
+            r'how to use'
+        ]) or q_lower in ["how it works", "how it work", "how does it work", "workflow", "work flow"]
+        if is_how_it_works:
+            how_sents = [
+                s for s in raw_sentences
+                if is_valid_complete_sentence(s) and
+                any(k in s.lower() for k in ["workflow", "action", "accountable", "trail", "decision", "executes", "understands", "data", "path", "erp", "connection", "api"])
+            ]
+            if how_sents:
+                clean_pts = deduplicate(how_sents)[:3]
+                return compose_natural_answer(clean_pts, mode="list", subject=entity_name)
+
         # Case A: "What does your company do?" / Company Overview
         if is_company_overview:
             overview_candidates = [
                 s for s in raw_sentences
                 if is_valid_complete_sentence(s) and
-                re.search(r'\b(platform|agent-as-a-service|engineered to|enterprise|provides|offers|automates|intelligence|service|services|solution|solutions|product|products|helps|built|designed|software|system|business|customer)\b', s, re.I) and
-                not re.search(r'expand agents as you trust', s, re.I) and
-                not re.search(r'new hire offer', s, re.I)
+                re.search(r'\b(workforce|ai agents understand|operate|enterprise|provides|offers|automates|intelligence|service|services|solution|solutions)\b', s, re.I) and
+                not re.search(r'expand agents as you trust|new hire offer|explore the agents|request a demo', s, re.I)
             ]
             if overview_candidates:
                 deduped = deduplicate(overview_candidates)[:2]
-                return compose_natural_answer(deduped, mode="summary", subject=entity_name)
+                return compose_natural_answer(deduped, mode="direct", subject=entity_name)
 
             valid_raw = deduplicate([s for s in raw_sentences if is_valid_complete_sentence(s)])[:2]
             if valid_raw:
-                return compose_natural_answer(valid_raw, mode="summary", subject=entity_name)
+                return compose_natural_answer(valid_raw, mode="direct", subject=entity_name)
 
             for score, sent, _ in scored_sentences:
                 s_lower = sent.lower()
@@ -623,17 +640,20 @@ class LLMProvider:
             r'which are (they|the)',
             r'what are (they|the)',
             r'list (them|all|the)',
-            r'name (them|the)',
+            r'name (them|the|all)',
             r'what agents',
-            r'which agents'
-        ])
+            r'which agents',
+            r'main agents',
+            r'agent names',
+            r'name'
+        ]) or q_lower in ["main agents", "agents", "agent names", "name", "names", "who are the agents", "list agents"]
 
         if is_list_which_are_they:
             if all_agent_entities:
-                return compose_natural_answer(all_agent_entities, mode="list", subject=entity_name)
+                return f"{entity_name} includes {len(all_agent_entities)} specialized department agents: {', '.join(all_agent_entities)}."
 
         # Case E2: Universal Quantity / Counting Questions
-        is_count_query = any(k in q_lower for k in ["how many", "how much", "number of", "total count", "count of"]) or re.search(r'how many (agents|specialists|modules)', q_lower)
+        is_count_query = any(k in q_lower for k in ["how many", "how much", "number of", "total count", "count of"]) or re.search(r'how (many|may) (agents|specialists|modules)', q_lower)
         if is_count_query:
             if any(k in q_lower for k in ["agent", "agents", "specialist", "specialists", "module", "department"]) and all_agent_entities:
                 return f"{entity_name} provides {len(all_agent_entities)} specialized department agents: {', '.join(all_agent_entities)}."
