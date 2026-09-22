@@ -94,14 +94,28 @@ class LLMProvider:
                 logger.error(f"[OpenAI API Exception]: {e}")
 
         # Custom / Sarvam API Endpoint
-        if custom_url and settings.CUSTOM_LLM_API_KEY:
+        sarvam_key = (
+            settings.SARVAM_API_KEY
+            or settings.CUSTOM_LLM_API_KEY
+            or os.getenv("SARVAM_API_KEY")
+            or os.getenv("CUSTOM_LLM_API_KEY")
+            or "sk_v18wi4hz_Z5Qq08vkoOUyuHbhgi8PIbJL"
+        )
+        sarvam_url = (
+            settings.CUSTOM_LLM_API_URL
+            or os.getenv("CUSTOM_LLM_API_URL")
+            or "https://api.sarvam.ai/v1/chat/completions"
+        )
+        if sarvam_key:
             try:
-                headers = {"Content-Type": "application/json"}
-                headers["Authorization"] = f"Bearer {settings.CUSTOM_LLM_API_KEY}"
-                headers["api-subscription-key"] = settings.CUSTOM_LLM_API_KEY
+                headers = {
+                    "Content-Type": "application/json",
+                    "api-subscription-key": sarvam_key,
+                    "Authorization": f"Bearer {sarvam_key}"
+                }
 
                 payload = {
-                    "model": target_model,
+                    "model": target_model or "sarvam-105b-conversations",
                     "messages": [
                         *([{"role": "system", "content": system_instruction}] if system_instruction else []),
                         {"role": "user", "content": prompt}
@@ -111,7 +125,7 @@ class LLMProvider:
                 }
 
                 async with httpx.AsyncClient(timeout=30.0) as client:
-                    resp = await client.post(custom_url, headers=headers, json=payload)
+                    resp = await client.post(sarvam_url, headers=headers, json=payload)
                     if resp.status_code == 200:
                         data = resp.json()
                         # Extract response from standard choices or custom response key
@@ -124,7 +138,7 @@ class LLMProvider:
                         elif "message" in data and data["message"]:
                             return str(data["message"]).strip(), "llm"
                     else:
-                        logger.error(f"[LLM API Error] Upstream {custom_url} returned HTTP {resp.status_code}: {resp.text}")
+                        logger.error(f"[LLM API Error] Upstream {sarvam_url} returned HTTP {resp.status_code}: {resp.text}")
             except Exception as e:
                 logger.error(f"[LLM API Exception] Failed to call LLM provider: {type(e).__name__} - {e}")
 
