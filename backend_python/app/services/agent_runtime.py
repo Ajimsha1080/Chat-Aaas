@@ -307,12 +307,18 @@ class AgentRuntime:
         )
 
         start_llm = time.time()
-        llm_response, gen_mode = await LLMProvider.generate_response_with_mode(
-            prompt=current_user_question,
-            system_instruction=sys_instruction,
-            model=model_name,
-            temperature=float(agent_config.get('creativityLevel', 0.3)) if isinstance(agent_config.get('creativityLevel'), (int, float)) else 0.3
-        )
+        try:
+            llm_response, gen_mode = await LLMProvider.generate_response_with_mode(
+                prompt=current_user_question,
+                system_instruction=sys_instruction,
+                model=model_name,
+                temperature=float(agent_config.get('creativityLevel', 0.3)) if isinstance(agent_config.get('creativityLevel'), (int, float)) else 0.3
+            )
+        except Exception as e:
+            import logging
+            logging.getLogger(__name__).error(f"[AgentRuntime] LLM dispatch exception, falling back to grounded synthesis: {e}")
+            llm_response = LLMProvider.synthesize_grounded_answer(current_user_question, sys_instruction)
+            gen_mode = "template_fallback"
         llm_duration_ms = (time.time() - start_llm) * 1000
 
         prompt_tokens = LLMProvider.count_tokens(current_user_question + "\n" + sys_instruction, model=model_name)

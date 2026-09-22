@@ -1,3 +1,4 @@
+import os
 import asyncio
 import json
 import logging
@@ -209,6 +210,38 @@ class LLMProvider:
         q_clean = prompt.strip()
         q_lower = q_clean.lower()
 
+        def stem(w: str) -> str:
+            w = w.lower()
+            for suffix in ["ing", "ments", "ment", "tions", "tion", "ed", "es", "s"]:
+                if w.endswith(suffix) and len(w) - len(suffix) >= 3:
+                    return w[:-len(suffix)]
+            return w
+
+        def is_valid_complete_sentence(text: str) -> bool:
+            clean = re.sub(r'^[-*•□\s\d.)]+', '', text).strip()
+            if len(clean) < 15 or clean.endswith(':') or clean.endswith('?'):
+                return False
+            if re.match(r'^(platform status|document title|classification|effective date|version|page url|document id):', clean, re.I):
+                return False
+            words = clean.split()
+            if len(words) < 4:
+                return False
+            if re.search(r'^[\w.-]+\.(app|com|io|net|org|ai)/\S*$', clean, re.I):
+                return False
+            if re.search(r'^(new hire offer|explore the agents|request a demo|sign in|sign up|ai business operating system|coarai  your erp should do the work|# your erp should)$', clean, re.I):
+                return False
+            return True
+
+        def deduplicate(items: List[str]) -> List[str]:
+            seen = set()
+            result = []
+            for item in items:
+                k = re.sub(r'[^a-z0-9]', '', item.lower())
+                if k not in seen:
+                    seen.add(k)
+                    result.append(item)
+            return result
+
         def compose_natural_answer(evidence: List[str], mode: str = "direct", subject: str = "the company") -> str:
             cleaned_items: List[str] = []
             for item in evidence:
@@ -219,7 +252,7 @@ class LLMProvider:
                 if clean:
                     cleaned_items.append(clean.rstrip("."))
 
-            cleaned_items = deduplicate(cleaned_items) if "deduplicate" in locals() else cleaned_items
+            cleaned_items = deduplicate(cleaned_items)
             if not cleaned_items:
                 return "I don't have enough verified information in the company knowledge base to answer that."
 
@@ -363,38 +396,6 @@ class LLMProvider:
         meaningful_tokens = [t for t in q_tokens if t not in stop_words and len(t) > 1] or q_tokens
         company_brand_names = {"coarai", "brightforge", "coar", "ai", "platform", "company", "app"}
         topic_tokens = [t for t in meaningful_tokens if t.lower() not in company_brand_names]
-
-        def stem(w: str) -> str:
-            w = w.lower()
-            for suffix in ["ing", "ments", "ment", "tions", "tion", "ed", "es", "s"]:
-                if w.endswith(suffix) and len(w) - len(suffix) >= 3:
-                    return w[:-len(suffix)]
-            return w
-
-        def is_valid_complete_sentence(text: str) -> bool:
-            clean = re.sub(r'^[-*•□\s\d.)]+', '', text).strip()
-            if len(clean) < 15 or clean.endswith(':') or clean.endswith('?'):
-                return False
-            if re.match(r'^(platform status|document title|classification|effective date|version|page url|document id):', clean, re.I):
-                return False
-            words = clean.split()
-            if len(words) < 4:
-                return False
-            if re.search(r'^[\w.-]+\.(app|com|io|net|org|ai)/\S*$', clean, re.I):
-                return False
-            if re.search(r'^(new hire offer|explore the agents|request a demo|sign in|sign up|ai business operating system|coarai  your erp should do the work|# your erp should)$', clean, re.I):
-                return False
-            return True
-
-        def deduplicate(items: List[str]) -> List[str]:
-            seen = set()
-            result = []
-            for item in items:
-                k = re.sub(r'[^a-z0-9]', '', item.lower())
-                if k not in seen:
-                    seen.add(k)
-                    result.append(item)
-            return result
 
         active_tokens = topic_tokens if topic_tokens else meaningful_tokens
         stemmed_q_tokens = [stem(t) for t in active_tokens]

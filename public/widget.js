@@ -255,6 +255,7 @@
 
   const form = container.querySelector('.aaas-widget-input-row');
   const inputEl = container.querySelector('.aaas-widget-input');
+  const messagesEl = container.querySelector('.aaas-widget-messages');
   let inferredOrigin = window.location.origin;
   if (currentScript && currentScript.src) {
     try {
