@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { AppProvider, useApp } from './context';
 import { Sidebar } from './components/layout/Sidebar';
 import { Header } from './components/layout/Header';
@@ -19,8 +19,6 @@ import { ToastContainer } from './components/common/ToastContainer';
 import { HelpModal } from './components/common/HelpModal';
 import { CommandPalette } from './components/common/CommandPalette';
 import { ErrorBoundary } from './components/common/ErrorBoundary';
-import { AuthPage } from './components/auth/AuthPage';
-import { APIClient } from './api/apiClient';
 import { AlertTriangle, ArrowRight } from 'lucide-react';
 
 const DashboardContent: React.FC = () => {
@@ -165,43 +163,6 @@ const DashboardContent: React.FC = () => {
 };
 
 export default function App() {
-  const [authToken, setAuthToken] = useState<string | null>(() => {
-    if (typeof localStorage !== 'undefined') {
-      return localStorage.getItem('auth_token');
-    }
-    return null;
-  });
-
-  useEffect(() => {
-    const handleLogout = () => {
-      setAuthToken(null);
-    };
-    window.addEventListener('auth_logout', handleLogout);
-    return () => window.removeEventListener('auth_logout', handleLogout);
-  }, []);
-
-  const handleAuthenticated = (token: string, user: any, companyId: string, role: string) => {
-    if (typeof localStorage !== 'undefined') {
-      localStorage.setItem('auth_token', token);
-      localStorage.setItem('auth_company_id', companyId);
-      if (user) localStorage.setItem('auth_user', JSON.stringify(user));
-      if (role) localStorage.setItem('auth_role', role);
-    }
-    APIClient.setAuth(token, companyId);
-    if (role === 'super_admin' || role === 'platform_super_admin') {
-      APIClient.setAdminAuth(token);
-    }
-    setAuthToken(token);
-  };
-
-  if (!authToken) {
-    return (
-      <ErrorBoundary>
-        <AuthPage onAuthenticated={handleAuthenticated} />
-      </ErrorBoundary>
-    );
-  }
-
   return (
     <ErrorBoundary>
       <AppProvider>

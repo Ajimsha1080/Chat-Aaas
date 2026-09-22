@@ -321,9 +321,6 @@ export interface AppContextType {
   toasts: ToastNotification[];
   showToast: (title: string, message?: string, type?: 'success' | 'info' | 'warning' | 'error') => void;
   removeToast: (id: string) => void;
-
-  // Session & Authentication
-  logout: () => void;
 }
 
 export const AppContext = createContext<AppContextType | undefined>(undefined);

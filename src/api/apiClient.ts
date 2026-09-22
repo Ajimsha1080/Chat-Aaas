@@ -18,9 +18,9 @@ export interface TestResult {
 }
 
 export class APIClient {
-  private static token: string | null = (typeof localStorage !== 'undefined' ? localStorage.getItem('auth_token') : null);
-  private static adminToken: string | null = (typeof localStorage !== 'undefined' ? (localStorage.getItem('admin_token') || (localStorage.getItem('auth_role') === 'super_admin' ? localStorage.getItem('auth_token') : null)) : null);
-  private static currentCompanyId = (typeof localStorage !== 'undefined' ? (localStorage.getItem('auth_company_id') || 'comp-coarai') : 'comp-coarai');
+  private static token: string | null = null;
+  private static adminToken: string | null = null;
+  private static currentCompanyId = 'comp-coarai';
   private static baseUrl = (typeof window !== 'undefined' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1')
     ? ''
     : ((typeof import.meta !== 'undefined' && import.meta.env?.VITE_API_BASE_URL) || '');
@@ -28,79 +28,25 @@ export class APIClient {
   public static setAuth(token?: string | null, companyId?: string): void {
     if (token !== undefined && token !== null) {
       this.token = token;
-      if (typeof localStorage !== 'undefined') {
-        localStorage.setItem('auth_token', token);
-      }
     }
     if (companyId) {
       this.currentCompanyId = companyId;
-      if (typeof localStorage !== 'undefined') {
-        localStorage.setItem('auth_company_id', companyId);
-      }
     }
   }
 
   public static setAdminAuth(token: string | null): void {
     this.adminToken = token;
-    if (typeof localStorage !== 'undefined') {
-      if (token) {
-        localStorage.setItem('admin_token', token);
-      } else {
-        localStorage.removeItem('admin_token');
-      }
-    }
   }
 
   public static async login(email: string, password: string) {
     const res = await this.request('/api/v1/auth/login', 'POST', { email, password });
     if (res && res.token) {
       if (res.role === 'super_admin' || res.role === 'platform_super_admin') {
-        this.setAdminAuth(res.token);
+        this.adminToken = res.token;
       }
       this.setAuth(res.token, res.companyId || this.currentCompanyId);
-      if (typeof localStorage !== 'undefined') {
-        localStorage.setItem('auth_token', res.token);
-        if (res.companyId) localStorage.setItem('auth_company_id', res.companyId);
-        if (res.user) localStorage.setItem('auth_user', JSON.stringify(res.user));
-        if (res.role) localStorage.setItem('auth_role', res.role);
-      }
     }
     return res;
-  }
-
-  public static async signup(data: {
-    fullName: string;
-    email: string;
-    password: string;
-    companyName: string;
-    industry: string;
-    planId?: string;
-  }) {
-    const res = await this.request('/api/v1/auth/signup', 'POST', data);
-    if (res && res.token) {
-      const companyId = res.company?.id || res.companyId || this.currentCompanyId;
-      this.setAuth(res.token, companyId);
-      if (typeof localStorage !== 'undefined') {
-        localStorage.setItem('auth_token', res.token);
-        localStorage.setItem('auth_company_id', companyId);
-        if (res.user) localStorage.setItem('auth_user', JSON.stringify(res.user));
-        localStorage.setItem('auth_role', 'owner');
-      }
-    }
-    return res;
-  }
-
-  public static logout(): void {
-    this.token = null;
-    this.adminToken = null;
-    if (typeof localStorage !== 'undefined') {
-      localStorage.removeItem('auth_token');
-      localStorage.removeItem('auth_refresh_token');
-      localStorage.removeItem('auth_user');
-      localStorage.removeItem('auth_company_id');
-      localStorage.removeItem('auth_role');
-      localStorage.removeItem('admin_token');
-    }
   }
 
   private static async request(path: string, method: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE' = 'GET', body?: any) {
