@@ -28,7 +28,8 @@ export default defineConfig({
     }
   },
   build: {
-    chunkSizeWarningLimit: 1000,
+    reportCompressedSize: false,
+    chunkSizeWarningLimit: 1500,
     rollupOptions: {
       output: {
         manualChunks(id: string) {
