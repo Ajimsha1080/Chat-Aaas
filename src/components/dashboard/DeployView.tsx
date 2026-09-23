@@ -343,6 +343,7 @@ const SwirlIcon: React.FC<{ className?: string }> = ({ className = "w-4.5 h-4.5"
   const apiEndpointUrl = isLocal ? 'http://127.0.0.1:8001/api/v1/chat' : `${origin}/api/v1/chat`;
 
   const isLogoSelected = localSettings.launcherIcon === 'logo' || localSettings.launcherIcon === 'custom';
+  const startersAttr = starterQuestions && starterQuestions.length > 0 ? `\n  data-starter-questions="${starterQuestions.join('||')}"` : '';
   const scriptSnippet = `<!-- CoarAI AI Assistant Widget for ${currentCompany.name} -->
 <script
   src="${widgetScriptSrc}"
@@ -350,9 +351,14 @@ const SwirlIcon: React.FC<{ className?: string }> = ({ className = "w-4.5 h-4.5"
   data-api-url="${origin}"
   data-position="${localSettings.position}"
   data-primary-color="${localSettings.primaryColor}"
+  data-theme-mode="${localSettings.themeMode || 'light'}"
+  data-launcher-text="${localSettings.launcherText || 'Chat with Us'}"
+  data-launcher-shape="${localSettings.launcherShape || 'teardrop'}"
+  data-launcher-icon="${localSettings.launcherIcon || 'chat'}"${isLogoSelected ? `\n  data-launcher-logo-url="${companyLogoUrl}"` : ''}
   data-bottom-padding="${localSettings.bottomPadding ?? 20}"
   data-side-padding="${localSettings.sidePadding ?? 20}"
-  data-launcher-icon="${localSettings.launcherIcon || 'chat'}"${isLogoSelected ? `\n  data-launcher-logo-url="${companyLogoUrl}"` : ''}
+  data-assistant-name="${currentCompany.agent.name || brandName || 'CoarAI Assistant'}"
+  data-greeting-message="${currentCompany.agent.greetingMessage || greetingMessage}"${startersAttr}
   defer>
 </script>`;
 

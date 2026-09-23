@@ -3,9 +3,9 @@
  * 
  * Production-ready embeddable customer Q&A widget with:
  * - Public deployment token authentication
- * - Real-time conversational interface
+ * - Real-time conversational interface & Sarvam 105B AI
  * - Responsive mobile & desktop floating popover
- * - Customer custom branding & theme color support
+ * - Full appearance synchronization: Colors, Icons, Shapes, Dark/Light theme, Starter questions
  */
 
 (function () {
@@ -17,12 +17,20 @@
   const launcherLogoUrl = currentScript?.getAttribute('data-launcher-logo-url') || '';
   const launcherText = currentScript?.getAttribute('data-launcher-text') || 'Chat with Us';
   const launcherShape = currentScript?.getAttribute('data-launcher-shape') || 'teardrop';
+  const themeMode = currentScript?.getAttribute('data-theme-mode') || 'light';
+  const assistantName = currentScript?.getAttribute('data-assistant-name') || currentScript?.getAttribute('data-title') || 'CoarAI Assistant';
+  const greetingMessage = currentScript?.getAttribute('data-greeting-message') || currentScript?.getAttribute('data-welcome-message') || 'Hello! 👋 How can I assist you today?';
+  const starterQuestionsRaw = currentScript?.getAttribute('data-starter-questions') || '';
+  const starterQuestions = starterQuestionsRaw ? starterQuestionsRaw.split('||').map(s => s.trim()).filter(Boolean) : [];
+  
   const bottomPaddingNum = parseInt(currentScript?.getAttribute('data-bottom-padding') || '20', 10) || 20;
   const sidePaddingNum = parseInt(currentScript?.getAttribute('data-side-padding') || '20', 10) || 20;
   const isLeft = position === 'bottom_left';
+  const isDark = themeMode === 'dark';
+
   const launcherRadius = launcherShape === 'teardrop' 
     ? (isLeft ? '50% 50% 50% 4px' : '50% 50% 4px 50%') 
-    : (launcherShape === 'squircle' ? '18px' : '9999px');
+    : (launcherShape === 'squircle' ? '18px' : (launcherShape === 'pill' ? '9999px' : '9999px'));
 
   // Inject Styles
   const style = document.createElement('style');
@@ -60,13 +68,14 @@
       max-width: calc(100vw - 32px);
       max-height: calc(100vh - 110px);
       z-index: 999999;
-      background: #ffffff;
+      background: ${isDark ? '#0f172a' : '#ffffff'};
+      color: ${isDark ? '#f8fafc' : '#1e293b'};
       border-radius: 20px;
-      box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.15), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+      box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.3), 0 8px 10px -6px rgba(0, 0, 0, 0.2);
       overflow: hidden;
       flex-direction: column;
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-      border: 1px solid #e2e8f0;
+      border: 1px solid ${isDark ? '#334155' : '#e2e8f0'};
       animation: aaasFadeIn 0.2s ease-out;
     }
     .aaas-widget-container.aaas-open {
@@ -107,22 +116,22 @@
       flex: 1;
       padding: 16px;
       overflow-y: auto;
-      background: #f8fafc;
+      background: ${isDark ? '#090d16' : '#f8fafc'};
       display: flex;
       flex-direction: column;
       gap: 12px;
     }
     .aaas-msg {
-      max-width: 82%;
+      max-width: 84%;
       padding: 10px 14px;
       border-radius: 14px;
       font-size: 13px;
       line-height: 1.45;
     }
     .aaas-msg-bot {
-      background: #ffffff;
-      color: #1e293b;
-      border: 1px solid #e2e8f0;
+      background: ${isDark ? '#1e293b' : '#ffffff'};
+      color: ${isDark ? '#f1f5f9' : '#1e293b'};
+      border: 1px solid ${isDark ? '#334155' : '#e2e8f0'};
       align-self: flex-start;
       border-bottom-left-radius: 4px;
     }
@@ -132,16 +141,40 @@
       align-self: flex-end;
       border-bottom-right-radius: 4px;
     }
+    .aaas-starter-pills {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 8px;
+    }
+    .aaas-starter-pill {
+      background: ${isDark ? '#1e293b' : '#ffffff'};
+      color: ${primaryColor};
+      border: 1px solid ${isDark ? '#334155' : '#cbd5e1'};
+      border-radius: 16px;
+      padding: 6px 12px;
+      font-size: 12px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+    .aaas-starter-pill:hover {
+      background: ${primaryColor};
+      color: #ffffff;
+      border-color: ${primaryColor};
+    }
     .aaas-widget-input-row {
       padding: 12px;
-      background: #ffffff;
-      border-top: 1px solid #e2e8f0;
+      background: ${isDark ? '#0f172a' : '#ffffff'};
+      border-top: 1px solid ${isDark ? '#334155' : '#e2e8f0'};
       display: flex;
       gap: 8px;
     }
     .aaas-widget-input {
       flex: 1;
-      border: 1px solid #cbd5e1;
+      border: 1px solid ${isDark ? '#334155' : '#cbd5e1'};
+      background: ${isDark ? '#1e293b' : '#ffffff'};
+      color: ${isDark ? '#f8fafc' : '#0f172a'};
       border-radius: 12px;
       padding: 10px 14px;
       font-size: 13px;
@@ -194,15 +227,20 @@
   container.innerHTML = `
     <div class="aaas-widget-header">
       <div>
-        <h4>AI Assistant</h4>
+        <h4>${assistantName}</h4>
         <p>● Ready to answer questions</p>
       </div>
       <button class="aaas-widget-close">✕</button>
     </div>
     <div class="aaas-widget-messages">
       <div class="aaas-msg aaas-msg-bot">
-        Hi there! 👋 How can I help you with our products, pricing, or policies today?
+        ${greetingMessage}
       </div>
+      ${starterQuestions.length > 0 ? `
+        <div class="aaas-starter-pills">
+          ${starterQuestions.map(q => `<button type="button" class="aaas-starter-pill" data-question="${q.replace(/"/g, '&quot;')}">${q}</button>`).join('')}
+        </div>
+      ` : ''}
     </div>
     <form class="aaas-widget-input-row">
       <input type="text" class="aaas-widget-input" placeholder="Ask a question..." />
@@ -264,6 +302,17 @@
   }
   const apiUrl = currentScript?.getAttribute('data-api-url') || (inferredOrigin.includes('localhost') || inferredOrigin.includes('127.0.0.1') ? 'http://127.0.0.1:8001' : inferredOrigin);
   const sessionId = 'widget_sess_' + Math.random().toString(36).substring(2, 9);
+
+  // Attach Starter Pills Click Listener
+  container.querySelectorAll('.aaas-starter-pill').forEach(pill => {
+    pill.addEventListener('click', () => {
+      const q = pill.getAttribute('data-question');
+      if (q && inputEl) {
+        inputEl.value = q;
+        form.dispatchEvent(new Event('submit', { cancelable: true, bubbles: true }));
+      }
+    });
+  });
 
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
