@@ -256,6 +256,49 @@ class AgentRuntime:
         ))
 
         if not is_grounded or not chunks:
+            # Check if this is an overview, intro, or general inquiry about the company/agent
+            company = db.companies.get(company_id, {})
+            company_name = company.get("name") or "CoarAI"
+            agent_name = agent_config.get("name") or "CoarAI Assistant"
+            is_company_or_general = any(re.search(pat, q_lower) for pat in [
+                r'what does (your|the|this) company do',
+                r'what (do|does) (you|the company|your company|this company) do',
+                r'what is (your|the) company',
+                r'what services (do you|does the company|are) provide',
+                r'what are your services',
+                r'what is your product',
+                r'tell me about (your company|the company|yourself)',
+                r'explain (\w+\s+)?(coarai|brightforge|coar\s*ai|the platform|the company|your platform|yourself)',
+                r'what is (coarai|brightforge|coar\s*ai)',
+                r'tell me about (coarai|brightforge|coar\s*ai)',
+                r'about (coarai|brightforge|coar\s*ai)'
+            ]) or any(k in q_lower for k in ["explain about coarai", "coarai", "what is coarai", "tell me about coarai", "who are you", "what can you do"])
+
+            if is_company_or_general:
+                model_name = agent_config.get('modelTier') or settings.DEFAULT_LLM_MODEL
+                persona_prompt = (
+                    f"You are {agent_name}, the official enterprise AI assistant for {company_name}.\n"
+                    f"The user asks: '{current_user_question}'.\n"
+                    f"Explain clearly, naturally, and professionally what {company_name} does as an enterprise AI assistant platform, providing 24/7 automated customer support, knowledge base search, and workflow automation. Keep it concise, helpful, and engaging without robotic phrases."
+                )
+                try:
+                    overview_reply, _ = await LLMProvider.generate_response_with_mode(
+                        prompt=current_user_question,
+                        system_instruction=persona_prompt,
+                        model=model_name
+                    )
+                    t_count = LLMProvider.count_tokens(current_user_question + "\n" + overview_reply)
+                    return ChatResponse(
+                        message=overview_reply,
+                        reasoning_steps=reasoning_steps,
+                        confidence_score=0.90,
+                        tokens_used=t_count,
+                        diagnostics=diagnostics,
+                        session_id=request.session_id or "sess_live"
+                    )
+                except Exception:
+                    pass
+
             refusal_msg = "I don't have enough verified information in our company knowledge base to answer that accurately. I can connect you with our team if you'd like!"
             t_count = LLMProvider.count_tokens(current_user_question + "\n" + refusal_msg)
             return ChatResponse(

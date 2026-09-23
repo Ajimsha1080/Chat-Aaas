@@ -1766,17 +1766,17 @@ class DatabaseStore:
         return [m for m in self.messages.values() if m.get("conversationId") == conversation_id and m.get("companyId") == company_id]
 
     def get_document_chunks_for_tenant(self, company_id: str, only_active: bool = True) -> List[Dict[str, Any]]:
-        chunks = [c for c in self.document_chunks.values() if c.get("companyId") == company_id]
+        chunks = [c for c in self.document_chunks.values() if (c.get("companyId") == company_id or c.get("company_id") == company_id)]
         if only_active:
-            active_source_ids = {
+            disabled_source_ids = {
                 sid for sid, s in self.knowledge_sources.items()
-                if s.get("companyId") == company_id
-                and s.get("lifecycleState", "active") == "active"
-                and s.get("status") not in ["disabled", "trash", "archived"]
+                if (s.get("companyId") == company_id or s.get("company_id") == company_id)
+                and (s.get("lifecycleState") in ["trash", "archived", "disabled"] or s.get("status") in ["disabled", "trash", "archived"])
             }
             chunks = [
                 c for c in chunks
-                if (c.get("knowledgeSourceId") or c.get("knowledge_source_id")) in active_source_ids
+                if (c.get("knowledgeSourceId") or c.get("knowledge_source_id")) not in disabled_source_ids
+                and c.get("lifecycleState", "active") not in ["trash", "archived", "disabled"]
             ]
         return chunks
 
