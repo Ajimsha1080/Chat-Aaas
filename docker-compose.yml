@@ -28,6 +28,7 @@ services:
     environment:
       - PORT=8000
       - ENVIRONMENT=production
+      - RUN_MIGRATIONS_ON_STARTUP=false
       - DATABASE_URL=postgresql://aaas_admin:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}@postgres:5432/aaas_production
       - REDIS_URL=redis://redis:6379/0
       - JWT_SECRET=${JWT_SECRET:?JWT_SECRET is required (min 32 chars)}
