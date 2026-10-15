@@ -8,6 +8,8 @@ from typing import Dict, Any, Optional
 from app.db.database import db
 from app.core.security import hash_password, revoke_user_sessions
 
+from app.core.config import settings
+
 logger = logging.getLogger(__name__)
 
 # In-memory token registry for verification and password reset tokens
@@ -67,9 +69,14 @@ class EmailService:
     def send_email(cls, to_email: str, subject: str, body_text: str, body_html: Optional[str] = None) -> Dict[str, Any]:
         """
         Dispatches transactional email via configured provider (Resend, SES, SMTP, or console logger).
+        Fails loudly in production if real email delivery provider is not configured.
         """
         from_email = os.getenv("EMAIL_FROM", "support@coarai.com")
         resend_key = os.getenv("RESEND_API_KEY")
+
+        if settings.ENVIRONMENT == "production":
+            if (not resend_key or resend_key.startswith("mock_")) and not os.getenv("AWS_SES_REGION"):
+                raise RuntimeError("[EMAIL] In production, valid RESEND_API_KEY or AWS SES configuration is required. Mock/direct dispatch is forbidden.")
 
         # Provider 1: Resend API
         if resend_key and not resend_key.startswith("mock_"):
@@ -98,6 +105,40 @@ class EmailService:
                     return {"success": True, "provider": "resend", "id": resp_data.get("id")}
             except Exception as e:
                 logger.error(f"Failed sending email via Resend: {e}")
+                if settings.ENVIRONMENT == "production":
+                    raise RuntimeError(f"[EMAIL] Resend email dispatch failed in production: {e}")
+
+        # Provider 2: AWS SES
+        if os.getenv("AWS_SES_REGION") and os.getenv("AWS_ACCESS_KEY_ID"):
+            try:
+                import boto3
+                ses_client = boto3.client(
+                    "ses",
+                    region_name=os.getenv("AWS_SES_REGION", "ap-south-1"),
+                    aws_access_key_id=os.getenv("AWS_ACCESS_KEY_ID"),
+                    aws_secret_access_key=os.getenv("AWS_SECRET_ACCESS_KEY")
+                )
+                response = ses_client.send_email(
+                    Source=from_email,
+                    Destination={"ToAddresses": [to_email]},
+                    Message={
+                        "Subject": {"Data": subject},
+                        "Body": {
+                            "Text": {"Data": body_text},
+                            "Html": {"Data": body_html or f"<p>{body_text}</p>"}
+                        }
+                    }
+                )
+                logger.info(f"Email sent via SES to {to_email}: {response.get('MessageId')}")
+                return {"success": True, "provider": "ses", "id": response.get("MessageId")}
+            except Exception as e:
+                logger.error(f"Failed sending email via SES: {e}")
+                if settings.ENVIRONMENT == "production":
+                    raise RuntimeError(f"[EMAIL] SES email dispatch failed in production: {e}")
+
+        # Fail loudly in production if neither provider worked
+        if settings.ENVIRONMENT == "production":
+            raise RuntimeError("[EMAIL] Transactional email provider failed or unconfigured in production.")
 
         # Local & dev fallback logger
         logger.info(f"[TRANSACTIONAL EMAIL] To: {to_email} | Subject: {subject} | Body: {body_text[:120]}...")

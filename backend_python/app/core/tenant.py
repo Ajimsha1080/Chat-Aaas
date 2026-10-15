@@ -1,3 +1,5 @@
+import hashlib
+import hmac
 import time
 from dataclasses import dataclass
 from typing import Optional, List
@@ -17,59 +19,100 @@ class TenantContext:
     scopes: Optional[List[str]] = None
     is_api_key: bool = False
 
+
 def _resolve_api_key_context(key_str: str, header_comp: Optional[str], correlation_id: str) -> TenantContext:
-    matched_key = next((k for k in db.api_keys.values() if k.get("key") == key_str or k.get("id") == key_str), None)
-    if matched_key:
-        if matched_key.get("status") == "revoked":
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="API key has been revoked."
-            )
-        comp_id = matched_key.get("companyId")
-        if header_comp and header_comp != comp_id:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="Forbidden: API key does not match requested company."
-            )
-        key_comp = db.companies.get(comp_id)
-        if key_comp and key_comp.get("isSuspended"):
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="Company workspace is suspended."
-            )
-        key_scopes = matched_key.get("scopes")
+    incoming_hash = hashlib.sha256(key_str.encode("utf-8")).hexdigest()
+    matched_key = None
+
+    for k in db.api_keys.values():
+        stored_hash = k.get("key_hash") or k.get("keyHash")
+        if stored_hash and hmac.compare_digest(stored_hash, incoming_hash):
+            matched_key = k
+            break
+        # Legacy/test unhashed key matching only in non-production
+        if settings.ENVIRONMENT != "production":
+            raw_key = k.get("key")
+            if isinstance(raw_key, str) and hmac.compare_digest(raw_key, key_str):
+                matched_key = k
+                break
+
+    # If not a standard API key, check if it's a verified publishable key
+    if not matched_key:
+        for dep in db.deployments.values():
+            pub_key = dep.get("publishableKey") or dep.get("publishable_key")
+            if isinstance(pub_key, str) and hmac.compare_digest(pub_key, key_str):
+                if dep.get("status") == "disabled":
+                    raise HTTPException(
+                        status_code=status.HTTP_403_FORBIDDEN,
+                        detail="The AI assistant is currently unavailable on this deployment channel."
+                    )
+                comp = db.companies.get(dep["companyId"])
+                if not comp or comp.get("isSuspended"):
+                    raise HTTPException(
+                        status_code=status.HTTP_403_FORBIDDEN,
+                        detail="Company workspace is suspended."
+                    )
+                return TenantContext(
+                    company_id=dep["companyId"],
+                    user_id=f"visitor_{int(time.time())}",
+                    role="visitor",
+                    correlation_id=correlation_id,
+                    scopes=["chat:write", "chat:read"],
+                    is_api_key=True
+                )
+
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid or unrecognized API key."
+        )
+
+    if matched_key.get("status") == "revoked":
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="API key has been revoked."
+        )
+
+    comp_id = matched_key.get("companyId")
+    if header_comp and header_comp != comp_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Forbidden: API key does not match requested company."
+        )
+
+    key_comp = db.companies.get(comp_id)
+    if not key_comp or key_comp.get("isSuspended"):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Company workspace is suspended."
+        )
+
+    # Check if publishable widget key (role visitor with minimal scopes)
+    is_publishable = (
+        key_str.startswith("pk_")
+        or key_str.startswith("pub_")
+        or matched_key.get("isPublishable")
+        or matched_key.get("role") == "visitor"
+    )
+    if is_publishable:
         return TenantContext(
             company_id=comp_id,
-            user_id=f"key_{matched_key.get('id')}",
-            role="api_client",
+            user_id=f"visitor_{int(time.time())}",
+            role="visitor",
             correlation_id=correlation_id,
-            scopes=key_scopes,
+            scopes=["chat:write", "chat:read"],
             is_api_key=True
         )
 
-    matched_comp = next((c for c in db.companies.values() if c.get("apiKey") == key_str), None)
-    if not matched_comp and (key_str in ["pub_live_widget_key", "default", "aas_live_default"] or "coarai" in key_str.lower()):
-        matched_comp = db.companies.get("comp-coarai") or next(iter(db.companies.values()), None)
-
-    if matched_comp:
-        if matched_comp.get("isSuspended"):
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="Company workspace is suspended."
-            )
-        return TenantContext(
-            company_id=matched_comp["id"],
-            user_id=f"api_{matched_comp['id']}",
-            role="api_client",
-            correlation_id=correlation_id,
-            scopes=["chat:read", "chat:write", "analytics:read", "knowledge:read"],
-            is_api_key=True
-        )
-
-    raise HTTPException(
-        status_code=status.HTTP_401_UNAUTHORIZED,
-        detail="Invalid or unrecognized API key."
+    key_scopes = matched_key.get("scopes", ["chat:read", "chat:write"])
+    return TenantContext(
+        company_id=comp_id,
+        user_id=f"key_{matched_key.get('id')}",
+        role="api_client",
+        correlation_id=correlation_id,
+        scopes=key_scopes,
+        is_api_key=True
     )
+
 
 def get_tenant_context(
     authorization: Optional[str] = Header(None),
@@ -80,7 +123,7 @@ def get_tenant_context(
     x_request_id: Optional[str] = Header(None, alias="x-request-id"),
     x_deployment_id: Optional[str] = Header(None, alias="x-deployment-id")
 ) -> TenantContext:
-    # Normalize header inputs when called directly or through FastAPI dependency injection
+    # Normalize header inputs
     auth_str = authorization if isinstance(authorization, str) else None
     api_key_str = x_api_key if isinstance(x_api_key, str) else None
     comp_id_str = x_company_id if isinstance(x_company_id, str) else None
@@ -91,11 +134,9 @@ def get_tenant_context(
 
     correlation_id = request_id_str or f"req_{int(time.time() * 1000)}"
     header_comp = comp_id_str or tenant_id_str
-    if not header_comp and not auth_str and not api_key_str and not internal_token_str and not deployment_id_str:
-        header_comp = "comp-coarai"
 
     # 1. Internal Service Worker
-    if internal_token_str and internal_token_str == settings.INTERNAL_SERVICE_SECRET:
+    if internal_token_str and hmac.compare_digest(internal_token_str, settings.INTERNAL_SERVICE_SECRET):
         comp = header_comp or "comp-internal"
         return TenantContext(
             company_id=comp,
@@ -153,17 +194,8 @@ def get_tenant_context(
                 impersonator_user_id=impersonator_id
             )
 
-        # If not a valid JWT, check if Bearer token is a valid API Key (e.g., widget.js, cURL)
-        try:
-            return _resolve_api_key_context(token, header_comp, correlation_id)
-        except HTTPException as e:
-            if "." in token and token.count(".") == 2:
-                raise HTTPException(
-                    status_code=status.HTTP_401_UNAUTHORIZED,
-                    detail="Invalid or expired authentication token."
-                )
-            if not header_comp:
-                raise e
+        # If not a valid JWT, check if Bearer token is a valid API Key (e.g. widget.js, cURL)
+        return _resolve_api_key_context(token, header_comp, correlation_id)
 
     # 3. Verified API Key (REST API via x-api-key header)
     if api_key_str:
@@ -174,8 +206,8 @@ def get_tenant_context(
         dep = db.deployments.get(deployment_id_str)
         if not dep:
             raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Deployment channel not found."
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid or unrecognized deployment identifier."
             )
         if dep.get("status") == "disabled":
             raise HTTPException(
@@ -183,7 +215,7 @@ def get_tenant_context(
                 detail="The AI assistant is currently unavailable on this deployment channel."
             )
         comp = db.companies.get(dep["companyId"])
-        if comp and comp.get("isSuspended"):
+        if not comp or comp.get("isSuspended"):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="The company workspace for this AI assistant has been suspended."
@@ -192,56 +224,14 @@ def get_tenant_context(
             company_id=dep["companyId"],
             user_id=f"visitor_{int(time.time())}",
             role="visitor",
-            correlation_id=correlation_id
+            correlation_id=correlation_id,
+            scopes=["chat:write", "chat:read"]
         )
 
-    # 5. Direct Company Header (Public visitor access to existing tenant workspaces)
-    if header_comp:
-        effective_comp = header_comp.strip()
-        comp = db.companies.get(effective_comp)
-        if not comp and effective_comp == "comp-coarai":
-            db.ensure_baseline_tenant()
-            comp = db.companies.get("comp-coarai")
-
-        if comp:
-            if comp.get("isSuspended"):
-                raise HTTPException(
-                    status_code=status.HTTP_403_FORBIDDEN,
-                    detail="Company workspace is suspended."
-                )
-            return TenantContext(
-                company_id=comp.get("id", effective_comp),
-                user_id=f"usr-{comp.get('id', effective_comp)}-admin",
-                role="owner",
-                correlation_id=correlation_id
-            )
-        elif settings.ENVIRONMENT != "production":
-            db.companies[effective_comp] = {
-                "id": effective_comp,
-                "name": effective_comp.replace("comp-", "").replace("comp_", "").replace("-", " ").title() or "Workspace",
-                "status": "active",
-                "planId": "plan_enterprise",
-                "createdAt": time.strftime("%Y-%m-%dT%H:%M:%SZ")
-            }
-            return TenantContext(
-                company_id=effective_comp,
-                user_id=f"usr-{effective_comp}-owner",
-                role="owner",
-                correlation_id=correlation_id
-            )
-        else:
-            fallback_cid = "comp-coarai"
-            return TenantContext(
-                company_id=fallback_cid,
-                user_id=f"usr-{fallback_cid}-admin",
-                role="owner",
-                correlation_id=correlation_id
-            )
-
-    # No valid authentication or tenant could be resolved
+    # Strictly no unauthenticated fallback, no auto-created companies, no owner from x-company-id!
     raise HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
-        detail="Authentication required. Provide a valid Bearer token or API key."
+        detail="Authentication required. Provide a valid Bearer token, API key, or verified deployment ID."
     )
 
 
@@ -273,5 +263,3 @@ def require_super_admin(
                 detail="Super Admin account is suspended."
             )
     return ctx
-
-

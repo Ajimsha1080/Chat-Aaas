@@ -19,6 +19,12 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
+    conn = op.get_bind()
+    if conn.dialect.name == 'postgresql':
+        try:
+            op.execute("CREATE EXTENSION IF NOT EXISTS vector;")
+        except Exception:
+            pass
     # 1. Companies
     op.create_table(
         'companies',

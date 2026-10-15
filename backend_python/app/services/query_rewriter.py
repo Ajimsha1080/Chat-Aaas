@@ -1,6 +1,5 @@
 import re
-from typing import List, Optional, Dict, Any
-from app.schemas import ChatMessage
+from typing import List, Optional, Any
 
 class QueryRewriter:
     """

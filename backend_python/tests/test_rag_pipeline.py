@@ -1,5 +1,4 @@
 import pytest
-import asyncio
 from app.services.rag_engine import RAGEngine
 from app.services.document_ai import DocumentAIService
 from app.services.crawler_service import CrawlerService

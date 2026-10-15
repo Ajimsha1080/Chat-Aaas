@@ -182,43 +182,46 @@ docker-compose up -d --build
 # Run frontend unit & integration tests (Vitest)
 npm test
 
-# Run backend test suite (Pytest - 183 tests)
+# Run backend test suite (Pytest - comprehensive enterprise & RAG suites)
 npm run test:backend
 
-# Run all tests (Frontend + Backend)
-npm run test:all
+# Run enterprise security penetration attack suite (11/11 attacks neutralized)
+npm run pentest
 ```
 
 ### Run Static Analysis, Type Checking & Security Audits:
 ```powershell
+# Frontend TypeScript check
+npx tsc --noEmit
+
 # Python code linting
 cd backend_python && ruff check .
 
 # Python static type checking
-cd backend_python && mypy app
+cd backend_python && mypy app --config-file pyproject.toml
 
-# Python dependency vulnerability scanning
-pip-audit -r backend_python/requirements.txt --ignore-vuln PYSEC-2026-1325
-
-# Frontend dependency security audit
-npm audit --audit-level=high
+# Database migration check (ensures models match migration revisions)
+cd backend_python && alembic check
 ```
 
-### Backend Pytest Suite Highlights (183/183 tests passing):
-- **Platform Super Admin & Security** (`test_super_admin.py`): Platform-level RBAC enforcement, rejection of anonymous access, non-admin forbidden access, role tampering attack defense, tenant suspension with immediate cross-channel block (JWT, API keys, chat widget), tenant re-activation, user management with Last Super Admin protection, audited impersonation sessions strictly barred from `/admin/*` endpoints, real infrastructure health probes (`SELECT 1`, Redis, pgvector), durable metrics reconciliation, emergency global AI killswitch enforcement across `/chat`, and tenant diagnostics inspection.
-- **Product-Level Hardening** (`test_product_level_fixes.py`): Production safeguards, input sanitization, error response contracts, and lifecycle invariants.
-- **Agent Lifecycle & Runtime** (`test_agent_lifecycle.py`, `test_agent_runtime.py`): State management (draft/publish/pause), version rollback, streaming execution, and confidence scoring.
-- **Tools & Risk Gates** (`test_tools_and_risk_gates.py`, `test_workers.py`): Idempotency key deduplication, background task claims, and risk gating.
-- **Round 2 Production Completion** (`test_round2_production_completion.py`): Authoritative SQL persistence across reloads (`load_from_database` / `flush_durable_storage`), cross-process distributed worker `JobQueue` backed by Redis & durable `BackgroundJob` table with atomic claims, strict eradication of unassociated tenant fallbacks in `AuthService`, dynamic tool execution without fake mock data, real integration network handshake latency measurement (`perf_counter`), protected specialized AI endpoints (`/v1/embeddings`, `/v1/rerank`, etc.), and live database/worker readiness checks.
-- **Production Features & Hardening** (`test_production_features.py`): Real SSE token streaming without simulated word splitting, 6-stage human handoff lifecycle (`ai_active` → `handoff_requested` → `assigned` → `human_active` → `resolved` → `closed`) with automated AI reply suppression during human operator sessions, tool idempotency key replay caching, multi-connection integrations with unique UUID IDs, and asynchronous queue workers with HMAC-SHA256 signature generation.
-- **Full End-to-End Fresh Customer Lifecycle** (`test_e2e_platform.py`): Starts from empty database to signup, clean workspace verification, honest refusal, document ingestion, RAG answer, draft publishing, deployment, chat persistence, trash/restore, and multi-tenant security isolation.
-- **SSRF Multi-Hop Redirect Defense** (`test_rag_and_ssrf.py`): Verifies that direct targets and multi-hop HTTP 301/302 redirects to cloud metadata (`169.254.169.254`), loopback (`127.0.0.1`), and RFC1918 private subnets are strictly intercepted and blocked.
-- **Tenant Billing & GST Invoicing** (`test_billing_and_gst.py`): Verifies plan catalog, Indian GST (18%) intra/inter-state tax breakdown, upgrade generation, and multi-tenant invoice isolation (`GET /api/v1/billing/invoices`).
-- **Resource Lifecycles & 1:1 Schema Constraint** (`test_resource_lifecycle.py`, `models.py`): Enforces 1 AI assistant per company invariant, version draft/publish/rollback, API keys, webhooks, and tool risk gates.
-- **Authentication & RBAC** (`test_auth.py`, `test_multi_tenancy.py`): JWT token verification, password hashing, and role permissions.
+---
+
+## 🔒 Enterprise Security & Compliance Architecture
+
+- **PostgreSQL Row Level Security (RLS)**: Enforced via `SET LOCAL app.current_tenant_id` on every transactional session with zero in-memory dict source-of-truth bypasses.
+- **Tenant-Prefix Object Storage**: All ingested documents are partitioned into `{company_id}/{document_id}/{filename}` in AWS S3 / Cloudflare R2 with strict cross-tenant boundary validation on presigned URLs.
+- **Subscription Billing & Idempotency**: Real Razorpay HMAC-SHA256 signature verification with Redis deduplication preventing replayed webhook charges and handling activations, payment failures, and cancellations.
+- **Single-Use Cryptographic Auth Tokens**: Transactional email verification and password resets powered by Resend / AWS SES with single-use, 15-minute expiring cryptographic tokens.
+- **Usage & Cost Protection**: Hard token caps (Starter: 2M, Growth: 15M, Business: 100M) and monthly cost caps automatically blocking runaway LLM requests with HTTP 402.
+- **GDPR Compliance**: Dedicated endpoints for Data Portability (`POST /api/v1/companies/{id}/gdpr/export`) and Right to Erasure (`DELETE /api/v1/companies/{id}/gdpr/delete`).
+- **Compliance Documentation**:
+  - [Operational Runbook](docs/RUNBOOK.md): Disaster recovery, migrations, and credential rotation.
+  - [Privacy Policy](docs/PRIVACY.md): GDPR Article 13/14 disclosures, data retention, sub-processors.
+  - [Data Processing Agreement (DPA)](docs/DPA.md): Enterprise GDPR Article 28 contractual terms.
+  - [Security Audit Report](docs/AUDIT.md): Complete hardening log, threat models, and penetration verification.
 
 ### Run Frontend Production Build:
 ```powershell
 npm run build
 ```
-Production build compiles with zero errors in ~2.1s with split vendor chunks and optimized public widget.
+Production build compiles with zero errors with split vendor chunks and optimized public widget.

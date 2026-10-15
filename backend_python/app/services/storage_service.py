@@ -9,6 +9,8 @@ import os
 import logging
 from typing import Optional, Dict, Any
 
+from app.core.config import settings
+
 logger = logging.getLogger(__name__)
 
 class StorageService:
@@ -17,6 +19,11 @@ class StorageService:
         """Constructs tenant-isolated object key path."""
         safe_name = "".join(c for c in filename if c.isalnum() or c in "._-")
         return f"{company_id}/{document_id}/{safe_name}"
+
+    @classmethod
+    def upload_file(cls, company_id: str, file_name: str, content: bytes, content_type: str = "application/octet-stream") -> Dict[str, Any]:
+        """Convenience alias for uploading tenant document/backup files."""
+        return cls.upload_bytes(company_id=company_id, document_id="backup", filename=file_name, data=content, content_type=content_type)
 
     @classmethod
     def upload_bytes(
@@ -34,6 +41,10 @@ class StorageService:
         key = cls.get_object_key(company_id, document_id, filename)
         provider = os.getenv("STORAGE_PROVIDER", "local").lower()
         bucket = os.getenv("S3_BUCKET_NAME", "coarai-documents-prod")
+
+        if settings.ENVIRONMENT == "production":
+            if provider != "s3" or not os.getenv("S3_ACCESS_KEY_ID"):
+                raise RuntimeError("[STORAGE] Production requires AWS S3 or Cloudflare R2 object storage. Local storage is strictly prohibited.")
 
         if provider == "s3" and os.getenv("S3_ACCESS_KEY_ID"):
             try:
@@ -66,9 +77,14 @@ class StorageService:
                     "presigned_url": presigned_url
                 }
             except Exception as e:
-                logger.error(f"S3 upload failed for {key}: {e}. Falling back to local storage.")
+                logger.error(f"S3 upload failed for {key}: {e}.")
+                if settings.ENVIRONMENT == "production":
+                    raise RuntimeError(f"[STORAGE] S3 object storage upload failed in production: {e}")
 
-        # Local storage fallback (Dev/Test)
+        # Local storage fallback (Dev/Test only)
+        if settings.ENVIRONMENT == "production":
+            raise RuntimeError("[STORAGE] Local storage fallback is prohibited in production.")
+
         local_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../data/uploads", company_id, document_id))
         os.makedirs(local_dir, exist_ok=True)
         local_path = os.path.join(local_dir, "".join(c for c in filename if c.isalnum() or c in "._-"))

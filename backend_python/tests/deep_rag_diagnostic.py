@@ -7,7 +7,6 @@ from app.services.query_rewriter import QueryRewriter
 from app.services.llm_service import LLMProvider
 from app.services.agent_runtime import AgentRuntime
 from app.schemas import DocumentProcessRequest, ChatRequest, ChatMessage
-from app.db.database import db
 
 def print_header(title):
     print(f"\n{'='*20} {title} {'='*20}")

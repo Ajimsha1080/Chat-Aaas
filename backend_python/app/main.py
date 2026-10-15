@@ -1,5 +1,8 @@
 import time
-from fastapi import FastAPI, Request, Response, Depends
+import json
+import uuid
+import logging
+from fastapi import FastAPI, Request, Response, Depends, Header
 from fastapi.middleware.cors import CORSMiddleware
 from app.core.tenant import TenantContext, get_tenant_context
 
@@ -68,20 +71,27 @@ app = FastAPI(
 )
 
 # Secure Environment-driven CORS
+cors_kwargs = {
+    "allow_origins": settings.ALLOWED_ORIGINS,
+    "allow_credentials": True,
+    "allow_methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
+    "allow_headers": ["*"],
+    "expose_headers": ["*"],
+}
+if settings.ENVIRONMENT != "production":
+    cors_kwargs["allow_origin_regex"] = r"https?://(localhost|127\.0\.0\.1)(:[0-9]+)?"
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.ALLOWED_ORIGINS,
-    allow_origin_regex=r"https?://(localhost|127\.0\.0\.1)(:[0-9]+)?",
-    allow_credentials=True,
-    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
-    allow_headers=["*"],
-    expose_headers=["*"],
+    **cors_kwargs
 )
 
 from app.core.metrics import metrics_collector
 
 @app.middleware("http")
 async def add_security_and_timing_headers(request: Request, call_next):
+    request_id = request.headers.get("x-request-id") or uuid.uuid4().hex
+    tenant_id = request.headers.get("x-company-id") or "anonymous"
     start_time = time.time()
     response = await call_next(request)
     duration_s = time.time() - start_time
@@ -95,6 +105,21 @@ async def add_security_and_timing_headers(request: Request, call_next):
         duration_seconds=duration_s
     )
 
+    # Structured JSON logging for observability & SIEM aggregation
+    structured_log = {
+        "timestamp": time.strftime("%Y-%m-%dT%H:%M:%SZ"),
+        "level": "INFO",
+        "request_id": request_id,
+        "tenant_id": tenant_id,
+        "method": request.method,
+        "path": request.url.path,
+        "status_code": response.status_code,
+        "duration_ms": duration_ms,
+        "client_ip": request.client.host if request.client else None
+    }
+    logging.getLogger("access").info(json.dumps(structured_log))
+
+    response.headers["x-request-id"] = request_id
     response.headers["x-response-time-ms"] = str(duration_ms)
     response.headers["x-ai-service"] = "CoarAI-Enterprise-FastAPI-v2"
     response.headers["X-Content-Type-Options"] = "nosniff"
@@ -104,12 +129,33 @@ async def add_security_and_timing_headers(request: Request, call_next):
         response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains; preload"
     return response
 
+from typing import Optional
+import hmac
+
 @app.get("/metrics", response_class=Response)
 @app.get("/api/v1/metrics", response_class=Response)
-async def get_prometheus_metrics():
-    """Prometheus APM metrics scraping endpoint."""
-    output = metrics_collector.generate_prometheus_output()
-    return Response(content=output, media_type="text/plain; version=0.0.4; charset=utf-8")
+async def get_prometheus_metrics(
+    x_internal_token: Optional[str] = Header(None, alias="x-internal-token"),
+    authorization: Optional[str] = Header(None)
+):
+    """Prometheus APM metrics scraping endpoint - protected from public access."""
+    if x_internal_token and hmac.compare_digest(x_internal_token, settings.INTERNAL_SERVICE_SECRET):
+        output = metrics_collector.generate_prometheus_output()
+        return Response(content=output, media_type="text/plain; version=0.0.4; charset=utf-8")
+
+    if authorization and authorization.startswith("Bearer "):
+        token = authorization[7:].strip()
+        from app.core.security import decode_jwt_token
+        payload = decode_jwt_token(token)
+        if payload and payload.get("role") in ["super_admin", "platform_super_admin"]:
+            output = metrics_collector.generate_prometheus_output()
+            return Response(content=output, media_type="text/plain; version=0.0.4; charset=utf-8")
+
+    from fastapi import HTTPException
+    raise HTTPException(
+        status_code=401,
+        detail="Metrics access denied. Super Admin privileges or internal token required."
+    )
 
 # ----------------- Mount Modular Enterprise Routers -----------------
 app.include_router(auth_router, prefix="/api/v1")

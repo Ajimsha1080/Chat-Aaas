@@ -4,6 +4,7 @@ from pydantic import BaseModel
 from typing import Optional
 from app.db.database import db
 from app.core.tenant import TenantContext, get_tenant_context
+from app.core.permissions import has_permission
 
 router = APIRouter(prefix="/deployments", tags=["Deployments & Web Widget"])
 
@@ -57,6 +58,8 @@ def get_widget_configuration(ctx: TenantContext = Depends(get_tenant_context)):
 
 @router.put("/widget-config")
 def update_widget_configuration(req: UpdateWidgetConfigRequest, ctx: TenantContext = Depends(get_tenant_context)):
+    if not has_permission(ctx, "company:manage") and not has_permission(ctx, "developer:manage"):
+        raise HTTPException(status_code=403, detail="Forbidden: Insufficient permissions to configure widget.")
     company = db.companies.get(ctx.company_id)
     if not company:
         raise HTTPException(status_code=404, detail="Company not found")
@@ -84,6 +87,8 @@ def list_deployments(ctx: TenantContext = Depends(get_tenant_context)):
 @router.post("", status_code=status.HTTP_201_CREATED)
 def create_deployment(req: CreateDeploymentRequest, ctx: TenantContext = Depends(get_tenant_context)):
     """Creates a new deployment channel for the assistant."""
+    if not has_permission(ctx, "developer:manage") and not has_permission(ctx, "company:manage"):
+        raise HTTPException(status_code=403, detail="Forbidden: Insufficient permissions to create deployments.")
     dep_id = f"dep-{ctx.company_id}-{len(db.deployments) + 1}"
     agent = db.get_agent_for_company(ctx.company_id) or {}
     new_dep = {
@@ -104,6 +109,8 @@ def create_deployment(req: CreateDeploymentRequest, ctx: TenantContext = Depends
 @router.post("/{deployment_id}/disable")
 def disable_deployment(deployment_id: str, ctx: TenantContext = Depends(get_tenant_context)):
     """Temporarily disables an active deployment without modifying or deleting the assistant."""
+    if not has_permission(ctx, "developer:manage") and not has_permission(ctx, "company:manage"):
+        raise HTTPException(status_code=403, detail="Forbidden: Insufficient permissions to modify deployments.")
     dep = db.deployments.get(deployment_id)
     if not dep or dep.get("companyId") != ctx.company_id:
         raise HTTPException(status_code=404, detail="Deployment channel not found.")
@@ -115,6 +122,8 @@ def disable_deployment(deployment_id: str, ctx: TenantContext = Depends(get_tena
 @router.post("/{deployment_id}/enable")
 def enable_deployment(deployment_id: str, ctx: TenantContext = Depends(get_tenant_context)):
     """Re-enables a disabled deployment channel."""
+    if not has_permission(ctx, "developer:manage") and not has_permission(ctx, "company:manage"):
+        raise HTTPException(status_code=403, detail="Forbidden: Insufficient permissions to modify deployments.")
     dep = db.deployments.get(deployment_id)
     if not dep or dep.get("companyId") != ctx.company_id:
         raise HTTPException(status_code=404, detail="Deployment channel not found.")
@@ -126,6 +135,8 @@ def enable_deployment(deployment_id: str, ctx: TenantContext = Depends(get_tenan
 @router.delete("/{deployment_id}")
 def remove_deployment(deployment_id: str, ctx: TenantContext = Depends(get_tenant_context)):
     """Removes a deployment channel from the workspace without affecting the assistant."""
+    if not has_permission(ctx, "developer:manage") and not has_permission(ctx, "company:manage"):
+        raise HTTPException(status_code=403, detail="Forbidden: Insufficient permissions to delete deployments.")
     dep = db.deployments.get(deployment_id)
     if not dep or dep.get("companyId") != ctx.company_id:
         raise HTTPException(status_code=404, detail="Deployment channel not found.")

@@ -1,4 +1,22 @@
 services:
+  migration:
+    build:
+      context: ./backend_python
+      dockerfile: Dockerfile
+    container_name: aaas-migration
+    restart: "no"
+    command: ["alembic", "upgrade", "head"]
+    environment:
+      - DATABASE_URL=postgresql://aaas_admin:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}@postgres:5432/aaas_production
+      - JWT_SECRET=${JWT_SECRET:?JWT_SECRET is required (min 32 chars)}
+      - PYTHON_AI_INTERNAL_SECRET=${PYTHON_AI_INTERNAL_SECRET:?PYTHON_AI_INTERNAL_SECRET is required}
+      - ENCRYPTION_KEY=${ENCRYPTION_KEY:?ENCRYPTION_KEY is required (min 32 chars)}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - aaas-network
+
   backend:
     build:
       context: ./backend_python
@@ -10,11 +28,11 @@ services:
     environment:
       - PORT=8000
       - ENVIRONMENT=production
-      - DATABASE_URL=postgresql://aaas_admin:${POSTGRES_PASSWORD:-secret_password}@postgres:5432/aaas_production
+      - DATABASE_URL=postgresql://aaas_admin:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}@postgres:5432/aaas_production
       - REDIS_URL=redis://redis:6379/0
-      - JWT_SECRET=${JWT_SECRET:-insecure_default_dev_jwt_secret_must_be_32_bytes_long}
-      - PYTHON_AI_INTERNAL_SECRET=${PYTHON_AI_INTERNAL_SECRET:-insecure_default_dev_internal_secret_32_bytes}
-      - ENCRYPTION_KEY=${ENCRYPTION_KEY:-insecure_default_dev_encryption_key_32_bytes_len}
+      - JWT_SECRET=${JWT_SECRET:?JWT_SECRET is required (min 32 chars)}
+      - PYTHON_AI_INTERNAL_SECRET=${PYTHON_AI_INTERNAL_SECRET:?PYTHON_AI_INTERNAL_SECRET is required}
+      - ENCRYPTION_KEY=${ENCRYPTION_KEY:?ENCRYPTION_KEY is required (min 32 chars)}
       - CORS_ORIGINS=http://localhost,http://localhost:80,http://localhost:5173,http://localhost:3000,http://${SERVER_HOST:-127.0.0.1},https://${SERVER_HOST:-127.0.0.1}
       - OPENAI_API_KEY=${OPENAI_API_KEY:-}
       - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
@@ -28,8 +46,10 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+      migration:
+        condition: service_completed_successfully
     healthcheck:
-      test: ['CMD-SHELL', 'curl -f http://127.0.0.1:8000/health || exit 1']
+      test: ['CMD-SHELL', 'curl -f http://127.0.0.1:8000/ready || exit 1']
       interval: 5s
       timeout: 5s
       retries: 10
@@ -46,11 +66,11 @@ services:
     command: ["python", "-m", "app.workers.worker_runner"]
     environment:
       - ENVIRONMENT=production
-      - DATABASE_URL=postgresql://aaas_admin:${POSTGRES_PASSWORD:-secret_password}@postgres:5432/aaas_production
+      - DATABASE_URL=postgresql://aaas_admin:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}@postgres:5432/aaas_production
       - REDIS_URL=redis://redis:6379/0
-      - JWT_SECRET=${JWT_SECRET:-insecure_default_dev_jwt_secret_must_be_32_bytes_long}
-      - PYTHON_AI_INTERNAL_SECRET=${PYTHON_AI_INTERNAL_SECRET:-insecure_default_dev_internal_secret_32_bytes}
-      - ENCRYPTION_KEY=${ENCRYPTION_KEY:-insecure_default_dev_encryption_key_32_bytes_len}
+      - JWT_SECRET=${JWT_SECRET:?JWT_SECRET is required (min 32 chars)}
+      - PYTHON_AI_INTERNAL_SECRET=${PYTHON_AI_INTERNAL_SECRET:?PYTHON_AI_INTERNAL_SECRET is required}
+      - ENCRYPTION_KEY=${ENCRYPTION_KEY:?ENCRYPTION_KEY is required (min 32 chars)}
       - SARVAM_API_KEY=${SARVAM_API_KEY:-}
       - CUSTOM_LLM_API_KEY=${CUSTOM_LLM_API_KEY:-}
       - CUSTOM_LLM_API_URL=${CUSTOM_LLM_API_URL:-https://api.sarvam.ai/v1/chat/completions}
@@ -63,7 +83,11 @@ services:
       redis:
         condition: service_healthy
     healthcheck:
-      disable: true
+      test: ['CMD-SHELL', 'python -c "import redis, os; r = redis.from_url(os.getenv(\"REDIS_URL\")); r.ping()" || exit 1']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
     networks:
       - aaas-network
 
@@ -86,7 +110,7 @@ services:
     restart: always
     environment:
       - POSTGRES_USER=aaas_admin
-      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-secret_password}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
       - POSTGRES_DB=aaas_production
     # Database port kept internal to aaas-network for production security
     expose:

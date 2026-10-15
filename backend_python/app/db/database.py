@@ -59,7 +59,10 @@ class DatabaseStore:
         db_url = settings.DATABASE_URL
         if db_url.startswith("postgresql+asyncpg://"):
             db_url = db_url.replace("postgresql+asyncpg://", "postgresql+psycopg2://")
-        if not db_url or "localhost" in db_url or "127.0.0.1" in db_url:
+        if settings.ENVIRONMENT == "production":
+            if not db_url or "sqlite" in db_url or "localhost" in db_url or "127.0.0.1" in db_url:
+                raise RuntimeError("[DATABASE] Production requires a remote PostgreSQL cluster. SQLite and localhost DB are strictly prohibited.")
+        elif not db_url or "sqlite" in db_url:
             db_url = f"sqlite:///{self.sqlite_path}"
 
         engine_kwargs = {"connect_args": {"check_same_thread": False}} if "sqlite" in db_url else {
@@ -99,8 +102,8 @@ class DatabaseStore:
 
         # Primary load: query authoritative SQL database
         restored = self.load_from_database()
-        if not restored:
-            # Fallback load from JSON snapshot if database was empty
+        if not restored and settings.ENVIRONMENT != "production":
+            # Fallback load from JSON snapshot if database was empty (non-production only)
             restored = self.load_durable_storage()
             if restored:
                 self.flush_durable_storage()
@@ -412,8 +415,12 @@ class DatabaseStore:
             if self.engine.dialect.name == "postgresql":
                 if is_super_admin:
                     session.execute(text("SET LOCAL app.is_super_admin = 'true'"))
+                    session.execute(text("SET LOCAL app.current_tenant_id = ''"))
                 elif company_id:
                     session.execute(text("SET LOCAL app.current_tenant_id = :cid"), {"cid": company_id})
+                    session.execute(text("SET LOCAL app.is_super_admin = 'false'"))
+                else:
+                    session.execute(text("SET LOCAL app.current_tenant_id = ''"))
                     session.execute(text("SET LOCAL app.is_super_admin = 'false'"))
             yield session
             session.commit()
@@ -431,8 +438,12 @@ class DatabaseStore:
             if self.read_engine.dialect.name == "postgresql":
                 if is_super_admin:
                     session.execute(text("SET LOCAL app.is_super_admin = 'true'"))
+                    session.execute(text("SET LOCAL app.current_tenant_id = ''"))
                 elif company_id:
                     session.execute(text("SET LOCAL app.current_tenant_id = :cid"), {"cid": company_id})
+                    session.execute(text("SET LOCAL app.is_super_admin = 'false'"))
+                else:
+                    session.execute(text("SET LOCAL app.current_tenant_id = ''"))
                     session.execute(text("SET LOCAL app.is_super_admin = 'false'"))
             yield session
         except Exception:
@@ -1249,7 +1260,9 @@ class DatabaseStore:
         except Exception as e:
             print("FLUSH ERROR:", e)
 
-        # Optional snapshot backup
+        # Optional snapshot backup (non-production only)
+        if settings.ENVIRONMENT == "production":
+            return
         try:
             snapshot = {
                 "users": self.users,

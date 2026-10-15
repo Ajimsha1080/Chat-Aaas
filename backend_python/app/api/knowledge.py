@@ -4,7 +4,10 @@ import uuid
 from fastapi import APIRouter, HTTPException, Depends, status, Query, UploadFile, File, Form
 from pydantic import BaseModel, Field
 from typing import Optional, List
+import logging
 from app.db.database import db
+
+logger = logging.getLogger(__name__)
 from app.services.crawler_service import CrawlerService
 from app.services.rag_engine import RAGEngine
 from app.services.document_ai import DocumentAIService

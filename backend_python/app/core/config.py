@@ -77,12 +77,17 @@ class Settings(BaseSettings):
     # --- Secrets: required in production, auto-generated (with warning) in dev ---
     JWT_SECRET: str = _require_secret("JWT_SECRET", min_length=32)
     JWT_ALGORITHM: str = "HS256"
-    ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 7
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 15
 
     INTERNAL_SERVICE_SECRET: str = _require_secret("PYTHON_AI_INTERNAL_SECRET", min_length=32)
 
     # ENCRYPTION_KEY must be at least 32 characters (256-bit).
     ENCRYPTION_KEY: str = _require_secret("ENCRYPTION_KEY", min_length=32)
+
+    RAZORPAY_KEY_ID: Optional[str] = os.getenv("RAZORPAY_KEY_ID") or None
+    RAZORPAY_KEY_SECRET: Optional[str] = os.getenv("RAZORPAY_KEY_SECRET") or None
+    RAZORPAY_WEBHOOK_SECRET: Optional[str] = os.getenv("RAZORPAY_WEBHOOK_SECRET") or None
+    RESEND_API_KEY: Optional[str] = os.getenv("RESEND_API_KEY") or None
 
     _raw_origins = [
         origin.strip()
@@ -95,6 +100,33 @@ class Settings(BaseSettings):
     if _ENVIRONMENT == "production":
         if "*" in _raw_origins:
             raise RuntimeError("[SECURITY] Wildcard '*' CORS origin is strictly forbidden in production.")
+
+        # Fail startup in production for SQLite or localhost database
+        _db_check = DATABASE_URL.lower()
+        if "sqlite" in _db_check or "localhost" in _db_check or "127.0.0.1" in _db_check:
+            raise RuntimeError(
+                "[SECURITY] DATABASE_URL cannot be SQLite or localhost/127.0.0.1 in production. "
+                "Configure a valid authoritative PostgreSQL database."
+            )
+
+        # Fail startup in production for missing or mock payment keys
+        _rzp_id = os.getenv("RAZORPAY_KEY_ID", "")
+        _rzp_sec = os.getenv("RAZORPAY_KEY_SECRET", "")
+        if not _rzp_id or _rzp_id in ["rzp_test_mock_key", "mock_key"] or "mock" in _rzp_id.lower():
+            raise RuntimeError(
+                "[SECURITY] RAZORPAY_KEY_ID is missing or set to a mock key in production."
+            )
+        if not _rzp_sec or _rzp_sec in ["coarai_razorpay_secret_123", "mock_secret", "rzp_test_mock_secret"] or "mock" in _rzp_sec.lower():
+            raise RuntimeError(
+                "[SECURITY] RAZORPAY_KEY_SECRET is missing or set to a mock secret in production."
+            )
+
+        # Fail startup in production for missing or mock email keys
+        _resend = os.getenv("RESEND_API_KEY", "")
+        if not _resend or _resend in ["mock_key", "mock_secret", "re_test_mock"] or "mock" in _resend.lower():
+            raise RuntimeError(
+                "[SECURITY] RESEND_API_KEY is missing or set to a mock key in production. Real email delivery is required."
+            )
 
     ALLOWED_ORIGINS: List[str] = _raw_origins
 

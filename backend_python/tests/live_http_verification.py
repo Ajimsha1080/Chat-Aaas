@@ -1,5 +1,4 @@
 import httpx
-import json
 
 BASE_URL = "http://127.0.0.1:8000"
 COMPANY_ID = "comp_live_demo"

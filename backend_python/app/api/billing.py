@@ -20,7 +20,7 @@ class CheckoutRequest(BaseModel):
     customerEmail: Optional[str] = None
 
 @router.get("/plans")
-def get_plans():
+def get_plans(ctx: TenantContext = Depends(get_tenant_context)):
     return {"status": 200, "data": {"plans": BillingService.get_plans()}}
 
 @router.post("/checkout")

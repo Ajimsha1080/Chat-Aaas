@@ -49,19 +49,24 @@ class UsageService:
     @staticmethod
     def check_monthly_quota(company_id: str, billing_period: str = None) -> Dict[str, Any]:
         """
-        Validates monthly conversation usage against the active subscription tier.
-        Protects platform margins against excessive token burn and runaway loops.
+        Validates monthly conversation usage, token burn, and cost caps against active subscription tier.
+        Protects platform margins against excessive token burn, runaway loops, and malicious exhaustion.
         """
         company = db.companies.get(company_id, {})
         plan_id = company.get("planId", "starter")
+        settings_obj = company.get("settings", {}) or {}
 
         # Monthly limits
         plan_limits = {
-            "starter": 1000,
-            "growth": 5000,
-            "business": 25000
+            "starter": {"conversations": 1000, "tokens": 2_000_000, "cost_inr": 1500.0},
+            "growth": {"conversations": 5000, "tokens": 15_000_000, "cost_inr": 7500.0},
+            "business": {"conversations": 25000, "tokens": 100_000_000, "cost_inr": 35000.0}
         }
-        max_allowed = plan_limits.get(plan_id, 1000)
+        tier_cfg = plan_limits.get(plan_id, plan_limits["starter"])
+
+        max_conversations = settings_obj.get("monthlyConversationLimit") or tier_cfg["conversations"]
+        max_tokens = settings_obj.get("monthlyTokenCap") or tier_cfg["tokens"]
+        max_cost_inr = settings_obj.get("monthlyCostCap") or tier_cfg["cost_inr"]
 
         # Count tenant conversations in current billing period (calendar month YYYY-MM)
         current_period = billing_period or time.strftime("%Y-%m")
@@ -74,21 +79,50 @@ class UsageService:
                 if str(created_ts).startswith(current_period):
                     tenant_convs.append(c)
             else:
-                # If timestamp is absent (legacy/unseeded mock), default to current period
                 tenant_convs.append(c)
-        used_count = len(tenant_convs)
+        used_convs = len(tenant_convs)
 
-        is_exceeded = used_count >= max_allowed
-        usage_percent = round((used_count / max_allowed) * 100, 1) if max_allowed > 0 else 100.0
+        # Count tenant token consumption in current billing period
+        tenant_events = [
+            e for e in db.usage_events
+            if e.get("companyId") == company_id and str(e.get("timestamp", "")).startswith(current_period)
+        ]
+        tokens_used = sum(e.get("quantity", 0) for e in tenant_events if e.get("unit") == "tokens")
+
+        # Estimated cost (₹0.00015 per token)
+        estimated_cost_inr = round(tokens_used * 0.00015, 2)
+
+        conv_exceeded = used_convs >= max_conversations
+        token_exceeded = tokens_used >= max_tokens
+        cost_exceeded = estimated_cost_inr >= max_cost_inr
+        is_exceeded = conv_exceeded or token_exceeded or cost_exceeded
+
+        reasons = []
+        if conv_exceeded:
+            reasons.append(f"Conversation limit reached ({used_convs}/{max_conversations})")
+        if token_exceeded:
+            reasons.append(f"Monthly token cap reached ({tokens_used}/{max_tokens})")
+        if cost_exceeded:
+            reasons.append(f"Monthly cost cap reached (₹{estimated_cost_inr}/₹{max_cost_inr})")
+
+        usage_percent = round((used_convs / max_conversations) * 100, 1) if max_conversations > 0 else 100.0
+        token_usage_percent = round((tokens_used / max_tokens) * 100, 1) if max_tokens > 0 else 100.0
 
         return {
             "companyId": company_id,
             "planId": plan_id,
-            "monthlyLimit": max_allowed,
-            "conversationsUsed": used_count,
+            "monthlyLimit": max_conversations,
+            "conversationsUsed": used_convs,
             "usagePercent": usage_percent,
+            "tokenCap": max_tokens,
+            "tokensUsed": tokens_used,
+            "tokenUsagePercent": token_usage_percent,
+            "costCapINR": max_cost_inr,
+            "estimatedCostINR": estimated_cost_inr,
             "isExceeded": is_exceeded,
-            "overageRateINR": 0.50,  # ₹0.50 per additional conversation
+            "exceededReasons": reasons,
+            "overageRateINR": 0.50,
             "billingPeriod": current_period
         }
+
 

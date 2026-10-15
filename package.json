@@ -6,7 +6,10 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test": "vitest run",
+    "test:backend": "python -m pytest backend_python/tests -v",
+    "pentest": "python scripts/pentest.py"
   },
   "dependencies": {
     "@sentry/react": "^10.75.0",
@@ -20,15 +23,18 @@
     "tailwind-merge": "^3.6.0"
   },
   "devDependencies": {
+    "@testing-library/jest-dom": "^7.0.1",
     "@types/canvas-confetti": "^1.9.0",
     "@types/node": "^24.13.3",
     "@types/react": "^19.2.18",
     "@types/react-dom": "^19.2.4",
     "@vitejs/plugin-react": "^6.1.0",
     "autoprefixer": "^10.5.5",
+    "jsdom": "^29.1.1",
     "postcss": "^8.5.28",
     "tailwindcss": "^4.3.3",
     "typescript": "~6.0.2",
-    "vite": "^8.2.2"
+    "vite": "^8.2.2",
+    "vitest": "^4.1.12"
   }
 }

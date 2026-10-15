@@ -56,6 +56,14 @@ export class AIAgentEngine {
     // 2. Immediate Conversational Greeting Shortcut
     const cleanQuery = qLower.replace(/[^\w\s]/g, '').trim();
     const greetings = ['hi', 'hello', 'hey', 'hlo', 'hllo', 'helo', 'yo', 'sup', 'greetings', 'hi there', 'hello there', 'good morning', 'good afternoon', 'good evening'];
+    const isIdentityQuery = /(who are you|what are you|what do you do|tell me about yourself|introduce yourself)/i.test(cleanQuery);
+
+    if (isIdentityQuery) {
+      return {
+        message: `Hello! 👋 I'm **${company.agent.name}**, your AI assistant for **${company.name}**. How can I help you today?`,
+        reasoningSteps: [`[Conversational Intent] Recognized identity query. Returning persona description.`]
+      };
+    }
 
     if (greetings.includes(cleanQuery)) {
       return {

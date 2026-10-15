@@ -5,7 +5,7 @@ ROLE_PERMISSIONS: Dict[str, Set[str]] = {
         "admin:all", "org:all", "agent:readall", "agent:create", "agent:write", "agent:publish", "agent:rollback",
         "knowledge:read", "knowledge:write", "knowledge:delete", "conversation:readall", "conversation:takeover",
         "tool:read", "tool:write", "tool:execute", "billing:manage", "analytics:read", "audit:read",
-        "developer:manage", "team:manage", "company:manage"
+        "developer:manage", "team:manage", "company:manage", "company:create"
     },
     "owner": {
         "agent:create", "agent:write", "agent:publish", "agent:rollback",

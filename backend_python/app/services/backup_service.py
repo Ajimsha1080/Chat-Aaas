@@ -110,3 +110,38 @@ class BackupService:
             "companyId": company_id,
             "restoredEntities": restored_counts
         }
+
+    @staticmethod
+    def export_tenant_snapshot(company_id: str) -> Dict[str, Any]:
+        """Creates and returns a compressed base64 backup snapshot."""
+        import base64
+        backup = BackupService.create_tenant_backup(company_id)
+        company = db.companies.get(company_id, {})
+        snapshot = {
+            "version": "2.0.0",
+            "companyId": company_id,
+            "timestamp": time.strftime("%Y-%m-%dT%H:%M:%SZ"),
+            "company": company,
+            "agents": [a for a in db.agents.values() if a.get("companyId") == company_id],
+            "agent_versions": [v for v in db.agent_versions.values() if v.get("companyId") == company_id],
+            "knowledge_collections": [c for c in db.knowledge_collections.values() if c.get("companyId") == company_id],
+            "knowledge_sources": [s for s in db.knowledge_sources.values() if s.get("companyId") == company_id],
+            "document_chunks": [chk for chk in db.document_chunks.values() if chk.get("companyId") == company_id],
+            "agent_tools": [t for t in db.agent_tools.values() if t.get("companyId") == company_id],
+            "integrations": [i for i in db.integrations.values() if i.get("companyId") == company_id],
+            "invoices": [inv for inv in db.invoices.values() if inv.get("companyId") == company_id],
+            "deployments": [d for d in db.deployments.values() if d.get("companyId") == company_id],
+            "memberships": [m for m in db.memberships.values() if m.get("companyId") == company_id]
+        }
+        compressed = gzip.compress(json.dumps(snapshot, ensure_ascii=False).encode("utf-8"))
+        backup["snapshotJsonGzBase64"] = base64.b64encode(compressed).decode("ascii")
+        return backup
+
+    @staticmethod
+    def restore_tenant_snapshot(company_id: str, snapshot_gz_b64: str) -> Dict[str, Any]:
+        """Restores a tenant workspace from a compressed base64 snapshot payload."""
+        import base64
+        compressed = base64.b64decode(snapshot_gz_b64)
+        snapshot_data = json.loads(gzip.decompress(compressed).decode("utf-8"))
+        return BackupService.restore_tenant_backup(company_id, snapshot_data)
+

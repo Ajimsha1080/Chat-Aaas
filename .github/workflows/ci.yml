@@ -59,6 +59,31 @@ jobs:
   backend-tests:
     name: Backend Pytest, Lint & Static Analysis
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: ci_password
+          POSTGRES_DB: chat_aaas
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 5
+
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 5
+
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
@@ -87,7 +112,18 @@ jobs:
       - name: Static Type Checking (Mypy)
         working-directory: backend_python
         run: |
-          mypy app
+          mypy app --config-file pyproject.toml
+
+      - name: Run Alembic Migrations
+        working-directory: backend_python
+        env:
+          DATABASE_URL: postgresql://postgres:ci_password@localhost:5432/chat_aaas
+          JWT_SECRET: ci-test-token-secret-must-be-at-least-32-chars-long
+          PYTHON_AI_INTERNAL_SECRET: ci-test-internal-secret-must-be-at-least-32-chars
+          ENCRYPTION_KEY: ci-test-encryption-key-must-be-at-least-32-chars-length
+        run: |
+          alembic upgrade head
+          alembic check
 
       - name: Run Pytest Suite
         env:
@@ -95,9 +131,10 @@ jobs:
           JWT_SECRET: ci-test-token-secret-must-be-at-least-32-chars-long
           PYTHON_AI_INTERNAL_SECRET: ci-test-internal-secret-must-be-at-least-32-chars
           ENCRYPTION_KEY: ci-test-encryption-key-must-be-at-least-32-chars-length
-          DATABASE_URL: sqlite:///./ci_test.db
+          DATABASE_URL: postgresql://postgres:ci_password@localhost:5432/chat_aaas
+          REDIS_URL: redis://localhost:6379/0
         run: |
-          python -m pytest backend_python/app/tests -v
+          python -m pytest backend_python/tests -v
 
   docker-build:
     name: Docker Production Build Check

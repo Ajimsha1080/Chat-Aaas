@@ -10,7 +10,14 @@ os.makedirs(db_dir, exist_ok=True)
 sqlite_path = os.path.join(db_dir, "chat_aaas.db")
 
 raw_db_url = settings.DATABASE_URL
-if not raw_db_url or "localhost" in raw_db_url or "127.0.0.1" in raw_db_url:
+if settings.ENVIRONMENT == "production":
+    if not raw_db_url or "sqlite" in raw_db_url or "localhost" in raw_db_url or "127.0.0.1" in raw_db_url:
+        raise RuntimeError("[DATABASE] Production requires a remote PostgreSQL cluster. SQLite and localhost DB are strictly prohibited.")
+    if raw_db_url.startswith("postgresql://"):
+        async_db_url = raw_db_url.replace("postgresql://", "postgresql+asyncpg://", 1)
+    else:
+        async_db_url = raw_db_url
+elif not raw_db_url or "localhost" in raw_db_url or "127.0.0.1" in raw_db_url:
     async_db_url = f"sqlite+aiosqlite:///{sqlite_path}"
 elif raw_db_url.startswith("postgresql://"):
     async_db_url = raw_db_url.replace("postgresql://", "postgresql+asyncpg://", 1)
@@ -41,6 +48,24 @@ AsyncSessionLocal = async_sessionmaker(
 )
 
 
+from sqlalchemy import text
+from typing import Optional
+
+async def set_async_session_rls(session: AsyncSession, company_id: Optional[str] = None, is_super_admin: bool = False):
+    """Configures PostgreSQL RLS session variables."""
+    bind = session.bind or async_engine
+    if bind and bind.dialect.name == "postgresql":
+        if is_super_admin:
+            await session.execute(text("SET LOCAL app.is_super_admin = 'true'"))
+            await session.execute(text("SET LOCAL app.current_tenant_id = ''"))
+        elif company_id:
+            await session.execute(text("SET LOCAL app.current_tenant_id = :cid"), {"cid": company_id})
+            await session.execute(text("SET LOCAL app.is_super_admin = 'false'"))
+        else:
+            await session.execute(text("SET LOCAL app.current_tenant_id = ''"))
+            await session.execute(text("SET LOCAL app.is_super_admin = 'false'"))
+
+
 async def get_async_db() -> AsyncGenerator[AsyncSession, None]:
     """FastAPI dependency for injecting async SQLAlchemy sessions into route handlers."""
     async with AsyncSessionLocal() as session:
@@ -55,10 +80,11 @@ async def get_async_db() -> AsyncGenerator[AsyncSession, None]:
 
 
 @asynccontextmanager
-async def get_async_session() -> AsyncGenerator[AsyncSession, None]:
-    """Async context manager for background jobs and non-FastAPI request contexts."""
+async def get_async_session(company_id: Optional[str] = None, is_super_admin: bool = False) -> AsyncGenerator[AsyncSession, None]:
+    """Async context manager for background jobs and non-FastAPI request contexts with RLS support."""
     async with AsyncSessionLocal() as session:
         try:
+            await set_async_session_rls(session, company_id=company_id, is_super_admin=is_super_admin)
             yield session
             await session.commit()
         except Exception:
@@ -66,3 +92,4 @@ async def get_async_session() -> AsyncGenerator[AsyncSession, None]:
             raise
         finally:
             await session.close()
+

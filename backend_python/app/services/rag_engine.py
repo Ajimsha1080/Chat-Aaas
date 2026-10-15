@@ -1,7 +1,6 @@
 import math
 import re
-import time
-from typing import List, Dict, Any, Tuple, Optional
+from typing import List, Dict, Any, Tuple
 from app.schemas import ChunkSearchResult, RAGDiagnostics
 from app.services.embedding_service import EmbeddingService, UNIVERSAL_SEMANTIC_BASINS
 

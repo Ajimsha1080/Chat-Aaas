@@ -1,8 +1,8 @@
-import asyncio
 import time
 import json
 import re
 from typing import AsyncGenerator, Dict, Any, List
+from app.db.database import db
 from app.schemas import (
     ChatRequest,
     ChatResponse,

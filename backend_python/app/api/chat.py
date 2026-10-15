@@ -106,9 +106,10 @@ async def process_chat_message(
     if ctx.role not in ["super_admin", "platform_super_admin"]:
         quota = UsageService.check_monthly_quota(company_id)
         if quota.get("isExceeded"):
+            reasons = "; ".join(quota.get("exceededReasons", [])) or f"Monthly limit ({quota.get('monthlyLimit')}) exceeded"
             raise HTTPException(
                 status_code=402,
-                detail=f"Monthly conversation limit ({quota.get('monthlyLimit')}) exceeded for your active subscription. Please upgrade to continue."
+                detail=f"Subscription quota exceeded: {reasons}. Please upgrade to continue."
             )
 
     # 3. Anti-spam & Cost Protection: Plan-based session and tenant-level aggregate rate limits

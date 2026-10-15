@@ -1,11 +1,14 @@
 import time
 import uuid
+import logging
 from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel
 from typing import Optional, Dict, Any
 from app.db.database import db
 from app.core.tenant import TenantContext, get_tenant_context
 from app.core.permissions import has_permission
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/companies", tags=["Companies & Organization"])
 
@@ -55,9 +58,14 @@ def list_companies(ctx: TenantContext = Depends(get_tenant_context)):
         c["agent"] = agent
     return {"status": 200, "data": {"companies": [c]}}
 
-@router.post("")
-def create_company(req: CreateCompanyRequest):
+@router.post("", status_code=201)
+def create_company(req: CreateCompanyRequest, ctx: TenantContext = Depends(get_tenant_context)):
     """Creates a new company workspace with isolated agent and default parameters."""
+    if not has_permission(ctx, "company:create"):
+        raise HTTPException(
+            status_code=403,
+            detail="Forbidden: 'company:create' permission required to create company workspaces."
+        )
     slug = req.name.lower().replace(" ", "-").replace(".", "").replace("/", "")
     comp_id = f"comp-{slug}-{int(time.time() % 10000)}"
 
@@ -148,7 +156,7 @@ def get_current_company(ctx: TenantContext = Depends(get_tenant_context)):
 
 @router.put("/current")
 def update_current_company(req: UpdateCompanyRequest, ctx: TenantContext = Depends(get_tenant_context)):
-    return update_company_by_id(ctx.company_id, req)
+    return update_company_by_id(ctx.company_id, req, ctx)
 
 @router.get("/{company_id}")
 def get_company_by_id(company_id: str, ctx: TenantContext = Depends(get_tenant_context)):
@@ -253,4 +261,77 @@ def restore_company_backup(company_id: str, req: RestoreBackupRequest, ctx: Tena
     from app.services.backup_service import BackupService
     result = BackupService.restore_tenant_snapshot(company_id, req.snapshotJsonGzBase64)
     return {"status": 200, "data": result}
+
+
+# ----------------- GDPR Compliance (Art. 17 & Art. 20) Endpoints -----------------
+
+@router.get("/{company_id}/gdpr/export")
+@router.post("/{company_id}/gdpr/export")
+def export_tenant_gdpr_bundle(company_id: str, ctx: TenantContext = Depends(get_tenant_context)):
+    """
+    GDPR Article 20: Right to Data Portability.
+    Exports all tenant customer data in an open, structured JSON format.
+    """
+    if ctx.role not in ["super_admin", "platform_super_admin", "owner"] or (ctx.company_id != company_id and ctx.role not in ["super_admin", "platform_super_admin"]):
+        raise HTTPException(status_code=403, detail="Forbidden: Tenant owner or super admin permission required.")
+    
+    from app.services.backup_service import BackupService
+    bundle = BackupService.export_tenant_snapshot(company_id)
+    return {
+        "status": 200,
+        "compliance": "GDPR Article 20 - Data Portability",
+        "companyId": company_id,
+        "data": bundle
+    }
+
+
+@router.delete("/{company_id}/gdpr/delete")
+def delete_tenant_gdpr_data(company_id: str, ctx: TenantContext = Depends(get_tenant_context)):
+    """
+    GDPR Article 17: Right to Erasure ('Right to be Forgotten').
+    Permanently cascades deletion of all tenant data, embeddings, document chunks, 
+    conversations, messages, integrations, deployments, and keys.
+    """
+    if ctx.role not in ["super_admin", "platform_super_admin", "owner"] or (ctx.company_id != company_id and ctx.role not in ["super_admin", "platform_super_admin"]):
+        raise HTTPException(status_code=403, detail="Forbidden: Tenant owner or super admin permission required.")
+
+    # 1. Purge memory caches
+    db.companies.pop(company_id, None)
+    db.agents = {k: v for k, v in db.agents.items() if v.get("companyId") != company_id}
+    db.agent_versions = {k: v for k, v in db.agent_versions.items() if v.get("companyId") != company_id}
+    db.knowledge_collections = {k: v for k, v in db.knowledge_collections.items() if v.get("companyId") != company_id}
+    db.knowledge_sources = {k: v for k, v in db.knowledge_sources.items() if v.get("companyId") != company_id}
+    db.document_chunks = {k: v for k, v in db.document_chunks.items() if v.get("companyId") != company_id}
+    db.knowledge_gaps = {k: v for k, v in db.knowledge_gaps.items() if v.get("companyId") != company_id}
+    db.agent_tools = {k: v for k, v in db.agent_tools.items() if v.get("companyId") != company_id}
+    db.integrations = {k: v for k, v in db.integrations.items() if v.get("companyId") != company_id}
+    db.deployments = {k: v for k, v in db.deployments.items() if v.get("companyId") != company_id}
+    db.api_keys = {k: v for k, v in db.api_keys.items() if v.get("companyId") != company_id}
+    db.webhooks = {k: v for k, v in db.webhooks.items() if v.get("companyId") != company_id}
+    db.conversations = {k: v for k, v in db.conversations.items() if v.get("companyId") != company_id}
+    db.messages = {k: v for k, v in db.messages.items() if v.get("companyId") != company_id}
+    db.memberships = {k: v for k, v in db.memberships.items() if v.get("companyId") != company_id}
+
+    # 2. Durable database cascading deletion
+    if db.engine:
+        from sqlalchemy import text
+        try:
+            with db.engine.begin() as conn:
+                for table in [
+                    "messages", "conversations", "document_chunks", "knowledge_sources",
+                    "knowledge_collections", "agent_tools", "agent_versions", "agents",
+                    "deployments", "api_keys", "webhooks", "integrations", "action_executions",
+                    "invoices", "subscriptions", "memberships", "tenant_key_metadata"
+                ]:
+                    conn.execute(text(f"DELETE FROM {table} WHERE company_id = :cid"), {"cid": company_id})
+                conn.execute(text("DELETE FROM companies WHERE id = :cid"), {"cid": company_id})
+        except Exception as e:
+            logger.error(f"Error purging database records for tenant {company_id}: {e}")
+
+    return {
+        "status": 200,
+        "compliance": "GDPR Article 17 - Right to Erasure",
+        "message": f"Tenant {company_id} and all associated data have been permanently erased."
+    }
+
 

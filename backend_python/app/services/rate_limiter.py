@@ -26,12 +26,16 @@ class RateLimiter:
     def _get_redis(cls):
         if cls._redis_client is None:
             redis_url = os.getenv("REDIS_URL")
-            if redis_url and not ("localhost" in redis_url or "127.0.0.1" in redis_url):
+            if redis_url:
                 try:
                     import redis
-                    cls._redis_client = redis.Redis.from_url(redis_url, decode_responses=True)
+                    client = redis.Redis.from_url(redis_url, decode_responses=True)
+                    client.ping()
+                    cls._redis_client = client
                 except Exception as e:
-                    logger.warning(f"Redis rate limiter connection failed: {e}. Using in-memory fallback.")
+                    if os.getenv("ENVIRONMENT") == "production":
+                        raise RuntimeError(f"[SECURITY] Redis connection required for rate limiting in production: {e}")
+                    logger.warning(f"Redis rate limiter connection failed: {e}. Using in-memory fallback for dev.")
         return cls._redis_client
 
     @classmethod
@@ -71,8 +75,13 @@ class RateLimiter:
                 raise
             except Exception as e:
                 logger.error(f"Redis rate limit error: {e}")
+                if os.getenv("ENVIRONMENT") == "production":
+                    raise RuntimeError(f"[SECURITY] Redis error during rate limiting in production: {e}")
 
-        # In-Memory Sliding Window Fallback
+        if os.getenv("ENVIRONMENT") == "production":
+            raise RuntimeError("[SECURITY] In-memory rate limiting is forbidden in production. Redis connection is required.")
+
+        # In-Memory Sliding Window Fallback for development
         cutoff = now - window_seconds
         cls._in_memory_requests[client_identifier] = [
             ts for ts in cls._in_memory_requests.get(client_identifier, []) if ts > cutoff
