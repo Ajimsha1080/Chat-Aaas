@@ -41,4 +41,5 @@ venv/
 backend_python/data/
 *.db
 chat_aaas_state.json
+*.zip
 
