@@ -1,10 +1,22 @@
 import httpx
+import os
+import sys
+from pathlib import Path
+sys.path.insert(0, str(Path(__file__).parent.parent))
 
-BASE_URL = "http://127.0.0.1:8000"
+from app.core.security import create_jwt_token
+
+BASE_URL = os.environ.get("BASE_URL", "http://127.0.0.1:8001")
 COMPANY_ID = "comp_live_demo"
+TOKEN = create_jwt_token(
+    user_id="user_live_demo",
+    company_id=COMPANY_ID,
+    role="admin",
+    extra_claims={"permissions": ["knowledge:write", "knowledge:read", "agent:chat", "agent:read"]}
+)
 HEADERS = {
+    "Authorization": f"Bearer {TOKEN}",
     "X-Company-ID": COMPANY_ID,
-    "X-User-Role": "admin",
     "Content-Type": "application/json"
 }
 
