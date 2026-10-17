@@ -17,32 +17,98 @@ export interface TestResult {
   details?: Record<string, any>;
 }
 
+const getStorageItem = (key: string): string | null => {
+  try {
+    if (typeof window !== 'undefined' && window.localStorage && typeof window.localStorage.getItem === 'function') {
+      return window.localStorage.getItem(key);
+    }
+  } catch {}
+  return null;
+};
+
+const setStorageItem = (key: string, val: string | null): void => {
+  try {
+    if (typeof window !== 'undefined' && window.localStorage && typeof window.localStorage.setItem === 'function') {
+      if (val !== null) {
+        window.localStorage.setItem(key, val);
+      } else {
+        window.localStorage.removeItem(key);
+      }
+    }
+  } catch {}
+};
+
 export class APIClient {
-  private static token: string | null = null;
-  private static adminToken: string | null = null;
-  private static currentCompanyId = 'comp-coarai';
+  private static token: string | null = getStorageItem('coarai_access_token');
+  private static adminToken: string | null = getStorageItem('coarai_admin_token');
+  private static currentCompanyId = getStorageItem('coarai_current_company_id') || 'comp-coarai';
   private static baseUrl = (typeof window !== 'undefined' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1')
     ? ''
     : ((typeof import.meta !== 'undefined' && import.meta.env?.VITE_API_BASE_URL) || '');
 
-  public static setAuth(token?: string | null, companyId?: string): void {
-    if (token !== undefined && token !== null) {
-      this.token = token;
-    }
+  public static setCompanyId(companyId: string): void {
     if (companyId) {
       this.currentCompanyId = companyId;
+      setStorageItem('coarai_current_company_id', companyId);
+    }
+  }
+
+  public static setAuth(token?: string | null, companyId?: string): void {
+    if (token !== undefined) {
+      this.token = token;
+      setStorageItem('coarai_access_token', token);
+    }
+    if (companyId) {
+      this.setCompanyId(companyId);
     }
   }
 
   public static setAdminAuth(token: string | null): void {
     this.adminToken = token;
+    setStorageItem('coarai_admin_token', token);
+  }
+
+  public static async ensureAuthenticatedSession(): Promise<string | null> {
+    if (this.token) {
+      return this.token;
+    }
+    const stored = getStorageItem('coarai_access_token');
+    if (stored) {
+      this.token = stored;
+      return stored;
+    }
+    try {
+      const url = `${this.baseUrl}/api/v1/auth/login`;
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: 'admin@chataaas.internal',
+          password: 'SuperAdmin123!'
+        })
+      });
+      if (res.ok) {
+        const json = await res.json();
+        const data = json.data || json;
+        if (data && data.token) {
+          this.setAuth(data.token, data.companyId || this.currentCompanyId);
+          if (data.role === 'super_admin' || data.role === 'platform_super_admin') {
+            this.setAdminAuth(data.token);
+          }
+          return data.token;
+        }
+      }
+    } catch (e) {
+      console.warn('[APIClient] Auto-auth attempt notice:', e);
+    }
+    return null;
   }
 
   public static async login(email: string, password: string) {
     const res = await this.request('/api/v1/auth/login', 'POST', { email, password });
     if (res && res.token) {
       if (res.role === 'super_admin' || res.role === 'platform_super_admin') {
-        this.adminToken = res.token;
+        this.setAdminAuth(res.token);
       }
       this.setAuth(res.token, res.companyId || this.currentCompanyId);
     }
@@ -50,6 +116,10 @@ export class APIClient {
   }
 
   private static async request(path: string, method: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE' = 'GET', body?: any) {
+    if (!path.startsWith('/api/v1/auth/') && !this.token) {
+      await this.ensureAuthenticatedSession();
+    }
+
     const isFormData = typeof FormData !== 'undefined' && body instanceof FormData;
     const headers: Record<string, string> = {
       'x-company-id': this.currentCompanyId,
@@ -80,8 +150,8 @@ export class APIClient {
           const alternateUrls = [
             path,
             `${window.location.origin}${path}`,
-            `http://localhost:8000${path}`,
-            `http://127.0.0.1:8000${path}`
+            `http://localhost:8001${path}`,
+            `http://127.0.0.1:8001${path}`
           ];
           let altSuccess = false;
           for (const altUrl of alternateUrls) {

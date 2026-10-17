@@ -263,7 +263,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   // 2. Real-time Tenant Sync: Load live Knowledge, Tools, Versions, Audit Logs & Conversations
   useEffect(() => {
-    APIClient.setAuth(null, currentCompanyId);
+    APIClient.setCompanyId(currentCompanyId);
 
     const syncTenantLiveData = async () => {
       try {
@@ -1091,7 +1091,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }));
 
     // Real-time backend ingestion & dynamic chunk count sync
-    APIClient.setAuth(null, currentCompanyId);
+    APIClient.setCompanyId(currentCompanyId);
 
     if (item.content && item.content.trim()) {
       APIClient.ingestFile({
@@ -1207,7 +1207,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const updateKnowledgeItem = (id: string, updates: Partial<KnowledgeItem>) => {
-    APIClient.setAuth(null, currentCompanyId);
+    APIClient.setCompanyId(currentCompanyId);
     const existing = (knowledgeMap[currentCompanyId] || []).find(k => k.id === id);
     const title = updates.title || existing?.title || 'Updated Document';
     const content = updates.content || updates.faqAnswer || existing?.content || '';
@@ -1284,7 +1284,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const finalChunks = crawledChunks;
 
     if (finalContent && finalContent.trim()) {
-      APIClient.setAuth(null, currentCompanyId);
+      APIClient.setCompanyId(currentCompanyId);
       APIClient.ingestFile({
         title: existing.title,
         content: finalContent,

@@ -105,7 +105,7 @@ export class AIAgentEngine {
     // 4. Primary Execution: Live FastAPI Backend Hybrid RAG & LLM Engine
     try {
       if (company?.id) {
-        APIClient.setAuth(null, company.id);
+        APIClient.setCompanyId(company.id);
       }
 
       const historyPayload = conversationHistory.slice(-6).map(m => ({
