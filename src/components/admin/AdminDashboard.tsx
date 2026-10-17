@@ -144,7 +144,6 @@ export const AdminDashboard: React.FC = () => {
   }, [userSearch, userRoleFilter]);
 
   useEffect(() => {
-    // oxlint-disable-next-line react/set-state-in-effect
     fetchLiveData();
     const interval = setInterval(() => {
       fetchLiveData();
@@ -153,13 +152,11 @@ export const AdminDashboard: React.FC = () => {
   }, [fetchLiveData]);
 
   useEffect(() => {
-    // oxlint-disable-next-line react/set-state-in-effect
     fetchTenants();
   }, [fetchTenants]);
 
   useEffect(() => {
     if (activeTab === 'users') {
-      // oxlint-disable-next-line react/set-state-in-effect
       fetchUsers();
     }
   }, [activeTab, fetchUsers]);

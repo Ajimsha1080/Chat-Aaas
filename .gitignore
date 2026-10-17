@@ -38,6 +38,10 @@ env/
 venv/
 .venv/
 .pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
 backend_python/data/
 *.db
 chat_aaas_state.json
