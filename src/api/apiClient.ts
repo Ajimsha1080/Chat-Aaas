@@ -178,6 +178,32 @@ export class APIClient {
       }
 
       if (!response.ok) {
+        if (response.status === 401 && !path.startsWith('/api/v1/auth/')) {
+          this.token = null;
+          setStorageItem('coarai_access_token', null);
+          const freshToken = await this.ensureAuthenticatedSession();
+          if (freshToken) {
+            headers['Authorization'] = `Bearer ${freshToken}`;
+            const retryRes = await fetch(url, {
+              method,
+              headers,
+              body: isFormData ? body : (body ? JSON.stringify(body) : undefined)
+            });
+            if (retryRes.ok) {
+              const res = await retryRes.json();
+              const unwrapped = res.data !== undefined ? res.data : res;
+              if (unwrapped && typeof unwrapped === 'object' && !('data' in unwrapped)) {
+                Object.defineProperty(unwrapped, 'data', {
+                  value: unwrapped,
+                  enumerable: false,
+                  configurable: true,
+                  writable: true
+                });
+              }
+              return unwrapped;
+            }
+          }
+        }
         const errJson = await response.json().catch(() => ({ detail: `HTTP ${response.status} Error` }));
         throw new Error(errJson.detail || `HTTP ${response.status} Error`);
       }
