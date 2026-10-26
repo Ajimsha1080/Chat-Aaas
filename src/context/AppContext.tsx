@@ -46,7 +46,7 @@ import {
   INITIAL_API_LOGS,
   INITIAL_SYSTEM_HEALTH,
   INITIAL_SECURITY_EVENTS
-} from '../data/mockData';
+} from '../data/platformConstants';
 import { AIAgentEngine } from '../services/aiEngine';
 import { APIClient } from '../api/apiClient';
 import { generateComprehensiveDocumentContent } from '../utils/documentGenerator';

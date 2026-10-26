@@ -143,33 +143,33 @@ class DatabaseStore:
         """
         now_str = "2026-08-01T00:00:00.000Z"
 
-        # 0. Completely purge legacy mock comp-techflow and agent-tf-1 artifacts
-        for mock_cid in ["comp-techflow"]:
-            self.companies.pop(mock_cid, None)
+        # 0. Completely purge legacy comp-techflow and agent-tf-1 artifacts
+        for legacy_cid in ["comp-techflow"]:
+            self.companies.pop(legacy_cid, None)
             if self.engine:
                 try:
                     with self.engine.begin() as conn:
                         for table in ["agent_versions", "agents", "agent_tools", "company_members", "deployments", "api_keys", "webhooks", "knowledge_documents", "document_chunks", "conversations", "messages"]:
-                            conn.execute(text(f"DELETE FROM {table} WHERE company_id = :cid"), {"cid": mock_cid})
-                        conn.execute(text("DELETE FROM companies WHERE id = :cid"), {"cid": mock_cid})
+                            conn.execute(text(f"DELETE FROM {table} WHERE company_id = :cid"), {"cid": legacy_cid})
+                        conn.execute(text("DELETE FROM companies WHERE id = :cid"), {"cid": legacy_cid})
                 except Exception as purge_err:
                     logger.debug(f"[Purge] Legacy cleanup notice: {purge_err}")
 
-        for mock_aid in ["agent-tf-1"]:
-            self.agents.pop(mock_aid, None)
+        for legacy_aid in ["agent-tf-1"]:
+            self.agents.pop(legacy_aid, None)
             if self.engine:
                 try:
                     with self.engine.begin() as conn:
-                        conn.execute(text("DELETE FROM agents WHERE id = :aid"), {"aid": mock_aid})
+                        conn.execute(text("DELETE FROM agents WHERE id = :aid"), {"aid": legacy_aid})
                 except Exception as purge_err:
                     logger.debug(f"[Purge] Agent cleanup notice: {purge_err}")
 
-        for mock_vid in ["ver-tf-v1", "ver-agent-tf-1-v1"]:
-            self.agent_versions.pop(mock_vid, None)
+        for legacy_vid in ["ver-tf-v1", "ver-agent-tf-1-v1"]:
+            self.agent_versions.pop(legacy_vid, None)
             if self.engine:
                 try:
                     with self.engine.begin() as conn:
-                        conn.execute(text("DELETE FROM agent_versions WHERE id = :vid"), {"vid": mock_vid})
+                        conn.execute(text("DELETE FROM agent_versions WHERE id = :vid"), {"vid": legacy_vid})
                 except Exception as purge_err:
                     logger.debug(f"[Purge] Version cleanup notice: {purge_err}")
 

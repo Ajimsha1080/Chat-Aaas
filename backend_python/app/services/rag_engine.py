@@ -34,8 +34,6 @@ class RAGEngine:
         """Computes a normalized semantic dense embedding vector."""
         return EmbeddingService.compute_dense_vector(text, dimensions=dim, normalize=True)
 
-    compute_mock_embedding = compute_dense_embedding  # Backward compatibility alias
-
     @staticmethod
     def cosine_similarity(vec_a: List[float], vec_b: List[float]) -> float:
         """Calculates cosine similarity between two normalized vectors."""
