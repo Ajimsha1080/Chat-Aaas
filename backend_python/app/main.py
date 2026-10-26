@@ -272,3 +272,28 @@ async def process_raw_document(req: DocumentProcessRequest, ctx: TenantContext =
 @app.post("/api/v1/classify", response_model=ClassificationResponse)
 async def classify_user_intent(req: ClassificationRequest, ctx: TenantContext = Depends(get_tenant_context)):
     return ClassificationService.classify_text(req)
+
+
+# ----------------- Real-Time Multi-Tenant WebSocket Hub -----------------
+from fastapi import WebSocket, WebSocketDisconnect
+from app.core.websocket_manager import ws_manager
+
+@app.websocket("/ws/{company_id}")
+@app.websocket("/ws")
+async def websocket_realtime_endpoint(websocket: WebSocket, company_id: str = "comp-coarai"):
+    cid = websocket.query_params.get("companyId") or company_id or "comp-coarai"
+    await ws_manager.connect(websocket, cid)
+    try:
+        await websocket.send_text(json.dumps({"event": "connected", "data": {"companyId": cid, "timestamp": time.time()}}))
+        while True:
+            data = await websocket.receive_text()
+            try:
+                msg = json.loads(data)
+                if msg.get("type") == "ping" or msg.get("event") == "ping":
+                    await websocket.send_text(json.dumps({"event": "pong", "timestamp": time.time()}))
+            except Exception:
+                pass
+    except WebSocketDisconnect:
+        ws_manager.disconnect(websocket, cid)
+    except Exception:
+        ws_manager.disconnect(websocket, cid)

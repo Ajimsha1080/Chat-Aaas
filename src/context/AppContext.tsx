@@ -455,9 +455,84 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   }, [currentCompanyId, currentKnowledgeItems]);
 
-  // 4. Background Real-time Polling for Live Conversations
+  // 4. True Real-Time WebSocket Connection & Push Sync
   useEffect(() => {
-    const pollInterval = setInterval(async () => {
+    if (!currentCompanyId || typeof window === 'undefined') return;
+
+    let ws: WebSocket | null = null;
+    let pingInterval: any = null;
+    let reconnectTimeout: any = null;
+    let isCleanedUp = false;
+
+    const connectWebSocket = () => {
+      try {
+        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        const host = window.location.host;
+        const wsUrl = `${protocol}//${host}/ws/${currentCompanyId}`;
+        ws = new WebSocket(wsUrl);
+
+        ws.onopen = () => {
+          pingInterval = setInterval(() => {
+            if (ws && ws.readyState === WebSocket.OPEN) {
+              ws.send(JSON.stringify({ type: 'ping' }));
+            }
+          }, 20000);
+        };
+
+        ws.onmessage = (event) => {
+          try {
+            const parsed = JSON.parse(event.data);
+            if (parsed.event === 'conversation:message' || parsed.event === 'conversation:update') {
+              const convData = parsed.data?.conversation;
+              if (convData && convData.id) {
+                const normalized = normalizeConversation(convData);
+                setConversationsMap(prev => {
+                  const currentList = prev[currentCompanyId] || [];
+                  const existingIdx = currentList.findIndex(c => c.id === normalized.id);
+                  let updatedList: Conversation[];
+                  if (existingIdx >= 0) {
+                    updatedList = [...currentList];
+                    updatedList[existingIdx] = { ...updatedList[existingIdx], ...normalized };
+                  } else {
+                    updatedList = [normalized, ...currentList];
+                  }
+                  return { ...prev, [currentCompanyId]: updatedList };
+                });
+              }
+            } else if (parsed.event === 'conversation:takeover' || parsed.event === 'conversation:handoff' || parsed.event === 'conversation:resolved') {
+              APIClient.getConversations().then(cRes => {
+                if (cRes && cRes.conversations && Array.isArray(cRes.conversations)) {
+                  setConversationsMap(prev => ({
+                    ...prev,
+                    [currentCompanyId]: cRes.conversations.map(normalizeConversation)
+                  }));
+                }
+              }).catch(() => {});
+            }
+          } catch {}
+        };
+
+        ws.onclose = () => {
+          clearInterval(pingInterval);
+          if (!isCleanedUp) {
+            reconnectTimeout = setTimeout(connectWebSocket, 3000);
+          }
+        };
+
+        ws.onerror = () => {
+          ws?.close();
+        };
+      } catch {
+        if (!isCleanedUp) {
+          reconnectTimeout = setTimeout(connectWebSocket, 5000);
+        }
+      }
+    };
+
+    connectWebSocket();
+
+    // Fallback light sync interval (every 12 seconds for resilience)
+    const fallbackSync = setInterval(async () => {
       try {
         const cRes = await APIClient.getConversations();
         if (cRes && cRes.conversations && Array.isArray(cRes.conversations)) {
@@ -470,12 +545,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             return prev;
           });
         }
-      } catch {
-        // Polling catch
-      }
-    }, 4000);
+      } catch {}
+    }, 12000);
 
-    return () => clearInterval(pollInterval);
+    return () => {
+      isCleanedUp = true;
+      clearInterval(pingInterval);
+      clearInterval(fallbackSync);
+      clearTimeout(reconnectTimeout);
+      if (ws) {
+        ws.close();
+      }
+    };
   }, [currentCompanyId]);
 
   // Sync to local storage

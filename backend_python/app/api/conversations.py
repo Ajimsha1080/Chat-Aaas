@@ -9,6 +9,7 @@ from app.services.usage_service import UsageService
 from app.services.rate_limiter import RateLimiter
 from app.schemas import ChatRequest
 from app.core.tenant import TenantContext, get_tenant_context
+from app.core.websocket_manager import ws_manager
 
 router = APIRouter(prefix="/conversations", tags=["Conversations & Support Inbox"])
 
@@ -150,6 +151,11 @@ async def send_message(req: SendMessageRequest, ctx: TenantContext = Depends(get
     db.save_message(agent_msg)
     UsageService.record_event(company_id, "message", 2, "count", conv_id)
     UsageService.record_event(company_id, "token_consumption", runtime_res.tokens_used, "tokens", conv_id)
+    await ws_manager.broadcast_to_company(company_id, "conversation:message", {
+        "conversation": conv,
+        "userMessage": user_msg,
+        "agentMessage": agent_msg
+    })
 
     return {
         "status": 200,
@@ -161,32 +167,37 @@ async def send_message(req: SendMessageRequest, ctx: TenantContext = Depends(get
     }
 
 @router.post("/{conversation_id}/takeover")
-def takeover_chat(conversation_id: str, req: TakeoverRequest, ctx: TenantContext = Depends(get_tenant_context)):
+async def takeover_chat(conversation_id: str, req: TakeoverRequest, ctx: TenantContext = Depends(get_tenant_context)):
     op_name = req.operatorName or req.operatorId or "Staff Agent"
     res = ConversationService.human_takeover(conversation_id, ctx.company_id, op_name)
+    await ws_manager.broadcast_to_company(ctx.company_id, "conversation:takeover", res)
     return {"status": 200, "data": res}
 
 @router.post("/{conversation_id}/handoff")
-def handoff_chat(conversation_id: str, req: Optional[HandoffRequest] = None, ctx: TenantContext = Depends(get_tenant_context)):
+async def handoff_chat(conversation_id: str, req: Optional[HandoffRequest] = None, ctx: TenantContext = Depends(get_tenant_context)):
     reason = req.reason if req else "Customer requested live assistance"
     res = ConversationService.request_handoff(conversation_id, ctx.company_id, reason)
+    await ws_manager.broadcast_to_company(ctx.company_id, "conversation:handoff", res)
     return {"status": 200, "data": res}
 
 @router.post("/{conversation_id}/reply")
-def reply_as_human(conversation_id: str, req: HumanReplyRequest, ctx: TenantContext = Depends(get_tenant_context)):
+async def reply_as_human(conversation_id: str, req: HumanReplyRequest, ctx: TenantContext = Depends(get_tenant_context)):
     op_name = req.operatorName or req.operatorId or "Staff Agent"
     msg_text = req.text or req.content or ""
     res = ConversationService.send_human_reply(conversation_id, ctx.company_id, op_name, msg_text)
+    await ws_manager.broadcast_to_company(ctx.company_id, "conversation:reply", res)
     return {"status": 200, "data": res}
 
 @router.post("/{conversation_id}/resolve")
-def resolve_chat(conversation_id: str, ctx: TenantContext = Depends(get_tenant_context)):
+async def resolve_chat(conversation_id: str, ctx: TenantContext = Depends(get_tenant_context)):
     res = ConversationService.resolve_conversation(conversation_id, ctx.company_id)
+    await ws_manager.broadcast_to_company(ctx.company_id, "conversation:resolved", res)
     return {"status": 200, "data": res}
 
 @router.post("/{conversation_id}/close")
-def close_chat(conversation_id: str, ctx: TenantContext = Depends(get_tenant_context)):
+async def close_chat(conversation_id: str, ctx: TenantContext = Depends(get_tenant_context)):
     res = ConversationService.close_conversation(conversation_id, ctx.company_id)
+    await ws_manager.broadcast_to_company(ctx.company_id, "conversation:closed", res)
     return {"status": 200, "data": res}
 
 class BulkConversationActionRequest(BaseModel):
