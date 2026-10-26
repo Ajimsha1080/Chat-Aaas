@@ -109,7 +109,6 @@ class LLMProvider:
             or settings.CUSTOM_LLM_API_KEY
             or os.getenv("SARVAM_API_KEY")
             or os.getenv("CUSTOM_LLM_API_KEY")
-            or "sk_v18wi4hz_Z5Qq08vkoOUyuHbhgi8PIbJL"
         )
         sarvam_url = (
             settings.CUSTOM_LLM_API_URL
