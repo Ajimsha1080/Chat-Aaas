@@ -1853,7 +1853,6 @@ class DatabaseStore:
         ready = [s for s in sources if s.get("status") in ["ready", "indexed"]]
 
         # Calculate numeric health score (0-100)
-        total_s = max(1, len(sources))
         penalty = (len(failed_sources) * 25) + (len(needs_attention) * 10) + (min(len(gaps), 5) * 4)
         health_score = max(50, min(100, 100 - penalty))
 

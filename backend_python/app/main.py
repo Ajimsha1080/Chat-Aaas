@@ -205,7 +205,7 @@ async def readiness_check():
     # 2. Redis / Background Worker Queue check
     try:
         from app.core.queue import JobQueue
-        test_q = JobQueue("readiness_check")
+        JobQueue("readiness_check")
         checks["worker_queue"] = True
     except Exception:
         checks["worker_queue"] = False

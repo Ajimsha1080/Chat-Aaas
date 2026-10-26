@@ -112,6 +112,7 @@ class ToolRegistry:
                 success=True,
                 result={
                     "ticket_id": f"TICK-{int(time.time() * 1000) % 100000:05d}",
+                    "subject": subject,
                     "status": "Open",
                     "priority": params.get("priority", "Normal"),
                     "created_at": time.strftime("%Y-%m-%dT%H:%M:%SZ")
