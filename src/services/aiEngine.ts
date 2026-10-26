@@ -84,10 +84,24 @@ export class AIAgentEngine {
 
       if (isExplicitHandoff || hitCustom) {
         const hitKeyword = hitCustom || 'talk to human';
+        let handoffStatus = 'dispatched';
+        let handoffDetails: any = { notifiedTo: escalation.notifyEmail || 'support@coarai.internal', timestamp: new Date().toISOString() };
+
+        try {
+          const convId = conversationHistory.length > 0 ? (conversationHistory[0] as any)?.conversationId : undefined;
+          if (convId) {
+            const handoffRes = await APIClient.requestHandoff(convId, `Customer requested human assistance: "${hitKeyword}"`);
+            handoffDetails = { ...handoffDetails, ...handoffRes };
+          }
+        } catch (err: any) {
+          handoffStatus = 'pending_operator_pickup';
+          handoffDetails = { error: err.message || 'Notification queued for operator review', timestamp: new Date().toISOString() };
+        }
+
         const handoffTrace: ToolExecutionTrace = {
           toolName: 'escalate_to_human_agent',
           arguments: { keyword: hitKeyword, userQuery },
-          result: { status: 'dispatched', notifiedTo: escalation.notifyEmail, timestamp: new Date().toISOString() },
+          result: { status: handoffStatus, ...handoffDetails },
           status: 'executed',
           executedAt: new Date().toISOString()
         };

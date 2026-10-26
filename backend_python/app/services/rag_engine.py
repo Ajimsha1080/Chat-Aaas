@@ -30,9 +30,11 @@ class RAGEngine:
         return chunks if chunks else [text]
 
     @staticmethod
-    def compute_mock_embedding(text: str, dim: int = 1536) -> List[float]:
+    def compute_dense_embedding(text: str, dim: int = 1536) -> List[float]:
         """Computes a normalized semantic dense embedding vector."""
         return EmbeddingService.compute_dense_vector(text, dimensions=dim, normalize=True)
+
+    compute_mock_embedding = compute_dense_embedding  # Backward compatibility alias
 
     @staticmethod
     def cosine_similarity(vec_a: List[float], vec_b: List[float]) -> float:

@@ -150,28 +150,28 @@ class DatabaseStore:
                 try:
                     with self.engine.begin() as conn:
                         for table in ["agent_versions", "agents", "agent_tools", "company_members", "deployments", "api_keys", "webhooks", "knowledge_documents", "document_chunks", "conversations", "messages"]:
-                            conn.execute(text(f"DELETE FROM {table} WHERE company_id = '{mock_cid}'"))
-                        conn.execute(text(f"DELETE FROM companies WHERE id = '{mock_cid}'"))
-                except Exception:
-                    pass
+                            conn.execute(text(f"DELETE FROM {table} WHERE company_id = :cid"), {"cid": mock_cid})
+                        conn.execute(text("DELETE FROM companies WHERE id = :cid"), {"cid": mock_cid})
+                except Exception as purge_err:
+                    logger.debug(f"[Purge] Legacy cleanup notice: {purge_err}")
 
         for mock_aid in ["agent-tf-1"]:
             self.agents.pop(mock_aid, None)
             if self.engine:
                 try:
                     with self.engine.begin() as conn:
-                        conn.execute(text(f"DELETE FROM agents WHERE id = '{mock_aid}'"))
-                except Exception:
-                    pass
+                        conn.execute(text("DELETE FROM agents WHERE id = :aid"), {"aid": mock_aid})
+                except Exception as purge_err:
+                    logger.debug(f"[Purge] Agent cleanup notice: {purge_err}")
 
         for mock_vid in ["ver-tf-v1", "ver-agent-tf-1-v1"]:
             self.agent_versions.pop(mock_vid, None)
             if self.engine:
                 try:
                     with self.engine.begin() as conn:
-                        conn.execute(text(f"DELETE FROM agent_versions WHERE id = '{mock_vid}'"))
-                except Exception:
-                    pass
+                        conn.execute(text("DELETE FROM agent_versions WHERE id = :vid"), {"vid": mock_vid})
+                except Exception as purge_err:
+                    logger.debug(f"[Purge] Version cleanup notice: {purge_err}")
 
         self.memberships = {k: v for k, v in self.memberships.items() if v.get("companyId") != "comp-techflow"}
         self.deployments = {k: v for k, v in self.deployments.items() if v.get("companyId") != "comp-techflow"}

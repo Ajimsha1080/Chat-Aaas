@@ -86,21 +86,7 @@ class WebhookWorker:
             signature = f"sha256={sig_hex}"
             headers["X-CoarAI-Signature"] = signature
 
-        # Fast-path for dummy/test hosts in offline CI/unit-tests
-        is_mock_target = any(dummy in target_url for dummy in ["api.company.com", "example.com", "webhook.site", "mock://"])
-        if is_mock_target:
-            return {
-                "deliveryId": delivery_id,
-                "targetUrl": target_url,
-                "eventType": event_type,
-                "status": "delivered",
-                "statusCode": 200,
-                "signature": signature,
-                "attempts": 1,
-                "timestamp": timestamp_str
-            }
-
-        # Real HTTP dispatch with exponential backoff
+        # Real HTTP dispatch with exponential backoff and HMAC-SHA256 signing
         last_error = None
         for attempt in range(1, max_retries + 1):
             try:

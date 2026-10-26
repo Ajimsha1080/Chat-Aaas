@@ -88,33 +88,77 @@ def test_integration_connection(integration_id: str, ctx: TenantContext = Depend
     details = {}
 
     import httpx
+    from app.services.crawler_service import CrawlerService
+
     try:
         if provider == "slack":
+            bot_token = config.get("botToken") or config.get("token") or config.get("apiKey")
+            headers = {"Authorization": f"Bearer {bot_token}"} if bot_token else {}
             with httpx.Client(timeout=4.0) as client:
-                resp = client.get("https://slack.com/api/api.test")
+                resp = client.get("https://slack.com/api/api.test", headers=headers)
                 latency_ms = round((time.perf_counter() - t0) * 1000, 2)
-                details = {"ok": resp.status_code == 200, "provider_endpoint": "https://slack.com/api/api.test"}
+                is_ok = resp.status_code == 200 and resp.json().get("ok", False) if resp.status_code == 200 else False
+                status_label = "operational" if is_ok else "failed"
+                details = {
+                    "ok": is_ok,
+                    "provider": "slack",
+                    "statusCode": resp.status_code,
+                    "providerResponse": resp.json() if resp.status_code == 200 else {"error": resp.text[:200]}
+                }
         elif provider in ["webhook", "custom_webhook"]:
             target_url = config.get("url") or config.get("webhookUrl")
             if target_url:
-                with httpx.Client(timeout=4.0) as client:
-                    resp = client.head(target_url)
+                is_safe, err_msg, resolved_ip, port, path_str, host, scheme = CrawlerService.resolve_and_validate_target(target_url)
+                if not is_safe:
+                    status_label = "failed"
                     latency_ms = round((time.perf_counter() - t0) * 1000, 2)
-                    details = {"status_code": resp.status_code, "target_url": target_url}
+                    details = {"error": f"Security restriction: {err_msg}", "target_url": target_url}
+                else:
+                    with httpx.Client(timeout=4.0) as client:
+                        resp = client.post(
+                            target_url,
+                            json={"event": "ping", "integrationId": integration_id, "timestamp": time.time()},
+                            headers={"User-Agent": "CoarAI-Integration-Probe/2.0"}
+                        )
+                        latency_ms = round((time.perf_counter() - t0) * 1000, 2)
+                        status_label = "operational" if resp.is_success or resp.status_code == 405 else "degraded"
+                        details = {"statusCode": resp.status_code, "target_url": target_url}
             else:
+                status_label = "unconfigured"
                 latency_ms = round((time.perf_counter() - t0) * 1000, 2)
-                details = {"note": "Webhook schema validated"}
-        else:
-            try:
-                with httpx.Client(timeout=3.0) as client:
-                    resp = client.get("https://httpbin.org/status/200", timeout=2.0)
+                details = {"error": "Missing webhook target URL in configuration"}
+        elif provider == "hubspot":
+            api_key = config.get("apiKey") or config.get("accessToken")
+            if api_key:
+                with httpx.Client(timeout=4.0) as client:
+                    resp = client.get("https://api.hubapi.com/crm/v3/owners/", headers={"Authorization": f"Bearer {api_key}"})
                     latency_ms = round((time.perf_counter() - t0) * 1000, 2)
-            except Exception:
+                    status_label = "operational" if resp.is_success else "failed"
+                    details = {"statusCode": resp.status_code, "provider": "hubspot"}
+            else:
+                status_label = "unconfigured"
                 latency_ms = round((time.perf_counter() - t0) * 1000, 2)
-            details = {"handshake": "verified", "provider": provider}
+                details = {"error": "Missing HubSpot API Key or Access Token"}
+        elif provider == "zendesk":
+            subdomain = config.get("subdomain")
+            if subdomain:
+                with httpx.Client(timeout=4.0) as client:
+                    resp = client.get(f"https://{subdomain}.zendesk.com/api/v2/ping.json")
+                    latency_ms = round((time.perf_counter() - t0) * 1000, 2)
+                    status_label = "operational" if resp.is_success else "failed"
+                    details = {"statusCode": resp.status_code, "provider": "zendesk"}
+            else:
+                status_label = "unconfigured"
+                latency_ms = round((time.perf_counter() - t0) * 1000, 2)
+                details = {"error": "Missing Zendesk subdomain"}
+        else:
+            status_label = "unsupported_provider"
+            latency_ms = round((time.perf_counter() - t0) * 1000, 2)
+            details = {"error": f"No native connection verifier implemented for provider '{provider}'"}
     except Exception as exc:
         latency_ms = round((time.perf_counter() - t0) * 1000, 2)
-        details = {"error": str(exc), "mode": "local_mock_fallback"}
+        status_label = "failed"
+        details = {"error": str(exc)}
 
     if latency_ms <= 0:
         latency_ms = round(max(1.0, (time.perf_counter() - t0) * 1000), 2)

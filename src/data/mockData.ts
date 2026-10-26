@@ -136,13 +136,6 @@ export const INITIAL_API_KEYS: Record<string, ApiKeyMetadata[]> = {};
 
 export const INITIAL_API_LOGS: ApiLogEntry[] = [];
 
-export const INITIAL_SYSTEM_HEALTH: SystemHealthMetric[] = [
-  { service: 'Python FastAPI AI Runtime', status: 'operational', uptimePercent: 100.0, latencyMs: 12, lastCheck: 'Active', details: 'Workers active, SSE streaming enabled' },
-  { service: 'RAG Hybrid Vector Retrieval', status: 'operational', uptimePercent: 100.0, latencyMs: 20, lastCheck: 'Active', details: 'PostgreSQL pgvector similarity search' },
-  { service: 'Multi-Tenant Database Engine', status: 'operational', uptimePercent: 100.0, latencyMs: 4, lastCheck: 'Active', details: 'Multi-tenant isolation enforced' },
-  { service: 'KMS AES-256 Encryption', status: 'operational', uptimePercent: 100.0, latencyMs: 1, lastCheck: 'Active', details: 'Storage encryption active' },
-  { service: 'SSRF & Ingress Safety Firewall', status: 'operational', uptimePercent: 100.0, latencyMs: 2, lastCheck: 'Active', details: 'Private subnets & cloud metadata blocked' },
-  { service: 'LLM Gateway Routing', status: 'operational', uptimePercent: 100.0, latencyMs: 250, lastCheck: 'Active', details: 'Direct multi-model LLM provider routing' }
-];
+export const INITIAL_SYSTEM_HEALTH: SystemHealthMetric[] = [];
 
 export const INITIAL_SECURITY_EVENTS: SecurityEventItem[] = [];

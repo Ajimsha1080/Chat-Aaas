@@ -774,17 +774,23 @@ export const AdminDashboard: React.FC = () => {
                 <p className="text-sm text-slate-500">FastAPI runtime, pgvector & KMS latency</p>
               </div>
               <div className="space-y-2.5">
-                {displayedHealth.map((h, i) => (
-                  <div key={i} className="p-3.5 bg-slate-50/70 rounded-xl border border-slate-200/70 flex items-center justify-between">
-                    <div>
-                      <p className="font-bold text-slate-900 text-sm">{h.service}</p>
-                      <span className="text-xs text-slate-500 font-mono">{h.latencyMs}ms latency</span>
-                    </div>
-                    <span className="px-2.5 py-1 bg-emerald-50 text-emerald-700 border border-emerald-200/60 text-xs font-mono font-bold rounded-md">
-                      {h.uptimePercent}%
-                    </span>
+                {displayedHealth.length === 0 ? (
+                  <div className="p-4 bg-slate-50 rounded-xl border border-dashed border-slate-200 text-center">
+                    <p className="text-xs text-slate-500 font-mono">No live telemetry recorded yet. Awaiting APM health probe.</p>
                   </div>
-                ))}
+                ) : (
+                  displayedHealth.map((h, i) => (
+                    <div key={i} className="p-3.5 bg-slate-50/70 rounded-xl border border-slate-200/70 flex items-center justify-between">
+                      <div>
+                        <p className="font-bold text-slate-900 text-sm">{h.service}</p>
+                        <span className="text-xs text-slate-500 font-mono">{h.latencyMs}ms latency</span>
+                      </div>
+                      <span className="px-2.5 py-1 bg-emerald-50 text-emerald-700 border border-emerald-200/60 text-xs font-mono font-bold rounded-md">
+                        {h.uptimePercent}%
+                      </span>
+                    </div>
+                  ))
+                )}
               </div>
             </div>
           </div>
@@ -1179,18 +1185,24 @@ export const AdminDashboard: React.FC = () => {
               <p className="text-sm text-slate-500">Operational status of FastAPI runtimes, pgvector database, and worker queues.</p>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-              {displayedHealth.map((h, i) => (
-                <div key={i} className="p-5 bg-slate-50/70 rounded-xl border border-slate-200/70 space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="font-bold text-slate-900 text-sm">{h.service}</span>
-                    <span className={`w-2.5 h-2.5 rounded-full ${h.status === 'unhealthy' || h.status === 'down' ? 'bg-rose-500' : 'bg-emerald-500'}`} />
+            {displayedHealth.length === 0 ? (
+              <div className="p-8 bg-slate-50/70 rounded-xl border border-dashed border-slate-200 text-center">
+                <p className="text-sm text-slate-500 font-mono">No telemetry metrics recorded yet. Clusters operational.</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                {displayedHealth.map((h, i) => (
+                  <div key={i} className="p-5 bg-slate-50/70 rounded-xl border border-slate-200/70 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="font-bold text-slate-900 text-sm">{h.service}</span>
+                      <span className={`w-2.5 h-2.5 rounded-full ${h.status === 'unhealthy' || h.status === 'down' ? 'bg-rose-500' : 'bg-emerald-500'}`} />
+                    </div>
+                    <div className="text-2xl font-bold text-slate-900 font-mono">{h.uptimePercent}%</div>
+                    <p className="text-xs sm:text-sm text-slate-500">Latency: <strong className="text-slate-800 font-mono">{h.latencyMs} ms</strong></p>
                   </div>
-                  <div className="text-2xl font-bold text-slate-900 font-mono">{h.uptimePercent}%</div>
-                  <p className="text-xs sm:text-sm text-slate-500">Latency: <strong className="text-slate-800 font-mono">{h.latencyMs} ms</strong></p>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
 
             <div className="p-5 rounded-xl bg-slate-50 border border-slate-200/80 flex items-start gap-3.5">
               <Server className="w-5 h-5 text-slate-700 shrink-0 mt-0.5" />

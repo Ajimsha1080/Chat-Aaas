@@ -93,7 +93,7 @@ export const DeveloperConsole: React.FC = () => {
     setTestingWebhookId(null);
   };
 
-  const runSseSimulation = async () => {
+  const runSseStreaming = async () => {
     setIsSseStreaming(true);
     setSseOutput([]);
 
@@ -103,32 +103,16 @@ export const DeveloperConsole: React.FC = () => {
         (chunk: any) => {
           setSseOutput(prev => [...prev, `data: ${JSON.stringify(chunk)}\n\n`]);
         },
-        { isTestMode: true, conversationId: `conv-sse-live-${Date.now()}` }
+        { isTestMode: false, conversationId: `conv-sse-live-${Date.now()}` }
       );
+    } catch (err: any) {
+      setSseOutput(prev => [
+        ...prev,
+        `event: error\ndata: ${JSON.stringify({ error: err.message || 'Stream connection failed. Backend service unavailable.', status: 'failed' })}\n\n`
+      ]);
+    } finally {
       setIsSseStreaming(false);
-      return;
-    } catch {
-      // Fallback local simulation if offline
     }
-
-    const chunks = [
-      'data: {"id":"chat-1","object":"chat.completion.chunk","choices":[{"delta":{"role":"assistant"}}]}\n\n',
-      'data: {"id":"chat-1","choices":[{"delta":{"content":"To scale your "}}]}\n\n',
-      'data: {"id":"chat-1","choices":[{"delta":{"content":"your enterprise workspace, you can use "}}]}\n\n',
-      'data: {"id":"chat-1","choices":[{"delta":{"content":"the CoarAI streaming API or "}}]}\n\n',
-      'data: {"id":"chat-1","choices":[{"delta":{"content":"custom webhook integration triggers."}}]}\n\n',
-      'data: [DONE]\n\n'
-    ];
-    let idx = 0;
-    const interval = setInterval(() => {
-      if (idx < chunks.length) {
-        setSseOutput(prev => [...prev, chunks[idx]]);
-        idx++;
-      } else {
-        clearInterval(interval);
-        setIsSseStreaming(false);
-      }
-    }, 200);
   };
 
   const navItems: { id: DeveloperNavigationTab; label: string; icon: any; count?: number }[] = [
@@ -880,7 +864,7 @@ print(res.json())`}</pre>
                 className="flex-1 px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm font-mono focus:ring-2 focus:ring-indigo-600 focus:outline-hidden"
               />
               <button
-                onClick={runSseSimulation}
+                onClick={runSseStreaming}
                 disabled={isSseStreaming}
                 className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs sm:text-sm font-bold flex items-center gap-2 transition-colors cursor-pointer shadow-xs"
               >

@@ -535,6 +535,10 @@ export class APIClient {
     return this.request('/api/v1/conversations/message', 'POST', { conversationId, text, customerName, customerEmail });
   }
 
+  public static async requestHandoff(conversationId: string, reason: string = 'Customer requested live assistance') {
+    return this.request(`/api/v1/conversations/${conversationId}/handoff`, 'POST', { reason });
+  }
+
   public static async resolveConversation(conversationId: string) {
     return this.request(`/api/v1/conversations/${conversationId}/resolve`, 'POST');
   }

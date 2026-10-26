@@ -677,65 +677,19 @@ export const KnowledgeView: React.FC = () => {
         setIsTestingRag(false);
         return;
       }
-    } catch (err) {
-      console.info('Backend RAG test fallback to local semantic matcher:', err);
-    }
-
-    // 2. Smart local keyword overlap matcher fallback
-    const queryWords = testQuery.toLowerCase().split(/\W+/).filter(w => w.length > 2);
-    let bestMatch: KnowledgeItem | null = null;
-    let maxScore = 0;
-
-    for (const item of knowledgeItems) {
-      const fullText = (item.title + " " + item.content + " " + (item.faqAnswer || "")).toLowerCase();
-      const matchedWords = queryWords.filter(w => fullText.includes(w));
-      const score = queryWords.length > 0 ? matchedWords.length / queryWords.length : 0;
-      if (score > maxScore) {
-        maxScore = score;
-        bestMatch = item;
-      }
-    }
-
-    if (bestMatch && maxScore >= 0.20) {
-      const confidenceScore = Math.min(0.98, Math.max(0.70, Math.round(maxScore * 100) / 100));
-      setRagResult({
-        success: true,
-        isGrounded: true,
-        grounded: true,
-        confidenceScore,
-        answer: bestMatch.faqAnswer 
-          ? bestMatch.faqAnswer 
-          : `Based on your verified company knowledge in "${bestMatch.title}":\n\n${cleanPreviewText(bestMatch.content)}`,
-        citations: [
-          {
-            chunkId: `chk-${bestMatch.id}`,
-            sourceId: bestMatch.id,
-            sourceTitle: bestMatch.title,
-            preview: cleanPreviewText(bestMatch.content).slice(0, 180) + '...',
-            score: confidenceScore
-          }
-        ]
-      });
-    } else {
+    } catch (err: any) {
+      console.warn('Backend RAG test request failed:', err);
       setRagResult({
         success: false,
         isGrounded: false,
         grounded: false,
-        confidenceScore: 0.25,
-        needsGapRecorded: true,
-        answer: `I couldn't find enough verified information in your company's knowledge base to answer "${testQuery}" accurately.`,
+        confidenceScore: 0.0,
+        needsGapRecorded: false,
+        answer: `RAG test unavailable: ${err?.message || 'Unable to reach backend retrieval engine'}. Please verify backend service is running on http://127.0.0.1:8001.`,
         citations: []
       });
-
-      const newGap: KnowledgeGap = {
-        id: genId('gap'),
-        query: testQuery,
-        occurrences: 1,
-        lastAskedAt: 'Just now',
-        status: 'unresolved',
-        suggestedCategory: 'General'
-      };
-      setKnowledgeGaps(prev => [newGap, ...prev.filter(g => g.query.toLowerCase() !== testQuery.toLowerCase())]);
+      setIsTestingRag(false);
+      return;
     }
 
     setIsTestingRag(false);

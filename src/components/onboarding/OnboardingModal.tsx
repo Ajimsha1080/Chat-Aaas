@@ -44,18 +44,19 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({ isOpen, onClos
     { id: 'direct', label: 'Direct', desc: 'Short, precise answers with zero fluff.' }
   ];
 
-  const handleSimulateTest = async () => {
+  const handleTestAssistant = async () => {
     if (!testQuestion.trim()) return;
     setIsTesting(true);
+    setTestAnswer('');
     try {
-      const res: any = await APIClient.sendChatMessage(testQuestion, { isTestMode: true });
+      const res: any = await APIClient.sendChatMessage(testQuestion, { isTestMode: false });
       if (res && (res.message || res.answer)) {
         setTestAnswer(res.message || res.answer);
       } else {
-        setTestAnswer(`Hello! We are ready to assist you. Ask any question about ${businessName || 'our services'}.`);
+        setTestAnswer(`Assistant responded with empty content. Ensure your company profile and documents are indexed.`);
       }
-    } catch {
-      setTestAnswer(`Hello! Welcome to ${businessName || 'our company'}. How can we assist you today?`);
+    } catch (err: any) {
+      setTestAnswer(`Test failed: ${err.message || 'Unable to connect to assistant runtime'}. Please verify backend service is active.`);
     } finally {
       setIsTesting(false);
     }
@@ -287,7 +288,7 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({ isOpen, onClos
                   />
                   <button
                     type="button"
-                    onClick={handleSimulateTest}
+                    onClick={handleTestAssistant}
                     disabled={isTesting}
                     className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-bold flex items-center gap-2 cursor-pointer disabled:opacity-50 text-sm shadow-xs"
                   >
