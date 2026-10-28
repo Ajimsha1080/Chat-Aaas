@@ -98,6 +98,12 @@ async def send_message(req: SendMessageRequest, ctx: TenantContext = Depends(get
             "createdAt": time.strftime("%Y-%m-%dT%H:%M:%SZ")
         }
         db.save_message(notice_msg)
+        await ws_manager.broadcast_to_company(company_id, "conversation:message", {
+            "conversation": conv,
+            "userMessage": user_msg,
+            "agentMessage": notice_msg,
+            "isHumanActive": True
+        })
         return {
             "status": 200,
             "data": {

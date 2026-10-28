@@ -175,7 +175,6 @@ app.include_router(admin_router, prefix="/api/v1")
 app.include_router(developer_router, prefix="/api/v1")
 
 # ----------------- Core Health and Readiness Probes -----------------
-# ----------------- Core Health and Readiness Probes -----------------
 @app.get("/health", response_model=HealthResponse)
 @app.get("/api/v1/health")
 async def health_check():
