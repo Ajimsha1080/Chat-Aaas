@@ -362,3 +362,19 @@ def test_gdpr_data_export_and_right_to_erasure():
     assert db.companies.get(TENANT_A_ID) is None
     assert not any(a.get("companyId") == TENANT_A_ID for a in db.agents.values())
     assert not any(s.get("companyId") == TENANT_A_ID for s in db.knowledge_sources.values())
+
+
+def teardown_module():
+    """Clean up test tenant records so tests never pollute the live production database."""
+    for cid in [TENANT_A_ID, TENANT_B_ID]:
+        db.companies.pop(cid, None)
+        if db.engine:
+            try:
+                with db.engine.begin() as conn:
+                    for table in ["agent_versions", "agents", "agent_tools", "company_members", "deployments", "api_keys", "webhooks", "knowledge_documents", "document_chunks", "conversations", "messages"]:
+                        conn.execute(text(f"DELETE FROM {table} WHERE company_id = :cid"), {"cid": cid})
+                    conn.execute(text("DELETE FROM companies WHERE id = :cid"), {"cid": cid})
+            except Exception:
+                pass
+    db.agents.pop("agent_iso_a", None)
+    db.agents.pop("agent_iso_b", None)

@@ -74,6 +74,7 @@ export const AdminDashboard: React.FC = () => {
   const [liveAuditLogs, setLiveAuditLogs] = useState<any[] | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [lastTelemetrySync, setLastTelemetrySync] = useState<Date>(new Date());
+  const [wsConnected, setWsConnected] = useState<boolean>(false);
 
   const fetchLiveData = useCallback(async () => {
     setIsRefreshing(true);
@@ -143,11 +144,78 @@ export const AdminDashboard: React.FC = () => {
     }
   }, [userSearch, userRoleFilter]);
 
+  // Real-time Push WebSocket for instant multi-tenant admin events
+  useEffect(() => {
+    let ws: WebSocket | null = null;
+    let pingTimer: any = null;
+    let retryTimer: any = null;
+    let isMounted = true;
+
+    const connectAdminWs = () => {
+      try {
+        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        const host = window.location.host;
+        ws = new WebSocket(`${protocol}//${host}/ws/comp-coarai`);
+
+        ws.onopen = () => {
+          if (!isMounted) return;
+          setWsConnected(true);
+          pingTimer = setInterval(() => {
+            if (ws && ws.readyState === WebSocket.OPEN) {
+              ws.send(JSON.stringify({ type: 'ping' }));
+            }
+          }, 15000);
+        };
+
+        ws.onmessage = (event) => {
+          try {
+            const msg = JSON.parse(event.data);
+            if (
+              msg.event?.startsWith('admin:') ||
+              msg.event?.startsWith('company:') ||
+              msg.event?.startsWith('user:') ||
+              msg.event?.startsWith('killswitch:')
+            ) {
+              fetchLiveData();
+              fetchTenants();
+              fetchUsers();
+            }
+          } catch {}
+        };
+
+        ws.onclose = () => {
+          if (!isMounted) return;
+          setWsConnected(false);
+          clearInterval(pingTimer);
+          retryTimer = setTimeout(connectAdminWs, 3000);
+        };
+
+        ws.onerror = () => {
+          ws?.close();
+        };
+      } catch {
+        if (isMounted) {
+          retryTimer = setTimeout(connectAdminWs, 5000);
+        }
+      }
+    };
+
+    connectAdminWs();
+
+    return () => {
+      isMounted = false;
+      clearInterval(pingTimer);
+      clearTimeout(retryTimer);
+      if (ws) ws.close();
+    };
+  }, [fetchLiveData, fetchTenants, fetchUsers]);
+
+  // Real-Time 5-second telemetry polling ticker
   useEffect(() => {
     fetchLiveData();
     const interval = setInterval(() => {
       fetchLiveData();
-    }, 15000);
+    }, 5000);
     return () => clearInterval(interval);
   }, [fetchLiveData]);
 
@@ -212,6 +280,18 @@ export const AdminDashboard: React.FC = () => {
   const displayedHealth = (liveHealth && liveHealth.length > 0) ? liveHealth : systemHealth;
   const displayedAuditLogs = (liveAuditLogs && liveAuditLogs.length > 0) ? liveAuditLogs : auditLogs;
 
+  const operationalPercent = liveMetrics?.operationalPercent != null 
+    ? liveMetrics.operationalPercent 
+    : (activeAgents > 0 ? 100 : 0);
+  const overallUptime = liveMetrics?.platformUptimePercent != null
+    ? `${liveMetrics.platformUptimePercent}%`
+    : (displayedHealth.length > 0
+        ? `${(displayedHealth.reduce((acc: number, s: any) => acc + (s.uptimePercent || 0), 0) / displayedHealth.length).toFixed(1)}%`
+        : '100%');
+  const activeOutages = liveMetrics?.activeOutagesCount != null
+    ? liveMetrics.activeOutagesCount
+    : displayedHealth.filter((s: any) => s.status === 'unhealthy' || s.status === 'unreachable' || s.status === 'down').length;
+
   const displayedTenants = liveTenants ?? companies.filter(c => {
     const matchesSearch = !searchOrg || 
       c.name.toLowerCase().includes(searchOrg.toLowerCase()) || 
@@ -234,21 +314,10 @@ export const AdminDashboard: React.FC = () => {
         return;
       }
     } catch (e: any) {
-      console.warn('Backend diagnostic fallback:', e.message);
+      console.warn('Backend diagnostic error:', e.message);
+      showToast('Diagnostic Failed', e.message || 'Diagnostic inspection could not be completed.', 'error');
+      setSupportDiagnosticOutput(null);
     }
-    setSupportDiagnosticOutput({
-      tenantId: targetComp.id,
-      tenantName: targetComp.name,
-      agentHealth: targetComp.isSuspended ? 'Suspended' : 'Healthy (99.99%)',
-      knowledgeChunksIndexed: targetComp.stats?.knowledgeChunksUsed || 0,
-      totalConversations: targetComp.stats?.totalConversations || 0,
-      modelTier: targetComp.agent?.modelTier || 'automatic',
-      kmsEncryptionStatus: 'AES-256-GCM Envelope Verified',
-      pgvectorLatency: '18 ms',
-      lastActive: 'Just now'
-    });
-    showToast('Diagnostic Complete', `Diagnostic inspection completed for ${targetComp.name}.`, 'info');
-    fetchLiveData();
   };
 
   const handleToggleKillswitch = async () => {
@@ -491,7 +560,7 @@ export const AdminDashboard: React.FC = () => {
     { id: 'organizations' as const, label: 'Organizations & Fleet', icon: Building2, badge: `${totalTenants}` },
     { id: 'users' as const, label: 'Platform Users', icon: Users, badge: usersList.length > 0 ? `${usersList.length}` : undefined },
     { id: 'fleet' as const, label: 'AI Fleet & Diagnostics', icon: Bot, badge: `${activeAgents} Active` },
-    { id: 'health' as const, label: 'Infrastructure & Telemetry', icon: HeartPulse, badge: '99.99%' },
+    { id: 'health' as const, label: 'Infrastructure & Telemetry', icon: HeartPulse, badge: overallUptime },
     { id: 'security' as const, label: 'Security & Audit Logs', icon: ShieldAlert, count: securityEvents.length }
   ];
 
@@ -655,12 +724,20 @@ export const AdminDashboard: React.FC = () => {
               <span>Workspace</span>
             </button>
             <span className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-mono font-bold ${
+              wsConnected 
+                ? 'bg-emerald-50 text-emerald-700 border border-emerald-200/60' 
+                : 'bg-amber-50 text-amber-700 border border-amber-200/60'
+            }`}>
+              <span className={`w-2 h-2 rounded-full ${wsConnected ? 'bg-emerald-500 animate-pulse' : 'bg-amber-500'}`} />
+              <span className="hidden xs:inline">{wsConnected ? 'Live Real-Time Push' : 'Polling Sync'}</span>
+            </span>
+            <span className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-mono font-bold ${
               isEmergencyKillswitchActive 
                 ? 'bg-rose-50 text-rose-700 border border-rose-200' 
                 : 'bg-emerald-50 text-emerald-700 border border-emerald-200/60'
             }`}>
               <span className={`w-2 h-2 rounded-full ${isEmergencyKillswitchActive ? 'bg-rose-500' : 'bg-emerald-500'}`} />
-              <span className="hidden xs:inline">{isEmergencyKillswitchActive ? 'Killswitch Active' : '99.99% Operational'}</span>
+              <span className="hidden xs:inline">{isEmergencyKillswitchActive ? 'Killswitch Active' : `${overallUptime} Operational`}</span>
             </span>
           </div>
         </header>
@@ -674,11 +751,40 @@ export const AdminDashboard: React.FC = () => {
                 {/* Top Metrics KPI Grid */}
                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
             {[
-              { label: 'Total Tenants', value: `${totalTenants}`, sub: '+18% growth', icon: Building2 },
-              { label: 'Active Fleet', value: `${activeAgents}`, sub: '100% operational', icon: Bot, isGood: true },
-              { label: 'Platform MRR', value: `₹${totalMRR.toLocaleString('en-IN')}`, sub: '18% GST Compliant', icon: DollarSign },
-              { label: 'Annual Run Rate', value: `₹${(totalMRR * 12).toLocaleString('en-IN')}`, sub: 'Projected ARR', icon: TrendingUp },
-              { label: 'Platform Uptime', value: '99.99%', sub: 'Zero active outages', icon: HeartPulse, isGood: true }
+              { 
+                label: 'Total Tenants', 
+                value: `${totalTenants}`, 
+                sub: liveMetrics?.activeTenants != null 
+                  ? `${liveMetrics.activeTenants} active, ${liveMetrics.suspendedTenants || 0} suspended`
+                  : `${totalTenants} registered`, 
+                icon: Building2 
+              },
+              { 
+                label: 'Active Fleet', 
+                value: `${activeAgents}`, 
+                sub: `${operationalPercent}% operational`, 
+                icon: Bot, 
+                isGood: activeAgents > 0 
+              },
+              { 
+                label: 'Platform MRR', 
+                value: `₹${totalMRR.toLocaleString('en-IN')}`, 
+                sub: `${liveMetrics?.activeTenants || totalTenants} active plans`, 
+                icon: DollarSign 
+              },
+              { 
+                label: 'Annual Run Rate', 
+                value: `₹${(totalMRR * 12).toLocaleString('en-IN')}`, 
+                sub: 'Projected ARR (MRR × 12)', 
+                icon: TrendingUp 
+              },
+              { 
+                label: 'Platform Uptime', 
+                value: overallUptime, 
+                sub: activeOutages === 0 ? 'Zero active outages' : `${activeOutages} active outage(s)`, 
+                icon: HeartPulse, 
+                isGood: activeOutages === 0 
+              }
             ].map((stat, idx) => {
               const Icon = stat.icon;
               return (
@@ -730,38 +836,46 @@ export const AdminDashboard: React.FC = () => {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
-                    {companies.map(c => (
-                      <tr key={c.id} className="hover:bg-slate-50 transition-colors">
-                        <td className="py-3.5">
-                          <div className="font-bold text-slate-900">{c.name}</div>
-                          <span className="text-xs text-slate-500 font-mono">{c.domain}</span>
-                        </td>
-                        <td className="py-3.5">
-                          <span className="px-2.5 py-1 rounded-md text-xs font-mono font-bold uppercase bg-slate-100 text-slate-700 border border-slate-200">
-                            {c.planId}
-                          </span>
-                        </td>
-                        <td className="py-3.5 text-slate-700 font-semibold">{c.agent?.name || 'AI Assistant'}</td>
-                        <td className="py-3.5">
-                          <span className={`inline-flex items-center gap-1.5 text-xs font-bold px-2.5 py-1 rounded-md ${
-                            c.isSuspended 
-                              ? 'bg-rose-50 text-rose-700 border border-rose-200/60' 
-                              : 'bg-emerald-50 text-emerald-700 border border-emerald-200/60'
-                          }`}>
-                            <span className={`w-2 h-2 rounded-full ${c.isSuspended ? 'bg-rose-500' : 'bg-emerald-500'}`} />
-                            {c.isSuspended ? 'Suspended' : 'Active'}
-                          </span>
-                        </td>
-                        <td className="py-3.5 text-right">
-                          <button
-                            onClick={() => handleImpersonate(c)}
-                            className="px-3.5 py-1.5 bg-slate-900 hover:bg-slate-800 text-white rounded-lg text-xs font-semibold cursor-pointer transition-colors shadow-xs"
-                          >
-                            Impersonate
-                          </button>
+                    {((liveTenants && liveTenants.length > 0) ? liveTenants : displayedTenants).length === 0 ? (
+                      <tr>
+                        <td colSpan={5} className="py-8 text-center text-slate-500 text-xs font-mono">
+                          {isTenantsLoading ? 'Loading real-time workspaces...' : 'No workspaces configured.'}
                         </td>
                       </tr>
-                    ))}
+                    ) : (
+                      ((liveTenants && liveTenants.length > 0) ? liveTenants : displayedTenants).map(c => (
+                        <tr key={c.id} className="hover:bg-slate-50 transition-colors">
+                          <td className="py-3.5">
+                            <div className="font-bold text-slate-900">{c.name}</div>
+                            <span className="text-xs text-slate-500 font-mono">{c.domain || 'no domain'}</span>
+                          </td>
+                          <td className="py-3.5">
+                            <span className="px-2.5 py-1 rounded-md text-xs font-mono font-bold uppercase bg-slate-100 text-slate-700 border border-slate-200">
+                              {c.planId}
+                            </span>
+                          </td>
+                          <td className="py-3.5 text-slate-700 font-semibold">{c.agent?.name || 'AI Assistant'}</td>
+                          <td className="py-3.5">
+                            <span className={`inline-flex items-center gap-1.5 text-xs font-bold px-2.5 py-1 rounded-md ${
+                              c.isSuspended 
+                                ? 'bg-rose-50 text-rose-700 border border-rose-200/60' 
+                                : 'bg-emerald-50 text-emerald-700 border border-emerald-200/60'
+                            }`}>
+                              <span className={`w-2 h-2 rounded-full ${c.isSuspended ? 'bg-rose-500' : 'bg-emerald-500'}`} />
+                              {c.isSuspended ? 'Suspended' : 'Active'}
+                            </span>
+                          </td>
+                          <td className="py-3.5 text-right">
+                            <button
+                              onClick={() => handleImpersonate(c)}
+                              className="px-3.5 py-1.5 bg-slate-900 hover:bg-slate-800 text-white rounded-lg text-xs font-semibold cursor-pointer transition-colors shadow-xs"
+                            >
+                              Impersonate
+                            </button>
+                          </td>
+                        </tr>
+                      ))
+                    )}
                   </tbody>
                 </table>
               </div>

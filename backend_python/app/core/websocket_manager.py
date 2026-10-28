@@ -42,4 +42,18 @@ class ConnectionManager:
         for dead_conn in stale:
             self.disconnect(dead_conn, company_id)
 
+    async def broadcast_all(self, event_type: str, data: dict):
+        """Broadcasts real-time events globally across all connected tenants and admin consoles."""
+        payload = json.dumps({"event": event_type, "data": data})
+        for company_id, connections in list(self.active_connections.items()):
+            stale = set()
+            for conn in list(connections):
+                try:
+                    await conn.send_text(payload)
+                except Exception as e:
+                    logger.warning(f"[WebSocket] Failed to deliver broadcast to {company_id}: {e}")
+                    stale.add(conn)
+            for dead_conn in stale:
+                self.disconnect(dead_conn, company_id)
+
 ws_manager = ConnectionManager()

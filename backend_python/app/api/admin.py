@@ -7,6 +7,9 @@ from sqlalchemy import text
 
 from app.db.database import db
 from app.core.tenant import TenantContext, require_super_admin
+import httpx
+from app.core.config import settings
+from app.core.websocket_manager import ws_manager
 from app.core.security import create_jwt_token
 from app.services.billing_service import BillingService
 
@@ -105,7 +108,7 @@ def list_all_tenants(
     }
 
 @router.post("/tenants/{company_id}/suspend")
-def suspend_tenant(
+async def suspend_tenant(
     company_id: str,
     req: Optional[SuspendTenantRequest] = None,
     ctx: TenantContext = Depends(require_super_admin)
@@ -132,6 +135,9 @@ def suspend_tenant(
         metadata={"reason": reason, "admin_user_id": ctx.user_id}
     )
 
+    await ws_manager.broadcast_all("company:suspended", {"companyId": company_id, "name": company["name"]})
+    await ws_manager.broadcast_all("admin:telemetry", {"type": "company_suspended", "companyId": company_id})
+
     return {
         "status": 200,
         "message": f"Tenant '{company['name']}' has been suspended successfully.",
@@ -139,7 +145,7 @@ def suspend_tenant(
     }
 
 @router.post("/tenants/{company_id}/activate")
-def activate_tenant(
+async def activate_tenant(
     company_id: str,
     ctx: TenantContext = Depends(require_super_admin)
 ):
@@ -163,6 +169,9 @@ def activate_tenant(
         severity="info",
         metadata={"admin_user_id": ctx.user_id}
     )
+
+    await ws_manager.broadcast_all("company:activated", {"companyId": company_id, "name": company["name"]})
+    await ws_manager.broadcast_all("admin:telemetry", {"type": "company_activated", "companyId": company_id})
 
     return {
         "status": 200,
@@ -213,7 +222,7 @@ def list_platform_users(
     return {"status": 200, "data": {"users": results, "total": len(results)}}
 
 @router.patch("/users/{user_id}/role")
-def update_user_role(
+async def update_user_role(
     user_id: str,
     req: UpdateUserRoleRequest,
     ctx: TenantContext = Depends(require_super_admin)
@@ -270,6 +279,9 @@ def update_user_role(
         severity="critical" if req.role == "super_admin" or old_role == "super_admin" else "warning",
         metadata={"old_role": old_role, "new_role": req.role}
     )
+
+    await ws_manager.broadcast_all("user:role_updated", {"userId": user_id, "newRole": req.role})
+    await ws_manager.broadcast_all("admin:telemetry", {"type": "user_role_updated", "userId": user_id})
 
     return {
         "status": 200,
@@ -480,15 +492,18 @@ def list_platform_audit_logs(
 # ================= REAL OBSERVABILITY & HEALTH PROBES ================= #
 
 @router.get("/health")
-def get_system_health(ctx: TenantContext = Depends(require_super_admin)):
+async def get_system_health(ctx: TenantContext = Depends(require_super_admin)):
     services = []
 
-    # 1. Database Probe (Real SQL round-trip)
+    # 1. Primary PostgreSQL / Authoritative Database Probe (Real SQL round-trip)
     t0 = time.time()
     db_ok = True
     try:
-        with db.engine.connect() as conn:
-            conn.execute(text("SELECT 1"))
+        if db.engine:
+            with db.engine.connect() as conn:
+                conn.execute(text("SELECT 1"))
+        else:
+            _ = len(db.companies)
     except Exception:
         db_ok = False
     db_latency = max(1, int((time.time() - t0) * 1000))
@@ -496,48 +511,83 @@ def get_system_health(ctx: TenantContext = Depends(require_super_admin)):
         "service": "Primary PostgreSQL Cluster",
         "status": "healthy" if db_ok else "unhealthy",
         "latencyMs": db_latency,
-        "uptimePercent": 99.99 if db_ok else 0.0
+        "uptimePercent": 100.0 if db_ok else 0.0
     })
 
-    # 2. Redis & Background Queue
+    # 2. Redis Event Stream & Asynchronous Background Queue
+    t_q = time.time()
     q_len = len(db.background_jobs)
-    q_latency = 4
+    _ = db.background_jobs.keys()
+    q_latency = max(1, int((time.time() - t_q) * 1000))
     services.append({
         "service": "Redis Event Stream & Queue",
         "status": "healthy",
         "latencyMs": q_latency,
-        "uptimePercent": 99.98,
+        "uptimePercent": 100.0,
         "queueDepth": q_len
     })
 
-    # 3. pgvector Vector Search Engine
+    # 3. pgvector Hybrid Index & Vector Chunk Store
     t_vec = time.time()
-    _ = len(db.document_chunks)
-    vec_latency = max(2, int((time.time() - t_vec) * 1000) + 8)
+    vec_ok = True
+    try:
+        if db.engine:
+            with db.engine.connect() as conn:
+                conn.execute(text("SELECT count(*) FROM document_chunks"))
+        else:
+            _ = len(db.document_chunks)
+    except Exception:
+        vec_ok = False
+    vec_latency = max(1, int((time.time() - t_vec) * 1000))
     services.append({
         "service": "pgvector Hybrid Index",
-        "status": "healthy",
+        "status": "healthy" if vec_ok else "degraded",
         "latencyMs": vec_latency,
-        "uptimePercent": 99.99
+        "uptimePercent": 100.0 if vec_ok else 0.0
     })
 
-    # 4. Upstream AI Gateway
-    services.append({
-        "service": "OpenAI / Anthropic Gateway",
-        "status": "healthy" if not db.global_killswitch_active else "paused",
-        "latencyMs": 18,
-        "uptimePercent": 99.95
-    })
+    # 4. Upstream AI Gateway (Live HTTP Probe to configured provider)
+    if db.global_killswitch_active:
+        services.append({
+            "service": "OpenAI / Anthropic Gateway",
+            "status": "paused",
+            "latencyMs": 0,
+            "uptimePercent": 0.0
+        })
+    else:
+        t_llm = time.time()
+        llm_ok = True
+        llm_target = settings.CUSTOM_LLM_API_URL or "https://api.sarvam.ai/v1/chat/completions"
+        base_endpoint = llm_target.split("/chat/completions")[0]
+        try:
+            async with httpx.AsyncClient(timeout=2.0) as client:
+                res = await client.get(base_endpoint)
+                llm_latency = max(1, int((time.time() - t_llm) * 1000))
+                if res.status_code >= 500:
+                    llm_ok = False
+        except Exception:
+            llm_latency = max(1, int((time.time() - t_llm) * 1000))
+            llm_ok = False
 
-    overall = "healthy"
-    if any(s["status"] == "unhealthy" for s in services):
-        overall = "degraded"
+        services.append({
+            "service": "OpenAI / Anthropic Gateway",
+            "status": "healthy" if llm_ok else "unreachable",
+            "latencyMs": llm_latency,
+            "uptimePercent": 100.0 if llm_ok else 0.0
+        })
+
+    healthy_count = sum(1 for s in services if s["status"] == "healthy")
+    overall = "healthy" if healthy_count == len(services) else ("paused" if db.global_killswitch_active else "degraded")
+    avg_uptime = round(sum(s["uptimePercent"] for s in services) / len(services), 2)
+    active_outages = sum(1 for s in services if s["status"] in ["unhealthy", "unreachable", "down"])
 
     return {
         "status": 200,
         "data": {
             "overallStatus": overall,
             "services": services,
+            "overallUptimePercent": avg_uptime,
+            "activeOutagesCount": active_outages,
             "killswitchActive": db.global_killswitch_active,
             "activeWorkerJobs": len(db.background_jobs),
             "timestamp": time.strftime("%Y-%m-%dT%H:%M:%SZ")
@@ -551,6 +601,7 @@ def get_platform_metrics(ctx: TenantContext = Depends(require_super_admin)):
     total_tenants = len(db.companies)
     active_tenants = len([c for c in db.companies.values() if not c.get("isSuspended")])
     suspended_tenants = len([c for c in db.companies.values() if c.get("isSuspended")])
+    total_agents = len(db.agents)
     active_agents = len([a for a in db.agents.values() if a.get("status") == "active"])
 
     total_messages = sum(e.get("quantity", 1) for e in db.usage_events if e.get("eventType") == "message")
@@ -561,19 +612,25 @@ def get_platform_metrics(ctx: TenantContext = Depends(require_super_admin)):
     plan_pricing = {p["id"]: p.get("priceMonthlyINR", 4999) for p in plans_list}
     mrr = sum(plan_pricing.get(c.get("planId", "starter"), 4999) for c in db.companies.values() if not c.get("isSuspended"))
 
+    operational_percent = round((active_agents / max(1, total_agents)) * 100, 1) if total_agents > 0 else 100.0
+
     return {
         "status": 200,
         "data": {
             "totalTenants": total_tenants,
             "activeTenants": active_tenants,
             "suspendedTenants": suspended_tenants,
+            "totalAgents": total_agents,
             "activeAgents": active_agents,
+            "operationalPercent": operational_percent,
             "totalPlatformMessages": total_messages,
             "totalKnowledgeChunks": total_chunks,
             "totalConversations": total_conversations,
             "totalMRRINR": mrr,
             "totalARRINR": mrr * 12,
-            "systemHealth": "OPTIMAL",
+            "systemHealth": "DEGRADED" if db.global_killswitch_active else "OPTIMAL",
+            "platformUptimePercent": 0.0 if db.global_killswitch_active else 100.0,
+            "activeOutagesCount": 1 if db.global_killswitch_active else 0,
             "activeWorkerJobs": len(db.background_jobs),
             "killswitchActive": db.global_killswitch_active
         }
@@ -593,7 +650,7 @@ def get_killswitch_status(ctx: TenantContext = Depends(require_super_admin)):
     }
 
 @router.post("/killswitch")
-def toggle_killswitch(
+async def toggle_killswitch(
     req: KillswitchRequest,
     ctx: TenantContext = Depends(require_super_admin)
 ):
@@ -612,6 +669,9 @@ def toggle_killswitch(
         severity="critical" if req.active else "info",
         metadata={"active": req.active, "reason": db.global_killswitch_reason}
     )
+
+    await ws_manager.broadcast_all("killswitch:toggled", {"active": req.active, "reason": db.global_killswitch_reason})
+    await ws_manager.broadcast_all("admin:telemetry", {"type": "killswitch_toggled", "active": req.active})
 
     return {
         "status": 200,
@@ -638,19 +698,29 @@ def run_tenant_diagnostic(
     convos = [c for c in db.conversations.values() if c.get("companyId") == company_id]
 
     t0 = time.time()
-    _ = len(chunks)
-    query_latency = max(3, int((time.time() - t0) * 1000) + 12)
+    try:
+        if db.engine:
+            with db.engine.connect() as conn:
+                conn.execute(text("SELECT count(*) FROM document_chunks WHERE company_id = :cid"), {"cid": company_id})
+        else:
+            _ = len(chunks)
+    except Exception:
+        pass
+    measured_query_latency = max(1, int((time.time() - t0) * 1000))
+
+    has_kms = bool(company.get("apiSecretEncrypted") or db.tenant_keys.get(company_id))
+    last_active = company.get("updatedAt") or company.get("createdAt") or time.strftime("%Y-%m-%dT%H:%M:%SZ")
 
     output = {
         "tenantId": company["id"],
         "tenantName": company["name"],
-        "agentHealth": "Suspended" if company.get("isSuspended") else ("Active (99.99%)" if agent else "Unconfigured"),
+        "agentHealth": "Suspended" if company.get("isSuspended") else ("Active (Operational)" if (agent and agent.get("status") == "active") else "Unconfigured"),
         "knowledgeChunksIndexed": len(chunks),
         "totalConversations": len(convos),
-        "modelTier": "enterprise-rag",
-        "kmsEncryptionStatus": "AES-256-GCM Envelope Verified",
-        "pgvectorLatency": f"{query_latency} ms",
-        "lastActive": "Just now"
+        "modelTier": agent.get("modelTier", "enterprise-rag") if agent else "unassigned",
+        "kmsEncryptionStatus": "Tenant KMS Key Active" if has_kms else "Standard Encryption Active",
+        "pgvectorLatency": f"{measured_query_latency} ms",
+        "lastActive": last_active
     }
 
     db.record_audit_log(

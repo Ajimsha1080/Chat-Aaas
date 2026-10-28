@@ -143,8 +143,12 @@ class DatabaseStore:
         """
         now_str = "2026-08-01T00:00:00.000Z"
 
-        # 0. Completely purge legacy comp-techflow and agent-tf-1 artifacts
-        for legacy_cid in ["comp-techflow"]:
+        # 0. Completely purge legacy demo and test entities
+        for legacy_cid in [
+            "comp-techflow", "comp-acme", "comp-finscale", "comp-apex-health",
+            "comp-nexus", "comp-artisan", "comp_iso_tenant_a", "comp_iso_tenant_b",
+            "comp-beta", "comp-capped", "comp-tenant-a", "comp-tenant-b", "comp-alpha"
+        ]:
             self.companies.pop(legacy_cid, None)
             if self.engine:
                 try:
@@ -155,7 +159,7 @@ class DatabaseStore:
                 except Exception as purge_err:
                     logger.debug(f"[Purge] Legacy cleanup notice: {purge_err}")
 
-        for legacy_aid in ["agent-tf-1"]:
+        for legacy_aid in ["agent-tf-1", "agent_iso_a", "agent_iso_b", "agent-beta"]:
             self.agents.pop(legacy_aid, None)
             if self.engine:
                 try:

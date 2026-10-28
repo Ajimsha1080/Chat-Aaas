@@ -7,6 +7,7 @@ from typing import Optional, Dict, Any
 from app.db.database import db
 from app.core.tenant import TenantContext, get_tenant_context
 from app.core.permissions import has_permission
+from app.core.websocket_manager import ws_manager
 
 logger = logging.getLogger(__name__)
 
@@ -59,7 +60,7 @@ def list_companies(ctx: TenantContext = Depends(get_tenant_context)):
     return {"status": 200, "data": {"companies": [c]}}
 
 @router.post("", status_code=201)
-def create_company(req: CreateCompanyRequest, ctx: TenantContext = Depends(get_tenant_context)):
+async def create_company(req: CreateCompanyRequest, ctx: TenantContext = Depends(get_tenant_context)):
     """Creates a new company workspace with isolated agent and default parameters."""
     if not has_permission(ctx, "company:create"):
         raise HTTPException(
@@ -141,6 +142,8 @@ def create_company(req: CreateCompanyRequest, ctx: TenantContext = Depends(get_t
     db.agent_versions[version_id] = new_version
 
     new_company["agent"] = new_agent
+    await ws_manager.broadcast_all("company:created", {"companyId": comp_id, "name": req.name})
+    await ws_manager.broadcast_all("admin:telemetry", {"type": "company_created", "companyId": comp_id})
     return {"status": 200, "data": {"company": new_company}}
 
 @router.get("/current")
